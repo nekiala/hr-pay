@@ -169,6 +169,17 @@ public class OrgController {
         return org.people();
     }
 
+    public record Person(long userId, String name, String registrationNo, long unitId) {}
+
+    /** The people the current user can act on (everyone for HR, their branch for a head), with their unit, for filters and pickers. */
+    @GetMapping("/my-people")
+    @PreAuthorize("isAuthenticated()")
+    public List<Person> myPeople() {
+        java.util.Set<Long> team = CurrentUser.has("user.read") ? null : org.teamOf(CurrentUser.id());
+        return org.people().stream().filter(m -> team == null || team.contains(m.userId()))
+                .map(m -> new Person(m.userId(), m.name(), m.registrationNo(), m.unitId())).toList();
+    }
+
     @GetMapping("/users/{userId}/assignments")
     @PreAuthorize("isAuthenticated()")
     public Map<String, Object> assignments(@PathVariable long userId) {

@@ -41,7 +41,7 @@ public class EvaluationController {
 
     public record TemplateInput(@NotBlank @Size(max = 150) String name,
                                 @NotNull @Pattern(regexp = "MONTHLY|QUARTERLY|SEMI_ANNUAL") String frequency,
-                                Long gradeCategoryId, boolean active, @NotEmpty List<@Valid WeightInput> criteria) {
+                                Long gradeCategoryId, Long orgUnitId, boolean active, @NotEmpty List<@Valid WeightInput> criteria) {
 
         Map<Long, BigDecimal> weights() {
             Map<Long, BigDecimal> m = new LinkedHashMap<>();
@@ -108,13 +108,13 @@ public class EvaluationController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('evaluation.manage')")
     public Evaluations.Template addTemplate(@Valid @RequestBody TemplateInput b) {
-        return evaluations.saveTemplate(null, b.name().trim(), b.frequency(), b.gradeCategoryId(), b.active(), b.weights());
+        return evaluations.saveTemplate(null, b.name().trim(), b.frequency(), b.gradeCategoryId(), b.orgUnitId(), b.active(), b.weights());
     }
 
     @PutMapping("/evaluation-templates/{id}")
     @PreAuthorize("hasAuthority('evaluation.manage')")
     public Evaluations.Template updateTemplate(@PathVariable long id, @Valid @RequestBody TemplateInput b) {
-        return evaluations.saveTemplate(id, b.name().trim(), b.frequency(), b.gradeCategoryId(), b.active(), b.weights());
+        return evaluations.saveTemplate(id, b.name().trim(), b.frequency(), b.gradeCategoryId(), b.orgUnitId(), b.active(), b.weights());
     }
 
     // ---- evaluations -----------------------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -39,7 +40,7 @@ public class Evaluations {
     public record TemplateCriterion(long criterionId, String code, String name, String source, BigDecimal weight) {}
 
     public record Template(long id, String name, String frequency, Long gradeCategoryId, boolean active,
-                           List<TemplateCriterion> criteria) {}
+                           List<TemplateCriterion> criteria, Long orgUnitId) {}
 
     public record Score(long criterionId, String code, String name, String source, BigDecimal weight,
                         BigDecimal score, String comment) {}
@@ -111,40 +112,42 @@ public class Evaluations {
 
     public List<Template> templates() {
         List<Template> heads = jdbc.sql("""
-                select id, name, frequency, grade_category_id, active, null as criteria from evaluation_template
-                order by grade_category_id nulls first, name""")
+                select id, name, frequency, grade_category_id, active, org_unit_id from evaluation_template
+                order by org_unit_id nulls first, grade_category_id nulls first, name""")
                 .query((rs, i) -> new Template(rs.getLong("id"), rs.getString("name"), rs.getString("frequency"),
-                        (Long) rs.getObject("grade_category_id", Long.class), rs.getBoolean("active"), List.of()))
+                        (Long) rs.getObject("grade_category_id", Long.class), rs.getBoolean("active"), List.of(),
+                        (Long) rs.getObject("org_unit_id", Long.class)))
                 .list();
         return heads.stream().map(t -> new Template(t.id(), t.name(), t.frequency(), t.gradeCategoryId(), t.active(),
                 jdbc.sql("""
                         select c.id as criterion_id, c.code, c.name, c.source, tc.weight
                         from evaluation_template_criterion tc join evaluation_criterion c on c.id = tc.criterion_id
                         where tc.template_id = ? order by tc.weight desc, c.name""").param(t.id())
-                        .query(TemplateCriterion.class).list())).toList();
+                        .query(TemplateCriterion.class).list(), t.orgUnitId())).toList();
     }
 
     /** Creates or replaces a template; the weights must add up to 100. Running evaluations keep their weights. */
     @Transactional
-    public Template saveTemplate(Long id, String name, String frequency, Long gradeCategoryId, boolean active,
-                                 Map<Long, BigDecimal> weights) {
+    public Template saveTemplate(Long id, String name, String frequency, Long gradeCategoryId, Long orgUnitId,
+                                 boolean active, Map<Long, BigDecimal> weights) {
         BigDecimal sum = weights.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         if (weights.isEmpty() || sum.compareTo(BigDecimal.valueOf(100)) != 0) {
             throw new BusinessRuleException("The weights must add up to 100% (now " + sum.stripTrailingZeros().toPlainString() + "%).");
         }
         if (active && jdbc.sql("""
                 select count(*) from evaluation_template where active and id <> coalesce(?, -1)
-                  and grade_category_id is not distinct from ?""").params(id, gradeCategoryId).query(Integer.class).single() > 0) {
-            throw new ConflictException(gradeCategoryId == null
+                  and grade_category_id is not distinct from ? and org_unit_id is not distinct from ?""")
+                .params(id, gradeCategoryId, orgUnitId).query(Integer.class).single() > 0) {
+            throw new ConflictException(gradeCategoryId == null && orgUnitId == null
                     ? "Another active template already applies to everyone. Deactivate it first."
-                    : "Another active template already applies to this grade category. Deactivate it first.");
+                    : "Another active template already applies to the same people. Deactivate it first.");
         }
         if (id == null) {
-            id = jdbc.sql("insert into evaluation_template (name, frequency, grade_category_id, active) values (?, ?, ?, ?) returning id")
-                    .params(name, frequency, gradeCategoryId, active).query(Long.class).single();
+            id = jdbc.sql("insert into evaluation_template (name, frequency, grade_category_id, org_unit_id, active) values (?, ?, ?, ?, ?) returning id")
+                    .params(name, frequency, gradeCategoryId, orgUnitId, active).query(Long.class).single();
         } else {
-            if (jdbc.sql("update evaluation_template set name = ?, frequency = ?, grade_category_id = ?, active = ? where id = ?")
-                    .params(name, frequency, gradeCategoryId, active, id).update() == 0) {
+            if (jdbc.sql("update evaluation_template set name = ?, frequency = ?, grade_category_id = ?, org_unit_id = ?, active = ? where id = ?")
+                    .params(name, frequency, gradeCategoryId, orgUnitId, active, id).update() == 0) {
                 throw new NotFoundException("Template not found.");
             }
             jdbc.sql("delete from evaluation_template_criterion where template_id = ?").param(id).update();
@@ -158,11 +161,27 @@ public class Evaluations {
         return templates().stream().filter(t -> t.id() == saved).findFirst().orElseThrow();
     }
 
-    Template templateFor(AppUser user) {
+    /**
+     * The template for an employee, most specific first: their unit's (or the nearest unit above with one), for their
+     * grade category, then for anyone in that unit; then their grade category's; then the one for everyone.
+     */
+    public Template templateFor(AppUser user) {
         List<Template> active = templates().stream().filter(Template::active).toList();
-        return active.stream().filter(t -> t.gradeCategoryId() != null && t.gradeCategoryId().equals(user.getGradeCategoryId()))
+        Long cat = user.getGradeCategoryId();
+        Long unit = org.unitsOn(org.today()).get(user.getId());
+        if (unit != null) {
+            for (long u : org.ancestors(unit)) {
+                Optional<Template> t = active.stream().filter(x -> Objects.equals(x.orgUnitId(), u))
+                        .filter(x -> x.gradeCategoryId() != null && x.gradeCategoryId().equals(cat)).findFirst()
+                        .or(() -> active.stream().filter(x -> Objects.equals(x.orgUnitId(), u) && x.gradeCategoryId() == null).findFirst());
+                if (t.isPresent()) {
+                    return t.get();
+                }
+            }
+        }
+        return active.stream().filter(t -> t.orgUnitId() == null && t.gradeCategoryId() != null && t.gradeCategoryId().equals(cat))
                 .findFirst()
-                .or(() -> active.stream().filter(t -> t.gradeCategoryId() == null).findFirst())
+                .or(() -> active.stream().filter(t -> t.orgUnitId() == null && t.gradeCategoryId() == null).findFirst())
                 .orElseThrow(() -> new BusinessRuleException("No active evaluation template applies to this employee."));
     }
 

@@ -365,15 +365,25 @@ export type PendingOvertime = {
   lastOut: string | null
 }
 
-export type LeaveType = { id: number; code: string; name: string; paid: boolean; usesBalance: boolean; requiresDocument: boolean; maxDays: number | null; active: boolean }
+export type LeaveType = { id: number; code: string; name: string; paid: boolean; usesBalance: boolean; requiresDocument: boolean; maxDays: number | null; active: boolean; payPercent: number }
 export type GradeCategory = { id: number; code: string; name: string; annualLeaveDays: number; active: boolean }
 export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
 export type LeaveRequest = {
   id: number; userId: number; employeeName: string; registrationNo: string; leaveTypeId: number; leaveType: string
   startDate: string; endDate: string; workingDays: number; reason: string | null
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'; requestedAt: string
+  status: 'PENDING' | 'AWAITING_HR' | 'APPROVED' | 'REJECTED' | 'CANCELLED'; requestedAt: string
   decidedBy: string | null; decidedAt: string | null; decisionNote: string | null
+  halfDay: 'AM' | 'PM' | null; requiresDocument: boolean; documents: number; documentCheckedBy: string | null
 }
+export type LeaveDocument = { id: number; leaveRequestId: number; fileName: string; contentType: string; sizeBytes: number; uploadedBy: string; uploadedAt: string }
+
+/** Reads a chosen file as base64, for JSON uploads. */
+export const fileToBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(String(reader.result).replace(/^data:[^,]*,/, ''))
+  reader.onerror = () => reject(new Error('The file could not be read.'))
+  reader.readAsDataURL(file)
+})
 export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
 export const days = (n: number) => `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} day${Number(n) === 1 ? '' : 's'}`
 
@@ -460,6 +470,7 @@ export type Evaluation = {
 export type EvalCriterion = { id: number; code: string; name: string; description: string | null; source: 'MANAGER' | 'ATTENDANCE'; active: boolean }
 export type EvalTemplate = {
   id: number; name: string; frequency: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL'; gradeCategoryId: number | null; active: boolean
+  orgUnitId: number | null
   criteria: { criterionId: number; code: string; name: string; source: string; weight: number }[]
 }
 export const FREQUENCY = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', SEMI_ANNUAL: 'Every six months' }

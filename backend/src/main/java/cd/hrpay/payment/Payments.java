@@ -37,7 +37,14 @@ public class Payments {
                         String paidBy, String cancelReason) {}
 
     public record Line(long payslipId, long userId, String beneficiary, String registrationNo, String account,
-                       BigDecimal amount, String currency) {}
+                       BigDecimal amount, String currency, Long unitId, String directionName, String unitName) {
+
+        Line placed(java.util.Map<Long, cd.hrpay.org.OrgStructure.Placement> units) {
+            var p = unitId == null ? null : units.get(unitId);
+            return p == null ? this : new Line(payslipId, userId, beneficiary, registrationNo, account, amount, currency,
+                    unitId, p.directionName(), p.unitName());
+        }
+    }
 
     public record Overview(String month, String runStatus, List<Group> toPay, List<Payee> problems,
                            List<Batch> batches, int payslips, int paid) {}
@@ -51,6 +58,12 @@ public class Payments {
     private final JdbcClient jdbc;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public Payments(JdbcClient jdbc, AuditService audit, Clock clock) {
         this.jdbc = jdbc;
@@ -196,8 +209,12 @@ public class Payments {
         String month = jdbc.sql("select to_char(r.month, 'YYYY-MM') from payroll_run r join payment_batch b on b.run_id = r.id where b.id = ?")
                 .param(id).query(String.class).single();
         List<Line> lines = jdbc.sql("""
-                select payslip_id, user_id, beneficiary, registration_no, account, amount, trim(currency) as currency
-                from payment_line where batch_id = ? order by beneficiary""").param(id).query(Line.class).list();
+                select l.payslip_id, l.user_id, l.beneficiary, l.registration_no, l.account, l.amount, trim(l.currency) as currency,
+                       p.unit_id, null as direction_name, null as unit_name
+                from payment_line l join payslip p on p.id = l.payslip_id where l.batch_id = ? order by l.beneficiary""")
+                .param(id).query(Line.class).list();
+        var units = org.placementsOfUnits();
+        lines = lines.stream().map(l -> l.placed(units)).toList();
         return new BatchView(b, month, lines);
     }
 

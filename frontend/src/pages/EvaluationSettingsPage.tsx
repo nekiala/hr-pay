@@ -2,17 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, FREQUENCY, api, type EvalCriterion, type EvalTemplate, type GradeCategory } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { UnitSelect } from '../components/OrgCard'
+import { unitPath, type OrgUnit } from '../org'
 
 type CriterionForm = { id?: number; code: string; name: string; description: string; source: 'MANAGER' | 'ATTENDANCE'; active: boolean }
-type TemplateForm = { id?: number; name: string; frequency: EvalTemplate['frequency']; gradeCategoryId: string; active: boolean; weights: Record<number, string> }
+type TemplateForm = { id?: number; name: string; frequency: EvalTemplate['frequency']; gradeCategoryId: string; orgUnitId: string; active: boolean; weights: Record<number, string> }
 
 const blankCriterion: CriterionForm = { code: '', name: '', description: '', source: 'MANAGER', active: true }
-const blankTemplate: TemplateForm = { name: '', frequency: 'QUARTERLY', gradeCategoryId: '', active: true, weights: {} }
+const blankTemplate: TemplateForm = { name: '', frequency: 'QUARTERLY', gradeCategoryId: '', orgUnitId: '', active: true, weights: {} }
 
 export default function EvaluationSettingsPage() {
   const [criteria, setCriteria] = useState<EvalCriterion[]>([])
   const [templates, setTemplates] = useState<EvalTemplate[]>([])
   const [categories, setCategories] = useState<GradeCategory[]>([])
+  const [units, setUnits] = useState<OrgUnit[]>([])
   const [criterion, setCriterion] = useState<CriterionForm | null>(null)
   const [template, setTemplate] = useState<TemplateForm | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +28,7 @@ export default function EvaluationSettingsPage() {
   useEffect(() => {
     load()
     api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch(() => undefined)
+    api<OrgUnit[]>('/api/org/units').then(setUnits).catch(() => undefined)
   }, [])
 
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -55,6 +59,7 @@ export default function EvaluationSettingsPage() {
     const body = {
       name: template.name, frequency: template.frequency, active: template.active,
       gradeCategoryId: template.gradeCategoryId === '' ? null : Number(template.gradeCategoryId),
+      orgUnitId: template.orgUnitId === '' ? null : Number(template.orgUnitId),
       criteria: Object.entries(template.weights).filter(([, w]) => w !== '' && Number(w) > 0).map(([id, w]) => ({ criterionId: Number(id), weight: Number(w) })),
     }
     void run(async () => {
@@ -75,20 +80,22 @@ export default function EvaluationSettingsPage() {
 
       <div className="card">
         <h3>Templates</h3>
-        <p className="hint">A template says how often people are evaluated and how much each criterion weighs. Weights must add up to 100. One active template per grade category; a template for “Everyone” applies when the category has none.</p>
+        <p className="hint">A template says how often people are evaluated and how much each criterion weighs. Weights must add up to 100. One active template per grade category and unit. The most specific applies: the person's unit (or the nearest unit above with a template), then their grade category, then “Everyone”.</p>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>How often</th><th>For</th><th>Criteria</th><th>Active</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>How often</th><th>For</th><th>Unit</th><th>Criteria</th><th>Active</th><th></th></tr></thead>
             <tbody>
               {templates.map((t) => (
                 <tr key={t.id}>
                   <td>{t.name}</td>
                   <td>{FREQUENCY[t.frequency]}</td>
                   <td>{categoryName(t.gradeCategoryId)}</td>
+                  <td>{t.orgUnitId === null ? 'All units' : unitPath(units, t.orgUnitId)}</td>
                   <td className="small">{t.criteria.map((c) => `${c.name} ${c.weight}%`).join(', ')}</td>
                   <td>{t.active ? 'Yes' : 'No'}</td>
                   <td><button className="secondary" onClick={() => setTemplate({
                     id: t.id, name: t.name, frequency: t.frequency, active: t.active, gradeCategoryId: t.gradeCategoryId === null ? '' : String(t.gradeCategoryId),
+                    orgUnitId: t.orgUnitId === null ? '' : String(t.orgUnitId),
                     weights: Object.fromEntries(t.criteria.map((c) => [c.criterionId, String(c.weight)])),
                   })}>Edit</button></td>
                 </tr>
@@ -112,6 +119,10 @@ export default function EvaluationSettingsPage() {
                   <option value="">Everyone</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
+              </label>
+              <label>Unit
+                <UnitSelect units={units} value={template.orgUnitId} placeholder="All units"
+                  onChange={(v) => setTemplate({ ...template, orgUnitId: v })} />
               </label>
             </div>
             <table>
