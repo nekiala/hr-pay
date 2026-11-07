@@ -151,3 +151,36 @@ td.signature { height: 34px; }
 dl.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; margin: 0 0 12px; }
 dl.facts dt { font-size: 12px; color: var(--muted); }
 dl.facts dd { margin: 0; }
+
+/* Phase 5: org chart (top-down tree; scrolls sideways when wide) */
+.org-scroll { overflow-x: auto; padding-bottom: 12px; }
+.org-tree { display: inline-block; min-width: 100%; }
+.org-tree ul { display: flex; justify-content: center; padding: 18px 0 0; margin: 0; position: relative; list-style: none; }
+.org-tree > ul { padding-top: 0; }
+.org-tree li { display: flex; flex-direction: column; align-items: center; position: relative; padding: 18px 6px 0; }
+.org-tree > ul > li { padding-top: 0; }
+.org-tree li::before, .org-tree li::after { content: ''; position: absolute; top: 0; width: 50%; height: 18px; border-top: 1px solid var(--muted); }
+.org-tree li::before { right: 50%; }
+.org-tree li::after { left: 50%; border-left: 1px solid var(--muted); }
+.org-tree li:first-child::before, .org-tree li:last-child::after { border-top: none; }
+.org-tree li:only-child::before { display: none; }
+.org-tree li:only-child::after { border-top: none; }
+.org-tree > ul > li::before, .org-tree > ul > li::after { display: none; }
+.org-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 18px; border-left: 1px solid var(--muted); }
+.org-box { display: flex; flex-direction: column; gap: 2px; min-width: 130px; max-width: 190px; padding: 8px 10px; text-align: center;
+  background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--primary); border-radius: 8px; font-size: 13px; }
+.org-box small { color: var(--muted); font-size: 11px; }
+.org-box a { color: var(--text); text-decoration: none; }
+.org-box a:hover { text-decoration: underline; }
+.org-box.vacant { border-top-color: var(--muted); }
+.org-box.staff { border-style: dashed; }
+.org-box.person { border-top-color: var(--border); }
+.org-toggle { margin-top: 4px; padding: 0 8px; font-size: 12px; line-height: 18px; }
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+  .org-scroll { overflow: visible; }
+  .org-box { break-inside: avoid; border-color: #888; }
+}
+.org-tools { align-items: center; }
+.org-tools select { width: auto; }

@@ -93,6 +93,16 @@ cd backend && ./gradlew test
 - **Year summary**: totals for everyone for a year (HR), and an annual pay statement per employee, month by month with the date each pay was made. Employees open their own statement from My payslips.
 - The CSV layouts are generic. If a bank, operator or the CNSS/DGI portal wants a fixed format, it can be added as another export.
 
+## Organizational structure (phase 5)
+
+- Levels follow the usual DRC pattern and can be renamed or extended under Org chart › Levels, import and moves: Direction générale, Direction, Département, Service, Section, Équipe, plus the Cellule, a staff unit that can sit anywhere. A unit sits under a higher level; levels may be skipped.
+- Units have a code, an optional cost centre and dates. A unit closes only when nobody works in it and it has no open sub-units; history is kept.
+- Each unit has at most one head and one deputy at a time, either of them possibly ad interim. A unit can be vacant, and one person can head any number of units.
+- Every employee belongs to exactly one unit at a time. New users need a unit; moves are dated and kept (hire, transfer, promotion, reorganisation, correction). A correction fixes the current line instead of adding one.
+- Who someone reports to: the head of their unit, or, if it is vacant or they are the head, the nearest head above.
+- The org chart (units or people) is visible to everyone and prints to PDF; headcounts and names of members need `user.read`. The structure can be exported and imported as CSV (`code,name,level,parent,cost_centre,head_registration_no`, all or nothing).
+- `org.manage` (HR) edits the structure. Phase 6 will use the structure for approvals, payslips and reports.
+
 ## Configuration
 
 | Variable | Default | Purpose |

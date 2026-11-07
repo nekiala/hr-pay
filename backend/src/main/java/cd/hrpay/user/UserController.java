@@ -44,7 +44,8 @@ public class UserController {
         }
     }
 
-    public record CreateUser(@Valid UserInput user, List<String> roles, String initialPassword) {}
+    public record CreateUser(@Valid UserInput user, List<String> roles, String initialPassword,
+                             @jakarta.validation.constraints.NotNull(message = "Choose the unit this person works in") Long orgUnitId) {}
 
     public record RolesInput(@NotEmpty List<String> roles) {}
 
@@ -71,6 +72,13 @@ public class UserController {
 
     private final UserRepository users;
     private final UserService service;
+
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public UserController(UserRepository users, UserService service) {
         this.users = users;
@@ -100,8 +108,12 @@ public class UserController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('user.create')")
+    @org.springframework.transaction.annotation.Transactional
     public UserView create(@Valid @RequestBody CreateUser body) {
-        return UserView.of(service.create(body.user().data(), body.roles(), body.initialPassword()));
+        org.requireOpenUnit(body.orgUnitId());
+        AppUser created = service.create(body.user().data(), body.roles(), body.initialPassword());
+        org.assign(created.getId(), body.orgUnitId(), null, "HIRE", null);
+        return UserView.of(created);
     }
 
     @PutMapping("/{id}")

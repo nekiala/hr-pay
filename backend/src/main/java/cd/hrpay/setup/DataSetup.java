@@ -68,6 +68,9 @@ public class DataSetup implements ApplicationRunner {
     private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
     private final cd.hrpay.payroll.EmployeeFile files;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.org.OrgStructure org;
+
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
                      PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
                      UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries,
@@ -106,6 +109,52 @@ public class DataSetup implements ApplicationRunner {
             log.info("Created first administrator {}. Update the phone number and change the password.",
                     admin.getEmail());
         }
+        if (properties.sampleData() != null && properties.sampleData().enabled()) {
+            addSampleStructure();
+        }
+        int placed = org.placeUnassigned();
+        if (placed > 0) {
+            log.info("Placed {} user(s) without a unit at the top of the structure.", placed);
+        }
+    }
+
+    /**
+     * A small sample structure, only while the structure is just its top unit: three Directions with their heads,
+     * a vacant Service logistique holding the employees (so they report to the Directeur des opérations), a
+     * Service paie and a Cellule informatique.
+     */
+    private void addSampleStructure() {
+        if (jdbc.sql("select count(*) from org_unit").query(Integer.class).single() > 1) {
+            return;
+        }
+        long top = jdbc.sql("select id from org_unit where parent_id is null").query(Long.class).single();
+        java.util.function.BiFunction<String, String[], Long> unit = (level, a) -> jdbc.sql("""
+                insert into org_unit (code, name, level_id, parent_id, valid_from, created_by)
+                values (?, ?, (select id from org_level where code = ?), ?, date '2024-01-01', 'sample data') returning id""")
+                .params(a[0], a[1], level, Long.valueOf(a[2])).query(Long.class).single();
+        long drh = unit.apply("DIRECTION", new String[] {"DRH", "Direction des ressources humaines", String.valueOf(top)});
+        long daf = unit.apply("DIRECTION", new String[] {"DAF", "Direction administrative et financière", String.valueOf(top)});
+        long dop = unit.apply("DIRECTION", new String[] {"DOP", "Direction des opérations", String.valueOf(top)});
+        long slog = unit.apply("SERVICE", new String[] {"SLOG", "Service logistique", String.valueOf(dop)});
+        unit.apply("SERVICE", new String[] {"SPAIE", "Service paie", String.valueOf(drh)});
+        long cinf = unit.apply("CELLULE", new String[] {"CINF", "Cellule informatique", String.valueOf(top)});
+        Map<String, Long> placeOf = Map.of("hr@demo.hrpay.cd", drh, "finance@demo.hrpay.cd", daf,
+                "manager@demo.hrpay.cd", dop, "employee1@demo.hrpay.cd", slog, "employee2@demo.hrpay.cd", slog,
+                "employee3@demo.hrpay.cd", slog, "admin@demo.hrpay.cd", cinf);
+        placeOf.forEach((email, unitId) -> users.findByEmailIgnoreCase(email).ifPresent(u -> {
+            int n = jdbc.sql("update org_assignment set unit_id = ? where user_id = ? and valid_to is null")
+                    .params(unitId, u.getId()).update();
+            if (n == 0) {
+                jdbc.sql("""
+                        insert into org_assignment (user_id, unit_id, valid_from, reason, created_by)
+                        values (?, ?, date '2024-01-15', 'HIRE', 'sample data')""").params(u.getId(), unitId).update();
+            }
+        }));
+        Map<String, Long> heads = Map.of("hr@demo.hrpay.cd", drh, "finance@demo.hrpay.cd", daf, "manager@demo.hrpay.cd", dop);
+        heads.forEach((email, unitId) -> users.findByEmailIgnoreCase(email).ifPresent(u -> jdbc.sql("""
+                insert into org_head (unit_id, user_id, role, valid_from, created_by)
+                values (?, ?, 'HEAD', date '2024-01-15', 'sample data')""").params(unitId, u.getId()).update()));
+        log.info("Sample organizational structure created.");
     }
 
     private void loadSampleData(String password) {

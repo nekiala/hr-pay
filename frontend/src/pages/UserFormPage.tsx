@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, api, days, money, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { OrgCard, UnitSelect } from '../components/OrgCard'
+import type { OrgUnit } from '../org'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
 const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', lastName: '', siteId: '' }
@@ -26,6 +28,8 @@ export default function UserFormPage() {
   const [assignments, setAssignments] = useState<ScheduleAssignment[]>([])
   const [newSchedule, setNewSchedule] = useState('')
   const [scheduleFrom, setScheduleFrom] = useState(new Date().toISOString().slice(0, 10))
+  const [units, setUnits] = useState<OrgUnit[]>([])
+  const [orgUnitId, setOrgUnitId] = useState('')
 
   const canAssign = can('role.assign')
   const canEdit = isNew ? can('user.create') : can('user.update')
@@ -33,6 +37,7 @@ export default function UserFormPage() {
   useEffect(() => {
     api<Role[]>('/api/roles').then(setRoles).catch(() => undefined)
     if (can('site.read') || can('site.manage')) api<Site[]>('/api/sites').then(setSites).catch(() => undefined)
+    if (!id) api<OrgUnit[]>('/api/org/units').then(setUnits).catch(() => undefined)
     if (id) {
       api<Schedule[]>('/api/schedules').then(setSchedules).catch(() => undefined)
       api<ScheduleAssignment[]>(`/api/users/${id}/schedules`).then(setAssignments).catch(() => undefined)
@@ -67,7 +72,7 @@ export default function UserFormPage() {
       if (isNew) {
         const created = await api<User>('/api/users', {
           method: 'POST',
-          body: { user: payload(), roles: selectedRoles, initialPassword: initialPassword || null },
+          body: { user: payload(), roles: selectedRoles, initialPassword: initialPassword || null, orgUnitId: orgUnitId ? Number(orgUnitId) : null },
         })
         navigate(`/users/${created.id}`, { replace: true })
       } else {
@@ -139,6 +144,12 @@ export default function UserFormPage() {
         </label>
         {isNew && (
           <>
+            <label>
+              Unit
+              <UnitSelect units={units} value={orgUnitId} required onChange={setOrgUnitId} />
+              <span className="hint">Where this person works: Direction, Service, Équipe and so on. It can be changed later, with history.</span>
+              {fieldErrors.orgUnitId && <span className="error">{fieldErrors.orgUnitId}</span>}
+            </label>
             <fieldset>
               <legend>Roles</legend>
               {roles.filter((r) => canAssign || r.code === 'EMPLOYEE').map((r) => (
@@ -188,6 +199,8 @@ export default function UserFormPage() {
       )}
 
       {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} />}
+
+      {!isNew && user && <OrgCard userId={user.id} />}
 
       {!isNew && user && <ManagerCard user={user} editable={can('user.update')} onChange={setUser} />}
 
