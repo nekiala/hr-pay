@@ -49,6 +49,13 @@ public class DataSetup implements ApplicationRunner {
             new SampleUser("employee3@demo.hrpay.cd", "EMP-0003", "+243810000007", "David", "Lukusa", "EMPLOYEE"));
 
     private final AppProperties properties;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.schedule.WorkCalendar calendar;
+
+    /** Sample check-ins for last month, so a payroll can be tried at once. Off in tests. */
+    @org.springframework.beans.factory.annotation.Value("${app.sample-data.attendance:true}")
+    private boolean sampleAttendance;
     private final UserRepository users;
     private final RoleRepository roles;
     private final SiteRepository sites;
@@ -59,11 +66,14 @@ public class DataSetup implements ApplicationRunner {
     private final cd.hrpay.salary.SalaryService salaries;
     private final cd.hrpay.leave.LeaveService leave;
     private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
+    private final cd.hrpay.payroll.EmployeeFile files;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
                      PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
                      UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries,
-                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc,
+                     cd.hrpay.payroll.EmployeeFile files) {
+        this.files = files;
         this.salaries = salaries;
         this.leave = leave;
         this.jdbc = jdbc;
@@ -106,7 +116,53 @@ public class DataSetup implements ApplicationRunner {
         addSampleSalaries();
         assignSampleManager();
         assignSampleEmployment();
+        addSampleContracts();
         allowLocalIpv6();
+        if (sampleAttendance) {
+            addSampleAttendance();
+        }
+    }
+
+    /**
+     * Last month's attendance for the sample staff, if they have none: on time every working day, except one late
+     * arrival for employee2 and one absence for employee3. Lets HR try a payroll right after start-up.
+     */
+    private void addSampleAttendance() {
+        java.time.ZoneId zone = java.time.ZoneId.of("Africa/Kinshasa");
+        java.time.YearMonth month = java.time.YearMonth.now(zone).minusMonths(1);
+        LocalDate from = month.atDay(1);
+        LocalDate to = month.atEndOfMonth();
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            AppUser user = users.findByEmailIgnoreCase(s.email()).orElse(null);
+            if (user == null || jdbc.sql("select count(*) from clock_event where user_id = ? and work_date between ? and ?")
+                    .params(user.getId(), from, to).query(Integer.class).single() > 0) {
+                continue;
+            }
+            int workday = 0;
+            for (var day : calendar.plan(user, from, to)) {
+                if (!day.expectedAtWork() || day.start() == null || day.end() == null) {
+                    continue;
+                }
+                workday++;
+                if (s.email().startsWith("employee3") && workday == 5) {
+                    continue;   // one absence
+                }
+                int late = s.email().startsWith("employee2") && workday == 3 ? 25 : -3;
+                var in = day.date().atTime(day.start()).plusMinutes(late).atZone(zone).toOffsetDateTime();
+                var out = day.date().atTime(day.end()).plusMinutes(4).atZone(zone).toOffsetDateTime();
+                for (var e : List.of(Map.entry("IN", in), Map.entry("OUT", out))) {
+                    jdbc.sql("""
+                            insert into clock_event (user_id, type, occurred_at, work_date, site_id, source, note, created_by)
+                            values (?, ?, ?, ?, ?, 'SELF', 'Sample data', 'sample-data')""")
+                            .params(user.getId(), e.getKey(), e.getValue(), day.date(),
+                                    user.getSite() == null ? null : user.getSite().getId())
+                            .update();
+                }
+            }
+        }
     }
 
     /** Browsers on the same machine may reach the API over ::1; the sample site allows it too. */
@@ -119,6 +175,34 @@ public class DataSetup implements ApplicationRunner {
                 site.replaceIpRanges(ranges);
             }
         });
+    }
+
+    /** Contracts, personal details and a family for the sample staff, so payroll can be tried. */
+    private void addSampleContracts() {
+        Map<String, String> gradeByRole = Map.of("EMPLOYEE", "G1B", "HR", "G2B", "FINANCE", "G2B", "MANAGER", "G3B");
+        Map<String, String> occupationByRole = Map.of("EMPLOYEE", "ENGINEER", "HR", "HR_OFFICER", "FINANCE", "ACCOUNTANT",
+                "MANAGER", "MANAGER");
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            users.findByEmailIgnoreCase(s.email()).filter(u -> files.contracts(u.getId()).isEmpty()).ifPresent(u -> {
+                long grade = jdbc.sql("select id from grade where code = ?").param(gradeByRole.get(s.role())).query(Long.class).single();
+                Long occupation = jdbc.sql("select id from occupation where code = ?").param(occupationByRole.get(s.role()))
+                        .query(Long.class).optional().orElse(null);
+                files.startContract(u.getId(), "PERMANENT", LocalDate.of(2024, 1, 15), null, grade, occupation, false, null,
+                        "Sample contract");
+                boolean married = s.email().startsWith("employee1") || s.role().equals("MANAGER");
+                files.saveProfile(u.getId(), new cd.hrpay.payroll.EmployeeFile.Profile(LocalDate.of(1988, 5, 12), null,
+                        "Congolese", married ? "MARRIED" : "SINGLE", "CNSS-" + s.registrationNo(), "NIF-" + s.registrationNo(),
+                        "BANK", "Rawbank (sample)", "0001-" + s.registrationNo(), null, null));
+                if (married) {
+                    files.addDependant(u.getId(), "Spouse of " + s.firstName(), "SPOUSE", LocalDate.of(1990, 3, 2), true, null);
+                    files.addDependant(u.getId(), "First child", "CHILD", LocalDate.of(2015, 9, 1), true, null);
+                    files.addDependant(u.getId(), "Second child", "CHILD", LocalDate.of(2019, 2, 20), true, null);
+                }
+            });
+        }
     }
 
     /** Sample grade categories and hire dates, then this year's annual leave. */

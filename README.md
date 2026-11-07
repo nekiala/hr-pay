@@ -49,6 +49,30 @@ reads them on the Messages page. Sample employees report to the sample manager a
 - Clock entries are never edited: HR voids a wrong one with a reason and adds the right one.
 - The DRC values (overtime tiers, holidays, leave kinds, leave days) are samples to confirm with a payroll specialist.
 
+## Payroll rules (phase 2)
+
+- Master data: grade categories (leave days, anniversary raise % and when it starts), grades with a base salary,
+  occupations. A contract sets the grade; the basic is the negotiated amount or the grade's base.
+- Pay elements are data: each says if it is an earning or a deduction, how it is computed (fixed, % of basic, per day
+  worked, per child in charge, entered each month) and whether it is subject to CNSS and taxable for IPR. HR can
+  override, add or exclude an element for one employee, and enter one-off bonuses or deductions for a month.
+- A month's payslip: basic x paid hours / scheduled hours; approved overtime; allowances and bonuses; CNSS on the
+  elements subject to it; IPR on taxable elements less employee CNSS, worked out in CDF on the annual barème, then
+  reduced per dependant and capped; other deductions; loans and advances within a maximum share of net pay;
+  employer charges (CNSS, INPP by company size, ONEM, IERE for expatriates).
+- Statutory rates and the IPR barème carry an effective date, so old payslips can be reproduced.
+- USD/CDF uses the BCC rate, fetched at start-up and twice a day from `EXCHANGE_RATES_URL`; HR can enter a rate.
+  Each run records the rate it used.
+- Workflow: HR calculates (again as often as needed), Finance approves (not the person who calculated), HR closes.
+  Closing numbers the payslips, records loan repayments and shows employees their payslips. Pay data of an approved or
+  closed month is locked.
+- Anniversary raises are applied each morning for permanent staff; HR gets one email on the 1st of each month.
+  Anniversaries before `RAISES_FROM` (payroll setting) are not applied.
+- **Every DRC rate and the barème are samples from memory.** A DRC payroll accountant must confirm them and check a
+  set of test payslips before the first real payroll.
+
+With `SAMPLE_DATA=true`, last month's attendance is filled in for the demo staff so a payroll can be tried at once.
+
 Tests run against the `hrpay_test` database, which they wipe and re-create:
 
 ```bash
@@ -62,6 +86,8 @@ cd backend && ./gradlew test
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | local `hrpay` | Database |
 | `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` | empty | Creates the first administrator when there are no users. They must change the password at first sign-in. |
 | `SAMPLE_DATA` | `false` | Loads the demo site and users. Never in production. |
+| `EXCHANGE_RATES_URL` | BCC rate API | Source of the daily USD/CDF rate |
+| `EXCHANGE_RATES_FETCH` | `true` | Set to `false` to enter rates by hand only |
 | `COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
 | `FORWARD_HEADERS` | `none` | Set to `native` behind a reverse proxy so the client IP comes from `X-Forwarded-For` |
 | `CORS_ORIGINS` | `http://localhost:5173` | Only needed if the app is served from another origin |

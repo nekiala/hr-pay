@@ -125,3 +125,21 @@ tr.absent td:nth-child(2) { color: var(--danger); }
 td.actions { white-space: nowrap; }
 td.actions button + button { margin-left: 6px; }
 .row.grant { align-items: end; margin-top: 12px; }
+.month-pick { display: inline-flex; gap: 8px; align-items: center; }
+.month-pick input { width: auto; }
+.sub-form { border-top: 1px solid var(--border, #e3e6ea); margin-top: 16px; padding-top: 12px; }
+tr.muted td { color: inherit; opacity: .6; }
+.payslip-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.payslip-head h2 { margin: 0; }
+.payslip-head .right { text-align: right; }
+table.lines td.num, table.lines th.num { text-align: right; white-space: nowrap; }
+table.lines tr.group th { background: transparent; padding-top: 14px; text-transform: uppercase; font-size: 12px; letter-spacing: .04em; }
+table.lines tr.subtotal td { font-weight: 600; border-top: 1px solid var(--border); }
+table.lines tr.net td { font-weight: 700; font-size: 1.1em; border-top: 2px solid var(--text); }
+@media print {
+  .topbar, .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { border: none; box-shadow: none; padding: 0; }
+  section.narrow { max-width: none; }
+  details { display: block; }
+}

@@ -50,3 +50,7 @@ app:
     whatsapp-phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
     whatsapp-template: ${WHATSAPP_TEMPLATE:hrpay_otp}
     whatsapp-language: ${WHATSAPP_LANGUAGE:fr}
+  # BCC exchange rates (CDF per unit). Fetched at start-up and twice a day; HR can enter one by hand.
+  exchange-rates:
+    url: ${EXCHANGE_RATES_URL:https://exchange-api.ntoprog.org/api/v1/exchange-rates/current}
+    fetch-enabled: ${EXCHANGE_RATES_FETCH:true}
