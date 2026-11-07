@@ -27,7 +27,7 @@ import java.util.List;
  */
 public final class DayCalculator {
 
-    public enum Status { FUTURE, NOT_STARTED, IN_PROGRESS, PRESENT, ABSENT, HOLIDAY, REST_DAY, NO_SCHEDULE }
+    public enum Status { FUTURE, NOT_STARTED, IN_PROGRESS, PRESENT, ABSENT, HOLIDAY, REST_DAY, NO_SCHEDULE, LEAVE }
 
     public record Session(OffsetDateTime in, OffsetDateTime out, boolean open) {}
 
@@ -40,7 +40,15 @@ public final class DayCalculator {
                             int earlyDeductedMinutes, int overtimeMinutes, OvertimeRateTier.Kind overtimeKind,
                             boolean missingCheckOut, OffsetDateTime firstIn, OffsetDateTime lastOut,
                             List<Session> sessions, boolean autoClosed, boolean corrected, boolean mission,
-                            List<Entry> entries) {}
+                            List<Entry> entries, String leaveType) {
+
+        /** This day as approved leave: paid leave pays the scheduled minutes. */
+        public DayResult onLeave(String type, boolean paid) {
+            return new DayResult(date, Status.LEAVE, scheduledMinutes, workedMinutes, paid ? scheduledMinutes : 0, 0, 0,
+                    0, 0, overtimeMinutes, overtimeKind, false, firstIn, lastOut, sessions, autoClosed, corrected,
+                    mission, entries, type);
+        }
+    }
 
     private record Span(long from, long to) {
         long length() { return Math.max(0, to - from); }
@@ -157,7 +165,7 @@ public final class DayCalculator {
                 e.getSource(), e.getNote(), e.getCreatedBy())).toList();
         return new DayResult(date, status, scheduled, (int) worked, (int) payable, (int) late, (int) lateDeducted,
                 (int) early, (int) earlyDeducted, overtime, kind, missing, firstIn, lastOut, List.copyOf(sessions),
-                autoClosed, corrected, mission, entries);
+                autoClosed, corrected, mission, entries, null);
     }
 
     private static int round(long minutes, int step) {

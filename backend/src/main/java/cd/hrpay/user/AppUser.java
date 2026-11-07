@@ -43,6 +43,8 @@ public class AppUser {
     private Site site;
     private boolean mustChangePassword;
     private Long managerId;
+    private Long gradeCategoryId;
+    private java.time.LocalDate hireDate;
     private OffsetDateTime lastLoginAt;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
@@ -92,6 +94,10 @@ public class AppUser {
     public void setStatus(UserStatus status) { this.status = status; }
     public Site getSite() { return site; }
     public Long getManagerId() { return managerId; }
+    public Long getGradeCategoryId() { return gradeCategoryId; }
+    public void setGradeCategoryId(Long gradeCategoryId) { this.gradeCategoryId = gradeCategoryId; }
+    public java.time.LocalDate getHireDate() { return hireDate; }
+    public void setHireDate(java.time.LocalDate hireDate) { this.hireDate = hireDate; }
     public void setManagerId(Long managerId) { this.managerId = managerId; }
     public void setSite(Site site) { this.site = site; }
     public boolean isMustChangePassword() { return mustChangePassword; }

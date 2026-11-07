@@ -57,11 +57,16 @@ public class DataSetup implements ApplicationRunner {
     private final WorkScheduleRepository schedules;
     private final UserScheduleRepository assignments;
     private final cd.hrpay.salary.SalaryService salaries;
+    private final cd.hrpay.leave.LeaveService leave;
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
                      PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
-                     UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries) {
+                     UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries,
+                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc) {
         this.salaries = salaries;
+        this.leave = leave;
+        this.jdbc = jdbc;
         this.schedules = schedules;
         this.assignments = assignments;
         this.properties = properties;
@@ -100,6 +105,7 @@ public class DataSetup implements ApplicationRunner {
         assignSampleSchedules();
         addSampleSalaries();
         assignSampleManager();
+        assignSampleEmployment();
         allowLocalIpv6();
     }
 
@@ -113,6 +119,24 @@ public class DataSetup implements ApplicationRunner {
                 site.replaceIpRanges(ranges);
             }
         });
+    }
+
+    /** Sample grade categories and hire dates, then this year's annual leave. */
+    private void assignSampleEmployment() {
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            String category = s.role().equals("MANAGER") ? "CAT3" : s.role().equals("EMPLOYEE") ? "CAT1" : "CAT2";
+            Long categoryId = jdbc.sql("select id from grade_category where code = ?").param(category)
+                    .query(Long.class).optional().orElse(null);
+            users.findByEmailIgnoreCase(s.email()).filter(u -> u.getGradeCategoryId() == null).ifPresent(u -> {
+                u.setGradeCategoryId(categoryId);
+                u.setHireDate(LocalDate.of(2024, 1, 15));
+            });
+        }
+        users.flush();
+        leave.grantAnnual(LocalDate.now().getYear());
     }
 
     /** Sample employees report to the sample manager, so team approvals can be tried. */

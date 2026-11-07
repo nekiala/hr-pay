@@ -52,15 +52,18 @@ public class UserController {
 
     public record ManagerInput(Long managerId) {}
 
+    public record EmploymentInput(Long gradeCategoryId, java.time.LocalDate hireDate) {}
+
     public record UserView(Long id, String email, String registrationNo, String phone, String firstName,
                            String lastName, Long siteId, String siteName, UserStatus status, Set<String> roles,
                            boolean hasPassword, OffsetDateTime lastLoginAt, OffsetDateTime createdAt,
-                           Long managerId) {
+                           Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate) {
         static UserView of(AppUser u) {
             return new UserView(u.getId(), u.getEmail(), u.getRegistrationNo(), u.getPhone(), u.getFirstName(),
                     u.getLastName(), u.getSite() == null ? null : u.getSite().getId(),
                     u.getSite() == null ? null : u.getSite().getName(), u.getStatus(), u.roleCodes(),
-                    u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt(), u.getManagerId());
+                    u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt(), u.getManagerId(),
+                    u.getGradeCategoryId(), u.getHireDate());
         }
     }
 
@@ -111,6 +114,12 @@ public class UserController {
     @PreAuthorize("hasAuthority('user.update')")
     public UserView setManager(@PathVariable Long id, @RequestBody ManagerInput body) {
         return UserView.of(service.setManager(id, body.managerId()));
+    }
+
+    @PutMapping("/{id}/employment")
+    @PreAuthorize("hasAuthority('user.update')")
+    public UserView setEmployment(@PathVariable Long id, @RequestBody EmploymentInput body) {
+        return UserView.of(service.setEmployment(id, body.gradeCategoryId(), body.hireDate()));
     }
 
     @PutMapping("/{id}/roles")

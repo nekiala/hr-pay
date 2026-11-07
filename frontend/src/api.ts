@@ -85,6 +85,8 @@ export type User = {
   lastLoginAt: string | null
   createdAt: string
   managerId: number | null
+  gradeCategoryId: number | null
+  hireDate: string | null
 }
 
 export type Page<T> = { items: T[]; page: number; size: number; total: number }
@@ -257,7 +259,7 @@ export function currentPosition(): Promise<Position> {
 export const time = (iso: string, timeZone = 'Africa/Kinshasa') =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone })
 
-export type DayStatus = 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
+export type DayStatus = 'LEAVE' | 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
 
 export type DayResult = {
   date: string
@@ -278,6 +280,7 @@ export type DayResult = {
   corrected: boolean
   mission: boolean
   entries: DayEntry[]
+  leaveType: string | null
 }
 
 export type DayEntry = {
@@ -359,3 +362,15 @@ export type PendingOvertime = {
   firstIn: string | null
   lastOut: string | null
 }
+
+export type LeaveType = { id: number; code: string; name: string; paid: boolean; usesBalance: boolean; requiresDocument: boolean; maxDays: number | null; active: boolean }
+export type GradeCategory = { id: number; code: string; name: string; annualLeaveDays: number; active: boolean }
+export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
+export type LeaveRequest = {
+  id: number; userId: number; employeeName: string; registrationNo: string; leaveTypeId: number; leaveType: string
+  startDate: string; endDate: string; workingDays: number; reason: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'; requestedAt: string
+  decidedBy: string | null; decidedAt: string | null; decisionNote: string | null
+}
+export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
+export const days = (n: number) => `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} day${Number(n) === 1 ? '' : 's'}`

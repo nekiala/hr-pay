@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, money, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
+import { ApiError, api, days, money, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -188,6 +188,10 @@ export default function UserFormPage() {
 
       {!isNew && user && <ManagerCard user={user} editable={can('user.update')} onChange={setUser} />}
 
+      {!isNew && user && <EmploymentCard user={user} editable={can('user.update')} onChange={setUser} />}
+
+      {!isNew && user && can('leave.manage') && <LeaveCard userId={user.id} />}
+
       {!isNew && user && canAssign && (
         <div className="card">
           <h3>Roles</h3>
@@ -318,6 +322,99 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
         </>
       )}
       <ErrorText error={error} />
+    </div>
+  )
+}
+
+function EmploymentCard({ user, editable, onChange }: { user: User; editable: boolean; onChange: (u: User) => void }) {
+  const [categories, setCategories] = useState<GradeCategory[]>([])
+  const [categoryId, setCategoryId] = useState(user.gradeCategoryId ? String(user.gradeCategoryId) : '')
+  const [hireDate, setHireDate] = useState(user.hireDate ?? '')
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => { api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch(() => undefined) }, [])
+
+  const save = async () => {
+    setError(null)
+    setMessage(null)
+    try {
+      onChange(await api<User>(`/api/users/${user.id}/employment`, {
+        method: 'PUT', body: { gradeCategoryId: categoryId ? Number(categoryId) : null, hireDate: hireDate || null },
+      }))
+      setMessage('Saved.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save.')
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Employment</h3>
+      <div className="grid2">
+        <label>Grade category
+          <select value={categoryId} disabled={!editable} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">None</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)} leave)</option>)}
+          </select>
+        </label>
+        <label>Hire date<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
+      </div>
+      <p className="hint">The grade category sets the yearly annual leave. Grades and pay scales come with payroll.</p>
+      {editable && <button className="secondary" onClick={() => void save()}>Save employment</button>}
+      <ErrorText error={error} />
+      {message && <p className="success">{message}</p>}
+    </div>
+  )
+}
+
+function LeaveCard({ userId }: { userId: number }) {
+  const [data, setData] = useState<{ balances: LeaveBalance[]; ledger: LeaveLedgerEntry[] } | null>(null)
+  const [types, setTypes] = useState<LeaveType[]>([])
+  const [adjust, setAdjust] = useState({ leaveTypeId: '', days: '', note: '' })
+  const [error, setError] = useState<string | null>(null)
+
+  const load = () => api<{ balances: LeaveBalance[]; ledger: LeaveLedgerEntry[] }>(`/api/leave/users/${userId}`).then(setData).catch((e: Error) => setError(e.message))
+  useEffect(() => {
+    load()
+    api<LeaveType[]>('/api/leave/types').then((t) => setTypes(t.filter((x) => x.usesBalance))).catch(() => undefined)
+  }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    try {
+      await api(`/api/leave/users/${userId}/adjustments`, { method: 'POST', body: { leaveTypeId: Number(adjust.leaveTypeId), days: Number(adjust.days), note: adjust.note } })
+      setAdjust({ ...adjust, days: '', note: '' })
+      await load()
+    } catch (err) {
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Leave balance</h3>
+      {data?.balances.map((b) => (
+        <p key={b.leaveTypeId}><strong>{b.leaveType}: {days(b.available)}</strong> <span className="muted">({days(b.granted)} granted, {days(b.taken)} taken{b.pending ? `, ${days(b.pending)} waiting` : ''})</span></p>
+      ))}
+      <form className="row" onSubmit={submit}>
+        <select value={adjust.leaveTypeId} onChange={(e) => setAdjust({ ...adjust, leaveTypeId: e.target.value })} required>
+          <option value="">Kind</option>
+          {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <input type="number" step="0.5" placeholder="Days (+ or -)" className="narrow-input" value={adjust.days} onChange={(e) => setAdjust({ ...adjust, days: e.target.value })} required />
+        <input placeholder="Reason, for example days carried from the old system" value={adjust.note} onChange={(e) => setAdjust({ ...adjust, note: e.target.value })} required />
+        <button type="submit" className="secondary">Adjust</button>
+      </form>
+      <ErrorText error={error} />
+      {data && data.ledger.length > 0 && (
+        <details>
+          <summary>History</summary>
+          {data.ledger.map((l) => (
+            <p key={l.id} className="muted">{l.entryDate} · {l.leaveType} · {l.days > 0 ? '+' : ''}{days(l.days)} · {l.kind.toLowerCase()}{l.note ? ` · ${l.note}` : ''} · {l.createdBy}</p>
+          ))}
+        </details>
+      )}
     </div>
   )
 }

@@ -93,6 +93,20 @@ public class UserService {
     }
 
     @Transactional
+    public AppUser setEmployment(Long id, Long gradeCategoryId, java.time.LocalDate hireDate) {
+        AppUser user = find(id);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        track(changes, "gradeCategoryId", user.getGradeCategoryId(), gradeCategoryId);
+        track(changes, "hireDate", user.getHireDate(), hireDate);
+        user.setGradeCategoryId(gradeCategoryId);
+        user.setHireDate(hireDate);
+        if (!changes.isEmpty()) {
+            audit.record("user.employment_changed", "user", id, changes);
+        }
+        return user;
+    }
+
+    @Transactional
     public AppUser setManager(Long id, Long managerId) {
         AppUser user = find(id);
         if (managerId != null) {

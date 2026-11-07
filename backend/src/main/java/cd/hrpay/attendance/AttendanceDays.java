@@ -43,9 +43,12 @@ public class AttendanceDays {
     private final SalaryService salaries;
     private final Clock clock;
     private final cd.hrpay.overtime.OvertimeDecisions decisions;
+    private final cd.hrpay.leave.LeaveService leave;
 
     public AttendanceDays(WorkCalendar calendar, ClockEventRepository events, OvertimePolicyRepository policies,
-                          SalaryService salaries, Clock clock, cd.hrpay.overtime.OvertimeDecisions decisions) {
+                          SalaryService salaries, Clock clock, cd.hrpay.overtime.OvertimeDecisions decisions,
+                          cd.hrpay.leave.LeaveService leave) {
+        this.leave = leave;
         this.decisions = decisions;
         this.calendar = calendar;
         this.events = events;
@@ -63,9 +66,16 @@ public class AttendanceDays {
         Map<LocalDate, List<ClockEvent>> byDay = events.findForPeriod(user.getId(), from, to).stream()
                 .collect(Collectors.groupingBy(ClockEvent::getWorkDate));
         List<DayPlan> plans = calendar.plan(user, from, to);
+        Map<LocalDate, cd.hrpay.leave.LeaveService.LeaveDay> onLeave = leave.approvedDays(user.getId(), from, to);
         return plans.stream()
-                .map(p -> DayCalculator.compute(p, byDay.getOrDefault(p.date(), List.of()), zone, clock.instant(),
-                        rounding))
+                .map(p -> {
+                    DayResult r = DayCalculator.compute(p, byDay.getOrDefault(p.date(), List.of()), zone,
+                            clock.instant(), rounding);
+                    var l = onLeave.get(p.date());
+                    boolean replace = l != null && p.expectedAtWork() && (r.status() == DayCalculator.Status.ABSENT
+                            || r.status() == DayCalculator.Status.FUTURE || r.status() == DayCalculator.Status.NOT_STARTED);
+                    return replace ? r.onLeave(l.type(), l.paid()) : r;
+                })
                 .toList();
     }
 

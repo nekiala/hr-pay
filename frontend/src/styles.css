@@ -124,3 +124,4 @@ tr.absent td:nth-child(2) { color: var(--danger); }
 .narrow-input { width: 90px; }
 td.actions { white-space: nowrap; }
 td.actions button + button { margin-left: 6px; }
+.row.grant { align-items: end; margin-top: 12px; }
