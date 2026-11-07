@@ -48,6 +48,7 @@ public class NotificationService {
             case "CHECK_IN" -> Texts.t("check-in");
             case "SIGN_IN" -> Texts.t("sign-in");
             case "TWO_STEP_SETUP" -> Texts.t("second step set-up");
+            case "LETTER_SIGN" -> Texts.t("signature");
             default -> purpose.toLowerCase(Locale.ROOT).replace('_', '-');
         };
     }

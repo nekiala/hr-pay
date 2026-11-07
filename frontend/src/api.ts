@@ -338,6 +338,7 @@ export type Site = {
   maxAccuracyM: number
   active: boolean
   qrRequired: boolean
+  offlineCheckin: OfflineMode
   ipRanges: IpRange[]
 }
 
@@ -447,7 +448,7 @@ export type ClockEventView = {
 export type AttendanceStatus = {
   checkedIn: boolean
   since: string | null
-  site: { name: string; timeZone: string; qrRequired: boolean; gpsRequired: boolean; maxAccuracyM: number } | null
+  site: { name: string; timeZone: string; qrRequired: boolean; gpsRequired: boolean; maxAccuracyM: number; offlineCheckin: OfflineMode } | null
   trustedDevice: boolean
   trustedDeviceName: string | null
   today: ClockEventView[]
@@ -795,3 +796,97 @@ export type ExportLayout = {
   id: number; target: LayoutTarget; name: string; columns: LayoutColumn[]; separator: string; decimalComma: boolean
   dateFormat: string; headerRow: boolean; encoding: 'UTF-8' | 'WINDOWS-1252'; extension: 'csv' | 'txt'; createdBy: string | null; createdAt: string | null
 }
+
+// ---- Phase 16: the employee's life in the company, notifications, the phone app ----
+
+export type OfflineMode = 'OFF' | 'REVIEW' | 'IN_AREA'
+export const OFFLINE_MODES: Record<OfflineMode, string> = {
+  OFF: t('Not allowed'),
+  REVIEW: t('Allowed, each one approved by the manager'),
+  IN_AREA: t('Recorded when the location is in the site\'s area, otherwise approved by the manager'),
+}
+
+export type DocumentType = { id: number; code: string; name: string; hasExpiry: boolean; remindDays: number; employeeCanUpload: boolean; employeeCanSee: boolean; position: number; active: boolean }
+export type DocSource = 'HR' | 'EMPLOYEE' | 'SIGNED' | 'CERTIFICATE'
+export type EmployeeDocument = {
+  id: number; userId: number; typeId: number; typeCode: string; typeName: string; fileName: string; contentType: string; sizeBytes: number
+  sha256: string; issuedOn: string | null; expiresOn: string | null; note: string | null; source: DocSource; uploadedBy: string; uploadedAt: string; employeeCanSee: boolean
+}
+export const DOC_SOURCES: Record<DocSource, string> = { HR: t('Filed by HR'), EMPLOYEE: t('Sent by the employee'), SIGNED: t('Signed in HR Pay'), CERTIFICATE: t('Certificate') }
+
+export type ChecklistKind = 'HIRING' | 'DEPARTURE'
+export const CHECKLIST_KINDS: Record<ChecklistKind, string> = { HIRING: t('Hiring'), DEPARTURE: t('Departure') }
+export type ChecklistAction = 'DOCUMENT' | 'EQUIPMENT' | 'CONTRACT_SIGNED' | 'SETTLEMENT' | 'ACCOUNT_CLOSED'
+export const CHECKLIST_ACTIONS: Record<ChecklistAction, string> = {
+  DOCUMENT: t('A document of this type is filed'),
+  EQUIPMENT: t('Equipment: lent on hiring, all back on departure'),
+  CONTRACT_SIGNED: t('A contract is signed'),
+  SETTLEMENT: t('The final settlement is confirmed'),
+  ACCOUNT_CLOSED: t('The account is closed'),
+}
+export type ChecklistStep = { id: number; kind: ChecklistKind; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; active: boolean }
+export type ChecklistItem = { id: number; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; done: boolean; auto: boolean; doneAt: string | null; doneBy: string | null; note: string | null }
+export type Checklist = { id: number; userId: number; kind: ChecklistKind; status: 'OPEN' | 'DONE' | 'CANCELLED'; dueOn: string | null; startedBy: string; startedAt: string; closedAt: string | null; items: ChecklistItem[] }
+export type OpenChecklist = { id: number; userId: number; name: string; registrationNo: string; kind: ChecklistKind; dueOn: string | null; startedAt: string; done: number; total: number }
+export type Equipment = { id: number; userId: number; kind: string; description: string | null; serialNo: string | null; issuedOn: string; returnedOn: string | null; returnedTo: string | null; note: string | null }
+export type EquipmentOut = { id: number; userId: number; name: string; kind: string; description: string | null; serialNo: string | null; issuedOn: string }
+export type ExpiringDocument = { id: number; userId: number; name: string; registrationNo: string; typeName: string; expiresOn: string }
+
+export type LetterKind = 'CONTRACT' | 'LETTER'
+export const LETTER_KINDS: Record<LetterKind, string> = { CONTRACT: t('Contract'), LETTER: t('Letter') }
+export type LetterStatus = 'DRAFT' | 'SENT' | 'SIGNED' | 'DECLINED' | 'CANCELLED'
+export const LETTER_STATUS: Record<LetterStatus, [string, string]> = {
+  DRAFT: [t('Draft'), 'badge'], SENT: [t('Waiting for the signature'), 'badge warn'], SIGNED: [t('Signed'), 'badge ok'],
+  DECLINED: [t('Refused'), 'badge off'], CANCELLED: [t('Cancelled'), 'badge'],
+}
+export type LetterTemplate = { id: number; code: string; name: string; kind: LetterKind; body: string; requiresSignature: boolean; documentTypeId: number | null; active: boolean; updatedBy: string | null; updatedAt: string }
+export type Letter = {
+  id: number; userId: number; employeeName: string; templateId: number | null; kind: LetterKind; number: string | null; title: string; body: string | null
+  requiresSignature: boolean; status: LetterStatus; sha256: string | null; sentBy: string | null; sentByName: string | null; sentAt: string | null
+  signedSha256: string | null; signedAt: string | null; signedName: string | null; signedIp: string | null; declinedReason: string | null; documentId: number | null; createdBy: string | null; createdAt: string
+}
+export type LetterDraft = { title: string; body: string; missing: string[] }
+export type CodeSent = { challengeId: string; channels: string[]; expiresAt: string }
+
+export type CertificateKind = 'WORK' | 'SALARY'
+export const CERTIFICATE_KINDS: Record<CertificateKind, string> = { WORK: t('Work certificate'), SALARY: t('Salary certificate') }
+export type CertificateStatus = 'PENDING' | 'ISSUED' | 'REJECTED' | 'CANCELLED'
+export const CERTIFICATE_STATUS: Record<CertificateStatus, [string, string]> = {
+  PENDING: [t('Asked'), 'badge warn'], ISSUED: [t('Issued'), 'badge ok'], REJECTED: [t('Refused'), 'badge off'], CANCELLED: [t('Withdrawn'), 'badge'],
+}
+export type CertificateRequest = {
+  id: number; userId: number; employeeName: string; registrationNo: string; kind: CertificateKind; purpose: string | null; status: CertificateStatus
+  number: string | null; documentId: number | null; requestedBy: string; requestedAt: string; decidedBy: string | null; decidedAt: string | null; reason: string | null
+}
+export type LifecycleOverview = { checklists: OpenChecklist[]; expiring: ExpiringDocument[]; certificates: CertificateRequest[]; letters: Letter[]; equipment: EquipmentOut[] }
+export type PersonLifecycle = { checklists: Checklist[]; documents: EmployeeDocument[]; equipment: Equipment[]; letters: Letter[]; certificates: CertificateRequest[] }
+export type MyDocuments = { documents: EmployeeDocument[]; letters: Letter[]; certificates: CertificateRequest[]; uploadTypes: DocumentType[] }
+
+export type NotificationItem = { id: number; kind: string; title: string; body: string | null; link: string | null; createdAt: string; readAt: string | null }
+export type Inbox = { unread: number; items: NotificationItem[] }
+export type PushSettings = { enabled: boolean; publicKey: string | null; phones: { id: number; userAgent: string | null; createdAt: string; lastOkAt: string | null }[] }
+export type OfflineOutcome = { clientId: string; outcome: 'RECORDED' | 'REVIEW' | 'REFUSED' | 'RETRY'; detail: string | null }
+
+/** Opens a file from HR Pay in a new tab (a PDF or a picture), read with the session; the tab opens first so no popup blocker stops it. */
+export async function openFile(path: string) {
+  const tab = window.open('', '_blank')
+  try {
+    const response = await fetch(path, { credentials: 'same-origin', headers: { 'Accept-Language': language() } })
+    if (!response.ok) {
+      let message = t('Download failed ({a})', { a: response.status })
+      try { message = (await response.json()).detail ?? message } catch { /* not JSON */ }
+      throw new ApiError(response.status, message)
+    }
+    const url = URL.createObjectURL(await response.blob())
+    if (tab) tab.location.href = url
+    else window.location.href = url
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  } catch (e) {
+    tab?.close()
+    throw e
+  }
+}
+
+export const fileSize = (bytes: number) => bytes < 1024 * 1024
+  ? t('{a} KB', { a: Math.max(1, Math.round(bytes / 1024)) })
+  : t('{a} MB', { a: (bytes / 1024 / 1024).toLocaleString(locale(), { maximumFractionDigits: 1 }) })

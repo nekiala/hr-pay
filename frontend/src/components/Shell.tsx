@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
 import { t } from '../i18n'
+import { NotificationBell } from './NotificationBell'
+import { useOfflineSync } from '../pwa'
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 type Item = { to: string; label: string; icon: Icon; end?: boolean; show: boolean }
@@ -30,6 +32,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/missions', label: t('Missions'), icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
         { to: '/corrections', label: t('Corrections'), icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
         { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
+        { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
       ],
     },
     {
@@ -45,6 +48,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: t('People'),
       items: [
         { to: '/users', label: t('Users'), icon: Users, show: can('user.read') },
+        { to: '/lifecycle', label: t('Hiring and departures'), icon: ClipboardList, end: true, show: can('lifecycle.manage') },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
         { to: '/departures', label: t('Departures'), icon: DoorOpen, show: pay && any('payroll.run', 'payroll.approve') },
@@ -111,6 +115,7 @@ export function applyTheme(theme: Theme = readTheme()) {
 export function Shell({ children }: { children: ReactNode }) {
   const { me, signOut, refresh } = useAuth()
   const groups = useNav()
+  useOfflineSync(me?.id)
   const location = useLocation()
   const navigate = useNavigate()
   const endSupport = async () => {
@@ -177,11 +182,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       {navOpen && <div className="sidebar-scrim no-print" onClick={() => setNavOpen(false)} />}
 
-      <div className="shell-main">
+      <div className="shell-main has-bottom-nav">
         <header className="topbar no-print">
           <button type="button" className="icon-button menu-button" aria-label={t('Open the menu')} onClick={() => setNavOpen(true)}><Menu size={22} /></button>
           <span className="topbar-title">{current?.label ?? (location.pathname === '/' ? t('Home') : '')}</span>
           <div className="topbar-right">
+            <NotificationBell />
             <button type="button" className="icon-button theme-toggle" aria-label={dark ? t('Use the light theme') : t('Use the dark theme')}
               title={dark ? t('Light theme') : t('Dark theme')} onClick={() => setTheme(dark ? 'light' : 'dark')}>
               {dark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
@@ -221,8 +227,32 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
           {children}
         </main>
+        <BottomNav />
       </div>
     </div>
+  )
+}
+
+/** On a phone: the four things people open most, under the thumb. */
+function BottomNav() {
+  const { can, me } = useAuth()
+  const has = (m: Module) => !me?.company || me.company.modules.includes(m)
+  const items = [
+    { to: '/', label: t('Home'), icon: House, end: true, show: true },
+    { to: '/check-in', label: t('Check in'), icon: Clock, show: has('ATTENDANCE') },
+    { to: '/leave', label: t('Leave'), icon: CalendarDays, show: ['leave.request', 'leave.manage', 'leave.approve.team'].some(can) },
+    { to: '/my/payslips', label: t('Payslips'), icon: ReceiptText, show: has('PAYROLL') && can('payslip.read.own') },
+    { to: '/my/documents', label: t('Documents'), icon: FolderOpen, show: true },
+  ].filter((i) => i.show).slice(0, 5)
+  return (
+    <nav className="bottom-nav no-print" aria-label={t('Quick links')}>
+      {items.map((i) => (
+        <NavLink key={i.to} to={i.to} end={i.end}>
+          <i.icon size={20} aria-hidden />
+          <span>{i.label}</span>
+        </NavLink>
+      ))}
+    </nav>
   )
 }
 

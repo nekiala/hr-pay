@@ -9,8 +9,10 @@ import '@fontsource/jetbrains-mono/500.css'
 import '@fontsource/jetbrains-mono/600.css'
 import './styles.css'
 import { applyTheme } from './components/Shell'
+import { registerServiceWorker } from './pwa'
 
 applyTheme()
+registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

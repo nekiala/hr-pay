@@ -76,6 +76,12 @@ public class PlatformController {
     private final Tenants tenants;
     private final TransactionTemplate tx;
     private final CountryPacks packs;
+    private cd.hrpay.lifecycle.LifecycleDefaults lifecycle;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLifecycle(cd.hrpay.lifecycle.LifecycleDefaults lifecycle) {
+        this.lifecycle = lifecycle;
+    }
     private final UserService users;
     private final OrgStructure org;
     private final AuditService audit;
@@ -150,6 +156,7 @@ public class PlatformController {
                     .query(Long.class).single());
             tenants.runAs(companyId, () -> {
                 packs.apply(body.countryCode());
+                lifecycle.seed();
                 AppUser admin = users.create(new UserService.UserData(email, "ADM-0001", body.admin().phone(),
                         body.admin().firstName().trim(), body.admin().lastName().trim(), null), List.of("ADMIN", "HR"), password);
                 long top = jdbc.sql("select id from org_unit where parent_id is null").query(Long.class).single();

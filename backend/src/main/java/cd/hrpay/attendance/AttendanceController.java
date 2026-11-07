@@ -43,7 +43,8 @@ public class AttendanceController {
         }
     }
 
-    public record SiteRules(String name, String timeZone, boolean qrRequired, boolean gpsRequired, int maxAccuracyM) {}
+    public record SiteRules(String name, String timeZone, boolean qrRequired, boolean gpsRequired, int maxAccuracyM,
+                            String offlineCheckin) {}
 
     public record Status(boolean checkedIn, OffsetDateTime since, SiteRules site, boolean trustedDevice,
                          String trustedDeviceName, List<EventView> today, MissionNow mission) {}
@@ -79,7 +80,7 @@ public class AttendanceController {
         var device = devices.find(deviceToken).filter(d -> site != null && d.siteId() == site.getId());
         return new Status(open.isPresent(), open.map(ClockEvent::getOccurredAt).orElse(null),
                 site == null ? null : new SiteRules(site.getName(), site.getTimeZone(), site.isQrRequired(),
-                        site.isGpsRequired(), site.getMaxAccuracyM()),
+                        site.isGpsRequired(), site.getMaxAccuracyM(), site.getOfflineCheckin()),
                 device.isPresent(), device.map(TrustedDevices.Device::name).orElse(null),
                 events.findForPeriod(user.getId(), today.minusDays(1), today).stream()
                         .filter(e -> e.getWorkDate().equals(today) || open.map(o -> o.getWorkDate().equals(e.getWorkDate())).orElse(false))

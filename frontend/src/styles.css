@@ -513,3 +513,39 @@ button.link:hover:not(:disabled) { background: none; filter: brightness(1.15); }
 
 /* Lists of checkboxes (permissions of a key, events of a webhook) */
 .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
+
+/* ---- Phase 16: notifications, the phone's bottom bar, lifecycle ---- */
+.icon-button.bell { position: relative; }
+.bell-count { position: absolute; top: 0; right: 0; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+.menu.notifications { width: min(360px, calc(100vw - 24px)); max-height: min(480px, 70vh); overflow-y: auto; padding: 0; }
+.notifications-head { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.notifications-empty { padding: 12px; margin: 0; }
+.menu.notifications ul { list-style: none; margin: 0; padding: 4px; }
+.menu.notifications li button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; border: none;
+  border-radius: 6px; background: none; color: var(--text); text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+.menu.notifications li button:hover { background: var(--surface-3); }
+.menu.notifications li.unread button { background: var(--ok-soft); }
+.menu.notifications li.unread button:hover { filter: brightness(1.05); }
+.bottom-nav { display: none; }
+@media (max-width: 960px) {
+  .bottom-nav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; justify-content: space-around;
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
+  .bottom-nav a { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 8px;
+    color: var(--muted); font-size: 11px; text-decoration: none; min-width: 0; }
+  .bottom-nav a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bottom-nav a.active { color: var(--text); background: var(--surface-3); }
+  .shell-main.has-bottom-nav main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+}
+@media print { .bottom-nav { display: none !important; } }
+.checklist { list-style: none; margin: 0; padding: 0; }
+.checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.checklist li:last-child { border-bottom: none; }
+.checklist li.done .step-label { color: var(--muted); text-decoration: line-through; }
+.progress { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; min-width: 80px; }
+.progress > span { display: block; height: 100%; background: var(--ok); }
+.letter-body { white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.5; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--field, var(--surface-2)); max-height: 50vh; overflow-y: auto; }
+textarea.template { min-height: 320px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+.cards2 + .cards2 { margin-top: 16px; }

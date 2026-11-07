@@ -53,18 +53,20 @@ public class SiteController {
             @Min(5) @Max(5_000) int maxAccuracyM,
             boolean active,
             Boolean qrRequired,
-            @NotNull List<@Valid IpRangeInput> ipRanges) {}
+            @NotNull List<@Valid IpRangeInput> ipRanges,
+            @Pattern(regexp = "OFF|REVIEW|IN_AREA") String offlineCheckin) {}
 
     public record IpRangeView(Long id, String cidr, String label) {}
 
     public record SiteView(Long id, String code, String name, String countryCode, String timeZone,
                            BigDecimal centerLat, BigDecimal centerLng, Integer radiusM, boolean gpsRequired,
-                           int maxAccuracyM, boolean active, boolean qrRequired, List<IpRangeView> ipRanges) {
+                           int maxAccuracyM, boolean active, boolean qrRequired, List<IpRangeView> ipRanges,
+                           String offlineCheckin) {
         static SiteView of(Site s) {
             return new SiteView(s.getId(), s.getCode(), s.getName(), s.getCountryCode(), s.getTimeZone(),
                     s.getCenterLat(), s.getCenterLng(), s.getRadiusM(), s.isGpsRequired(), s.getMaxAccuracyM(),
                     s.isActive(), s.isQrRequired(), s.getIpRanges().stream()
-                            .map(r -> new IpRangeView(r.getId(), r.getCidr(), r.getLabel())).toList());
+                            .map(r -> new IpRangeView(r.getId(), r.getCidr(), r.getLabel())).toList(), s.getOfflineCheckin());
         }
     }
 
@@ -157,6 +159,9 @@ public class SiteController {
         site.setMaxAccuracyM(body.maxAccuracyM());
         site.setActive(body.active());
         site.setQrRequired(Boolean.TRUE.equals(body.qrRequired()));
+        if (body.offlineCheckin() != null) {
+            site.setOfflineCheckin(body.offlineCheckin());
+        }
         site.replaceIpRanges(ranges);
     }
 
@@ -171,6 +176,7 @@ public class SiteController {
         m.put("maxAccuracyM", s.getMaxAccuracyM());
         m.put("active", s.isActive());
         m.put("qrRequired", s.isQrRequired());
+        m.put("offlineCheckin", s.getOfflineCheckin());
         m.put("ipRanges", s.getIpRanges().stream().map(SiteIpRange::getCidr).toList());
         return m;
     }
