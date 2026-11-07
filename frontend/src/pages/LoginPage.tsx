@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Banknote } from 'lucide-react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button, Form } from '../components/Button'
 
 export default function LoginPage() {
   const { signIn } = useAuth()
@@ -34,8 +36,8 @@ export default function LoginPage() {
 
   return (
     <div className="login">
-      <form className="card" onSubmit={submit}>
-        <h1>HR Pay</h1>
+      <Form className="card" onSubmit={submit}>
+        <h1><span className="brand-mark"><Banknote size={18} aria-hidden /></span>HR Pay</h1>
         <p className="muted">Sign in with the email address registered by HR.</p>
         <label>
           Email
@@ -47,11 +49,11 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <ErrorText error={error} />
-        <button type="submit" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+        <Button type="submit" pending={busy} pendingText="Signing in…">Sign in</Button>
         {google && (
           <a className="button secondary" href="/oauth2/authorization/google">Sign in with Google</a>
         )}
-      </form>
+      </Form>
     </div>
   )
 }

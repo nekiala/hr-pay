@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, api, type GradeCategory, type Grade, type Occupation } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 type CategoryWithRaise = GradeCategory & { anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH' }
 
@@ -30,8 +31,10 @@ export default function PayrollSettingsPage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
   const setGrade = (id: number, patch: Partial<Grade>) => setGrades(grades.map((g) => (g.id === id ? { ...g, ...patch } : g)))
@@ -63,7 +66,7 @@ export default function PayrollSettingsPage() {
                       <option value="NEXT_MONTH">1st of the following month</option>
                     </select>
                   </td>
-                  <td>{editable && <button className="secondary" onClick={() => void run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0, timing: c.raiseTiming ?? 'NEXT_MONTH' } }), `${c.code} saved.`)}>Save</button>}</td>
+                  <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0, timing: c.raiseTiming ?? 'NEXT_MONTH' } }), `${c.code} saved.`)}>Save</Button>}</td>
                 </tr>
               ))}
             </tbody>
@@ -93,7 +96,7 @@ export default function PayrollSettingsPage() {
                     </select>
                   </td>
                   <td><input type="checkbox" checked={g.active} disabled={!editable} onChange={(e) => setGrade(g.id, { active: e.target.checked })} /></td>
-                  <td>{editable && <button className="secondary" onClick={() => void run(() => api(`/api/grades/${g.id}`, { method: 'PUT', body: g }), `${g.code} saved.`)}>Save</button>}</td>
+                  <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grades/${g.id}`, { method: 'PUT', body: g }), `${g.code} saved.`)}>Save</Button>}</td>
                 </tr>
               ))}
               {editable && (
@@ -111,10 +114,10 @@ export default function PayrollSettingsPage() {
                     <select value={newGrade.currency} onChange={(e) => setNewGrade({ ...newGrade, currency: e.target.value })}><option>USD</option><option>CDF</option></select>
                   </td>
                   <td></td>
-                  <td><button onClick={() => void run(async () => {
+                  <td><Button onClick={() => run(async () => {
                     await api('/api/grades', { method: 'POST', body: { ...newGrade, categoryId: Number(newGrade.categoryId), baseSalary: Number(newGrade.baseSalary), active: true } })
                     setNewGrade({ categoryId: '', code: '', name: '', baseSalary: '', currency: 'USD' })
-                  }, 'Grade added.')}>Add</button></td>
+                  }, 'Grade added.')}>Add</Button></td>
                 </tr>
               )}
             </tbody>
@@ -134,7 +137,7 @@ export default function PayrollSettingsPage() {
                   <td>{o.code}</td>
                   <td><input value={o.name} disabled={!editable} onChange={(e) => setOcc(o.id, { name: e.target.value })} /></td>
                   <td><input type="checkbox" checked={o.active} disabled={!editable} onChange={(e) => setOcc(o.id, { active: e.target.checked })} /></td>
-                  <td>{editable && <button className="secondary" onClick={() => void run(() => api(`/api/occupations/${o.id}`, { method: 'PUT', body: o }), `${o.name} saved.`)}>Save</button>}</td>
+                  <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/occupations/${o.id}`, { method: 'PUT', body: o }), `${o.name} saved.`)}>Save</Button>}</td>
                 </tr>
               ))}
               {editable && (
@@ -142,10 +145,10 @@ export default function PayrollSettingsPage() {
                   <td><input className="narrow-input" placeholder="CODE" value={newOccupation.code} onChange={(e) => setNewOccupation({ ...newOccupation, code: e.target.value.toUpperCase() })} /></td>
                   <td><input placeholder="Name" value={newOccupation.name} onChange={(e) => setNewOccupation({ ...newOccupation, name: e.target.value })} /></td>
                   <td></td>
-                  <td><button onClick={() => void run(async () => {
+                  <td><Button onClick={() => run(async () => {
                     await api('/api/occupations', { method: 'POST', body: { ...newOccupation, active: true } })
                     setNewOccupation({ code: '', name: '' })
-                  }, 'Occupation added.')}>Add</button></td>
+                  }, 'Occupation added.')}>Add</Button></td>
                 </tr>
               )}
             </tbody>

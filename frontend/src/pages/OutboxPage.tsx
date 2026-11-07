@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 type Message = { id: number; createdAt: string; channel: string; recipient: string; subject: string | null; body: string; status: string; error: string | null }
 
@@ -11,7 +12,7 @@ export default function OutboxPage() {
   useEffect(() => { void load() }, [])
   return (
     <section>
-      <div className="row between"><h2>Sent messages</h2><button className="secondary" onClick={() => void load()}>Refresh</button></div>
+      <div className="row between"><h2>Sent messages</h2><Button className="secondary" onClick={() => load()}>Refresh</Button></div>
       <p className="muted">Codes and notifications. Without an email server configured, emails are only kept here ("LOGGED"), which is how to read codes while testing.</p>
       <ErrorText error={error} />
       <div className="table-wrap">

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, money, type Employer, type Payslip, type PayslipLine, type PayslipSettings } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 const hours = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
@@ -53,7 +54,7 @@ export default function PayslipPage() {
       <p className="no-print">
         {staff ? <Link to="/payroll">← Payroll</Link> : <Link to="/my/payslips">← My payslips</Link>}
         {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">Download PDF</a>
-        {' · '}<button className="link" onClick={() => window.print()}>Print</button>
+        {' · '}<Button className="link" onClick={() => window.print()}>Print</Button>
       </p>
       {slip.runStatus !== 'CLOSED' && <p className="notice">Draft: this payroll is {slip.runStatus.toLowerCase()} and not yet closed.</p>}
       {slip.warnings.length > 0 && staff && (

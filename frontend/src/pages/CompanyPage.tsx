@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, fileToBase64, type Employer, type PayslipSettings } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { Button, Form } from '../components/Button'
 
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', 'Name'], ['address', 'Address'], ['rccm', 'RCCM'], ['nationalId', 'Id. Nat.'], ['taxNumber', 'NIF'],
@@ -37,23 +38,25 @@ export default function CompanyPage() {
     try {
       await action()
       setMessage(done)
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
   const saveEmployer = (e: FormEvent) => {
     e.preventDefault()
-    if (employer) void run(async () => setEmployer(await api<Employer>('/api/company', { method: 'PUT', body: employer })), 'Company details saved.')
+    if (employer) return run(async () => setEmployer(await api<Employer>('/api/company', { method: 'PUT', body: employer })), 'Company details saved.')
   }
   const saveSettings = (e: FormEvent) => {
     e.preventDefault()
-    if (settings) void run(async () => setSettings(await api<PayslipSettings>('/api/company/payslip-settings', { method: 'PUT', body: settings })), 'Payslip settings saved.')
+    if (settings) return run(async () => setSettings(await api<PayslipSettings>('/api/company/payslip-settings', { method: 'PUT', body: settings })), 'Payslip settings saved.')
   }
   const upload = (file: File | undefined) => {
     if (!file) return
     if (file.size > 512 * 1024) { setError('The logo must be at most 512 KB.'); return }
-    void run(async () => {
+    return run(async () => {
       setSettings(await api<PayslipSettings>('/api/company/logo', { method: 'PUT', body: { contentType: file.type, base64: await fileToBase64(file) } }))
       setLogoVersion((v) => v + 1)
     }, 'Logo saved.')
@@ -69,7 +72,7 @@ export default function CompanyPage() {
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
-      <form className="card" onSubmit={saveEmployer}>
+      <Form className="card" onSubmit={saveEmployer}>
         <h3>Name, address and legal information</h3>
         <p className="hint">Printed on payslips, declarations and payment files.</p>
         <div className="grid3">
@@ -78,8 +81,8 @@ export default function CompanyPage() {
               onChange={(e) => setEmployer({ ...employer, [k]: e.target.value })} /></label>
           ))}
         </div>
-        <button type="submit">Save</button>
-      </form>
+        <Button type="submit">Save</Button>
+      </Form>
 
       <div className="card">
         <h3>Logo</h3>
@@ -92,11 +95,11 @@ export default function CompanyPage() {
             {settings.hasLogo ? 'Replace the logo' : 'Add a logo'}
             <input type="file" accept="image/png,image/jpeg" onChange={(e) => { upload(e.target.files?.[0]); e.target.value = '' }} />
           </label>
-          {settings.hasLogo && <button className="secondary" onClick={removeLogo}>Remove</button>}
+          {settings.hasLogo && <Button className="secondary" onClick={removeLogo}>Remove</Button>}
         </div>
       </div>
 
-      <form className="card" onSubmit={saveSettings}>
+      <Form className="card" onSubmit={saveSettings}>
         <h3>Payslips</h3>
         <div className="grid3">
           <label>Legal form and capital<input value={settings.legalForm ?? ''} maxLength={200} placeholder="SARL au capital de 10 000 USD"
@@ -122,8 +125,8 @@ export default function CompanyPage() {
           ))}
         </div>
         <p className="hint">Samples use made-up figures with your header, so they show no one's pay. Save first to see your latest changes.</p>
-        <button type="submit">Save</button>
-      </form>
+        <Button type="submit">Save</Button>
+      </Form>
     </section>
   )
 }

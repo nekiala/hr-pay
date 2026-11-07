@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
+import { Button } from '../components/Button'
 
 export default function UsersPage() {
   const { can } = useAuth()
@@ -65,9 +66,9 @@ export default function UsersPage() {
       </div>
       {data && (
         <div className="row pager">
-          <button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button>
+          <Button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
           <span>Page {page + 1} of {pages} · {data.total} users</span>
-          <button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next</button>
+          <Button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next</Button>
         </div>
       )}
     </section>

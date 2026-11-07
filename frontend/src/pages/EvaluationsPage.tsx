@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, EVAL_STATUS, api, type Evaluation } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 type ToDo = { userId: number; name: string; template?: string; periodStart?: string; periodEnd?: string; evaluationId?: number | null; problem?: string }
 
@@ -85,7 +86,7 @@ export default function EvaluationsPage() {
                     <tr key={t.userId}>
                       <td>{t.name}</td>
                       <td>{t.problem ?? `${t.periodStart} to ${t.periodEnd} · ${t.template}`}</td>
-                      <td>{!t.problem && (t.evaluationId ? <Link to={`/evaluations/${t.evaluationId}`}>Open</Link> : <button className="secondary" onClick={() => void start(t.userId)}>Start</button>)}</td>
+                      <td>{!t.problem && (t.evaluationId ? <Link to={`/evaluations/${t.evaluationId}`}>Open</Link> : <Button className="secondary" onClick={() => start(t.userId)}>Start</Button>)}</td>
                     </tr>
                   ))}
                 </tbody>

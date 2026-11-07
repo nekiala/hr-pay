@@ -2,11 +2,16 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, money, type Loan, type Page, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Modal } from '../components/Modal'
+import { Button, Form } from '../components/Button'
 
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 const STATUS = { ACTIVE: 'Being repaid', REPAID: 'Repaid', CANCELLED: 'Cancelled' }
 
 export default function LoansPage() {
+  const [granting, setGranting] = useState(false)
+  const ask = useAsk()
   const { can } = useAuth()
   const manage = can('loan.manage')
   const [status, setStatus] = useState('ACTIVE')
@@ -33,14 +38,16 @@ export default function LoansPage() {
       await action()
       setMessage(done)
       await load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
   const grant = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api('/api/loans', {
         method: 'POST',
         body: {
@@ -58,7 +65,10 @@ export default function LoansPage() {
 
   return (
     <section>
-      <h2>Loans and advances</h2>
+      <div className="row between">
+        <h2>Loans and advances</h2>
+        {manage && <Button onClick={() => setGranting(true)}>New loan or advance</Button>}
+      </div>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
@@ -87,16 +97,16 @@ export default function LoansPage() {
                     <td className="nowrap">
                       {manage && l.status === 'ACTIVE' && (
                         <>
-                          <button className="secondary" onClick={() => {
-                            const month = prompt('Skip the installment in which month? (YYYY-MM)', thisMonth())
-                            if (!month) return
-                            const reason = prompt('Reason for the pause')
-                            if (reason) void run(() => api(`/api/loans/${l.id}/pauses`, { method: 'POST', body: { month, reason } }), `Installment skipped for ${month}.`)
-                          }}>Pause a month</button>{' '}
-                          <button className="secondary" onClick={() => {
-                            const reason = prompt(`Cancel loan #${l.id}? The remaining ${money(l.balance, l.currency)} will not be deducted. Reason:`)
-                            if (reason) void run(() => api(`/api/loans/${l.id}/cancel`, { method: 'POST', body: { reason } }), 'Cancelled.')
-                          }}>Cancel</button>
+                          <Button className="secondary" onClick={() => ask({
+                            title: `Pause loan #${l.id} for a month`, confirmLabel: 'Pause',
+                            fields: [{ label: 'Skip the installment of', type: 'month', required: true, defaultValue: thisMonth() }, { label: 'Reason', required: true }],
+                            onConfirm: ([month, reason]) => run(() => api(`/api/loans/${l.id}/pauses`, { method: 'POST', body: { month, reason } }), `Installment skipped for ${month}.`),
+                          })}>Pause a month</Button>{' '}
+                          <Button className="secondary" onClick={() => ask({
+                            title: `Cancel loan #${l.id}?`, message: `The remaining ${money(l.balance, l.currency)} will not be deducted.`, confirmLabel: 'Cancel the loan', danger: true,
+                            fields: [{ label: 'Reason', required: true, multiline: true }],
+                            onConfirm: ([reason]) => run(() => api(`/api/loans/${l.id}/cancel`, { method: 'POST', body: { reason } }), 'Cancelled.'),
+                          })}>Cancel</Button>
                         </>
                       )}
                     </td>
@@ -109,10 +119,9 @@ export default function LoansPage() {
         <p className="hint">Each month the installments together take at most the share of net pay set under Rates; the rest waits for the next month.</p>
       </div>
 
-      {manage && (
-        <div className="card">
-          <h3>New loan or advance</h3>
-          <form onSubmit={grant}>
+      {manage && granting && (
+        <Modal title="New loan or advance" size="lg" onClose={() => setGranting(false)}>
+          <Form onSubmit={async (e) => { if (await grant(e)) setGranting(false) }}>
             <div className="grid3">
               <label>Employee
                 <input list="loan-people" placeholder="Type a name or number" value={form.userQuery} required
@@ -137,9 +146,10 @@ export default function LoansPage() {
               <label>Note<input value={form.note} maxLength={300} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
             </div>
             {months && <p className="hint">About {months} month(s) to repay.</p>}
-            <button type="submit" disabled={!form.userId}>Save</button>
-          </form>
-        </div>
+            <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setGranting(false)}>Cancel</Button><Button type="submit" disabled={!form.userId}>Save</Button></div>
+          </Form>
+        </Modal>
       )}
     </section>
   )

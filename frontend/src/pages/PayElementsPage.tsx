@@ -2,6 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, PAY_KINDS, PAY_METHODS, api, money, type Page, type PayElement, type PayEntry, type PayMethod, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 
@@ -21,6 +24,7 @@ const blankElement = {
 }
 
 export default function PayElementsPage() {
+  const ask = useAsk()
   const { can } = useAuth()
   const manage = can('masterdata.manage')
   const writePay = can('salary.write')
@@ -54,8 +58,10 @@ export default function PayElementsPage() {
       await action()
       setMessage(done)
       await Promise.all([loadElements(), loadEntries()])
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -68,7 +74,7 @@ export default function PayElementsPage() {
       defaultCurrency: edit.defaultAmount === '' ? null : edit.defaultCurrency, active: edit.active ?? true,
       kind: edit.system ? 'EARNING' : edit.kind, method: edit.system ? 'FIXED' : edit.method,
     }
-    void run(async () => {
+    return run(async () => {
       await api(edit.id ? `/api/pay-elements/${edit.id}` : '/api/pay-elements', { method: edit.id ? 'PUT' : 'POST', body })
       setEdit(null)
     }, 'Pay element saved.')
@@ -84,7 +90,7 @@ export default function PayElementsPage() {
 
   const addEntry = (ev: FormEvent) => {
     ev.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api('/api/pay-entries', {
         method: 'POST',
         body: { userId: Number(entry.userId), elementId: Number(entry.elementId), month, amount: Number(entry.amount), currency: entry.currency, note: entry.note || null },
@@ -120,7 +126,7 @@ export default function PayElementsPage() {
                       <td>{x.kind === 'DEDUCTION' ? '−' : ''}{money(x.amount, x.currency)}</td>
                       <td>{x.note}</td>
                       <td className="muted">{x.createdBy}</td>
-                      <td>{writePay && <button className="secondary" onClick={() => { if (confirm(`Remove ${x.elementName} for ${x.userName}?`)) void run(() => api(`/api/pay-entries/${x.id}`, { method: 'DELETE' }), 'Removed.') }}>Remove</button>}</td>
+                      <td>{writePay && <Button className="secondary" onClick={() => ask({ title: `Remove ${x.elementName} for ${x.userName}?`, confirmLabel: 'Remove', danger: true, onConfirm: () => run(() => api(`/api/pay-entries/${x.id}`, { method: 'DELETE' }), 'Removed.') })}>Remove</Button>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -128,7 +134,7 @@ export default function PayElementsPage() {
             </div>
           )}
           {writePay && (
-            <form onSubmit={addEntry}>
+            <Form onSubmit={addEntry}>
               <div className="grid3">
                 <label>Employee
                   <input list="pay-people" placeholder="Type a name or number" value={entry.userQuery} required
@@ -151,8 +157,8 @@ export default function PayElementsPage() {
                 <label>Note<input value={entry.note} maxLength={300} onChange={(e) => setEntry({ ...entry, note: e.target.value })} /></label>
               </div>
               {entry.userQuery && !entry.userId && <p className="hint">Pick the employee from the list.</p>}
-              <button type="submit" disabled={!entry.userId}>Add for {month}</button>
-            </form>
+              <Button type="submit" disabled={!entry.userId}>Add for {month}</Button>
+            </Form>
           )}
         </div>
       )}
@@ -174,71 +180,70 @@ export default function PayElementsPage() {
                   <td>{e.kind === 'EARNING' ? (e.taxableIpr ? 'Yes' : 'No') : ''}</td>
                   <td>{e.defaultForAll ? 'Yes' : ''}</td>
                   <td>{e.active ? 'Yes' : 'No'}</td>
-                  <td>{manage && <button className="secondary" onClick={() => startEdit(e)}>Edit</button>}</td>
+                  <td>{manage && <Button className="secondary" onClick={() => startEdit(e)}>Edit</Button>}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {manage && !edit && <button className="secondary" onClick={() => setEdit({ ...blankElement })}>New element</button>}
+        {manage && !edit && <Button className="secondary" onClick={() => setEdit({ ...blankElement })}>New element</Button>}
         {manage && edit && (
-          <form onSubmit={saveElement} className="sub-form">
-            <h4>{edit.id ? `Edit ${edit.code}` : 'New pay element'}</h4>
-            <div className="grid3">
-              <label>Code<input value={edit.code} disabled={!!edit.id} required pattern="[A-Za-z0-9_-]{1,32}" onChange={(e) => setEdit({ ...edit, code: e.target.value.toUpperCase() })} /></label>
-              <label>Name<input value={edit.name} required maxLength={150} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>
-              <label>Order on payslip<input type="number" min={0} max={999} value={edit.displayOrder} onChange={(e) => setEdit({ ...edit, displayOrder: Number(e.target.value) })} /></label>
-            </div>
-            {!edit.system && (
-              <>
-                <div className="grid3">
-                  <label>Type
-                    <select value={edit.kind} onChange={(e) => setEdit({ ...edit, kind: e.target.value })}>
-                      <option value="EARNING">Earning</option><option value="DEDUCTION">Deduction</option>
-                    </select>
-                  </label>
-                  <label>Rule
-                    <select value={edit.method} onChange={(e) => setEdit({ ...edit, method: e.target.value as PayMethod })}>
-                      {(['FIXED', 'PERCENT_OF_BASIC', 'PER_DAY_WORKED', 'PER_CHILD', 'MANUAL'] as PayMethod[]).map((m) => <option key={m} value={m}>{PAY_METHODS[m]}</option>)}
-                    </select>
-                  </label>
-                  {edit.method === 'PERCENT_OF_BASIC' && (
-                    <label>Percentage<input type="number" min={0} max={100} step={0.001} value={edit.percent} required onChange={(e) => setEdit({ ...edit, percent: e.target.value })} /></label>
-                  )}
-                  {needsAmount && (
-                    <>
-                      <label>Default amount<input type="number" min={0} step={0.01} value={edit.defaultAmount} required onChange={(e) => setEdit({ ...edit, defaultAmount: e.target.value })} /></label>
-                      <label>Currency<select value={edit.defaultCurrency} onChange={(e) => setEdit({ ...edit, defaultCurrency: e.target.value })}><option>USD</option><option>CDF</option></select></label>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-            {edit.kind === 'EARNING' && (
+          <Modal title={edit.id ? `Edit ${edit.code}` : 'New pay element'} size="lg" onClose={() => setEdit(null)}>
+            <Form onSubmit={saveElement}>
+              <div className="grid3">
+                <label>Code<input value={edit.code} disabled={!!edit.id} required pattern="[A-Za-z0-9_-]{1,32}" onChange={(e) => setEdit({ ...edit, code: e.target.value.toUpperCase() })} /></label>
+                <label>Name<input value={edit.name} required maxLength={150} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>
+                <label>Order on payslip<input type="number" min={0} max={999} value={edit.displayOrder} onChange={(e) => setEdit({ ...edit, displayOrder: Number(e.target.value) })} /></label>
+              </div>
+              {!edit.system && (
+                <>
                   <div className="grid3">
-                    <label className="check"><input type="checkbox" checked={edit.subjectToCnss} onChange={(e) => setEdit({ ...edit, subjectToCnss: e.target.checked })} /> Subject to CNSS</label>
-                    <label className="check"><input type="checkbox" checked={edit.taxableIpr} onChange={(e) => setEdit({ ...edit, taxableIpr: e.target.checked })} /> Taxable for IPR</label>
-                    {edit.taxableIpr && (
-                      <label>IPR-free share, % of basic (optional)<input type="number" min={0} max={100} step={0.001} value={edit.iprExemptCapPercent} onChange={(e) => setEdit({ ...edit, iprExemptCapPercent: e.target.value })} /></label>
+                    <label>Type
+                      <select value={edit.kind} onChange={(e) => setEdit({ ...edit, kind: e.target.value })}>
+                        <option value="EARNING">Earning</option><option value="DEDUCTION">Deduction</option>
+                      </select>
+                    </label>
+                    <label>Rule
+                      <select value={edit.method} onChange={(e) => setEdit({ ...edit, method: e.target.value as PayMethod })}>
+                        {(['FIXED', 'PERCENT_OF_BASIC', 'PER_DAY_WORKED', 'PER_CHILD', 'MANUAL'] as PayMethod[]).map((m) => <option key={m} value={m}>{PAY_METHODS[m]}</option>)}
+                      </select>
+                    </label>
+                    {edit.method === 'PERCENT_OF_BASIC' && (
+                      <label>Percentage<input type="number" min={0} max={100} step={0.001} value={edit.percent} required onChange={(e) => setEdit({ ...edit, percent: e.target.value })} /></label>
+                    )}
+                    {needsAmount && (
+                      <>
+                        <label>Default amount<input type="number" min={0} step={0.01} value={edit.defaultAmount} required onChange={(e) => setEdit({ ...edit, defaultAmount: e.target.value })} /></label>
+                        <label>Currency<select value={edit.defaultCurrency} onChange={(e) => setEdit({ ...edit, defaultCurrency: e.target.value })}><option>USD</option><option>CDF</option></select></label>
+                      </>
                     )}
                   </div>
-            )}
-            {!edit.system && (
-              <>
-                <div className="grid3">
-                  <label className="check"><input type="checkbox" checked={edit.prorated} onChange={(e) => setEdit({ ...edit, prorated: e.target.checked })} /> Prorated by hours paid</label>
-                  {edit.method !== 'MANUAL' && (
-                    <label className="check"><input type="checkbox" checked={edit.defaultForAll} onChange={(e) => setEdit({ ...edit, defaultForAll: e.target.checked })} /> Applies to every employee</label>
-                  )}
-                  {edit.id && <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Active</label>}
-                </div>
-              </>
-            )}
-            <div className="row">
-              <button type="submit">Save</button>
-              <button type="button" className="secondary" onClick={() => setEdit(null)}>Cancel</button>
-            </div>
-          </form>
+                </>
+              )}
+              {edit.kind === 'EARNING' && (
+                    <div className="grid3">
+                      <label className="check"><input type="checkbox" checked={edit.subjectToCnss} onChange={(e) => setEdit({ ...edit, subjectToCnss: e.target.checked })} /> Subject to CNSS</label>
+                      <label className="check"><input type="checkbox" checked={edit.taxableIpr} onChange={(e) => setEdit({ ...edit, taxableIpr: e.target.checked })} /> Taxable for IPR</label>
+                      {edit.taxableIpr && (
+                        <label>IPR-free share, % of basic (optional)<input type="number" min={0} max={100} step={0.001} value={edit.iprExemptCapPercent} onChange={(e) => setEdit({ ...edit, iprExemptCapPercent: e.target.value })} /></label>
+                      )}
+                    </div>
+              )}
+              {!edit.system && (
+                <>
+                  <div className="grid3">
+                    <label className="check"><input type="checkbox" checked={edit.prorated} onChange={(e) => setEdit({ ...edit, prorated: e.target.checked })} /> Prorated by hours paid</label>
+                    {edit.method !== 'MANUAL' && (
+                      <label className="check"><input type="checkbox" checked={edit.defaultForAll} onChange={(e) => setEdit({ ...edit, defaultForAll: e.target.checked })} /> Applies to every employee</label>
+                    )}
+                    {edit.id && <label className="check"><input type="checkbox" checked={edit.active ?? true} onChange={(e) => setEdit({ ...edit, active: e.target.checked })} /> Active</label>}
+                  </div>
+                </>
+              )}
+              <div className="modal-foot"><Button className="secondary" onClick={() => setEdit(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+  
+            </Form>
+          </Modal>
         )}
       </div>
     </section>

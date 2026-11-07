@@ -3,6 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError, api, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Modal } from '../components/Modal'
+import { Button, Form } from '../components/Button'
 
 export type PayMethodKind = 'BANK' | 'MOBILE_MONEY' | 'CASH'
 type Group = { method: PayMethodKind; provider: string; currency: string; count: number; total: number }
@@ -19,6 +22,7 @@ const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMo
 const today = () => new Date().toISOString().slice(0, 10)
 
 export default function PaymentsPage() {
+  const ask = useAsk()
   const { can } = useAuth()
   const canPay = can('payroll.pay')
   const [params, setParams] = useSearchParams()
@@ -41,8 +45,10 @@ export default function PaymentsPage() {
       await action()
       setMessage(done)
       await load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -72,8 +78,8 @@ export default function PaymentsPage() {
                       <tr key={`${g.method}|${g.provider}|${g.currency}`}>
                         <td>{METHOD[g.method]}</td><td>{g.provider}</td><td>{g.count}</td><td><strong>{money(g.total, g.currency)}</strong></td>
                         <td>{canPay && closed && (
-                          <button className="secondary" onClick={() => void run(() => api(`/api/payments/${month}/batches`, { method: 'POST', body: { method: g.method, provider: g.provider, currency: g.currency } }),
-                            `File made for ${g.provider}. Download it below, send it, then record the payment.`)}>Make file</button>
+                          <Button className="secondary" onClick={() => run(() => api(`/api/payments/${month}/batches`, { method: 'POST', body: { method: g.method, provider: g.provider, currency: g.currency } }),
+                            `File made for ${g.provider}. Download it below, send it, then record the payment.`)}>Make file</Button>
                         )}</td>
                       </tr>
                     ))}
@@ -114,11 +120,12 @@ export default function PaymentsPage() {
                           {canPay && b.status !== 'CANCELLED' && <a href={`/api/payment-batches/${b.id}/file.csv`}>Download</a>}
                           {canPay && b.status === 'PREPARED' && (
                             <>
-                              <button className="secondary" onClick={() => setPaying({ id: b.id, paidOn: today(), reference: '' })}>Record payment</button>
-                              <button className="link" onClick={() => {
-                                const reason = window.prompt('Why cancel this file? Its people can then be put in a new file.')
-                                if (reason) void run(() => api(`/api/payment-batches/${b.id}/cancel`, { method: 'POST', body: { reason } }), 'File cancelled.')
-                              }}>Cancel</button>
+                              <Button className="secondary" onClick={() => setPaying({ id: b.id, paidOn: today(), reference: '' })}>Record payment</Button>
+                              <Button className="link" onClick={() => ask({
+                                title: `Cancel payment file #${b.id}`, message: 'Its people can then be put in a new file.', confirmLabel: 'Cancel the file', danger: true,
+                                fields: [{ label: 'Why?', required: true, multiline: true }],
+                                onConfirm: ([reason]) => run(() => api(`/api/payment-batches/${b.id}/cancel`, { method: 'POST', body: { reason } }), 'File cancelled.'),
+                              })}>Cancel</Button>
                             </>
                           )}
                         </span></td>
@@ -129,20 +136,17 @@ export default function PaymentsPage() {
               </div>
             )}
             {paying && (
-              <form className="sub-form" onSubmit={(e) => {
-                e.preventDefault()
-                void run(async () => { await api(`/api/payment-batches/${paying.id}/paid`, { method: 'POST', body: { paidOn: paying.paidOn, reference: paying.reference || null } }); setPaying(null) }, 'Payment recorded.')
-              }}>
-                <h4>Record payment of file #{paying.id}</h4>
-                <div className="grid3">
+              <Modal title={`Record payment of file #${paying.id}`} size="sm" onClose={() => setPaying(null)}>
+                <Form onSubmit={() => run(async () => { await api(`/api/payment-batches/${paying.id}/paid`, { method: 'POST', body: { paidOn: paying.paidOn, reference: paying.reference || null } }); setPaying(null) }, 'Payment recorded.')}>
                   <label>Paid on<input type="date" required max={today()} value={paying.paidOn} onChange={(e) => setPaying({ ...paying, paidOn: e.target.value })} /></label>
                   <label>Bank or operator reference<input maxLength={100} value={paying.reference} onChange={(e) => setPaying({ ...paying, reference: e.target.value })} /></label>
-                </div>
-                <div className="row">
-                  <button type="submit">Save</button>
-                  <button type="button" className="secondary" onClick={() => setPaying(null)}>Cancel</button>
-                </div>
-              </form>
+                  <ErrorText error={error} />
+                  <div className="modal-foot">
+                    <Button className="secondary" onClick={() => setPaying(null)}>Cancel</Button>
+                    <Button type="submit">Save</Button>
+                  </div>
+                </Form>
+              </Modal>
             )}
           </div>
         </>

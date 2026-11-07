@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api, currentPosition, time, type AttendanceStatus, type StartResponse } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button, Form } from '../components/Button'
 
 const sourceLabel = { SELF: '', HR_MANUAL: ' (entered by HR)', AUTO_CLOSE: ' (closed automatically)', MISSION: ' (mission)' }
 
@@ -105,20 +106,19 @@ export default function CheckInPage() {
         )}
 
         {challenge ? (
-          <form onSubmit={confirm} className="stack">
+          <Form onSubmit={confirm} className="stack">
             <p>We sent a 6-digit code by {challenge.channels?.map((c) => (c === 'EMAIL' ? 'email' : 'WhatsApp')).join(' and ')}.</p>
             <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} className="code-input" autoFocus />
-            <button type="submit" disabled={code.length !== 6 || !!busy}>Confirm arrival</button>
-            <button type="button" className="secondary" onClick={() => setChallenge(null)}>Cancel</button>
-          </form>
+            <Button type="submit" disabled={code.length !== 6} pending={!!busy} pendingText={busy ?? undefined}>Confirm arrival</Button>
+            <Button type="button" className="secondary" onClick={() => setChallenge(null)}>Cancel</Button>
+          </Form>
         ) : status.checkedIn ? (
-          <button className="big danger" disabled={!!busy} onClick={() => void checkOut()}>End my day</button>
+          <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkOut()}>End my day</Button>
         ) : (
-          <button className="big" disabled={!!busy} onClick={() => void checkIn()}>Check in</button>
+          <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkIn()}>Check in</Button>
         )}
 
-        {busy && <p className="muted">{busy}</p>}
         <ErrorText error={error} />
         {done && <p className="success">{done}</p>}
 

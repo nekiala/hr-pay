@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
+import { Button, Form } from '../components/Button'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
 const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', lastName: '', siteId: '' }
@@ -56,11 +57,13 @@ export default function UserFormPage() {
     setError(null); setFieldErrors({}); setMessage(null)
     try {
       await action()
+      return true
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
         setFieldErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k.replace(/^user\./, ''), v])))
       } else setError('Something went wrong.')
+      return false
     }
   }
 
@@ -68,7 +71,7 @@ export default function UserFormPage() {
 
   const save = (e: FormEvent) => {
     e.preventDefault()
-    void handle(async () => {
+    return handle(async () => {
       if (isNew) {
         const created = await api<User>('/api/users', {
           method: 'POST',
@@ -125,7 +128,7 @@ export default function UserFormPage() {
           {user.lastLoginAt ? ` · Last sign-in ${new Date(user.lastLoginAt).toLocaleString()}` : ' · Never signed in'}
         </p>
       )}
-      <form className="card" onSubmit={save}>
+      <Form className="card" onSubmit={save}>
         <div className="grid2">
           {field('firstName', 'First name')}
           {field('lastName', 'Last name')}
@@ -168,8 +171,8 @@ export default function UserFormPage() {
         )}
         <ErrorText error={error} />
         {message && <p className="success">{message}</p>}
-        {canEdit && <button type="submit">{isNew ? 'Create user' : 'Save changes'}</button>}
-      </form>
+        {canEdit && <Button type="submit">{isNew ? 'Create user' : 'Save changes'}</Button>}
+      </Form>
 
       {!isNew && user && (
         <div className="card">
@@ -185,7 +188,7 @@ export default function UserFormPage() {
                 {schedules.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input type="date" value={scheduleFrom} onChange={(e) => setScheduleFrom(e.target.value)} />
-              <button className="secondary" disabled={!newSchedule} onClick={() => void assignSchedule()}>Assign</button>
+              <Button className="secondary" disabled={!newSchedule} onClick={() => assignSchedule()}>Assign</Button>
             </div>
           )}
         </div>
@@ -217,7 +220,7 @@ export default function UserFormPage() {
               {r.name}
             </label>
           ))}
-          <button onClick={() => void saveRoles()}>Save roles</button>
+          <Button onClick={() => saveRoles()}>Save roles</Button>
         </div>
       )}
 
@@ -228,13 +231,13 @@ export default function UserFormPage() {
             <div className="row">
               <input type="password" placeholder="New temporary password" value={resetPassword}
                 onChange={(e) => setResetPassword(e.target.value)} />
-              <button className="secondary" disabled={!resetPassword} onClick={() => void doReset()}>Set password</button>
+              <Button className="secondary" disabled={!resetPassword} onClick={() => doReset()}>Set password</Button>
             </div>
           )}
           {can('user.disable') && (
-            <button className={user.status === 'ACTIVE' ? 'danger' : ''} onClick={() => void toggleStatus()}>
+            <Button className={user.status === 'ACTIVE' ? 'danger' : ''} onClick={() => toggleStatus()}>
               {user.status === 'ACTIVE' ? 'Disable account' : 'Enable account'}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -274,7 +277,7 @@ function SalaryCard({ userId }: { userId: number }) {
         <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">from {s.effectiveFrom}{s.note ? ` · ${s.note}` : ''} · set by {s.createdBy}</span></p>
       ))}
       {can('salary.write') && (
-        <form className="row" onSubmit={add}>
+        <Form className="row" onSubmit={add}>
           <input type="date" value={form.effectiveFrom} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} required />
           <input type="number" min="0.01" step="0.01" placeholder="Gross per month" value={form.grossMonthly}
             onChange={(e) => setForm({ ...form, grossMonthly: e.target.value })} required />
@@ -282,8 +285,8 @@ function SalaryCard({ userId }: { userId: number }) {
             <option>USD</option><option>CDF</option>
           </select>
           <input placeholder="Reason (optional)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-          <button type="submit">Add</button>
-        </form>
+          <Button type="submit">Add</Button>
+        </Form>
       )}
       <p className="hint">A new amount applies from its date; earlier amounts stay in the history.</p>
       <ErrorText error={error} />
@@ -327,13 +330,13 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
     <div className="card">
       <h3>Manager set by hand</h3>
       <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">None: the head of the unit is used</span>}
-        {editable && manager && <> <button className="secondary void" onClick={() => void save(null)}>Remove</button></>}</p>
+        {editable && manager && <> <Button className="secondary void" onClick={() => save(null)}>Remove</Button></>}</p>
       <p className="hint">Normally people report to the head of their unit (or the nearest head above), who approves their missions, overtime and leave and scores their evaluations. Set a manager here only for an exception; heads above still see this person in their branch.</p>
       {editable && (
         <>
           <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} />
           {results.map((u) => (
-            <p key={u.id}><button className="secondary void" onClick={() => void save(u.id)}>Choose</button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
+            <p key={u.id}><Button className="secondary void" onClick={() => save(u.id)}>Choose</Button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
           ))}
         </>
       )}
@@ -376,7 +379,7 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
         <label>Hire date<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
       </div>
       <p className="hint">The grade category sets the yearly annual leave. Grades and pay scales come with payroll.</p>
-      {editable && <button className="secondary" onClick={() => void save()}>Save employment</button>}
+      {editable && <Button className="secondary" onClick={() => save()}>Save employment</Button>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -413,15 +416,15 @@ function LeaveCard({ userId }: { userId: number }) {
       {data?.balances.map((b) => (
         <p key={b.leaveTypeId}><strong>{b.leaveType}: {days(b.available)}</strong> <span className="muted">({days(b.granted)} granted, {days(b.taken)} taken{b.pending ? `, ${days(b.pending)} waiting` : ''})</span></p>
       ))}
-      <form className="row" onSubmit={submit}>
+      <Form className="row" onSubmit={submit}>
         <select value={adjust.leaveTypeId} onChange={(e) => setAdjust({ ...adjust, leaveTypeId: e.target.value })} required>
           <option value="">Kind</option>
           {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <input type="number" step="0.5" placeholder="Days (+ or -)" className="narrow-input" value={adjust.days} onChange={(e) => setAdjust({ ...adjust, days: e.target.value })} required />
         <input placeholder="Reason, for example days carried from the old system" value={adjust.note} onChange={(e) => setAdjust({ ...adjust, note: e.target.value })} required />
-        <button type="submit" className="secondary">Adjust</button>
-      </form>
+        <Button type="submit" className="secondary">Adjust</Button>
+      </Form>
       <ErrorText error={error} />
       {data && data.ledger.length > 0 && (
         <details>

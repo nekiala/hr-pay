@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError, api, type IpRange, type Site, type TrustedDevice } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Button, Form } from '../components/Button'
 
 type Form = Omit<Site, 'id'>
 
@@ -61,7 +63,7 @@ export default function SiteFormPage() {
   return (
     <section className="narrow">
       <h2>{isNew ? 'New site' : form.name}</h2>
-      <form className="card" onSubmit={save}>
+      <Form className="card" onSubmit={save}>
         <fieldset disabled={!editable}>
           <div className="grid2">
             <label>Code<input value={form.code} onChange={(e) => update('code', e.target.value.toUpperCase())} required disabled={!isNew} /></label>
@@ -82,10 +84,10 @@ export default function SiteFormPage() {
             <div className="row" key={i}>
               <input placeholder="IP or CIDR" value={r.cidr} onChange={(e) => setRange(i, { cidr: e.target.value })} />
               <input placeholder="Label" value={r.label ?? ''} onChange={(e) => setRange(i, { label: e.target.value })} />
-              <button type="button" className="secondary" onClick={() => update('ipRanges', form.ipRanges.filter((_, j) => j !== i))}>Remove</button>
+              <Button type="button" className="secondary" onClick={() => update('ipRanges', form.ipRanges.filter((_, j) => j !== i))}>Remove</Button>
             </div>
           ))}
-          <button type="button" className="secondary" onClick={() => update('ipRanges', [...form.ipRanges, { cidr: '', label: '' }])}>Add network</button>
+          <Button type="button" className="secondary" onClick={() => update('ipRanges', [...form.ipRanges, { cidr: '', label: '' }])}>Add network</Button>
 
           <h3>GPS area</h3>
           <div className="grid3">
@@ -93,7 +95,7 @@ export default function SiteFormPage() {
             <label>Longitude<input type="number" step="0.000001" value={form.centerLng ?? ''} onChange={(e) => update('centerLng', num(e.target.value))} /></label>
             <label>Radius (m)<input type="number" min={10} value={form.radiusM ?? ''} onChange={(e) => update('radiusM', num(e.target.value))} /></label>
           </div>
-          <button type="button" className="secondary" onClick={useMyLocation}>Use my current location</button>
+          <Button type="button" className="secondary" onClick={useMyLocation}>Use my current location</Button>
           <div className="grid2">
             <label className="check"><input type="checkbox" checked={form.gpsRequired} onChange={(e) => update('gpsRequired', e.target.checked)} />GPS required at check-in</label>
             <label>Maximum GPS accuracy (m)<input type="number" min={5} value={form.maxAccuracyM} onChange={(e) => update('maxAccuracyM', Number(e.target.value))} /></label>
@@ -103,14 +105,15 @@ export default function SiteFormPage() {
         </fieldset>
         <ErrorText error={error} />
         {message && <p className="success">{message}</p>}
-        {editable && <button type="submit">{isNew ? 'Create site' : 'Save changes'}</button>}
-      </form>
+        {editable && <Button type="submit">{isNew ? 'Create site' : 'Save changes'}</Button>}
+      </Form>
       {!isNew && editable && <OfficeTools siteId={Number(id)} />}
     </section>
   )
 }
 
 function OfficeTools({ siteId }: { siteId: number }) {
+  const ask = useAsk()
   const [devices, setDevices] = useState<TrustedDevice[]>([])
   const [link, setLink] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -126,10 +129,12 @@ function OfficeTools({ siteId }: { siteId: number }) {
     try { await action() } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong.') }
   }
   const showLink = () => run(async () => setLink((await api<{ url: string }>(`/api/sites/${siteId}/kiosk-link`)).url))
-  const newKey = () => run(async () => {
-    if (!confirm('Screens using the old kiosk link will stop working. Continue?')) return
-    setLink((await api<{ url: string }>(`/api/sites/${siteId}/kiosk-key`, { method: 'POST' })).url)
-    setMessage('New kiosk link created.')
+  const newKey = () => ask({
+    title: 'Create a new kiosk link?', message: 'Screens using the old kiosk link will stop working.', confirmLabel: 'Create a new link', danger: true,
+    onConfirm: () => run(async () => {
+      setLink((await api<{ url: string }>(`/api/sites/${siteId}/kiosk-key`, { method: 'POST' })).url)
+      setMessage('New kiosk link created.')
+    }),
   })
   const register = () => run(async () => {
     await api(`/api/sites/${siteId}/devices`, { method: 'POST', body: { name: name.trim() || 'Office computer' } })
@@ -147,8 +152,8 @@ function OfficeTools({ siteId }: { siteId: number }) {
       <h3>Kiosk QR screen</h3>
       <p className="hint">Open this link on a screen at the entrance. It shows a QR code that changes every 30 seconds.</p>
       <div className="row">
-        <button type="button" className="secondary" onClick={showLink}>Show kiosk link</button>
-        <button type="button" className="secondary" onClick={newKey}>Create a new link</button>
+        <Button type="button" className="secondary" onClick={showLink}>Show kiosk link</Button>
+        <Button type="button" className="secondary" onClick={newKey}>Create a new link</Button>
       </div>
       {link && <p><a href={link} target="_blank" rel="noreferrer">{link}</a></p>}
 
@@ -156,7 +161,7 @@ function OfficeTools({ siteId }: { siteId: number }) {
       <p className="hint">A shared office computer lets employees without a smartphone check in. The network check still applies.</p>
       <div className="row">
         <input placeholder="Name, for example Reception laptop" value={name} onChange={(e) => setName(e.target.value)} />
-        <button type="button" onClick={register}>Register this computer</button>
+        <Button type="button" onClick={register}>Register this computer</Button>
       </div>
       {devices.length > 0 && (
         <table>
@@ -167,7 +172,7 @@ function OfficeTools({ siteId }: { siteId: number }) {
                 <td>{d.name}</td>
                 <td>{new Date(d.createdAt).toLocaleDateString()}{d.createdBy ? ` by ${d.createdBy}` : ''}</td>
                 <td>{d.lastUsedAt ? new Date(d.lastUsedAt).toLocaleString() : 'Never'}</td>
-                <td>{d.active ? <button type="button" className="secondary" onClick={() => deactivate(d)}>Deactivate</button> : 'Inactive'}</td>
+                <td>{d.active ? <Button type="button" className="secondary" onClick={() => deactivate(d)}>Deactivate</Button> : 'Inactive'}</td>
               </tr>
             ))}
           </tbody>

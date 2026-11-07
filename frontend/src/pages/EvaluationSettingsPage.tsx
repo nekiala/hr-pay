@@ -4,6 +4,8 @@ import { ApiError, FREQUENCY, api, type EvalCriterion, type EvalTemplate, type G
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import { unitPath, type OrgUnit } from '../org'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 type CriterionForm = { id?: number; code: string; name: string; description: string; source: 'MANAGER' | 'ATTENDANCE'; active: boolean }
 type TemplateForm = { id?: number; name: string; frequency: EvalTemplate['frequency']; gradeCategoryId: string; orgUnitId: string; active: boolean; weights: Record<number, string> }
@@ -38,8 +40,10 @@ export default function EvaluationSettingsPage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -47,7 +51,7 @@ export default function EvaluationSettingsPage() {
     ev.preventDefault()
     if (!criterion) return
     const body = { ...criterion, description: criterion.description || null }
-    void run(async () => {
+    return run(async () => {
       await api(criterion.id ? `/api/evaluation-criteria/${criterion.id}` : '/api/evaluation-criteria', { method: criterion.id ? 'PUT' : 'POST', body })
       setCriterion(null)
     }, 'Criterion saved.')
@@ -62,7 +66,7 @@ export default function EvaluationSettingsPage() {
       orgUnitId: template.orgUnitId === '' ? null : Number(template.orgUnitId),
       criteria: Object.entries(template.weights).filter(([, w]) => w !== '' && Number(w) > 0).map(([id, w]) => ({ criterionId: Number(id), weight: Number(w) })),
     }
-    void run(async () => {
+    return run(async () => {
       await api(template.id ? `/api/evaluation-templates/${template.id}` : '/api/evaluation-templates', { method: template.id ? 'PUT' : 'POST', body })
       setTemplate(null)
     }, 'Template saved.')
@@ -93,57 +97,56 @@ export default function EvaluationSettingsPage() {
                   <td>{t.orgUnitId === null ? 'All units' : unitPath(units, t.orgUnitId)}</td>
                   <td className="small">{t.criteria.map((c) => `${c.name} ${c.weight}%`).join(', ')}</td>
                   <td>{t.active ? 'Yes' : 'No'}</td>
-                  <td><button className="secondary" onClick={() => setTemplate({
+                  <td><Button className="secondary" onClick={() => setTemplate({
                     id: t.id, name: t.name, frequency: t.frequency, active: t.active, gradeCategoryId: t.gradeCategoryId === null ? '' : String(t.gradeCategoryId),
                     orgUnitId: t.orgUnitId === null ? '' : String(t.orgUnitId),
                     weights: Object.fromEntries(t.criteria.map((c) => [c.criterionId, String(c.weight)])),
-                  })}>Edit</button></td>
+                  })}>Edit</Button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {!template && <button onClick={() => setTemplate(blankTemplate)}>New template</button>}
+        {!template && <Button onClick={() => setTemplate(blankTemplate)}>New template</Button>}
         {template && (
-          <form onSubmit={saveTemplate} className="sub-form">
-            <h4>{template.id ? `Edit ${template.name}` : 'New template'}</h4>
-            <div className="grid3">
-              <label>Name<input value={template.name} required maxLength={150} onChange={(e) => setTemplate({ ...template, name: e.target.value })} /></label>
-              <label>How often
-                <select value={template.frequency} onChange={(e) => setTemplate({ ...template, frequency: e.target.value as EvalTemplate['frequency'] })}>
-                  {Object.entries(FREQUENCY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </label>
-              <label>For
-                <select value={template.gradeCategoryId} onChange={(e) => setTemplate({ ...template, gradeCategoryId: e.target.value })}>
-                  <option value="">Everyone</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-              <label>Unit
-                <UnitSelect units={units} value={template.orgUnitId} placeholder="All units"
-                  onChange={(v) => setTemplate({ ...template, orgUnitId: v })} />
-              </label>
-            </div>
-            <table>
-              <thead><tr><th>Criterion</th><th>Weight %</th></tr></thead>
-              <tbody>
-                {criteria.filter((c) => c.active || template.weights[c.id]).map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.name}{c.source === 'ATTENDANCE' && <span className="hint"> (from attendance)</span>}</td>
-                    <td><input type="number" className="narrow-input" min={0} max={100} step={0.01} value={template.weights[c.id] ?? ''}
-                      onChange={(e) => setTemplate({ ...template, weights: { ...template.weights, [c.id]: e.target.value } })} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className={total === 100 ? 'success' : 'notice'}>Total: {total}%{total !== 100 && ' (must be 100)'}</p>
-            <label className="check"><input type="checkbox" checked={template.active} onChange={(e) => setTemplate({ ...template, active: e.target.checked })} /> Active</label>
-            <div className="row">
-              <button type="submit">Save</button>
-              <button type="button" className="secondary" onClick={() => setTemplate(null)}>Cancel</button>
-            </div>
-          </form>
+          <Modal title={template.id ? `Edit ${template.name}` : 'New template'} size="lg" onClose={() => setTemplate(null)}>
+            <Form onSubmit={saveTemplate}>
+              <div className="grid3">
+                <label>Name<input value={template.name} required maxLength={150} onChange={(e) => setTemplate({ ...template, name: e.target.value })} /></label>
+                <label>How often
+                  <select value={template.frequency} onChange={(e) => setTemplate({ ...template, frequency: e.target.value as EvalTemplate['frequency'] })}>
+                    {Object.entries(FREQUENCY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </label>
+                <label>For
+                  <select value={template.gradeCategoryId} onChange={(e) => setTemplate({ ...template, gradeCategoryId: e.target.value })}>
+                    <option value="">Everyone</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+                <label>Unit
+                  <UnitSelect units={units} value={template.orgUnitId} placeholder="All units"
+                    onChange={(v) => setTemplate({ ...template, orgUnitId: v })} />
+                </label>
+              </div>
+              <table>
+                <thead><tr><th>Criterion</th><th>Weight %</th></tr></thead>
+                <tbody>
+                  {criteria.filter((c) => c.active || template.weights[c.id]).map((c) => (
+                    <tr key={c.id}>
+                      <td>{c.name}{c.source === 'ATTENDANCE' && <span className="hint"> (from attendance)</span>}</td>
+                      <td><input type="number" className="narrow-input" min={0} max={100} step={0.01} value={template.weights[c.id] ?? ''}
+                        onChange={(e) => setTemplate({ ...template, weights: { ...template.weights, [c.id]: e.target.value } })} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className={total === 100 ? 'success' : 'notice'}>Total: {total}%{total !== 100 && ' (must be 100)'}</p>
+              <label className="check"><input type="checkbox" checked={template.active} onChange={(e) => setTemplate({ ...template, active: e.target.checked })} /> Active</label>
+              <div className="modal-foot"><Button className="secondary" onClick={() => setTemplate(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+  
+            </Form>
+          </Modal>
         )}
       </div>
 
@@ -160,32 +163,31 @@ export default function EvaluationSettingsPage() {
                   <td>{c.name}{c.description && <div className="hint">{c.description}</div>}</td>
                   <td>{c.source === 'ATTENDANCE' ? 'Attendance' : 'Manager'}</td>
                   <td>{c.active ? 'Yes' : 'No'}</td>
-                  <td><button className="secondary" onClick={() => setCriterion({ id: c.id, code: c.code, name: c.name, description: c.description ?? '', source: c.source, active: c.active })}>Edit</button></td>
+                  <td><Button className="secondary" onClick={() => setCriterion({ id: c.id, code: c.code, name: c.name, description: c.description ?? '', source: c.source, active: c.active })}>Edit</Button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {!criterion && <button onClick={() => setCriterion(blankCriterion)}>New criterion</button>}
+        {!criterion && <Button onClick={() => setCriterion(blankCriterion)}>New criterion</Button>}
         {criterion && (
-          <form onSubmit={saveCriterion} className="sub-form">
-            <h4>{criterion.id ? `Edit ${criterion.code}` : 'New criterion'}</h4>
-            <div className="grid3">
-              <label>Code<input value={criterion.code} disabled={!!criterion.id} required pattern="[A-Za-z0-9_-]{1,32}" onChange={(e) => setCriterion({ ...criterion, code: e.target.value.toUpperCase() })} /></label>
-              <label>Name<input value={criterion.name} required maxLength={150} onChange={(e) => setCriterion({ ...criterion, name: e.target.value })} /></label>
-              <label>Scored by
-                <select value={criterion.source} onChange={(e) => setCriterion({ ...criterion, source: e.target.value as CriterionForm['source'] })}>
-                  <option value="MANAGER">Manager</option><option value="ATTENDANCE">Attendance</option>
-                </select>
-              </label>
-            </div>
-            <label>Description (optional)<input value={criterion.description} maxLength={400} onChange={(e) => setCriterion({ ...criterion, description: e.target.value })} /></label>
-            {criterion.id && <label className="check"><input type="checkbox" checked={criterion.active} onChange={(e) => setCriterion({ ...criterion, active: e.target.checked })} /> Active</label>}
-            <div className="row">
-              <button type="submit">Save</button>
-              <button type="button" className="secondary" onClick={() => setCriterion(null)}>Cancel</button>
-            </div>
-          </form>
+          <Modal title={criterion.id ? `Edit ${criterion.code}` : 'New criterion'} size="lg" onClose={() => setCriterion(null)}>
+            <Form onSubmit={saveCriterion}>
+              <div className="grid3">
+                <label>Code<input value={criterion.code} disabled={!!criterion.id} required pattern="[A-Za-z0-9_-]{1,32}" onChange={(e) => setCriterion({ ...criterion, code: e.target.value.toUpperCase() })} /></label>
+                <label>Name<input value={criterion.name} required maxLength={150} onChange={(e) => setCriterion({ ...criterion, name: e.target.value })} /></label>
+                <label>Scored by
+                  <select value={criterion.source} onChange={(e) => setCriterion({ ...criterion, source: e.target.value as CriterionForm['source'] })}>
+                    <option value="MANAGER">Manager</option><option value="ATTENDANCE">Attendance</option>
+                  </select>
+                </label>
+              </div>
+              <label>Description (optional)<input value={criterion.description} maxLength={400} onChange={(e) => setCriterion({ ...criterion, description: e.target.value })} /></label>
+              {criterion.id && <label className="check"><input type="checkbox" checked={criterion.active} onChange={(e) => setCriterion({ ...criterion, active: e.target.checked })} /> Active</label>}
+              <div className="modal-foot"><Button className="secondary" onClick={() => setCriterion(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+  
+            </Form>
+          </Modal>
         )}
       </div>
     </section>

@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
+import { Button } from '../components/Button'
 
 type Person = {
   userId: number; name: string; registrationNo: string; directionName: string | null; unitName: string | null; siteName: string | null
@@ -73,7 +74,7 @@ export default function PresencePage() {
         <>
           <div className="row no-print">
             <label>Day<input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} /></label>
-            <button className="secondary" onClick={() => window.print()}>Print</button>
+            <Button className="secondary" onClick={() => window.print()}>Print</Button>
           </div>
           {presence && (
             <>

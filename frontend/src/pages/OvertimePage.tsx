@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, type OvertimePolicy, type OvertimeTier } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 const kindLabel: Record<OvertimeTier['kind'], string> = { WEEKDAY: 'Workday overtime', REST_DAY: 'Rest day', HOLIDAY: 'Public holiday' }
 
@@ -66,7 +67,7 @@ export default function OvertimePage() {
         <p className="hint">Saving with a new effective date keeps the earlier rules for earlier periods. Versions: {policies.map((p) => p.effectiveFrom).join(', ')}</p>
         <ErrorText error={error} />
         {message && <p className="success">{message}</p>}
-        {editable && <button onClick={() => void save()}>Save rules</button>}
+        {editable && <Button onClick={() => save()}>Save rules</Button>}
       </div>
     </section>
   )

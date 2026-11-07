@@ -3,6 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError, CONTRACT_TYPES, api, money, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 const age = (birth: string | null) => {
   if (!birth) return ''
@@ -12,6 +15,10 @@ const age = (birth: string | null) => {
 }
 
 export default function EmployeeFilePage() {
+  const [addingDependant, setAddingDependant] = useState(false)
+  const [addingItem, setAddingItem] = useState(false)
+  const [contracting, setContracting] = useState(false)
+  const ask = useAsk()
   const { id } = useParams()
   const { can } = useAuth()
   const editable = can('salary.write')
@@ -47,8 +54,10 @@ export default function EmployeeFilePage() {
       await action()
       setMessage(done)
       await load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -56,7 +65,7 @@ export default function EmployeeFilePage() {
 
   const startContract = (e: FormEvent) => {
     e.preventDefault()
-    void run(() => api(`/api/users/${id}/contracts`, {
+    return run(() => api(`/api/users/${id}/contracts`, {
       method: 'POST',
       body: {
         ...contract, gradeId: Number(contract.gradeId), occupationId: contract.occupationId ? Number(contract.occupationId) : null,
@@ -67,12 +76,12 @@ export default function EmployeeFilePage() {
 
   const saveProfile = (e: FormEvent) => {
     e.preventDefault()
-    void run(() => api(`/api/users/${id}/profile`, { method: 'PUT', body: profile }), 'Details saved.')
+    return run(() => api(`/api/users/${id}/profile`, { method: 'PUT', body: profile }), 'Details saved.')
   }
 
   const addDependant = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api(`/api/users/${id}/dependants`, { method: 'POST', body: { ...dependant, birthDate: dependant.birthDate || null } })
       setDependant({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
     }, 'Added.')
@@ -80,7 +89,7 @@ export default function EmployeeFilePage() {
 
   const addItem = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api(`/api/users/${id}/pay-elements`, {
         method: 'POST',
         body: {
@@ -116,48 +125,51 @@ export default function EmployeeFilePage() {
             <br /><span className="muted">from {c.startDate}{c.endDate ? ` to ${c.endDate}` : ''}{c.note ? ` · ${c.note}` : ''}</span>
           </p>
         ))}
-        {editable && (
-          <form onSubmit={startContract}>
-            <h3>New contract or change</h3>
-            <div className="grid3">
-              <label>Type
-                <select value={contract.contractType} onChange={(e) => setContract({ ...contract, contractType: e.target.value })}>
-                  {Object.entries(CONTRACT_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </label>
-              <label>Starts<input type="date" value={contract.startDate} onChange={(e) => setContract({ ...contract, startDate: e.target.value })} required /></label>
-              <label>Ends<input type="date" value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM'} /></label>
-            </div>
-            <div className="grid2">
-              <label>Grade
-                <select value={contract.gradeId} onChange={(e) => setContract({ ...contract, gradeId: e.target.value })} required>
-                  <option value="">Choose</option>
-                  {grades.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name} · {money(g.baseSalary, g.currency)}</option>)}
-                </select>
-              </label>
-              <label>Occupation
-                <select value={contract.occupationId} onChange={(e) => setContract({ ...contract, occupationId: e.target.value })}>
-                  <option value="">None</option>
-                  {occupations.filter((o) => o.active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                </select>
-              </label>
-            </div>
-            <div className="grid2">
-              <label>Negotiated basic (optional)
-                <input type="number" min="0.01" step="0.01" value={contract.negotiatedBasic} placeholder={grade ? `Grade basic: ${money(grade.baseSalary, grade.currency)}` : ''}
-                  onChange={(e) => setContract({ ...contract, negotiatedBasic: e.target.value })} />
-              </label>
-              <label>Note<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
-            </div>
-            <label className="check"><input type="checkbox" checked={contract.expatriate} onChange={(e) => setContract({ ...contract, expatriate: e.target.checked })} />Expatriate (employer pays IERE)</label>
-            <p className="hint">The previous contract ends the day before. The basic salary from that date is the negotiated amount, or the grade's.</p>
-            <button type="submit">Save contract</button>
-          </form>
+        {editable && <Button className="secondary" onClick={() => setContracting(true)}>New contract or change</Button>}
+        {editable && contracting && (
+          <Modal title="New contract or change" size="lg" onClose={() => setContracting(false)}>
+            <Form onSubmit={async (e) => { if (await startContract(e)) setContracting(false) }}>
+              <div className="grid3">
+                <label>Type
+                  <select value={contract.contractType} onChange={(e) => setContract({ ...contract, contractType: e.target.value })}>
+                    {Object.entries(CONTRACT_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </label>
+                <label>Starts<input type="date" value={contract.startDate} onChange={(e) => setContract({ ...contract, startDate: e.target.value })} required /></label>
+                <label>Ends<input type="date" value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM'} /></label>
+              </div>
+              <div className="grid2">
+                <label>Grade
+                  <select value={contract.gradeId} onChange={(e) => setContract({ ...contract, gradeId: e.target.value })} required>
+                    <option value="">Choose</option>
+                    {grades.filter((g) => g.active).map((g) => <option key={g.id} value={g.id}>{g.name} · {money(g.baseSalary, g.currency)}</option>)}
+                  </select>
+                </label>
+                <label>Occupation
+                  <select value={contract.occupationId} onChange={(e) => setContract({ ...contract, occupationId: e.target.value })}>
+                    <option value="">None</option>
+                    {occupations.filter((o) => o.active).map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="grid2">
+                <label>Negotiated basic (optional)
+                  <input type="number" min="0.01" step="0.01" value={contract.negotiatedBasic} placeholder={grade ? `Grade basic: ${money(grade.baseSalary, grade.currency)}` : ''}
+                    onChange={(e) => setContract({ ...contract, negotiatedBasic: e.target.value })} />
+                </label>
+                <label>Note<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
+              </div>
+              <label className="check"><input type="checkbox" checked={contract.expatriate} onChange={(e) => setContract({ ...contract, expatriate: e.target.checked })} />Expatriate (employer pays IERE)</label>
+              <p className="hint">The previous contract ends the day before. The basic salary from that date is the negotiated amount, or the grade's.</p>
+              <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setContracting(false)}>Cancel</Button><Button type="submit">Save contract</Button></div>
+            </Form>
+          </Modal>
         )}
       </div>
 
       {p && (
-        <form className="card" onSubmit={saveProfile}>
+        <Form className="card" onSubmit={saveProfile}>
           <h3>Personal and payment details</h3>
           <fieldset disabled={!editable}>
             <div className="grid3">
@@ -196,8 +208,8 @@ export default function EmployeeFilePage() {
               </div>
             )}
           </fieldset>
-          {editable && <button type="submit">Save details</button>}
-        </form>
+          {editable && <Button type="submit">Save details</Button>}
+        </Form>
       )}
 
       <div className="card">
@@ -212,49 +224,53 @@ export default function EmployeeFilePage() {
               {' · '}from {month(a.startMonth)}{a.endMonth ? ` to ${month(a.endMonth)}` : ''}{a.note ? ` · ${a.note}` : ''}
             </span>
             {editable && !a.endMonth && (
-              <button className="secondary void" onClick={() => {
-                const last = prompt('Last month it applies (YYYY-MM). Leave empty to remove it.', new Date().toISOString().slice(0, 7))
-                if (last === null) return
-                void run(() => api(`/api/users/${id}/pay-elements/${a.id}/end`, { method: 'PUT', body: { lastMonth: last || null } }), 'Updated.')
-              }}>End</button>
+              <Button className="secondary void" onClick={() => ask({
+                title: `End ${a.elementName}`, confirmLabel: 'Save',
+                fields: [{ label: 'Last month it applies', type: 'month', defaultValue: new Date().toISOString().slice(0, 7), hint: 'Leave empty to remove it altogether.' }],
+                onConfirm: ([last]) => run(() => api(`/api/users/${id}/pay-elements/${a.id}/end`, { method: 'PUT', body: { lastMonth: last || null } }), 'Updated.'),
+              })}>End</Button>
             )}
           </div>
         ))}
-        {editable && (
-          <form onSubmit={addItem}>
-            <div className="grid3">
-              <label>Element
-                <select value={item.elementId} required onChange={(e) => {
-                  const el = standing.find((x) => x.id === Number(e.target.value))
-                  setItem({ ...item, elementId: e.target.value, mode: el?.method === 'PERCENT_OF_BASIC' ? 'percent' : 'amount', currency: el?.defaultCurrency ?? item.currency })
-                }}>
-                  <option value="">Choose</option>
-                  {standing.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                </select>
-              </label>
-              <label>For this employee
-                <select value={item.mode} onChange={(e) => setItem({ ...item, mode: e.target.value })}>
-                  <option value="amount">{chosen?.method === 'PER_DAY_WORKED' ? 'Amount per day' : chosen?.method === 'PER_CHILD' ? 'Amount per child' : 'Amount'}</option>
-                  {chosen?.method === 'PERCENT_OF_BASIC' && <option value="percent">% of basic</option>}
-                  <option value="exclude">Exclude</option>
-                </select>
-              </label>
-              {item.mode === 'amount' && (
-                <div className="grid2">
-                  <label>Amount<input type="number" min={0} step={0.01} value={item.amount} required onChange={(e) => setItem({ ...item, amount: e.target.value })} /></label>
-                  <label>Currency<select value={item.currency} onChange={(e) => setItem({ ...item, currency: e.target.value })}><option>USD</option><option>CDF</option></select></label>
-                </div>
-              )}
-              {item.mode === 'percent' && (
-                <label>Percentage<input type="number" min={0} max={100} step={0.001} value={item.percent} required onChange={(e) => setItem({ ...item, percent: e.target.value })} /></label>
-              )}
-              {item.mode === 'exclude' && <span />}
-              <label>First month<input type="month" value={item.startMonth} required onChange={(e) => setItem({ ...item, startMonth: e.target.value })} /></label>
-              <label>Last month (optional)<input type="month" value={item.endMonth} onChange={(e) => setItem({ ...item, endMonth: e.target.value })} /></label>
-              <label>Note<input value={item.note} maxLength={300} onChange={(e) => setItem({ ...item, note: e.target.value })} /></label>
-            </div>
-            <button type="submit" className="secondary">Add item</button>
-          </form>
+        {editable && <Button className="secondary" onClick={() => setAddingItem(true)}>Add a pay item</Button>}
+        {editable && addingItem && (
+          <Modal title="Add a pay item" size="lg" onClose={() => setAddingItem(false)}>
+            <Form onSubmit={async (e) => { if (await addItem(e)) setAddingItem(false) }}>
+              <div className="grid3">
+                <label>Element
+                  <select value={item.elementId} required onChange={(e) => {
+                    const el = standing.find((x) => x.id === Number(e.target.value))
+                    setItem({ ...item, elementId: e.target.value, mode: el?.method === 'PERCENT_OF_BASIC' ? 'percent' : 'amount', currency: el?.defaultCurrency ?? item.currency })
+                  }}>
+                    <option value="">Choose</option>
+                    {standing.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  </select>
+                </label>
+                <label>For this employee
+                  <select value={item.mode} onChange={(e) => setItem({ ...item, mode: e.target.value })}>
+                    <option value="amount">{chosen?.method === 'PER_DAY_WORKED' ? 'Amount per day' : chosen?.method === 'PER_CHILD' ? 'Amount per child' : 'Amount'}</option>
+                    {chosen?.method === 'PERCENT_OF_BASIC' && <option value="percent">% of basic</option>}
+                    <option value="exclude">Exclude</option>
+                  </select>
+                </label>
+                {item.mode === 'amount' && (
+                  <div className="grid2">
+                    <label>Amount<input type="number" min={0} step={0.01} value={item.amount} required onChange={(e) => setItem({ ...item, amount: e.target.value })} /></label>
+                    <label>Currency<select value={item.currency} onChange={(e) => setItem({ ...item, currency: e.target.value })}><option>USD</option><option>CDF</option></select></label>
+                  </div>
+                )}
+                {item.mode === 'percent' && (
+                  <label>Percentage<input type="number" min={0} max={100} step={0.001} value={item.percent} required onChange={(e) => setItem({ ...item, percent: e.target.value })} /></label>
+                )}
+                {item.mode === 'exclude' && <span />}
+                <label>First month<input type="month" value={item.startMonth} required onChange={(e) => setItem({ ...item, startMonth: e.target.value })} /></label>
+                <label>Last month (optional)<input type="month" value={item.endMonth} onChange={(e) => setItem({ ...item, endMonth: e.target.value })} /></label>
+                <label>Note<input value={item.note} maxLength={300} onChange={(e) => setItem({ ...item, note: e.target.value })} /></label>
+              </div>
+              <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setAddingItem(false)}>Cancel</Button><Button type="submit">Add item</Button></div>
+            </Form>
+          </Modal>
         )}
       </div>
 
@@ -267,23 +283,30 @@ export default function EmployeeFilePage() {
             <span>{d.relationship === 'SPOUSE' ? 'Spouse' : 'Child'}: <strong>{d.fullName}</strong>{d.birthDate ? ` · ${age(d.birthDate)} years` : ''}{d.inCharge ? '' : ' · not in charge'}</span>
             {editable && (
               <>
-                <button className="secondary void" onClick={() => void run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'PUT', body: { inCharge: !d.inCharge, note: d.note } }), 'Updated.')}>
+                <Button className="secondary void" onClick={() => run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'PUT', body: { inCharge: !d.inCharge, note: d.note } }), 'Updated.')}>
                   {d.inCharge ? 'Mark not in charge' : 'Mark in charge'}
-                </button>
-                <button className="secondary void" onClick={() => { if (confirm(`Remove ${d.fullName}?`)) void run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'DELETE' }), 'Removed.') }}>Remove</button>
+                </Button>
+                <Button className="secondary void" onClick={() => ask({
+                  title: `Remove ${d.fullName}?`, message: 'Family allowances stop counting this person from the next payroll.', confirmLabel: 'Remove', danger: true,
+                  onConfirm: () => run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'DELETE' }), 'Removed.'),
+                })}>Remove</Button>
               </>
             )}
           </div>
         ))}
-        {editable && (
-          <form className="row" onSubmit={addDependant}>
-            <select value={dependant.relationship} onChange={(e) => setDependant({ ...dependant, relationship: e.target.value })}>
-              <option value="CHILD">Child</option><option value="SPOUSE">Spouse</option>
-            </select>
-            <input placeholder="Full name" value={dependant.fullName} onChange={(e) => setDependant({ ...dependant, fullName: e.target.value })} required />
-            <input type="date" value={dependant.birthDate} onChange={(e) => setDependant({ ...dependant, birthDate: e.target.value })} required={dependant.relationship === 'CHILD'} />
-            <button type="submit" className="secondary">Add</button>
-          </form>
+        {editable && <Button className="secondary" onClick={() => setAddingDependant(true)}>Add a spouse or child</Button>}
+        {editable && addingDependant && (
+          <Modal title="Add a spouse or child" size="sm" onClose={() => setAddingDependant(false)}>
+            <Form onSubmit={async (e) => { if (await addDependant(e)) setAddingDependant(false) }}>
+              <label>Relationship<select value={dependant.relationship} onChange={(e) => setDependant({ ...dependant, relationship: e.target.value })}>
+                <option value="CHILD">Child</option><option value="SPOUSE">Spouse</option>
+              </select></label>
+              <label>Full name<input value={dependant.fullName} onChange={(e) => setDependant({ ...dependant, fullName: e.target.value })} required /></label>
+              <label>Date of birth<input type="date" value={dependant.birthDate} onChange={(e) => setDependant({ ...dependant, birthDate: e.target.value })} required={dependant.relationship === 'CHILD'} /></label>
+              <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setAddingDependant(false)}>Cancel</Button><Button type="submit">Add</Button></div>
+            </Form>
+          </Modal>
         )}
       </div>
     </section>

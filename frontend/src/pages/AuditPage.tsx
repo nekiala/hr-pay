@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, type AuditEntry, type Page } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 export default function AuditPage() {
   const [page, setPage] = useState(0)
@@ -37,9 +38,9 @@ export default function AuditPage() {
       </div>
       {data && (
         <div className="row pager">
-          <button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Newer</button>
+          <Button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Newer</Button>
           <span>Page {page + 1} of {pages}</span>
-          <button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older</button>
+          <Button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Older</Button>
         </div>
       )}
     </section>

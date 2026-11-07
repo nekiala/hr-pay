@@ -3,9 +3,14 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError, api, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
 import MonthView from '../components/MonthView'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 export default function UserAttendancePage() {
+  const [adding, setAdding] = useState(false)
+  const ask = useAsk()
   const { id } = useParams()
   const { can, me } = useAuth()
   const [user, setUser] = useState<User | null>(null)
@@ -24,14 +29,16 @@ export default function UserAttendancePage() {
       await action()
       setMessage(done)
       setVersion((v) => v + 1)
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
   const add = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api(`/api/attendance/users/${id}/events`, {
         method: 'POST',
         body: { type: entry.type, at: `${entry.date}T${entry.time}:00`, workDate: entry.date, note: entry.note },
@@ -40,32 +47,37 @@ export default function UserAttendancePage() {
     }, 'Entry added.')
   }
 
-  const voidEntry = (entryId: number) => {
-    const reason = prompt('Why is this entry wrong?')
-    if (!reason?.trim()) return
-    void run(() => api(`/api/attendance/events/${entryId}/void`, { method: 'POST', body: { reason } }), 'Entry voided.')
-  }
+  const voidEntry = (entryId: number) => ask({
+    title: 'Void this entry', message: 'It stays in the history, marked as voided.', confirmLabel: 'Void', danger: true,
+    fields: [{ label: 'Why is it wrong?', required: true, multiline: true }],
+    onConfirm: ([reason]) => run(() => api(`/api/attendance/events/${entryId}/void`, { method: 'POST', body: { reason } }), 'Entry voided.'),
+  })
 
   return (
     <section>
       <p><Link to={`/users/${id}`}>← Back to employee</Link></p>
-      <h2>Attendance{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
-      {canCorrect && (
-        <form className="card" onSubmit={add}>
-          <h3>Add a missing entry</h3>
-          <p className="hint">Entries are never edited. Void a wrong one with a reason, then add the right one. Both are kept in the audit log.</p>
-          <div className="row">
-            <input type="date" value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} required />
-            <input type="time" value={entry.time} onChange={(e) => setEntry({ ...entry, time: e.target.value })} required />
-            <select value={entry.type} onChange={(e) => setEntry({ ...entry, type: e.target.value })}>
-              <option value="IN">Arrival</option>
-              <option value="OUT">End of day</option>
-            </select>
-            <input placeholder="Reason, for example phone was off" value={entry.note}
-              onChange={(e) => setEntry({ ...entry, note: e.target.value })} required maxLength={500} />
-            <button type="submit">Add</button>
-          </div>
-        </form>
+      <div className="row between">
+        <h2>Attendance{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
+        {canCorrect && <Button onClick={() => setAdding(true)}>Add a missing entry</Button>}
+      </div>
+      {canCorrect && adding && (
+        <Modal title="Add a missing entry" size="md" onClose={() => setAdding(false)}>
+          <Form onSubmit={async (e) => { if (await add(e)) setAdding(false) }}>
+            <p className="hint">Entries are never edited. Void a wrong one with a reason, then add the right one. Both are kept in the audit log.</p>
+            <div className="row">
+              <input type="date" value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} required />
+              <input type="time" value={entry.time} onChange={(e) => setEntry({ ...entry, time: e.target.value })} required />
+              <select value={entry.type} onChange={(e) => setEntry({ ...entry, type: e.target.value })}>
+                <option value="IN">Arrival</option>
+                <option value="OUT">End of day</option>
+              </select>
+              <input placeholder="Reason, for example phone was off" value={entry.note}
+                onChange={(e) => setEntry({ ...entry, note: e.target.value })} required maxLength={500} />
+              <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit">Add</Button></div>
+            </div>
+          </Form>
+        </Modal>
       )}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

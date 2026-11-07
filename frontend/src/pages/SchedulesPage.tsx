@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, api, hours, WEEKDAYS, type Schedule, type ScheduleDay } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 type Draft = Omit<Schedule, 'id' | 'weeklyMinutes'> & { id?: number }
 
@@ -50,7 +51,7 @@ export default function SchedulesPage() {
     <section>
       <div className="row between">
         <h2>Work schedules</h2>
-        {editable && <button onClick={() => { setDraft(blank()); setMessage(null) }}>New schedule</button>}
+        {editable && <Button onClick={() => { setDraft(blank()); setMessage(null) }}>New schedule</Button>}
       </div>
       <div className="table-wrap">
         <table>
@@ -58,7 +59,7 @@ export default function SchedulesPage() {
           <tbody>
             {schedules.map((s) => (
               <tr key={s.id}>
-                <td><button className="link" onClick={() => { setDraft(s); setMessage(null) }}>{s.name}</button></td>
+                <td><Button className="link" onClick={() => { setDraft(s); setMessage(null) }}>{s.name}</Button></td>
                 <td>{s.code}</td>
                 <td>{hours(s.weeklyMinutes)}</td>
                 <td>{s.graceMinutes} min</td>
@@ -109,8 +110,8 @@ export default function SchedulesPage() {
           </fieldset>
           <ErrorText error={error} />
           {message && <p className="success">{message}</p>}
-          {editable && <div className="row" style={{ marginTop: 12 }}><button onClick={() => void save()}>Save schedule</button>
-            <button className="secondary" onClick={() => setDraft(null)}>Close</button></div>}
+          {editable && <div className="row" style={{ marginTop: 12 }}><Button onClick={() => save()}>Save schedule</Button>
+            <Button className="secondary" onClick={() => setDraft(null)}>Close</Button></div>}
         </div>
       )}
     </section>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Modal } from '../components/Modal'
+import { Button, Form } from '../components/Button'
 
 type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null }
 type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string }
@@ -49,8 +51,10 @@ export default function StatutoryRatesPage() {
       await action()
       setMessage(done)
       await load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : e instanceof Error ? e.message : 'Something went wrong.')
+      return false
     }
   }
 
@@ -83,21 +87,21 @@ export default function StatutoryRatesPage() {
         <p className="hint">Fetched automatically at start-up and twice a day. Payroll uses the rate set in Settings below, and each run records the rate it used.</p>
         {fxEditable && (
           <div className="row">
-            <button className="secondary" onClick={() => void run(async () => {
+            <Button className="secondary" onClick={() => run(async () => {
               const r = await api<{ stored: number; alreadyKnown: number; error: string | null }>('/api/exchange-rates/fetch', { method: 'POST' })
               if (r.error) throw new Error(r.error)
-            }, 'Rates fetched.')}>Fetch now</button>
-            <form className="row" onSubmit={(e) => {
+            }, 'Rates fetched.')}>Fetch now</Button>
+            <Form className="row" onSubmit={(e) => {
               e.preventDefault()
-              void run(async () => {
+              return run(async () => {
                 await api('/api/exchange-rates', { method: 'POST', body: { currency: 'USD', rateDate: fxEntry.rateDate, cdfPerUnit: Number(fxEntry.cdfPerUnit) } })
                 setFxEntry({ ...fxEntry, cdfPerUnit: '' })
               }, 'Rate saved.')
             }}>
               <input type="date" value={fxEntry.rateDate} required onChange={(e) => setFxEntry({ ...fxEntry, rateDate: e.target.value })} />
               <input type="number" min={0.000001} step="any" placeholder="CDF per $1" value={fxEntry.cdfPerUnit} required onChange={(e) => setFxEntry({ ...fxEntry, cdfPerUnit: e.target.value })} />
-              <button type="submit" className="secondary">Enter rate</button>
-            </form>
+              <Button type="submit" className="secondary">Enter rate</Button>
+            </Form>
           </div>
         )}
         {fx && fx.recent.length > 1 && (
@@ -120,22 +124,22 @@ export default function StatutoryRatesPage() {
                   <td>{show(r, r.value)}</td>
                   <td>{r.effectiveFrom ?? '—'}</td>
                   <td>{r.nextChange ? `${show(r, r.nextValue)} from ${r.nextChange}` : ''}</td>
-                  <td><button className="secondary" onClick={() => setOpen(open === r.code ? null : r.code)}>{open === r.code ? 'Close' : editable ? 'History and change' : 'History'}</button></td>
+                  <td><Button className="secondary" onClick={() => setOpen(r.code)}>{editable ? 'History and change' : 'History'}</Button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
         {open && (
-          <div className="sub-form">
-            <h4>{data?.rates.find((r) => r.code === open)?.name}</h4>
+          <Modal title={data?.rates.find((r) => r.code === open)?.name ?? open} size="lg" onClose={() => setOpen(null)}>
+            <h4>History</h4>
             <ul>
               {history.map((h) => <li key={h.id}>{show(data!.rates.find((r) => r.code === open)!, h.value)} from {h.effectiveFrom}{h.note ? ` · ${h.note}` : ''} <span className="muted">· {h.createdBy}</span></li>)}
             </ul>
             {editable && (
-              <form className="grid3" onSubmit={(e) => {
+              <Form className="grid3" onSubmit={(e) => {
                 e.preventDefault()
-                void run(async () => {
+                return run(async () => {
                   await api(`/api/statutory/rates/${open}`, { method: 'POST', body: { effectiveFrom: change.effectiveFrom, value: Number(change.value), note: change.note || null } })
                   setChange({ ...change, value: '', note: '' })
                 }, 'New value saved.')
@@ -143,11 +147,12 @@ export default function StatutoryRatesPage() {
                 <label>New value<input type="number" min={0} step="any" value={change.value} required onChange={(e) => setChange({ ...change, value: e.target.value })} /></label>
                 <label>From<input type="date" value={change.effectiveFrom} required onChange={(e) => setChange({ ...change, effectiveFrom: e.target.value })} /></label>
                 <label>Reference (decree, circular)<input value={change.note} maxLength={300} onChange={(e) => setChange({ ...change, note: e.target.value })} /></label>
-                <div><button type="submit">Add value</button></div>
-              </form>
+                <div><Button type="submit">Add value</Button></div>
+              </Form>
             )}
             <p className="hint">Values are never overwritten: a new value starts on its date and earlier payslips keep the old one.</p>
-          </div>
+            <ErrorText error={error} />
+          </Modal>
         )}
       </div>
 
@@ -166,11 +171,11 @@ export default function StatutoryRatesPage() {
             </table>
           </div>
         )}
-        {editable && !scale && <button className="secondary" onClick={editScale}>New barème from a date</button>}
+        {editable && !scale && <Button className="secondary" onClick={editScale}>New barème from a date</Button>}
         {scale && (
-          <form onSubmit={(e) => {
+          <Form onSubmit={(e) => {
             e.preventDefault()
-            void run(async () => {
+            return run(async () => {
               await api('/api/statutory/ipr', {
                 method: 'POST',
                 body: { effectiveFrom: scale.effectiveFrom, bands: scale.bands.map((b) => ({ lowerBound: Number(b.lowerBound), upperBound: b.upperBound === '' ? null : Number(b.upperBound), ratePercent: Number(b.ratePercent) })) },
@@ -188,35 +193,35 @@ export default function StatutoryRatesPage() {
                       <td>{b.lowerBound}</td>
                       <td><input type="number" min={0} step="any" value={b.upperBound} required={i < scale.bands.length - 1} onChange={(e) => setBand(i, { upperBound: e.target.value })} /></td>
                       <td><input type="number" min={0} max={100} step="any" className="narrow-input" value={b.ratePercent} required onChange={(e) => setBand(i, { ratePercent: e.target.value })} /></td>
-                      <td>{scale.bands.length > 1 && <button type="button" className="secondary" onClick={() => {
+                      <td>{scale.bands.length > 1 && <Button type="button" className="secondary" onClick={() => {
                         const bands = scale.bands.filter((_, j) => j !== i)
                         if (bands[i]) bands[i] = { ...bands[i], lowerBound: i === 0 ? '0' : bands[i - 1].upperBound }
                         setScale({ ...scale, bands })
-                      }}>Remove</button>}</td>
+                      }}>Remove</Button>}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="row">
-              <button type="button" className="secondary" onClick={() => setScale({ ...scale, bands: [...scale.bands, { lowerBound: scale.bands[scale.bands.length - 1]?.upperBound || '0', upperBound: '', ratePercent: '' }] })}>Add band</button>
-              <button type="submit">Save barème</button>
-              <button type="button" className="secondary" onClick={() => setScale(null)}>Cancel</button>
+              <Button type="button" className="secondary" onClick={() => setScale({ ...scale, bands: [...scale.bands, { lowerBound: scale.bands[scale.bands.length - 1]?.upperBound || '0', upperBound: '', ratePercent: '' }] })}>Add band</Button>
+              <Button type="submit">Save barème</Button>
+              <Button type="button" className="secondary" onClick={() => setScale(null)}>Cancel</Button>
             </div>
-          </form>
+          </Form>
         )}
 
         <h4>Try it</h4>
-        <form className="grid3" onSubmit={(e) => {
+        <Form className="grid3" onSubmit={(e) => {
           e.preventDefault()
           setError(null)
-          api<IprResult>('/api/statutory/ipr/try', { method: 'POST', body: { taxableMonthlyCdf: Number(trial.taxableMonthlyCdf), dependants: Number(trial.dependants), on } })
+          return api<IprResult>('/api/statutory/ipr/try', { method: 'POST', body: { taxableMonthlyCdf: Number(trial.taxableMonthlyCdf), dependants: Number(trial.dependants), on } })
             .then(setTrialResult).catch((err: Error) => setError(err.message))
         }}>
           <label>Monthly taxable income (CDF)<input type="number" min={0} step="any" value={trial.taxableMonthlyCdf} onChange={(e) => setTrial({ ...trial, taxableMonthlyCdf: e.target.value })} /></label>
           <label>Dependants<input type="number" min={0} max={30} value={trial.dependants} onChange={(e) => setTrial({ ...trial, dependants: e.target.value })} /></label>
-          <div><button type="submit" className="secondary">Work out IPR</button></div>
-        </form>
+          <div><Button type="submit" className="secondary">Work out IPR</Button></div>
+        </Form>
         {trialResult && (
           <p>Barème: {cdf(trialResult.beforeReduction)} · dependants: −{cdf(trialResult.reduction)}{trialResult.capped > 0 ? ` · cap: −${cdf(trialResult.capped)}` : ''} · <strong>IPR {cdf(trialResult.tax)}</strong></p>
         )}

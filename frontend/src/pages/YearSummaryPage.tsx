@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 type Row = { userId: number; name: string; registrationNo: string; currency: string; months: number; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; iprCdf: number }
 type Month = { month: string; payslipId: number; number: string; currency: string; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; taxableCdf: number; iprCdf: number; paidOn: string | null }
@@ -70,7 +71,7 @@ export function AnnualStatementPage() {
     <section className="narrow">
       <p className="no-print">
         {userId ? <Link to={`/payroll/year?year=${year}`}>← Year summary</Link> : <Link to="/my/payslips">← My payslips</Link>}
-        {' · '}<button className="link" onClick={() => window.print()}>Print or save as PDF</button>
+        {' · '}<Button className="link" onClick={() => window.print()}>Print or save as PDF</Button>
       </p>
       <YearPicker year={year} onChange={(y) => setParams({ year: String(y) })} />
       <ErrorText error={error} />

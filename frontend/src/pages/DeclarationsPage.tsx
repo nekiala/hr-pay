@@ -3,6 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { ApiError, api, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Modal } from '../components/Modal'
+import { Button, Form } from '../components/Button'
 
 type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
@@ -53,6 +56,7 @@ function ByDirection({ rows }: { rows: Row[] }) {
 }
 
 export default function DeclarationsPage() {
+  const ask = useAsk()
   const { can } = useAuth()
   const [params, setParams] = useSearchParams()
   const month = params.get('month') ?? lastMonth()
@@ -81,8 +85,10 @@ export default function DeclarationsPage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -106,7 +112,7 @@ export default function DeclarationsPage() {
                   <tr key={s.kind} className={s.kind === kind ? 'selected' : undefined}>
                     <td>{KIND[s.kind].name}</td><td>{KIND[s.kind].to}</td><td>{s.employees}</td><td>{cdf(s.totalCdf)}</td>
                     <td>{s.filed ? `${s.filed.filedOn}${s.filed.reference ? ` · ${s.filed.reference}` : ''}` : <span className="muted">Not yet</span>}</td>
-                    <td><button className="link" onClick={() => setParams({ month, kind: s.kind })}>Open</button></td>
+                    <td><Button className="link" onClick={() => setParams({ month, kind: s.kind })}>Open</Button></td>
                   </tr>
                 ))}
               </tbody>
@@ -145,22 +151,19 @@ export default function DeclarationsPage() {
           {decl.filed && <p>Filed on {decl.filed.filedOn}{decl.filed.reference && `, reference ${decl.filed.reference}`}{decl.filed.note && ` (${decl.filed.note})`}. Recorded by {decl.filed.filedBy}.</p>}
           <div className="row no-print">
             <a className="button secondary" href={`/api/declarations/${month}/${kind}/file.csv`}>Download CSV</a>
-            <button className="secondary" onClick={() => window.print()}>Print or save as PDF</button>
-            {decl.runStatus === 'CLOSED' && !decl.filed && !filing && <button onClick={() => setFiling({ filedOn: new Date().toISOString().slice(0, 10), reference: '', note: '' })}>Record as filed</button>}
-            {decl.filed && <button className="link" onClick={() => { if (window.confirm('Remove the filing record?')) void run(() => api(`/api/declarations/${month}/${kind}/filed`, { method: 'DELETE' }), 'Filing record removed.') }}>Undo filing</button>}
+            <Button className="secondary" onClick={() => window.print()}>Print or save as PDF</Button>
+            {decl.runStatus === 'CLOSED' && !decl.filed && !filing && <Button onClick={() => setFiling({ filedOn: new Date().toISOString().slice(0, 10), reference: '', note: '' })}>Record as filed</Button>}
+            {decl.filed && <Button className="link" onClick={() => ask({ title: 'Remove the filing record?', confirmLabel: 'Remove', danger: true, onConfirm: () => run(() => api(`/api/declarations/${month}/${kind}/filed`, { method: 'DELETE' }), 'Filing record removed.') })}>Undo filing</Button>}
           </div>
           {filing && (
-            <form className="sub-form no-print" onSubmit={(e) => {
-              e.preventDefault()
-              void run(async () => { await api(`/api/declarations/${month}/${kind}/filed`, { method: 'POST', body: { filedOn: filing.filedOn, reference: filing.reference || null, note: filing.note || null } }); setFiling(null) }, `${kind} for ${month} recorded as filed.`)
-            }}>
-              <div className="grid3">
+            <Modal title={`Record ${kind} for ${month} as filed`} size="sm" onClose={() => setFiling(null)}>
+              <Form onSubmit={() => run(async () => { await api(`/api/declarations/${month}/${kind}/filed`, { method: 'POST', body: { filedOn: filing.filedOn, reference: filing.reference || null, note: filing.note || null } }); setFiling(null) }, `${kind} for ${month} recorded as filed.`)}>
                 <label>Filed on<input type="date" required value={filing.filedOn} onChange={(e) => setFiling({ ...filing, filedOn: e.target.value })} /></label>
                 <label>Receipt or reference<input maxLength={100} value={filing.reference} onChange={(e) => setFiling({ ...filing, reference: e.target.value })} /></label>
                 <label>Note<input maxLength={300} value={filing.note} onChange={(e) => setFiling({ ...filing, note: e.target.value })} /></label>
-              </div>
-              <div className="row"><button type="submit">Save</button><button type="button" className="secondary" onClick={() => setFiling(null)}>Cancel</button></div>
-            </form>
+                <div className="modal-foot"><Button className="secondary" onClick={() => setFiling(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+              </Form>
+            </Modal>
           )}
         </div>
       )}
@@ -169,23 +172,19 @@ export default function DeclarationsPage() {
         <div className="card no-print">
           <h3>Employer details</h3>
           <p className="hint">Printed on declarations and payment files.</p>
-          {!editEmployer ? (
-            <>
-              <dl className="facts">{EMPLOYER_FIELDS.map(([k, label]) => <div key={k}><dt>{label}</dt><dd>{employer[k] || '—'}</dd></div>)}</dl>
-              {can('company.manage') && <button className="secondary" onClick={() => setEditEmployer(employer)}>Edit</button>}
-            </>
-          ) : (
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              void run(async () => { await api('/api/company', { method: 'PUT', body: editEmployer }); setEditEmployer(null) }, 'Employer details saved.')
-            }}>
-              <div className="grid3">
-                {EMPLOYER_FIELDS.map(([k, label]) => (
-                  <label key={k}>{label}<input value={editEmployer[k] ?? ''} required={k === 'name'} onChange={(e) => setEditEmployer({ ...editEmployer, [k]: e.target.value })} /></label>
-                ))}
-              </div>
-              <div className="row"><button type="submit">Save</button><button type="button" className="secondary" onClick={() => setEditEmployer(null)}>Cancel</button></div>
-            </form>
+          <dl className="facts">{EMPLOYER_FIELDS.map(([k, label]) => <div key={k}><dt>{label}</dt><dd>{employer[k] || '—'}</dd></div>)}</dl>
+          {can('company.manage') && <Button className="secondary" onClick={() => setEditEmployer(employer)}>Edit</Button>}
+          {editEmployer && (
+            <Modal title="Employer details" size="lg" onClose={() => setEditEmployer(null)}>
+              <Form onSubmit={() => run(async () => { await api('/api/company', { method: 'PUT', body: editEmployer }); setEditEmployer(null) }, 'Employer details saved.')}>
+                <div className="grid2">
+                  {EMPLOYER_FIELDS.map(([k, label]) => (
+                    <label key={k}>{label}<input value={editEmployer[k] ?? ''} required={k === 'name'} onChange={(e) => setEditEmployer({ ...editEmployer, [k]: e.target.value })} /></label>
+                  ))}
+                </div>
+                <div className="modal-foot"><Button className="secondary" onClick={() => setEditEmployer(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+              </Form>
+            </Modal>
           )}
         </div>
       )}

@@ -5,6 +5,8 @@ import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import { REASON, type OrgLevel, type OrgMember, type OrgUnit } from '../org'
 import { UnitForm } from './OrgUnitPage'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 const message = (err: unknown) => err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Something went wrong.'
 type LevelForm = { id: number | null; code: string; name: string; rank: string; headTitle: string; staff: boolean; active: boolean }
@@ -83,29 +85,32 @@ export default function OrgSettingsPage() {
           <tbody>{levels.map((l) => (
             <tr key={l.id} className={l.active ? '' : 'muted'}>
               <td>{l.rank}</td><td>{l.code}</td><td>{l.name}{l.staff && ' (staff)'}{!l.active && ' · not used'}</td><td>{l.headTitle}</td>
-              <td className="actions"><button className="secondary void" onClick={() => setLevel({ ...l, rank: String(l.rank) })}>Edit</button></td>
+              <td className="actions"><Button className="secondary void" onClick={() => setLevel({ ...l, rank: String(l.rank) })}>Edit</Button></td>
             </tr>
           ))}</tbody>
         </table>
-        {!level && <button className="secondary" onClick={() => setLevel({ id: null, code: '', name: '', rank: '', headTitle: '', staff: false, active: true })}>Add a level</button>}
+        {!level && <Button className="secondary" onClick={() => setLevel({ id: null, code: '', name: '', rank: '', headTitle: '', staff: false, active: true })}>Add a level</Button>}
         {level && (
-          <form className="sub-form" onSubmit={(e) => void saveLevel(e)}>
-            <div className="grid3">
-              <label>Code<input required maxLength={32} disabled={!!level.id} value={level.code} onChange={(e) => setLevel({ ...level, code: e.target.value.toUpperCase() })} /></label>
-              <label>Name<input required maxLength={100} value={level.name} onChange={(e) => setLevel({ ...level, name: e.target.value })} /></label>
-              <label>Rank<input type="number" min={1} max={20} required value={level.rank} onChange={(e) => setLevel({ ...level, rank: e.target.value })} /></label>
-              <label>Head's title<input required maxLength={100} placeholder="Chef de service" value={level.headTitle} onChange={(e) => setLevel({ ...level, headTitle: e.target.value })} /></label>
-              <label className="check"><input type="checkbox" checked={level.staff} onChange={(e) => setLevel({ ...level, staff: e.target.checked })} />Staff unit (can sit anywhere)</label>
-              <label className="check"><input type="checkbox" checked={level.active} onChange={(e) => setLevel({ ...level, active: e.target.checked })} />In use</label>
-            </div>
-            <div className="row"><button type="submit">Save level</button><button type="button" className="secondary" onClick={() => setLevel(null)}>Cancel</button></div>
-          </form>
+          <Modal title={level.id ? `Edit ${level.name}` : 'Add a level'} size="lg" onClose={() => setLevel(null)}>
+            <Form onSubmit={(e) => saveLevel(e)}>
+              <div className="grid3">
+                <label>Code<input required maxLength={32} disabled={!!level.id} value={level.code} onChange={(e) => setLevel({ ...level, code: e.target.value.toUpperCase() })} /></label>
+                <label>Name<input required maxLength={100} value={level.name} onChange={(e) => setLevel({ ...level, name: e.target.value })} /></label>
+                <label>Rank<input type="number" min={1} max={20} required value={level.rank} onChange={(e) => setLevel({ ...level, rank: e.target.value })} /></label>
+                <label>Head's title<input required maxLength={100} placeholder="Chef de service" value={level.headTitle} onChange={(e) => setLevel({ ...level, headTitle: e.target.value })} /></label>
+                <label className="check"><input type="checkbox" checked={level.staff} onChange={(e) => setLevel({ ...level, staff: e.target.checked })} />Staff unit (can sit anywhere)</label>
+                <label className="check"><input type="checkbox" checked={level.active} onChange={(e) => setLevel({ ...level, active: e.target.checked })} />In use</label>
+              </div>
+              <ErrorText error={error.levels ?? null} />
+              <div className="modal-foot"><Button className="secondary" onClick={() => setLevel(null)}>Cancel</Button><Button type="submit">Save level</Button></div>
+            </Form>
+          </Modal>
         )}
         <ErrorText error={error.levels ?? null} />
       </div>
 
       {newUnit ? <UnitForm units={units} levels={levels} onCancel={() => setNewUnit(false)} onSaved={() => { setNewUnit(false); load() }} />
-        : <p><button className="secondary" onClick={() => setNewUnit(true)}>Add a unit</button></p>}
+        : <p><Button className="secondary" onClick={() => setNewUnit(true)}>Add a unit</Button></p>}
 
       <div className="card">
         <h3>Spreadsheet</h3>
@@ -116,12 +121,12 @@ export default function OrgSettingsPage() {
           <input type="file" accept=".csv,text/csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) void f.text().then(setCsv) }} />
         </label>
         <textarea rows={6} placeholder="Or paste the CSV here" value={csv} onChange={(e) => setCsv(e.target.value)} />
-        <button disabled={!csv.trim()} onClick={() => void importCsv()}>Import</button>
+        <Button disabled={!csv.trim()} onClick={() => importCsv()}>Import</Button>
         {imported && <p className="success">{imported}</p>}
         <ErrorText error={error.csv ?? null} />
       </div>
 
-      <form className="card" onSubmit={(e) => void moveAll(e)}>
+      <Form className="card" onSubmit={(e) => moveAll(e)}>
         <h3>Move several people</h3>
         <div className="grid2">
           <label>From unit<UnitSelect units={units} value={bulk.fromUnit} onChange={(v) => { setBulk({ ...bulk, fromUnit: v }); setPicked([]) }} /></label>
@@ -147,10 +152,10 @@ export default function OrgSettingsPage() {
             </select></label>
           <label>Note (optional)<input maxLength={300} value={bulk.note} onChange={(e) => setBulk({ ...bulk, note: e.target.value })} /></label>
         </div>
-        <button type="submit" disabled={picked.length === 0 || !bulk.unitId}>Move {picked.length || ''}</button>
+        <Button type="submit" disabled={picked.length === 0 || !bulk.unitId}>Move {picked.length || ''}</Button>
         {moved && <p className="success">{moved}</p>}
         <ErrorText error={error.bulk ?? null} />
-      </form>
+      </Form>
     </section>
   )
 }
