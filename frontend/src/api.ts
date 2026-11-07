@@ -750,3 +750,48 @@ export type PayslipSettings = { phone: string | null; email: string | null; webs
 
 /** The countries a company may be in, by their code. */
 export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }
+
+// ---- phase 15: imports, access keys, webhooks, time clocks, file layouts -----------------------------------------
+
+export type ImportKind = 'EMPLOYEES' | 'CONTRACTS' | 'SALARIES' | 'LEAVE_BALANCES' | 'YEAR_TO_DATE'
+export const IMPORT_KINDS: Record<ImportKind, string> = {
+  EMPLOYEES: t('Employees'), CONTRACTS: t('Contracts'), SALARIES: t('Salaries'), LEAVE_BALANCES: t('Leave balances'), YEAR_TO_DATE: t('Year-to-date totals'),
+}
+export type ImportColumn = { key: string; header: string; required: boolean; help: string | null }
+export type ImportKindView = { kind: ImportKind; columns: ImportColumn[] }
+export type ImportRow = { row: number; registrationNo: string | null; name: string | null; action: string | null; errors: string[]; warnings: string[] }
+export type ImportResult = { kind: ImportKind; saved: boolean; rows: number; withErrors: number; problems: string[]; results: ImportRow[] }
+export type ImportBatch = { id: number; kind: ImportKind; fileName: string | null; rows: number; createdBy: string; createdAt: string }
+
+export type ApiKey = {
+  id: number; name: string; prefix: string; permissions: string[]; createdBy: string; createdAt: string
+  expiresOn: string | null; lastUsedAt: string | null; lastUsedIp: string | null; revokedAt: string | null
+}
+export type Webhook = {
+  id: number; url: string; events: string[]; active: boolean; createdBy: string; createdAt: string
+  pending: number; failed: number; lastSentAt: string | null
+}
+export type WebhookDelivery = {
+  id: number; event: string; status: 'PENDING' | 'SENT' | 'FAILED'; attempts: number; lastCode: number | null; lastError: string | null
+  createdAt: string; sentAt: string | null; nextAttemptAt: string | null
+}
+export type IntegrationCatalogue = { scopes: Record<string, string>; events: string[] }
+
+export type TimeClock = {
+  id: number; companyId: number; serialNo: string; name: string; siteId: number; siteName: string; timeZone: string
+  active: boolean; allowedIps: string | null; useStatus: boolean; attlogStamp: string | null; lastSeenAt: string | null; lastIp: string | null
+}
+export type ClockPunch = {
+  id: number; device: string; pin: string; punchedAt: string; person: string | null
+  outcome: 'RECORDED' | 'UNKNOWN_PIN' | 'IGNORED'; detail: string | null; receivedAt: string
+}
+
+export type LayoutTarget = 'ACCOUNTING' | 'BANK' | 'MOBILE_MONEY' | 'CASH'
+export const LAYOUT_TARGETS: Record<LayoutTarget, string> = {
+  ACCOUNTING: t('Accounting entries'), BANK: t('Bank transfers'), MOBILE_MONEY: t('Mobile money'), CASH: t('Cash'),
+}
+export type LayoutColumn = { field: string; header: string; value: string | null }
+export type ExportLayout = {
+  id: number; target: LayoutTarget; name: string; columns: LayoutColumn[]; separator: string; decimalComma: boolean
+  dateFormat: string; headerRow: boolean; encoding: 'UTF-8' | 'WINDOWS-1252'; extension: 'csv' | 'txt'; createdBy: string | null; createdAt: string | null
+}

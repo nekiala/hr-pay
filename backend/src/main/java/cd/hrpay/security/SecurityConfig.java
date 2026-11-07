@@ -34,7 +34,46 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    /** The public API: access keys, no session, no CSRF (no browser cookie is involved). */
     @Bean
+    @org.springframework.core.annotation.Order(1)
+    SecurityFilterChain publicApiChain(HttpSecurity http, cd.hrpay.integration.ApiKeys keys, Tenants tenants) throws Exception {
+        http
+                .securityMatcher("/api/v1/**")
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .sessionManagement(s -> s.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .securityContext(c -> c.securityContextRepository(new org.springframework.security.web.context.RequestAttributeSecurityContextRepository()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/openapi.json").permitAll()
+                        .anyRequest().authenticated())
+                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .formLogin(f -> f.disable())
+                .httpBasic(b -> b.disable())
+                .logout(l -> l.disable())
+                .requestCache(r -> r.disable())
+                .addFilterBefore(new cd.hrpay.integration.ApiKeyFilter(keys, tenants), AuthorizationFilter.class);
+        return http.build();
+    }
+
+    /** Biometric time clocks: known by their serial number, they cannot sign in or carry a CSRF token. */
+    @Bean
+    @org.springframework.core.annotation.Order(2)
+    SecurityFilterChain timeClockChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/iclock/**")
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .formLogin(f -> f.disable())
+                .httpBasic(b -> b.disable())
+                .logout(l -> l.disable())
+                .requestCache(r -> r.disable());
+        return http.build();
+    }
+
+    @Bean
+    @org.springframework.core.annotation.Order(org.springframework.core.Ordered.LOWEST_PRECEDENCE)
     SecurityFilterChain api(HttpSecurity http, UserRepository users, AuditService audit, Tenants tenants,
                             ObjectProvider<ClientRegistrationRepository> googleClients,
                             SecurityContextRepository contextRepository, cd.hrpay.platform.SupportAccess support,

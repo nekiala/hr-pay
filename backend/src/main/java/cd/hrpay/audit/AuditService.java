@@ -19,11 +19,18 @@ public class AuditService {
 
     private final cd.hrpay.tenancy.Tenants tenants;
 
-    public AuditService(JdbcClient jdbc, JsonMapper json, cd.hrpay.tenancy.Tenants tenants) {
+    public AuditService(JdbcClient jdbc, JsonMapper json, cd.hrpay.tenancy.Tenants tenants,
+                        org.springframework.context.ApplicationEventPublisher events) {
         this.jdbc = jdbc;
         this.json = json;
         this.tenants = tenants;
+        this.events = events;
     }
+
+    /** Published once an action is written, in the same transaction: webhooks listen to it. */
+    public record Recorded(String actor, String action, String entityType, Object entityId, Map<String, ?> details) {}
+
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     public void record(String action, String entityType, Object entityId, Map<String, ?> details) {
         recordAs(currentActor(), action, entityType, entityId, details);
@@ -46,6 +53,7 @@ public class AuditService {
             return;
         }
         insert(actor, action, entityType, entityId, details);
+        events.publishEvent(new Recorded(actor, action, entityType, entityId, details));
     }
 
     private void insert(String actor, String action, String entityType, Object entityId, Map<String, ?> details) {

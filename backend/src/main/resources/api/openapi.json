@@ -1,0 +1,1005 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "HR Pay API",
+  "version": "1",
+  "description": "Read employees, attendance, leave and payrolls from HR Pay, and send check-ins and monthly pay entries to it.\n\n**Access.** An administrator makes a key on the Integrations page and chooses its permissions. Send it with every request as `Authorization: Bearer hrp_...` (or `X-API-Key: hrp_...`). A key acts for its company only. At most 600 requests a minute per key.\n\n**Errors** come as `application/problem+json` with a `detail` in plain words.\n\n**Webhooks.** HR Pay can also post a short JSON message when something happens (a payroll closed, a person hired). Each message carries the headers `X-HRPay-Event`, `X-HRPay-Delivery`, `X-HRPay-Timestamp` and `X-HRPay-Signature: sha256=<hex>`, the HMAC-SHA256 of `<timestamp>.<body>` with the webhook's secret. Check the signature and that the timestamp is recent, and answer 2xx within 15 seconds; other answers are retried for about two days. Messages say what happened and to what (`event`, `occurredAt`, `entity`, `data`); read the details through this API."
+ },
+ "servers": [
+  {
+   "url": "/api/v1"
+  }
+ ],
+ "security": [
+  {
+   "key": []
+  }
+ ],
+ "paths": {
+  "/employees": {
+   "get": {
+    "summary": "Employees",
+    "description": "Permission of the key: `user.read`.",
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "description": "ACTIVE or DISABLED",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Employee"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/employees/{registrationNo}": {
+   "get": {
+    "summary": "One employee",
+    "description": "Permission of the key: `user.read`.",
+    "parameters": [
+     {
+      "name": "registrationNo",
+      "in": "path",
+      "required": true,
+      "description": "Registration number",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Employee"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     }
+    }
+   }
+  },
+  "/units": {
+   "get": {
+    "summary": "Units of the structure",
+    "description": "Permission of the key: `user.read`.",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Unit"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/attendance/days": {
+   "get": {
+    "summary": "Attendance by day",
+    "description": "Scheduled, worked and payable minutes per person and day, as the payroll sees them.\n\nPermission of the key: `attendance.read.all`.",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": true,
+      "description": "First day",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": true,
+      "description": "Last day (at most 31 days later)",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     },
+     {
+      "name": "registrationNo",
+      "in": "query",
+      "required": false,
+      "description": "One person only",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Day"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/attendance/events": {
+   "get": {
+    "summary": "Check-ins and check-outs",
+    "description": "Permission of the key: `attendance.read.all`.",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": true,
+      "description": "First work day",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": true,
+      "description": "Last work day (at most 31 days later)",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Event"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   },
+   "post": {
+    "summary": "Send a check-in or check-out",
+    "description": "For a time clock of another brand or an access control system. Without `type`, the punch is a check-in when the person's day is closed and a check-out when it is open.\n\nPermission of the key: `attendance.correct`.",
+    "parameters": [],
+    "responses": {
+     "201": {
+      "description": "Recorded",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EventResult"
+        }
+       }
+      }
+     },
+     "200": {
+      "description": "Received and left out (a repeat, or the day would not read IN, OUT, IN, OUT); `ignored` says why",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EventResult"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EventInput"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/leave/requests": {
+   "get": {
+    "summary": "Leave requests",
+    "description": "Permission of the key: `leave.manage`.",
+    "parameters": [
+     {
+      "name": "from",
+      "in": "query",
+      "required": true,
+      "description": "Overlapping from",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     },
+     {
+      "name": "to",
+      "in": "query",
+      "required": true,
+      "description": "Overlapping to",
+      "schema": {
+       "type": "string",
+       "format": "date"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "description": "PENDING, APPROVED, REJECTED or CANCELLED",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Leave"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/payroll/runs": {
+   "get": {
+    "summary": "Payrolls",
+    "description": "Permission of the key: `payslip.read.all`.",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Run"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/payroll/runs/{month}/payslips": {
+   "get": {
+    "summary": "Payslips of a month",
+    "description": "Regular payslips and approved complementary ones.\n\nPermission of the key: `payslip.read.all`.",
+    "parameters": [
+     {
+      "name": "month",
+      "in": "path",
+      "required": true,
+      "description": "Month, YYYY-MM",
+      "schema": {
+       "type": "string",
+       "pattern": "^[0-9]{4}-[0-9]{2}$"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/Payslip"
+         }
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  },
+  "/payroll/runs/{month}/entries": {
+   "post": {
+    "summary": "Add a pay entry",
+    "description": "A bonus, allowance or deduction of the month worked out elsewhere, on a pay element entered each month (its code on the Pay elements page). The month must still be open; calculate the payroll again afterwards.\n\nPermission of the key: `payroll.run`.",
+    "parameters": [
+     {
+      "name": "month",
+      "in": "path",
+      "required": true,
+      "description": "Month, YYYY-MM",
+      "schema": {
+       "type": "string",
+       "pattern": "^[0-9]{4}-[0-9]{2}$"
+      }
+     }
+    ],
+    "responses": {
+     "201": {
+      "description": "Added"
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     },
+     "409": {
+      "description": "The person already has this element for the month"
+     }
+    },
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EntryInput"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/accounting/{month}": {
+   "get": {
+    "summary": "Accounting entries of a month",
+    "description": "Permission of the key: `accounting.export`.",
+    "parameters": [
+     {
+      "name": "month",
+      "in": "path",
+      "required": true,
+      "description": "Month, YYYY-MM",
+      "schema": {
+       "type": "string",
+       "pattern": "^[0-9]{4}-[0-9]{2}$"
+      }
+     },
+     {
+      "name": "byCostCentre",
+      "in": "query",
+      "required": false,
+      "description": "Split the expenses by cost centre",
+      "schema": {
+       "type": "boolean"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Journal"
+        }
+       }
+      }
+     },
+     "401": {
+      "$ref": "#/components/responses/Unauthorized"
+     },
+     "403": {
+      "$ref": "#/components/responses/Forbidden"
+     },
+     "429": {
+      "$ref": "#/components/responses/TooMany"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "key": {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "hrp_<prefix>_<secret>"
+   }
+  },
+  "responses": {
+   "Unauthorized": {
+    "description": "No key, or a revoked or expired key"
+   },
+   "Forbidden": {
+    "description": "The key does not have the permission"
+   },
+   "TooMany": {
+    "description": "More than 600 requests in the minute; wait for the time in Retry-After"
+   },
+   "NotFound": {
+    "description": "Not found"
+   }
+  },
+  "schemas": {
+   "Employee": {
+    "type": "object",
+    "properties": {
+     "registrationNo": {
+      "type": "string"
+     },
+     "firstName": {
+      "type": "string"
+     },
+     "lastName": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string"
+     },
+     "site": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "unit": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "hireDate": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date"
+     },
+     "gradeCategory": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "manager": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Registration number of the manager set by hand"
+     },
+     "clockPin": {
+      "type": "string",
+      "description": "Number on the time clock"
+     }
+    }
+   },
+   "Unit": {
+    "type": "object",
+    "properties": {
+     "code": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "level": {
+      "type": "string"
+     },
+     "parent": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "validFrom": {
+      "type": "string",
+      "format": "date"
+     },
+     "validTo": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date"
+     }
+    }
+   },
+   "Day": {
+    "type": "object",
+    "properties": {
+     "registrationNo": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string",
+      "format": "date"
+     },
+     "status": {
+      "type": "string"
+     },
+     "scheduledMinutes": {
+      "type": "integer"
+     },
+     "workedMinutes": {
+      "type": "integer"
+     },
+     "payableMinutes": {
+      "type": "integer"
+     },
+     "lateMinutes": {
+      "type": "integer"
+     },
+     "overtimeMinutes": {
+      "type": "integer"
+     },
+     "firstIn": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "lastOut": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "missingCheckOut": {
+      "type": "boolean"
+     },
+     "leaveType": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "Event": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "registrationNo": {
+      "type": "string"
+     },
+     "type": {
+      "enum": [
+       "IN",
+       "OUT"
+      ]
+     },
+     "at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "workDate": {
+      "type": "string",
+      "format": "date"
+     },
+     "source": {
+      "type": "string",
+      "description": "SELF, HR_MANUAL, AUTO_CLOSE, MISSION, BIOMETRIC or API"
+     },
+     "site": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "voided": {
+      "type": "boolean"
+     }
+    }
+   },
+   "EventInput": {
+    "type": "object",
+    "required": [
+     "registrationNo",
+     "at"
+    ],
+    "properties": {
+     "registrationNo": {
+      "type": "string"
+     },
+     "type": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "IN",
+       "OUT",
+       null
+      ]
+     },
+     "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "With its offset, e.g. 2026-11-09T07:58:00+01:00"
+     },
+     "note": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "EventResult": {
+    "type": "object",
+    "properties": {
+     "recorded": {
+      "type": "boolean"
+     },
+     "id": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "type": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ignored": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "Leave": {
+    "type": "object",
+    "properties": {
+     "id": {
+      "type": "integer"
+     },
+     "registrationNo": {
+      "type": "string"
+     },
+     "type": {
+      "type": "string"
+     },
+     "startDate": {
+      "type": "string",
+      "format": "date"
+     },
+     "endDate": {
+      "type": "string",
+      "format": "date"
+     },
+     "workingDays": {
+      "type": "number"
+     },
+     "status": {
+      "type": "string"
+     },
+     "requestedAt": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "decidedAt": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     }
+    }
+   },
+   "Run": {
+    "type": "object",
+    "properties": {
+     "month": {
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "CALCULATED",
+       "APPROVED",
+       "CLOSED"
+      ]
+     },
+     "payslips": {
+      "type": "integer"
+     },
+     "calculatedAt": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "approvedAt": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "closedAt": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     }
+    }
+   },
+   "Payslip": {
+    "type": "object",
+    "properties": {
+     "registrationNo": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     },
+     "number": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "kind": {
+      "enum": [
+       "REGULAR",
+       "COMPLEMENTARY"
+      ]
+     },
+     "currency": {
+      "type": "string"
+     },
+     "gross": {
+      "type": "number"
+     },
+     "employeeDeductions": {
+      "type": "number"
+     },
+     "net": {
+      "type": "number"
+     },
+     "employerCharges": {
+      "type": "number"
+     }
+    }
+   },
+   "EntryInput": {
+    "type": "object",
+    "required": [
+     "registrationNo",
+     "element",
+     "amount"
+    ],
+    "properties": {
+     "registrationNo": {
+      "type": "string"
+     },
+     "element": {
+      "type": "string",
+      "description": "Code of the pay element, e.g. OTHER_BONUS"
+     },
+     "amount": {
+      "type": "number"
+     },
+     "currency": {
+      "type": "string",
+      "description": "USD, CDF or XAF; empty: the element's currency"
+     },
+     "note": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "Journal": {
+    "type": "object",
+    "properties": {
+     "month": {
+      "type": "string"
+     },
+     "runStatus": {
+      "type": "string"
+     },
+     "journal": {
+      "type": "string"
+     },
+     "date": {
+      "type": "string",
+      "format": "date"
+     },
+     "reference": {
+      "type": "string"
+     },
+     "currency": {
+      "type": "string"
+     },
+     "rate": {
+      "type": "number"
+     },
+     "entries": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "account": {
+         "type": "string"
+        },
+        "label": {
+         "type": "string"
+        },
+        "costCentre": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "debit": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "credit": {
+         "type": [
+          "number",
+          "null"
+         ]
+        }
+       }
+      }
+     },
+     "debit": {
+      "type": "number"
+     },
+     "credit": {
+      "type": "number"
+     },
+     "payslips": {
+      "type": "integer"
+     },
+     "warnings": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  }
+ }
+}

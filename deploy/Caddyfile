@@ -24,3 +24,15 @@
 		-Server
 	}
 }
+
+# Time clocks that cannot use HTTPS send their punches over plain HTTP to /iclock (see README, phase 15): only
+# that path is served on port 80, everything else goes to HTTPS. Limit such clocks to the office's addresses.
+http://{$DOMAIN} {
+	@clock path /iclock/*
+	handle @clock {
+		reverse_proxy app:8081
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}

@@ -48,7 +48,41 @@ public class YearSummaries {
         this.crypto = crypto;
     }
 
+    /**
+     * The totals paid before HR Pay (imported), as one line before the person's first month: "2026-01…2026-06".
+     */
+    private List<Raw> openings(int year, Long userId) {
+        String sql = """
+                select o.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, o.through_month,
+                       o.currency, o.gross, o.cnss, o.tax, o.other_deductions, o.net, o.taxable_cdf, o.tax_cdf,
+                       p.cnss_number, p.tax_number
+                from ytd_opening o join app_user u on u.id = o.user_id
+                left join employee_profile p on p.user_id = o.user_id
+                where o.year = ?""" + (userId == null ? "" : " and o.user_id = ?") + " order by u.last_name, u.first_name";
+        var spec = jdbc.sql(sql).param(year);
+        if (userId != null) {
+            spec = spec.param(userId);
+        }
+        return spec.query((rs, i) -> new Raw(rs.getLong("user_id"), rs.getString("name"), rs.getString("registration_no"),
+                crypto.decrypt(rs.getString("cnss_number")), crypto.decrypt(rs.getString("tax_number")),
+                new Month("%d-01…%d-%02d".formatted(year, year, rs.getInt("through_month")), 0, null, rs.getString("currency").trim(),
+                        rs.getBigDecimal("gross"), rs.getBigDecimal("cnss"), rs.getBigDecimal("tax"), rs.getBigDecimal("other_deductions"),
+                        rs.getBigDecimal("net"), rs.getBigDecimal("taxable_cdf"), rs.getBigDecimal("tax_cdf"), null))).list();
+    }
+
     private List<Raw> raw(int year, Long userId) {
+        List<Raw> closed = closed(year, userId);
+        List<Raw> openings = openings(year, userId);
+        if (openings.isEmpty()) {
+            return closed;
+        }
+        Map<Long, List<Raw>> by = new LinkedHashMap<>();
+        openings.forEach(o -> by.computeIfAbsent(o.userId(), k -> new ArrayList<>()).add(o));
+        closed.forEach(c -> by.computeIfAbsent(c.userId(), k -> new ArrayList<>()).add(c));
+        return by.values().stream().flatMap(List::stream).toList();
+    }
+
+    private List<Raw> closed(int year, Long userId) {
         String sql = MONTHS + (userId == null ? "" : " and p.user_id = ?") + "\norder by u.last_name, u.first_name, r.month";
         var spec = jdbc.sql(sql).param(year);
         if (userId != null) {
@@ -68,13 +102,18 @@ public class YearSummaries {
         }).list();
     }
 
+    /** A month of HR Pay counts one; the totals paid before HR Pay count the months they cover. */
+    private static int span(Month m) {
+        return m.payslipId() == 0 ? Integer.parseInt(m.month().substring(m.month().length() - 2)) : 1;
+    }
+
     private static List<Totals> totals(List<Month> months) {
         Map<String, Totals> by = new LinkedHashMap<>();
         for (Month m : months) {
             Totals t = by.get(m.currency());
             by.put(m.currency(), t == null
-                    ? new Totals(m.currency(), 1, m.gross(), m.cnss(), m.ipr(), m.otherDeductions(), m.net())
-                    : new Totals(m.currency(), t.months() + 1, t.gross().add(m.gross()), t.cnss().add(m.cnss()),
+                    ? new Totals(m.currency(), span(m), m.gross(), m.cnss(), m.ipr(), m.otherDeductions(), m.net())
+                    : new Totals(m.currency(), t.months() + span(m), t.gross().add(m.gross()), t.cnss().add(m.cnss()),
                             t.ipr().add(m.ipr()), t.otherDeductions().add(m.otherDeductions()), t.net().add(m.net())));
         }
         return new ArrayList<>(by.values());
@@ -114,9 +153,9 @@ public class YearSummaries {
             String key = r.userId() + "|" + m.currency();
             Row t = by.get(key);
             by.put(key, t == null
-                    ? new Row(r.userId(), r.name(), r.registrationNo(), m.currency(), 1, m.gross(), m.cnss(), m.ipr(),
+                    ? new Row(r.userId(), r.name(), r.registrationNo(), m.currency(), span(m), m.gross(), m.cnss(), m.ipr(),
                             m.otherDeductions(), m.net(), m.iprCdf())
-                    : new Row(t.userId(), t.name(), t.registrationNo(), t.currency(), t.months() + 1, t.gross().add(m.gross()),
+                    : new Row(t.userId(), t.name(), t.registrationNo(), t.currency(), t.months() + span(m), t.gross().add(m.gross()),
                             t.cnss().add(m.cnss()), t.ipr().add(m.ipr()), t.otherDeductions().add(m.otherDeductions()),
                             t.net().add(m.net()), t.iprCdf().add(m.iprCdf())));
         }

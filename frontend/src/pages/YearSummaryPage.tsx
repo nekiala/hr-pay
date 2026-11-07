@@ -90,7 +90,7 @@ export function AnnualStatementPage() {
                   <tbody>
                     {s.months.map((m) => (
                       <tr key={m.payslipId}>
-                        <td><Link to={`/payslips/${m.payslipId}`}>{m.month}</Link></td>
+                        <td>{m.payslipId ? <Link to={`/payslips/${m.payslipId}`}>{m.month}</Link> : <>{m.month} <span className="muted small">{t('(brought in)')}</span></>}</td>
                         <td>{money(m.gross, m.currency)}</td><td>{money(m.cnss, m.currency)}</td><td>{money(m.ipr, m.currency)}</td>
                         <td>{money(m.otherDeductions, m.currency)}</td><td><strong>{money(m.net, m.currency)}</strong></td>
                         <td>{m.paidOn ?? <span className="muted">—</span>}</td>

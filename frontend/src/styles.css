@@ -510,3 +510,6 @@ button.link:hover:not(:disabled) { background: none; filter: brightness(1.15); }
 .session-list li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
 .session-list li:first-child { border-top: 0; }
 .language-toggle { align-self: center; margin-top: 4px; }
+
+/* Lists of checkboxes (permissions of a key, events of a webhook) */
+.checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }

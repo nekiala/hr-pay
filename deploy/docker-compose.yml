@@ -41,6 +41,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       PUBLIC_URL: ${PUBLIC_URL:-https://${DOMAIN:?Set DOMAIN in .env}}
       CORS_ORIGINS: ${PUBLIC_URL:-https://${DOMAIN}}
+      # Caddy is the only way in: take the client's address from its X-Forwarded-For (site and clock IP rules).
+      FORWARD_HEADERS: native
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       SPRING_MAIL_HOST: ${SMTP_HOST:-}
