@@ -34,7 +34,7 @@ npm install && npm run dev                 # app on http://localhost:5173
 Sample users (password `Demo@2026!`): `admin@demo.hrpay.cd`, `hr@demo.hrpay.cd`, `finance@demo.hrpay.cd`,
 `manager@demo.hrpay.cd`, `employee1@demo.hrpay.cd` to `employee3@demo.hrpay.cd`. The sample site allows
 `127.0.0.1` so check-ins work locally in phase 1. Check-in codes are not emailed without a mail server: an admin
-reads them on the Messages page. Sample employees report to the sample manager and have 2026 annual leave.
+reads them on the Messages page. Sample employees report to the heads of the sample structure and have 2026 annual leave.
 
 ## Attendance rules (phase 1)
 
@@ -101,7 +101,14 @@ cd backend && ./gradlew test
 - Every employee belongs to exactly one unit at a time. New users need a unit; moves are dated and kept (hire, transfer, promotion, reorganisation, correction). A correction fixes the current line instead of adding one.
 - Who someone reports to: the head of their unit, or, if it is vacant or they are the head, the nearest head above.
 - The org chart (units or people) is visible to everyone and prints to PDF; headcounts and names of members need `user.read`. The structure can be exported and imported as CSV (`code,name,level,parent,cost_centre,head_registration_no`, all or nothing).
-- `org.manage` (HR) edits the structure. Phase 6 will use the structure for approvals, payslips and reports.
+- `org.manage` (HR) edits the structure.
+
+## The structure across the app (phase 6)
+
+- **Who approves**: a head approves missions, overtime and leave, and scores evaluations, for everyone in the units they head and every unit below. The deputy does the same only while the unit has no head, or while the head is on approved leave or an approved mission that day. A manager set by hand on a user is an exception: that person also approves, and becomes who the employee "reports to". Migration V18 removed hand-set managers that only repeated the structure.
+- **Users**: the list shows each person's unit and can be filtered by a unit, including the units below it. The employee file shows the unit.
+- **Payslips** keep the unit, Direction and cost centre (the unit's own or the nearest one above) of the employee at the end of the month. The payroll page has subtotals and a filter by Direction.
+- **Reports**: the attendance and finance spreadsheets have Direction and unit columns and can be limited to a unit. Reports › Headcount and payroll cost by Direction gives people, payslips, gross, employer charges and total cost per Direction or per unit, in USD and in CDF at the payroll rate, also as CSV.
 
 ## Configuration
 

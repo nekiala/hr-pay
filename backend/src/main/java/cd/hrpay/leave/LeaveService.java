@@ -63,6 +63,12 @@ public class LeaveService {
     private final WorkCalendar calendar;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public LeaveService(JdbcClient jdbc, UserService users, UserRepository userRepository, WorkCalendar calendar,
                         AuditService audit, Clock clock) {
@@ -283,8 +289,9 @@ public class LeaveService {
                     .param(me).query(LeaveRequest.class).list();
         }
         if (CurrentUser.has("leave.approve.team")) {
-            return jdbc.sql(REQUEST_SELECT + " where r.status = 'PENDING' and u.manager_id = ? order by r.start_date")
-                    .param(me).query(LeaveRequest.class).list();
+            java.util.Set<Long> team = org.teamOf(me);
+            return jdbc.sql(REQUEST_SELECT + " where r.status = 'PENDING' and r.user_id <> ? order by r.start_date")
+                    .param(me).query(LeaveRequest.class).list().stream().filter(r -> team.contains(r.userId())).toList();
         }
         return List.of();
     }
@@ -294,7 +301,7 @@ public class LeaveService {
             return false;
         }
         return CurrentUser.has("leave.manage") || (CurrentUser.has("leave.approve.team")
-                && CurrentUser.id().equals(users.find(r.userId()).getManagerId()));
+                && org.inTeam(CurrentUser.id(), r.userId()));
     }
 
     @Transactional

@@ -2,16 +2,16 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError, api } from '../api'
 import { useAuth } from '../auth'
-import { flatten, REASON, unitPath, type OrgAssignment, type OrgHead, type OrgUnit } from '../org'
+import { flatten, REASON, unitPath, type OrgAssignment, type OrgBoss, type OrgHead, type OrgUnit } from '../org'
 import { ErrorText } from './ErrorText'
 
 /** A select of the open units, indented by depth. */
-export function UnitSelect({ units, value, onChange, required, exclude }: {
-  units: OrgUnit[]; value: string; onChange: (v: string) => void; required?: boolean; exclude?: number
+export function UnitSelect({ units, value, onChange, required, exclude, placeholder = 'Choose a unit' }: {
+  units: OrgUnit[]; value: string; onChange: (v: string) => void; required?: boolean; exclude?: number; placeholder?: string
 }) {
   return (
     <select value={value} required={required} onChange={(e) => onChange(e.target.value)}>
-      <option value="">Choose a unit</option>
+      <option value="">{placeholder}</option>
       {flatten(units.filter((u) => u.open)).filter((f) => f.unit.id !== exclude).map(({ unit, depth }) => (
         <option key={unit.id} value={unit.id}>{'  '.repeat(depth)}{unit.name} ({unit.levelName})</option>
       ))}
@@ -19,7 +19,7 @@ export function UnitSelect({ units, value, onChange, required, exclude }: {
   )
 }
 
-type Info = { history: OrgAssignment[]; manager: OrgHead | null; heads: OrgHead[] }
+type Info = { history: OrgAssignment[]; manager: OrgBoss | null; heads: OrgHead[] }
 const today = () => new Date().toISOString().slice(0, 10)
 
 /** Where an employee sits in the structure, who they report to, and the moves over time. */
@@ -58,7 +58,7 @@ export function OrgCard({ userId }: { userId: number }) {
         <p><Link to={`/org/units/${current.unitId}`}>{current.unitName}</Link> <span className="muted">since {current.validFrom}</span>
           <br /><span className="small muted">{unitPath(units, current.unitId)}</span></p>
       ) : <p className="muted">No unit.</p>}
-      <p>Reports to: {info?.manager ? <strong>{info.manager.userName}</strong> : <span className="muted">nobody (top of the structure)</span>}</p>
+      <p>Reports to: {info?.manager ? <><strong>{info.manager.userName}</strong> <span className="muted">{info.manager.manual ? '(set by hand)' : '(head of the unit)'}</span></> : <span className="muted">nobody (top of the structure)</span>}</p>
       {info && info.heads.length > 0 && (
         <p>Heads: {info.heads.map((h, i) => (
           <span key={h.id}>{i > 0 && ', '}<Link to={`/org/units/${h.unitId}`}>{units.find((u) => u.id === h.unitId)?.name ?? `#${h.unitId}`}</Link>

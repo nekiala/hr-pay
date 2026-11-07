@@ -57,6 +57,7 @@ export default function PayslipPage() {
             <strong>{String(s.name)}</strong><br />
             {String(s.registrationNo ?? '')}<br />
             {String(s.grade ?? '')}{s.occupation ? ` · ${String(s.occupation)}` : ''}
+            {s.unit ? <><br />{String(s.unit)}{s.direction && s.direction !== s.unit ? ` · ${String(s.direction)}` : ''}{s.costCentre ? ` · CC ${String(s.costCentre)}` : ''}</> : null}
           </div>
         </div>
         <div className="grid3 small">

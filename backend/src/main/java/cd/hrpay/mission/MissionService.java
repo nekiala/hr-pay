@@ -33,6 +33,12 @@ public class MissionService {
     private final UserService users;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public MissionService(MissionRepository missions, ClockEventRepository events, UserService users,
                           AuditService audit, Clock clock) {
@@ -92,7 +98,7 @@ public class MissionService {
             return true;
         }
         return CurrentUser.has("mission.approve.team")
-                && CurrentUser.id().equals(users.find(m.getUserId()).getManagerId());
+                && org.inTeam(CurrentUser.id(), m.getUserId());
     }
 
     @Transactional
@@ -156,7 +162,7 @@ public class MissionService {
 
     public List<Mission> toDecide() {
         List<Mission> list = CurrentUser.has("mission.approve.all") ? missions.findPending()
-                : CurrentUser.has("mission.approve.team") ? missions.findPendingForTeam(CurrentUser.id()) : List.of();
+                : CurrentUser.has("mission.approve.team") ? missions.findPendingForUsers(org.teamOf(CurrentUser.id())) : List.of();
         return list.stream().filter(m -> !m.getUserId().equals(CurrentUser.id())).toList();
     }
 

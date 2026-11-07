@@ -103,6 +103,7 @@ export default function EmployeeFilePage() {
     <section className="narrow">
       <p><Link to={`/users/${id}`}>← Back to employee</Link></p>
       <h2>Contract and family{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
+      {user?.unitId && <p className="muted">Unit: <Link to={`/org/units/${user.unitId}`}>{user.unitName}</Link></p>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 

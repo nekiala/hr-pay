@@ -71,6 +71,8 @@ export type Me = {
 }
 
 export type User = {
+  unitId?: number | null
+  unitName?: string | null
   id: number
   email: string
   registrationNo: string
@@ -424,6 +426,7 @@ export type PayrollRun = {
 export type PayslipSummary = {
   id: number; userId: number; userName: string; registrationNo: string; number: string | null; currency: string
   gross: number; employeeDeductions: number; net: number; employerCharges: number; warningCount: number
+  unitId: number | null; unitName: string | null; directionId: number | null; directionName: string | null
 }
 export type RunView = {
   run: PayrollRun; payslips: PayslipSummary[]; skipped: string[]
