@@ -1,0 +1,9 @@
+.idea/
+*.iml
+.DS_Store
+.env
+backend/build/
+backend/.gradle/
+backend/src/main/resources/static/
+frontend/node_modules/
+frontend/dist/
