@@ -72,6 +72,8 @@ public class Imports {
                 col("birth_date", "Birth date", false, null),
                 col("gender", "Gender", false, "F or M."),
                 col("nationality", "Nationality", false, null),
+                col("postnom", "Postnom", false, "The middle name, as on the identity card."),
+                col("commune", "Commune or territory", false, "Where the person lives, as the tax declaration asks."),
                 col("marital_status", "Marital status", false, "Single, married, divorced or widowed."),
                 col("cnss_number", "CNSS number", false, null),
                 col("tax_number", "Tax number", false, null),
@@ -409,7 +411,7 @@ public class Imports {
 
     private void profile(Row row, long userId) {
         String[] keys = {"birth_date", "gender", "nationality", "marital_status", "cnss_number", "tax_number", "payment_method",
-                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number"};
+                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number", "postnom", "commune"};
         boolean any = false;
         for (String k : keys) {
             any |= row.text(k) != null;
@@ -449,7 +451,7 @@ public class Imports {
         }
         employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, or(row.text("nationality"), p.nationality()),
                 marital == null ? "SINGLE" : marital, or(row.text("cnss_number"), p.cnssNumber()), or(row.text("tax_number"), p.taxNumber()),
-                method, bank, account, operator, number));
+                method, bank, account, operator, number, or(row.text("postnom"), p.postnom()), or(row.text("commune"), p.commune())));
     }
 
     private RowResult managerOf(Row row, RowResult r, Context ctx) {

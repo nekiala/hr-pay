@@ -153,6 +153,8 @@ export default function DeclarationsPage() {
           {decl.filed && <p>{t('Filed on')}{' '}{decl.filed.filedOn}{decl.filed.reference && t(', reference {a}', { a: decl.filed.reference })}{decl.filed.note && ` (${decl.filed.note})`}{t('. Recorded by')}{' '}{decl.filed.filedBy}.</p>}
           <div className="row no-print">
             <a className="button secondary" href={`/api/declarations/${month}/${kind}/file.csv`}>{t('Download CSV')}</a>
+            {kind === 'IPR' && summary?.some((x) => x.kind === 'INPP') &&
+              <a className="button secondary" href={`/api/declarations/${month}/IPR/irpp-dr111.xls`} title={t('The DGI import file for the monthly declaration on i-impots')}>{t('IRPP DR 111 file (.xls)')}</a>}
             <Button className="secondary" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
             {decl.runStatus === 'CLOSED' && !decl.filed && !filing && <Button onClick={() => setFiling({ filedOn: new Date().toISOString().slice(0, 10), reference: '', note: '' })}>{t('Record as filed')}</Button>}
             {decl.filed && <Button className="link" onClick={() => ask({ title: t('Remove the filing record?'), confirmLabel: t('Remove'), danger: true, onConfirm: () => run(() => api(`/api/declarations/${month}/${kind}/filed`, { method: 'DELETE' }), t('Filing record removed.')) })}>{t('Undo filing')}</Button>}

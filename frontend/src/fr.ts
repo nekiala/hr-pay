@@ -2244,6 +2244,11 @@ const fr: Record<string, string> = {
   "Working days": "Jours ouvrables",
   "days": "jours",
   "months": "mois",
+  "Postnom": "Postnom",
+  "Commune or territory": "Commune ou territoire",
+  "For the tax declaration": "Pour la déclaration fiscale",
+  "The DGI import file for the monthly declaration on i-impots": "Le fichier d’import de la DGI pour la déclaration mensuelle sur i-impots",
+  "IRPP DR 111 file (.xls)": "Fichier IRPP DR 111 (.xls)",
 }
 
 export default fr

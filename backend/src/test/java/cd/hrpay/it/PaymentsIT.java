@@ -132,6 +132,28 @@ class PaymentsIT extends IntegrationTest {
             assertThat(baseCdf).isEqualByComparingTo(new BigDecimal(employeeSlip).multiply(BigDecimal.valueOf(2000)));
             mvc.perform(get("/api/declarations/2026-08/IERE").session(finance)).andExpect(jsonPath("$.rows.length()").value(0));
             mvc.perform(get("/api/declarations/2026-08/IPR/file.csv").session(finance)).andExpect(status().isOk());
+            // The DGI's IRPP DR 111 import file: the template's sheet and columns, one row per employee taxed.
+            byte[] xls = mvc.perform(get("/api/declarations/2026-08/IPR/irpp-dr111.xls").session(finance))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+            String ipr = mvc.perform(get("/api/declarations/2026-08/IPR").session(finance)).andReturn().getResponse().getContentAsString();
+            try (var wb = new org.apache.poi.hssf.usermodel.HSSFWorkbook(new java.io.ByteArrayInputStream(xls))) {
+                var sheet = wb.getSheet("IRPPDR111");
+                assertThat(sheet).isNotNull();
+                var head = sheet.getRow(0);
+                assertThat(head.getCell(0).getStringCellValue()).isEqualTo("nif");
+                assertThat(head.getCell(18).getStringCellValue()).isEqualTo("MontantRetIRPP");
+                assertThat(sheet.getLastRowNum()).isEqualTo(JsonPath.<Integer>read(ipr, "$.rows.length()"));
+                var first = sheet.getRow(1);
+                assertThat(first.getCell(2).getNumericCellValue()).isEqualTo(2026);
+                assertThat(first.getCell(3).getNumericCellValue()).isEqualTo(8);
+                assertThat(first.getCell(11).getStringCellValue()).isEqualTo("08/2026");
+                double withheld = 0;
+                for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                    withheld += sheet.getRow(i).getCell(18).getNumericCellValue();
+                }
+                assertThat(BigDecimal.valueOf(withheld)).isEqualByComparingTo(
+                        new BigDecimal(JsonPath.<Object>read(ipr, "$.employeeCdf").toString()));
+            }
 
             mvc.perform(json(post("/api/declarations/2026-08/CNSS/filed").session(finance),
                             "{\"filedOn\":\"2026-09-10\",\"reference\":\"CNSS-0908\"}"))

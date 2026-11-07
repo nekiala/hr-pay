@@ -58,6 +58,12 @@ public class PaymentController {
     private final Company company;
     private final Payments payments;
     private final Declarations declarations;
+    private IrppDr111 irpp;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setIrpp(IrppDr111 irpp) {
+        this.irpp = irpp;
+    }
     private final YearSummaries years;
     private final AuditService audit;
     private final Clock clock;
@@ -271,6 +277,20 @@ public class PaymentController {
                 employerShare ? d.employerCdf() : "", d.totalCdf());
         out.flush();
         audit.record("declaration.exported", "declaration", d.month() + " " + d.kind(), Map.of("rows", d.rows().size()));
+    }
+
+    /** The DGI's IRPP DR 111 import file for DR Congo, in the layout of its template. */
+    @GetMapping("/declarations/{month}/IPR/irpp-dr111.xls")
+    @PreAuthorize("hasAuthority('declaration.manage')")
+    public void irppDr111(@PathVariable YearMonth month, HttpServletResponse response) throws IOException {
+        if (!"CD".equals(company.country())) {
+            throw new cd.hrpay.common.NotFoundException("The IRPP DR 111 file is for companies in DR Congo.");
+        }
+        Company.Details c = company.get();
+        response.setContentType("application/vnd.ms-excel");
+        response.setHeader("Content-Disposition", "attachment; filename=\"irpp-dr111-" + month + ".xls\"");
+        irpp.write(month, c.taxNumber(), c.name(), response.getOutputStream());
+        audit.record("declaration.exported", "declaration", month + " IPR", Map.of("format", "IRPP DR 111"));
     }
 
     @PostMapping("/declarations/{month}/{kind}/filed")

@@ -30,6 +30,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     // PDF payslips.
     implementation("com.github.librepdf:openpdf:3.0.5")
+    // The DGI's IRPP DR 111 import file is an Excel 97-2003 workbook (.xls).
+    implementation("org.apache.poi:poi:5.4.1")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 

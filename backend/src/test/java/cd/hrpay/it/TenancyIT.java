@@ -108,7 +108,7 @@ class TenancyIT extends IntegrationTest {
 
         tenants.runAs(acme.id(), () -> {
             assertThat(jdbc.sql("select count(*) from pay_element").query(Integer.class).single()).isEqualTo(25);
-            assertThat(jdbc.sql("select count(*) from ipr_bracket").query(Integer.class).single()).isEqualTo(10);
+            assertThat(jdbc.sql("select count(*) from ipr_bracket").query(Integer.class).single()).isEqualTo(14);
             assertThat(jdbc.sql("select count(*) from org_unit where parent_id is null").query(Integer.class).single()).isOne();
             assertThat(jdbc.sql("select value from payroll_setting where key = 'RAISES_FROM'").query(String.class).single())
                     .isEqualTo(LocalDate.now().withDayOfMonth(1).toString());

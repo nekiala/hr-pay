@@ -253,7 +253,7 @@ public class DataSetup implements ApplicationRunner {
                 boolean married = s.email().startsWith("employee1") || s.role().equals("MANAGER");
                 files.saveProfile(u.getId(), new cd.hrpay.payroll.EmployeeFile.Profile(LocalDate.of(1988, 5, 12), null,
                         "Congolese", married ? "MARRIED" : "SINGLE", "CNSS-" + s.registrationNo(), "NIF-" + s.registrationNo(),
-                        "BANK", "Rawbank (sample)", "0001-" + s.registrationNo(), null, null));
+                        "BANK", "Rawbank (sample)", "0001-" + s.registrationNo(), null, null, null, "Gombe"));
                 if (married) {
                     files.addDependant(u.getId(), "Spouse of " + s.firstName(), "SPOUSE", LocalDate.of(1990, 3, 2), true, null);
                     files.addDependant(u.getId(), "First child", "CHILD", LocalDate.of(2015, 9, 1), true, null);
