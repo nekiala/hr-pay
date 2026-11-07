@@ -118,6 +118,14 @@ cd backend && ./gradlew test
 - **Evaluation templates per unit**: a template can apply to a unit and every unit below it. The most specific wins: the person's unit (or the nearest unit above with a template) for their grade category, then for anyone in it, then the grade category's template, then the one for everyone.
 - **Leave**: each kind keeps a share of the day's pay (sick leave is a sample 66.67%, to confirm with a payroll specialist). A one-day request can cover the morning or the afternoon only (0.5 day). Annual leave gains seniority days (sample: 1 more day per 5 full years of service on 1 January, set in Leave settings). Kinds that need a document (sick, maternity, family events) take a PDF, JPEG or PNG of up to 5 MB; the manager approves, then HR checks the document before the leave counts. HR approving directly needs the document first.
 
+## Reports, documents and privacy (phase 8)
+
+- **Presence** (`/presence`, HR and heads): who is in on a day (expected, in, late, not in yet, absent, on leave, on mission), and the exceptions of a period of up to 92 days: absences, late arrivals, early departures, days without a check-out, days closed automatically and days corrected by HR. Filter by unit; export the exceptions as Excel or CSV.
+- **Excel exports**: the attendance, finance and cost reports download as Excel workbooks (numbers are number cells, header frozen) as well as CSV. Payment files and declarations stay CSV until the bank, operators, CNSS and DGI formats are known.
+- **PDF payslips**: `/api/payslips/{id}.pdf` (Download PDF on the payslip), with the employer's details, earnings, deductions, net pay, employer charges and the year-to-date totals (closed months of the year plus this one). The payslip screen also shows the year to date.
+- **Holiday moved inside a closed month**: when HR moves a holiday's observed date into or out of a month whose payroll is closed, that month's basic pay is worked out again with the new calendar; the difference goes into the first payroll not yet approved as "Holiday change, earlier month" (more, or less). Closed payslips never change. Payroll › Holiday changes lists them; calculate the target month again to include them. Moving the holiday back cancels the difference.
+- **Privacy**: at their first sign-in each person reads a notice on what is recorded, why, who sees it and for how long (also under Privacy at the bottom of every page). GPS positions of check-ins are erased after a period set on the Sites page (sample 90 days, 0 keeps them); the check-in itself stays.
+
 ## Configuration
 
 | Variable | Default | Purpose |

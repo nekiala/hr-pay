@@ -21,6 +21,16 @@ public class HolidayService {
     private final HolidayOccurrenceRepository occurrences;
     private final AuditService audit;
 
+    /** Published after a holiday's observed date changes, so payroll can settle closed months. */
+    public record Moved(String holiday, LocalDate from, LocalDate to) {}
+
+    private org.springframework.context.ApplicationEventPublisher events;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setEvents(org.springframework.context.ApplicationEventPublisher events) {
+        this.events = events;
+    }
+
     public HolidayService(HolidayDefinitionRepository definitions, HolidayOccurrenceRepository occurrences,
                           AuditService audit) {
         this.definitions = definitions;
@@ -65,6 +75,9 @@ public class HolidayService {
         audit.record("holiday.moved", "holiday_occurrence", o.getId(), Map.of("holiday", o.getDefinition().getName(),
                 "year", o.getYear(), "from", before.toString(), "to", observed.toString(),
                 "announcement", announcement == null ? "" : announcement, "userId", String.valueOf(CurrentUser.id())));
+        if (!before.equals(observed)) {
+            events.publishEvent(new Moved(o.getDefinition().getName(), before, observed));
+        }
         return o;
     }
 }

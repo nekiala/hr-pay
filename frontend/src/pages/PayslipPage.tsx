@@ -7,6 +7,7 @@ import { ErrorText } from '../components/ErrorText'
 const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 const hours = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
 const num = (n: number | null, digits = 2) => (n === null ? '' : new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(n))
+type YearToDate = { year: number; months: number; currency: string; gross: number; cnss: number; ipr: number; net: number; otherCurrencies: boolean }
 const PAYMENT: Record<string, string> = { BANK: 'Bank transfer', MOBILE_MONEY: 'Mobile money', CASH: 'Cash' }
 
 export default function PayslipPage() {
@@ -14,7 +15,11 @@ export default function PayslipPage() {
   const { can } = useAuth()
   const [slip, setSlip] = useState<Payslip | null>(null)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { api<Payslip>(`/api/payslips/${id}`).then(setSlip).catch((e: Error) => setError(e.message)) }, [id])
+  const [ytd, setYtd] = useState<YearToDate | null>(null)
+  useEffect(() => {
+    api<Payslip>(`/api/payslips/${id}`).then(setSlip).catch((e: Error) => setError(e.message))
+    api<YearToDate>(`/api/payslips/${id}/year-to-date`).then(setYtd).catch(() => undefined)
+  }, [id])
 
   if (error) return <section><ErrorText error={error} /></section>
   if (!slip) return <section><p className="muted">Loading…</p></section>
@@ -40,7 +45,8 @@ export default function PayslipPage() {
     <section className="narrow payslip">
       <p className="no-print">
         {staff ? <Link to="/payroll">← Payroll</Link> : <Link to="/my/payslips">← My payslips</Link>}
-        {' · '}<button className="link" onClick={() => window.print()}>Print or save as PDF</button>
+        {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">Download PDF</a>
+        {' · '}<button className="link" onClick={() => window.print()}>Print</button>
       </p>
       {slip.runStatus !== 'CLOSED' && <p className="notice">Draft: this payroll is {slip.runStatus.toLowerCase()} and not yet closed.</p>}
       {slip.warnings.length > 0 && staff && (
@@ -85,6 +91,17 @@ export default function PayslipPage() {
           {s.paymentMethod === 'MOBILE_MONEY' ? `: ${String(s.mobileMoneyOperator ?? '')} ${String(s.mobileMoneyNumber ?? '')}` : ''}
           {cur === 'USD' && ` · net in CDF: ${new Intl.NumberFormat().format(Math.round(slip.net * slip.usdCdf))} CDF at the BCC rate of ${slip.rateDate} ($1 = ${slip.usdCdf} CDF)`}
         </p>
+
+        {ytd && (
+          <div className="table-wrap">
+            <table className="lines">
+              <thead><tr><th>Year to date {ytd.year} ({ytd.months} month{ytd.months === 1 ? '' : 's'})</th><th className="num">Gross</th><th className="num">CNSS</th><th className="num">IPR</th><th className="num">Net</th></tr></thead>
+              <tbody><tr><td>Total</td><td className="num">{money(ytd.gross, ytd.currency)}</td><td className="num">{money(ytd.cnss, ytd.currency)}</td>
+                <td className="num">{money(ytd.ipr, ytd.currency)}</td><td className="num">{money(ytd.net, ytd.currency)}</td></tr></tbody>
+            </table>
+            {ytd.otherCurrencies && <p className="hint">Months paid in another currency are not included.</p>}
+          </div>
+        )}
 
         <details open={staff}>
           <summary>Employer charges (not deducted from pay)</summary>

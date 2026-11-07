@@ -143,8 +143,10 @@ public final class PayslipCalculator {
         for (PayElements.Entry x : in.entries()) {
             PayElements.Element e = byCode.get(x.elementCode());
             String label = e.name() + (x.note() == null || x.note().isBlank() ? "" : " (" + x.note() + ")");
-            lines.add(new Line(e.code(), label, e.kind(), null, null, convert(x.amount(), x.currency(), cur, r.usdCdf()),
-                    e.displayOrder(), null));
+            BigDecimal amount = convert(x.amount(), x.currency(), cur, r.usdCdf());
+            // A holiday change that takes back pay from an earlier month lowers the earnings (and their CNSS and IPR bases).
+            lines.add(new Line(e.code(), label, e.kind(), null, null,
+                    e.code().equals("HOLIDAY_ADJ_LESS") ? amount.negate() : amount, e.displayOrder(), null));
         }
 
         // 5. Gross, CNSS base and taxable income.

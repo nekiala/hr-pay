@@ -87,7 +87,46 @@ public class PayrollController {
         return runs.close(month);
     }
 
+    private PayslipPdf pdf;
+    private HolidayAdjustments holidayAdjustments;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setHolidayAdjustments(HolidayAdjustments holidayAdjustments) {
+        this.holidayAdjustments = holidayAdjustments;
+    }
+
+    /** Pay carried into a later payroll because a holiday moved inside a closed month. */
+    @GetMapping("/payroll/holiday-adjustments")
+    @PreAuthorize("hasAuthority('payroll.run') or hasAuthority('payroll.approve') or hasAuthority('payslip.read.all')")
+    public java.util.List<HolidayAdjustments.Adjustment> holidayAdjustments() {
+        return holidayAdjustments.recent();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setPdf(PayslipPdf pdf) {
+        this.pdf = pdf;
+    }
+
     // ---- payslips ----------------------------------------------------------------------------------------------
+
+    @GetMapping("/payslips/{id}.pdf")
+    @PreAuthorize("isAuthenticated()")
+    public org.springframework.http.ResponseEntity<byte[]> payslipPdf(@PathVariable long id) {
+        PayrollRuns.Payslip p = payslip(id);
+        String name = "payslip-" + p.month().toString().substring(0, 7) + "-" + p.snapshot().getOrDefault("registrationNo", p.userId())
+                .toString().replaceAll("[^A-Za-z0-9_-]", "") + ".pdf";
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"" + name + "\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(pdf.render(p));
+    }
+
+    @GetMapping("/payslips/{id}/year-to-date")
+    @PreAuthorize("isAuthenticated()")
+    public PayslipPdf.YearToDate yearToDate(@PathVariable long id) {
+        return pdf.yearToDate(payslip(id));
+    }
 
     @GetMapping("/payslips/{id}")
     @PreAuthorize("isAuthenticated()")

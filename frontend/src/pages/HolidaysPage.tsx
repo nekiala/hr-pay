@@ -85,6 +85,7 @@ export default function HolidaysPage() {
           <h3>{editing.name} {editing.year}</h3>
           <label>Observed date<input type="date" value={observed} onChange={(e) => setObserved(e.target.value)} required /></label>
           <label>Government announcement (reference)<input value={announcement} onChange={(e) => setAnnouncement(e.target.value)} placeholder="e.g. Communiqué du Ministère, 25 June" /></label>
+          <p className="hint">If the old or new date falls in a month whose payroll is closed, the pay difference is worked out and added to the next payroll that is not approved yet (Payroll › Holiday changes).</p>
           <div className="row"><button type="submit">Save</button><button type="button" className="secondary" onClick={() => setEditing(null)}>Cancel</button></div>
         </form>
       )}

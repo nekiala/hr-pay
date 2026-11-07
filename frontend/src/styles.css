@@ -192,3 +192,18 @@ dl.facts dd { margin: 0; }
 .file-button { display: inline-block; cursor: pointer; padding: 0.25rem 0.6rem; border: 1px solid var(--border, #ccc); border-radius: 6px; font-size: 0.9em; }
 .file-button input[type="file"] { display: none; }
 .row.space > select { width: auto; max-width: 22rem; }
+
+/* Privacy notice */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 32, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.modal { max-width: 640px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0; }
+.privacy-text h3 { margin: 1rem 0 0.25rem; font-size: 1rem; }
+.privacy-text ul { margin: 0.25rem 0; padding-left: 1.2rem; }
+.footer { text-align: center; padding: 1.5rem 0 2rem; font-size: 0.9em; }
+
+/* Presence */
+.status-pill { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.85em; background: var(--border); }
+.status-pill.in { background: #d8f0df; color: #19612f; }
+.status-pill.late { background: #fdebd2; color: #8a4b00; }
+.status-pill.absent { background: #f8d7d7; color: #8c1f1f; }
+.status-pill.away { background: #dde8f7; color: #1f4c86; }
+.row.space .row select { width: auto; max-width: 22rem; }

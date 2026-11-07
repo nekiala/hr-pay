@@ -46,6 +46,7 @@ public class AppUser {
     private Long gradeCategoryId;
     private java.time.LocalDate hireDate;
     private OffsetDateTime lastLoginAt;
+    private OffsetDateTime privacyAcceptedAt;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
@@ -101,6 +102,7 @@ public class AppUser {
     public void setManagerId(Long managerId) { this.managerId = managerId; }
     public void setSite(Site site) { this.site = site; }
     public boolean isMustChangePassword() { return mustChangePassword; }
+    public OffsetDateTime getPrivacyAcceptedAt() { return privacyAcceptedAt; }
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
     public OffsetDateTime getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(OffsetDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }

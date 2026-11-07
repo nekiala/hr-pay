@@ -79,12 +79,13 @@ public class ReportController {
                 .sorted(Comparator.comparing(AppUser::getLastName).thenComparing(AppUser::getFirstName)).toList();
     }
 
-    @GetMapping("/attendance.csv")
+    @GetMapping({"/attendance.csv", "/attendance.xlsx"})
     @PreAuthorize("hasAuthority('report.attendance.export')")
     @Transactional
     public void attendanceReport(@RequestParam YearMonth month, @RequestParam(defaultValue = "false") boolean detail,
-                                 @RequestParam(required = false) Long unitId, HttpServletResponse response) throws IOException {
-        PrintWriter out = start(response, "attendance-" + month + (detail ? "-daily" : "") + ".csv");
+                                 @RequestParam(required = false) Long unitId, jakarta.servlet.http.HttpServletRequest request,
+                                 HttpServletResponse response) throws IOException {
+        cd.hrpay.common.Sheet out = cd.hrpay.common.Sheet.open(request, response, "attendance-" + month + (detail ? "-daily" : ""));
         var where = placements(month);
         List<AppUser> people = inUnit(scope(), unitId, where);
         if (detail) {
@@ -128,17 +129,17 @@ public class ReportController {
                         h(m.overtimeApprovedMinutes()), h(m.overtimePendingMinutes()));
             }
         }
-        out.flush();
+        out.finish();
         audit.record("report.attendance_exported", "report", null, Map.of("month", month.toString(),
                 "detail", detail, "employees", people.size(), "unit", unitId == null ? "" : unitId));
     }
 
-    @GetMapping("/finance.csv")
+    @GetMapping({"/finance.csv", "/finance.xlsx"})
     @PreAuthorize("hasAuthority('report.finance.export') and hasAuthority('salary.read')")
     @Transactional
     public void financeReport(@RequestParam YearMonth month, @RequestParam(required = false) Long unitId,
-                              HttpServletResponse response) throws IOException {
-        PrintWriter out = start(response, "finance-" + month + ".csv");
+                              jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
+        cd.hrpay.common.Sheet out = cd.hrpay.common.Sheet.open(request, response, "finance-" + month);
         var where = placements(month);
         List<AppUser> people = inUnit(users.findAll().stream().filter(AppUser::isActive)
                 .sorted(Comparator.comparing(AppUser::getLastName).thenComparing(AppUser::getFirstName)).toList(), unitId, where);
@@ -155,18 +156,9 @@ public class ReportController {
                     e == null ? "" : e.overtimeEarned().toPlainString(),
                     e == null ? "" : e.earnedToDate().add(e.overtimeEarned()).toPlainString(), m.asOf().toString());
         }
-        out.flush();
+        out.finish();
         audit.record("report.finance_exported", "report", null, Map.of("month", month.toString(),
                 "employees", people.size(), "unit", unitId == null ? "" : unitId));
-    }
-
-    private static PrintWriter start(HttpServletResponse response, String filename) throws IOException {
-        response.setContentType("text/csv; charset=UTF-8");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        PrintWriter out = response.getWriter();
-        out.write('﻿');
-        return out;
     }
 
     private static String h(int minutes) {
@@ -177,9 +169,8 @@ public class ReportController {
         return b ? "yes" : "";
     }
 
-    private static void row(PrintWriter out, String... cells) {
-        out.write(java.util.Arrays.stream(cells).map(ReportController::cell).collect(Collectors.joining(",")));
-        out.write("\r\n");
+    private static void row(cd.hrpay.common.Sheet out, Object... cells) {
+        out.row(cells);
     }
 
     /** Quotes when needed, and neutralises leading =, +, - and @ so a cell is never run as a formula. */

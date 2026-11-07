@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, type Site } from '../api'
+import { ApiError, api, type Site } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -9,9 +9,24 @@ export default function SitesPage() {
   const [sites, setSites] = useState<Site[]>([])
   const [error, setError] = useState<string | null>(null)
 
+  const [retention, setRetention] = useState<number | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
   useEffect(() => {
     api<Site[]>('/api/sites').then(setSites).catch((e: Error) => setError(e.message))
+    api<{ gpsRetentionDays: number }>('/api/privacy/settings').then((s) => setRetention(s.gpsRetentionDays)).catch(() => undefined)
   }, [])
+
+  const saveRetention = async () => {
+    setError(null)
+    setMessage(null)
+    try {
+      const r = await api<{ erased: number }>('/api/privacy/settings', { method: 'PUT', body: { gpsRetentionDays: retention } })
+      setMessage(`Saved. ${r.erased} older GPS position${r.erased === 1 ? '' : 's'} erased.`)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Could not save.')
+    }
+  }
 
   return (
     <section>
@@ -37,6 +52,18 @@ export default function SitesPage() {
           </tbody>
         </table>
       </div>
+      {retention !== null && (
+        <div className="card narrow" style={{ marginTop: 16 }}>
+          <h3>GPS positions</h3>
+          <p className="hint">The position a phone shares at check-in is erased after this many days; the check-in itself (time, site, method) stays. 0 keeps positions. Everyone sees this period in the <Link to="/privacy">privacy notice</Link>.</p>
+          {message && <p className="success">{message}</p>}
+          <div className="row">
+            <label>Keep for (days)<input type="number" min={0} max={3650} className="narrow-input" value={retention} disabled={!can('site.manage')}
+              onChange={(e) => setRetention(Number(e.target.value))} /></label>
+            {can('site.manage') && <button className="secondary" onClick={() => void saveRetention()}>Save</button>}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

@@ -42,10 +42,10 @@ public class AuthController {
     public record ChangePassword(@NotBlank String currentPassword, @NotBlank String newPassword) {}
 
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
-                     Set<String> permissions, boolean mustChangePassword) {
+                     Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted) {
         static Me of(AppUser u) {
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
-                    u.permissionCodes(), u.isMustChangePassword());
+                    u.permissionCodes(), u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null);
         }
     }
 
