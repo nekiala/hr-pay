@@ -29,6 +29,9 @@ import LoansPage from './pages/LoansPage'
 import MyPayslipsPage from './pages/MyPayslipsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
+import EvaluationsPage from './pages/EvaluationsPage'
+import EvaluationPage from './pages/EvaluationPage'
+import EvaluationSettingsPage from './pages/EvaluationSettingsPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -94,6 +97,7 @@ export default function App() {
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
           {(can('schedule.manage') || can('user.read')) && <NavLink to="/schedules">Schedules</NavLink>}
           <NavLink to="/holidays">Holidays</NavLink>
+          <NavLink to="/evaluations">Evaluations</NavLink>
           {(can('overtime.approve.all') || can('overtime.approve.team')) && <NavLink to="/overtime/approvals">Approve overtime</NavLink>}
           {can('overtime_policy.manage') && <NavLink to="/overtime" end>Overtime rules</NavLink>}
           {(can('payroll.run') || can('payroll.approve') || can('payslip.read.all')) && <NavLink to="/payroll" end>Payroll</NavLink>}
@@ -139,6 +143,9 @@ export default function App() {
           <Route path="/payroll/rates" element={<PayElementsRoute page="rates" />} />
           <Route path="/payroll/settings" element={<Guard permission="masterdata.manage"><PayrollSettingsPage /></Guard>} />
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
+          <Route path="/evaluations" element={<EvaluationsPage />} />
+          <Route path="/evaluations/settings" element={<Guard permission="evaluation.manage"><EvaluationSettingsPage /></Guard>} />
+          <Route path="/evaluations/:id" element={<EvaluationPage />} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />

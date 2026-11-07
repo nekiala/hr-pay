@@ -25,6 +25,7 @@ class PayslipCalculatorTest {
             el(3, "HOUSING", "EARNING", "PERCENT_OF_BASIC", null, "30", false, false, true, true, 30),
             el(4, "TRANSPORT", "EARNING", "PER_DAY_WORKED", "2", null, false, false, false, true, 40),
             el(5, "FAMILY_ALLOWANCE", "EARNING", "PER_CHILD", "10", null, false, false, false, true, 50),
+            el(18, "THIRTEENTH_MONTH", "EARNING", "COMPUTED", null, null, true, true, false, false, 75),
             el(6, "PERF_BONUS", "EARNING", "MANUAL", null, null, true, true, false, false, 60),
             el(9, "CNSS_EMPLOYEE", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 110),
             el(10, "IPR", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 120),
@@ -41,7 +42,7 @@ class PayslipCalculatorTest {
     static PayslipCalculator.Input input(int paidMinutes, List<PayElements.Assignment> standing,
                                          List<PayElements.Entry> entries, List<PayslipCalculator.LoanDue> loans,
                                          boolean expatriate) {
-        return new PayslipCalculator.Input("USD", d("1000"), 10560, paidMinutes, 22, 22, BigDecimal.ZERO, 0, 2, 3,
+        return new PayslipCalculator.Input("USD", d("1000"), 10560, paidMinutes, 22, 22, BigDecimal.ZERO, 0, null, null, 2, 3,
                 expatriate, ELEMENTS, standing, entries, loans, RATES);
     }
 
@@ -114,5 +115,18 @@ class PayslipCalculatorTest {
         var r = PayslipCalculator.calculate(input(10560, List.of(), List.of(entry), List.of(), false));
         assertThat(line(r, "PERF_BONUS")).isEqualByComparingTo("50");
         assertThat(r.lines()).anyMatch(l -> l.label().equals("PERF_BONUS (Q3)"));
+    }
+
+    @Test
+    void theThirteenthMonthIsAnEarningSubjectToItsElementsTreatment() {
+        var in = input(10560, List.of(), List.of(), List.of(), false);
+        var withBonus = new PayslipCalculator.Input(in.currency(), in.basicMonthly(), in.scheduledMinutes(), in.paidMinutes(),
+                in.scheduledDays(), in.daysWorked(), in.overtimeAmount(), in.overtimeMinutes(), d("812.50"), "81.25% x 1000",
+                in.childrenInCharge(), in.dependantsInCharge(), in.expatriate(), in.elements(), in.standing(), in.entries(),
+                in.loans(), in.rates());
+        var r = PayslipCalculator.calculate(withBonus);
+        assertThat(line(r, "THIRTEENTH_MONTH")).isEqualByComparingTo("812.50");
+        assertThat(r.cnssBase()).isEqualByComparingTo("1812.50");
+        assertThat(r.lines()).anyMatch(l -> l.label().equals("THIRTEENTH_MONTH (81.25% x 1000)"));
     }
 }
