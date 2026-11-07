@@ -46,11 +46,11 @@ class PayrollCompletenessIT extends IntegrationTest {
         long esther = id("employee2@demo.hrpay.cd");
         record Before(Long category, java.time.LocalDate hired) {}
         Before before = jdbc.sql("select grade_category_id as category, hire_date as hired from app_user where id = ?").param(esther).query(Before.class).single();
-        long cat1 = jdbc.sql("select id from grade_category where code = 'CAT1'").query(Long.class).single();
+        long cat1 = jdbc.sql("select id from grade_category where code = 'EXEC'").query(Long.class).single();
         // The categories carry their notice; only master-data managers change it.
         mvc.perform(get("/api/leave/categories").session(hr))
-                .andExpect(jsonPath("$[?(@.code=='CAT2')].noticeBaseUnit").value("MONTHS"))
-                .andExpect(jsonPath("$[?(@.code=='CAT3')].noticeDaysPerYear").value(16.0));
+                .andExpect(jsonPath("$[?(@.code=='MAITRISE')].noticeBaseUnit").value("MONTHS"))
+                .andExpect(jsonPath("$[?(@.code=='CADRE_COLLAB')].noticeDaysPerYear").value(16.0));
         mvc.perform(json(put("/api/grade-categories/" + cat1 + "/notice").session(login(EMPLOYEE)),
                 "{\"base\":14,\"baseUnit\":\"DAYS\",\"daysPerYear\":7,\"dayKind\":\"WORKING\",\"resignationShare\":0.5}"))
                 .andExpect(status().isForbidden());

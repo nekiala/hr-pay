@@ -30,8 +30,8 @@ class AnniversaryRaiseIT extends IntegrationTest {
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long user = JsonPath.<Number>read(created, "$.id").longValue();
         String grades = mvc.perform(get("/api/grades").session(hr)).andReturn().getResponse().getContentAsString();
-        long g2a = JsonPath.<List<Number>>read(grades, "$[?(@.code=='G2A')].id").getFirst().longValue();
-        // Hired on a permanent contract on 10 March 2025 at a negotiated 800 (grade G2A base 700, CAT2 raise 2.5%).
+        long g2a = JsonPath.<List<Number>>read(grades, "$[?(@.code=='M1')].id").getFirst().longValue();
+        // Hired on a permanent contract on 10 March 2025 at a negotiated 800 (grade M1 base 731, MAITRISE raise 2.5%).
         mvc.perform(json(post("/api/users/" + user + "/contracts").session(hr), """
                         {"contractType":"PERMANENT","startDate":"2025-03-10","gradeId":%d,"expatriate":false,
                          "negotiatedBasic":800}""".formatted(g2a)))
@@ -41,21 +41,21 @@ class AnniversaryRaiseIT extends IntegrationTest {
                         """
                         {"percent":3,"timing":"ANNIVERSARY_MONTH"}"""))
                 .andExpect(status().isOk());
-        mvc.perform(get("/api/leave/categories").session(hr)).andExpect(jsonPath("$[2].raiseTiming").value("ANNIVERSARY_MONTH"));
+        mvc.perform(get("/api/leave/categories").session(hr)).andExpect(jsonPath("$[?(@.id==3)].raiseTiming").value("ANNIVERSARY_MONTH"));
 
         var before = raises.applyDue(LocalDate.parse("2026-03-09"), user);
         assertThat(before.applied()).isEmpty();
         var on = raises.applyDue(LocalDate.parse("2026-03-10"), user);
         assertThat(on.applied()).hasSize(1);
         var r = on.applied().getFirst();
-        assertThat(r.raiseAmount()).isEqualByComparingTo("17.50");      // 2.5% of 700
-        assertThat(r.newBasic()).isEqualByComparingTo("817.50");
+        assertThat(r.raiseAmount()).isEqualByComparingTo("18.28");      // 2.5% of 731
+        assertThat(r.newBasic()).isEqualByComparingTo("818.28");
         assertThat(r.effectiveFrom()).isEqualTo(LocalDate.parse("2026-04-01"));
         assertThat(raises.applyDue(LocalDate.parse("2026-03-20"), user).applied()).isEmpty();
 
         mvc.perform(get("/api/users/" + user + "/salaries").session(hr))
                 .andExpect(jsonPath("$[0].effectiveFrom").value("2026-04-01"))
-                .andExpect(jsonPath("$[0].grossMonthly").value(817.5));
+                .andExpect(jsonPath("$[0].grossMonthly").value(818.28));
         mvc.perform(get("/api/raises").session(hr)).andExpect(status().isOk());
 
         int listed = raises.sendSummary();

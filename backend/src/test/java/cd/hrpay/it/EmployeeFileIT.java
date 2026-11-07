@@ -34,23 +34,23 @@ class EmployeeFileIT extends IntegrationTest {
         mvc.perform(get("/api/users/" + employee + "/file").session(hr))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contracts.length()").value(1))
-                .andExpect(jsonPath("$.contracts[0].gradeCode").value("G1B"));
+                .andExpect(jsonPath("$.contracts[0].gradeCode").value("E4A"));
 
         mvc.perform(json(post("/api/users/" + employee + "/contracts").session(hr), """
                         {"contractType":"PERMANENT","startDate":"2026-12-01","gradeId":%d,"expatriate":false,
-                         "negotiatedBasic":900,"note":"Promotion"}""".formatted(grade(hr, "G2A"))))
+                         "negotiatedBasic":900,"note":"Promotion"}""".formatted(grade(hr, "M1"))))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.gradeCode").value("G2A"));
+                .andExpect(jsonPath("$.gradeCode").value("M1"));
         mvc.perform(get("/api/users/" + employee + "/file").session(hr))
                 .andExpect(jsonPath("$.contracts[1].endDate").value("2026-11-30"));
         mvc.perform(get("/api/users/" + employee + "/salaries").session(hr))
                 .andExpect(jsonPath("$[0].effectiveFrom").value("2026-12-01"))
                 .andExpect(jsonPath("$[0].grossMonthly").value(900));
         mvc.perform(get("/api/users/" + employee).session(hr))
-                .andExpect(jsonPath("$.gradeCategoryId").value(2));   // CAT2, the category of G2A
+                .andExpect(jsonPath("$.gradeCategoryId").value(2));   // MAITRISE, the category of M1
 
         mvc.perform(json(post("/api/users/" + employee + "/contracts").session(hr), """
-                        {"contractType":"FIXED_TERM","startDate":"2027-01-01","gradeId":%d,"expatriate":false}""".formatted(grade(hr, "G2A"))))
+                        {"contractType":"FIXED_TERM","startDate":"2027-01-01","gradeId":%d,"expatriate":false}""".formatted(grade(hr, "M1"))))
                 .andExpect(status().is(422));
         mvc.perform(get("/api/users/" + employee + "/file").session(login(EMPLOYEE))).andExpect(status().isForbidden());
     }

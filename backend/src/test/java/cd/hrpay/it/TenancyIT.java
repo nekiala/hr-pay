@@ -101,7 +101,7 @@ class TenancyIT extends IntegrationTest {
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.items[0].email").value(acme.email()));
         mvc.perform(get("/api/grades").session(boss)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(6));
+                .andExpect(jsonPath("$.length()").value(18));
         mvc.perform(get("/api/roles").session(boss)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(5));
         mvc.perform(get("/api/holidays/definitions").session(boss)).andExpect(status().isOk());

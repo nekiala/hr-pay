@@ -60,7 +60,7 @@ class PayrollRunIT extends IntegrationTest {
         long slip = JsonPath.<List<Number>>read(run, "$.payslips[?(@.userId==" + employee + ")].id").getFirst().longValue();
 
         String detail = mvc.perform(get("/api/payslips/" + slip).session(hr)).andExpect(status().isOk())
-                .andExpect(jsonPath("$.snapshot.grade").value("G1B · Grade 1B (exemple)"))
+                .andExpect(jsonPath("$.snapshot.grade").value("E4A · Cat. 4, échelon 1 · Travailleur qualifié"))
                 .andExpect(jsonPath("$.snapshot.childrenInCharge").value(2))
                 .andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<List<String>>read(detail, "$.lines[*].elementCode"))

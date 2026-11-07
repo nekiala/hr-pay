@@ -92,7 +92,7 @@ class SecurityIT extends IntegrationTest {
         MockHttpSession hr = login(HR);
         long id = newPerson(hr);
         String grades = mvc.perform(get("/api/grades").session(hr)).andReturn().getResponse().getContentAsString();
-        long grade = JsonPath.<List<Number>>read(grades, "$[?(@.code=='G1B')].id").getFirst().longValue();
+        long grade = JsonPath.<List<Number>>read(grades, "$[?(@.code=='E4A')].id").getFirst().longValue();
         mvc.perform(json(post("/api/users/" + id + "/contracts").session(hr), """
                         {"contractType":"PERMANENT","startDate":"2010-01-01","gradeId":%d,"expatriate":false}""".formatted(grade)))
                 .andExpect(status().isCreated());
