@@ -252,3 +252,51 @@ export function currentPosition(): Promise<Position> {
 }
 
 export const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+export type DayStatus = 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
+
+export type DayResult = {
+  date: string
+  status: DayStatus
+  scheduledMinutes: number
+  workedMinutes: number
+  payableMinutes: number
+  lateMinutes: number
+  lateDeductedMinutes: number
+  earlyMinutes: number
+  earlyDeductedMinutes: number
+  overtimeMinutes: number
+  overtimeKind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY' | null
+  missingCheckOut: boolean
+  firstIn: string | null
+  lastOut: string | null
+}
+
+export type MonthSummary = {
+  month: string
+  asOf: string
+  scheduledMinutesMonth: number
+  scheduledMinutesToDate: number
+  payableMinutesToDate: number
+  workedMinutesToDate: number
+  overtimeMinutesToDate: number
+  lateDays: number
+  absentDays: number
+  missingCheckOutDays: number
+  earnings: { grossMonthly: number; currency: string; earnedToDate: number; minuteRate: number } | null
+  days: DayResult[]
+}
+
+export type Salary = {
+  id: number
+  userId: number
+  effectiveFrom: string
+  grossMonthly: number
+  currency: 'USD' | 'CDF'
+  note: string | null
+  createdBy: string
+  createdAt: string
+}
+
+export const money = (amount: number, currency: string) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount)

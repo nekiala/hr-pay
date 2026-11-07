@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, type Role, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ApiError, api, money, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -180,6 +180,12 @@ export default function UserFormPage() {
         </div>
       )}
 
+      {!isNew && user && can('attendance.read.all') && (
+        <p><Link className="button secondary" to={`/users/${id}/attendance`}>View attendance and earnings</Link></p>
+      )}
+
+      {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} />}
+
       {!isNew && user && canAssign && (
         <div className="card">
           <h3>Roles</h3>
@@ -211,5 +217,55 @@ export default function UserFormPage() {
         </div>
       )}
     </section>
+  )
+}
+
+function SalaryCard({ userId }: { userId: number }) {
+  const { can } = useAuth()
+  const [history, setHistory] = useState<Salary[]>([])
+  const [form, setForm] = useState({ effectiveFrom: new Date().toISOString().slice(0, 8) + '01', grossMonthly: '', currency: 'USD', note: '' })
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const load = () => api<Salary[]>(`/api/users/${userId}/salaries`).then(setHistory).catch((e: Error) => setError(e.message))
+  useEffect(() => { load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const add = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setMessage(null)
+    try {
+      await api(`/api/users/${userId}/salaries`, { method: 'POST', body: { ...form, grossMonthly: Number(form.grossMonthly) } })
+      setForm({ ...form, grossMonthly: '', note: '' })
+      setMessage('Salary saved.')
+      await load()
+    } catch (err) {
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Gross monthly salary</h3>
+      {history.length === 0 && <p className="muted">No salary yet.</p>}
+      {history.map((s) => (
+        <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">from {s.effectiveFrom}{s.note ? ` · ${s.note}` : ''} · set by {s.createdBy}</span></p>
+      ))}
+      {can('salary.write') && (
+        <form className="row" onSubmit={add}>
+          <input type="date" value={form.effectiveFrom} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} required />
+          <input type="number" min="0.01" step="0.01" placeholder="Gross per month" value={form.grossMonthly}
+            onChange={(e) => setForm({ ...form, grossMonthly: e.target.value })} required />
+          <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
+            <option>USD</option><option>CDF</option>
+          </select>
+          <input placeholder="Reason (optional)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+          <button type="submit">Add</button>
+        </form>
+      )}
+      <p className="hint">A new amount applies from its date; earlier amounts stay in the history.</p>
+      <ErrorText error={error} />
+      {message && <p className="success">{message}</p>}
+    </div>
   )
 }

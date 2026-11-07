@@ -56,10 +56,12 @@ public class DataSetup implements ApplicationRunner {
     private final AuditService audit;
     private final WorkScheduleRepository schedules;
     private final UserScheduleRepository assignments;
+    private final cd.hrpay.salary.SalaryService salaries;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
                      PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
-                     UserScheduleRepository assignments) {
+                     UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries) {
+        this.salaries = salaries;
         this.schedules = schedules;
         this.assignments = assignments;
         this.properties = properties;
@@ -96,6 +98,7 @@ public class DataSetup implements ApplicationRunner {
             loadSampleUsers(password);
         }
         assignSampleSchedules();
+        addSampleSalaries();
         allowLocalIpv6();
     }
 
@@ -109,6 +112,19 @@ public class DataSetup implements ApplicationRunner {
                 site.replaceIpRanges(ranges);
             }
         });
+    }
+
+    /** Fake gross salaries from 1 January 2026 so earnings to date can be tried; HR replaces them. */
+    private void addSampleSalaries() {
+        Map<String, String> gross = Map.of(
+                "hr@demo.hrpay.cd", "2800", "finance@demo.hrpay.cd", "3000", "manager@demo.hrpay.cd", "3500",
+                "employee1@demo.hrpay.cd", "4500", "employee2@demo.hrpay.cd", "1200", "employee3@demo.hrpay.cd", "950");
+        gross.forEach((email, amount) -> users.findByEmailIgnoreCase(email).ifPresent(user -> {
+            if (salaries.history(user.getId()).isEmpty()) {
+                salaries.add(user.getId(), LocalDate.of(2026, 1, 1), new BigDecimal(amount), "USD", "Sample data",
+                        "system");
+            }
+        }));
     }
 
     /** Gives every sample user the standard schedule from 1 January 2026, if they have none. */

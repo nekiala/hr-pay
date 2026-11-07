@@ -14,6 +14,12 @@ public final class CurrentUser {
         return auth != null && auth.getPrincipal() instanceof AuthenticatedUser user ? user.id() : null;
     }
 
+    /** Email of the signed-in user, or "system" outside a request. */
+    public static String email() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth == null || !auth.isAuthenticated() ? "system" : auth.getName();
+    }
+
     public static boolean has(String permission) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {

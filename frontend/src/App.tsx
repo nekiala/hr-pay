@@ -15,6 +15,7 @@ import OvertimePage from './pages/OvertimePage'
 import CheckInPage from './pages/CheckInPage'
 import KioskPage from './pages/KioskPage'
 import OutboxPage from './pages/OutboxPage'
+import UserAttendancePage from './pages/UserAttendancePage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/account" element={<ChangePasswordPage />} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
+          <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
           <Route path="/roles" element={<Guard permission="role.read"><RolesPage /></Guard>} />
           <Route path="/sites" element={<SitesPage />} />
