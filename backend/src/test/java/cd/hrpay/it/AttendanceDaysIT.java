@@ -75,7 +75,7 @@ class AttendanceDaysIT extends IntegrationTest {
         String body = "{\"effectiveFrom\":\"2026-12-01\",\"grossMonthly\":1350,\"currency\":\"USD\",\"note\":\"Promotion\"}";
         mvc.perform(json(post("/api/users/" + employee.getId() + "/salaries").session(hr), body))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.grossMonthly").value(1350))
+                .andExpect(jsonPath("$.grossMonthly").value(473))      // the E4A basic; 877 is the complement
                 .andExpect(jsonPath("$.createdBy").value(HR));
         mvc.perform(json(post("/api/users/" + employee.getId() + "/salaries").session(hr), body))
                 .andExpect(status().isConflict());

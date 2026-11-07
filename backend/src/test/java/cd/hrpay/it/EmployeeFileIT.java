@@ -45,7 +45,9 @@ class EmployeeFileIT extends IntegrationTest {
                 .andExpect(jsonPath("$.contracts[1].endDate").value("2026-11-30"));
         mvc.perform(get("/api/users/" + employee + "/salaries").session(hr))
                 .andExpect(jsonPath("$[0].effectiveFrom").value("2026-12-01"))
-                .andExpect(jsonPath("$[0].grossMonthly").value(900));
+                .andExpect(jsonPath("$[0].grossMonthly").value(731));    // the M1 basic; 169 is the complement
+        mvc.perform(get("/api/users/" + employee + "/pay-elements").session(hr))
+                .andExpect(jsonPath("$[?(@.elementCode=='COMPLEMENT' && @.startMonth=='2026-12-01')].amount").value(169.0));
         mvc.perform(get("/api/users/" + employee).session(hr))
                 .andExpect(jsonPath("$.gradeCategoryId").value(2));   // MAITRISE, the category of M1
 

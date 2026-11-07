@@ -2247,6 +2247,17 @@ const fr: Record<string, string> = {
   "Postnom": "Postnom",
   "Commune or territory": "Commune ou territoire",
   "For the tax declaration": "Pour la déclaration fiscale",
+  "Agreed net salary (optional)": "Salaire net convenu (facultatif)",
+  "The previous contract ends the day before. The basic salary is the grade's. With an agreed net, HR Pay works out the gross and pays the difference above the basic as a salary complement.": "Le contrat précédent se termine la veille. Le salaire de base est celui du grade. Avec un net convenu, HR Pay calcule le brut et verse l'écart au-dessus de la base comme complément de salaire.",
+  "Monthly salary": "Salaire mensuel",
+  "Agreed net per month": "Net convenu par mois",
+  "Work out the gross": "Calculer le brut",
+  "Grade {g} basic": "Base du grade {g}",
+  "Salary complement": "Complément de salaire",
+  "Gross for a normal month": "Brut pour un mois normal",
+  "CNSS": "CNSS",
+  "Save this salary": "Enregistrer ce salaire",
+  "Enter the net agreed with the person. The basic is the grade's; HR Pay works out the complement so that a normal month (housing, transport, CNSS and IPR included) pays that net.": "Saisissez le net convenu avec la personne. La base est celle du grade ; HR Pay calcule le complément pour qu'un mois normal (logement, transport, CNSS et IPR compris) verse ce net.",
 }
 
 export default fr

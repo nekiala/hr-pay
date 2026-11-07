@@ -1,5 +1,6 @@
 package cd.hrpay.it;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,9 +14,13 @@ import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
 
 class PayElementsIT extends IntegrationTest {
+
+    @Autowired
+    JdbcClient jdbc;
 
     @Autowired
     UserRepository users;
@@ -106,11 +111,68 @@ class PayElementsIT extends IntegrationTest {
                 .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].subjectToCnss").value(true))
                 .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].taxableIpr").value(true))
                 .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].defaultForAll").value(false));
-        mvc.perform(json(post("/api/users/" + id("employee3@demo.hrpay.cd") + "/pay-elements").session(hr), """
+        long user = JsonPath.<Number>read(mvc.perform(json(post("/api/users").session(login(ADMIN)), newUser("[\"EMPLOYEE\"]")))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id").longValue();
+        mvc.perform(json(post("/api/users/" + user + "/pay-elements").session(hr), """
                         {"elementId":%d,"amount":125.97,"currency":"USD","excluded":false,"startMonth":"2028-01",
                          "note":"Agreed at hiring"}""".formatted(element(hr, "COMPLEMENT"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.amount").value(125.97));
+    }
+
+    @Test
+    void theAgreedPayKeepsTheGradesBasicAndTheRestIsTheComplement() throws Exception {
+        MockHttpSession hr = login(HR);
+        jdbc.sql("insert into exchange_rate (currency, rate_date, cdf_per_unit, source) values ('USD', '2026-09-30', 2265, 'Test') on conflict do nothing").update();
+        String grades = mvc.perform(get("/api/grades").session(hr)).andReturn().getResponse().getContentAsString();
+        long e3a = JsonPath.<List<Number>>read(grades, "$[?(@.code=='E3A')].id").getFirst().longValue();
+        long user = JsonPath.<Number>read(mvc.perform(json(post("/api/users").session(login(ADMIN)), newUser("[\"EMPLOYEE\"]")))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id").longValue();
+
+        // Below the grade's basic: refused.
+        mvc.perform(json(post("/api/users/" + user + "/contracts").session(hr), """
+                        {"contractType":"PERMANENT","startDate":"2026-09-01","gradeId":%d,"expatriate":false,
+                         "negotiatedBasic":250}""".formatted(e3a)))
+                .andExpect(status().is(422));
+        // A net that the grade's basic alone already exceeds: refused, choose a lower grade.
+        mvc.perform(json(post("/api/users/" + user + "/contracts").session(hr), """
+                        {"contractType":"PERMANENT","startDate":"2026-09-01","gradeId":%d,"expatriate":false,
+                         "agreedNet":100}""".formatted(e3a)))
+                .andExpect(status().is(422));
+        // An agreed net: the E3A basic, and the complement that gives exactly that net in a normal month.
+        mvc.perform(json(post("/api/users/" + user + "/contracts").session(hr), """
+                        {"contractType":"PERMANENT","startDate":"2026-09-01","gradeId":%d,"expatriate":false,
+                         "agreedNet":600}""".formatted(e3a)))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/users/" + user + "/salaries").session(hr))
+                .andExpect(jsonPath("$[0].grossMonthly").value(307.0));
+        String items = mvc.perform(get("/api/users/" + user + "/pay-elements").session(hr))
+                .andReturn().getResponse().getContentAsString();
+        java.math.BigDecimal complement = new java.math.BigDecimal(JsonPath.<List<Object>>read(items,
+                "$[?(@.elementCode=='COMPLEMENT')].amount").getFirst().toString());
+        assertThat(complement).isPositive();
+        String plan = mvc.perform(json(post("/api/users/" + user + "/salaries/net/preview").session(hr), """
+                        {"effectiveFrom":"2026-09-01","net":600}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gradeBasic").value(307.0))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(new java.math.BigDecimal(JsonPath.<Object>read(plan, "$.net").toString()))
+                .isCloseTo(new java.math.BigDecimal("600"), org.assertj.core.data.Offset.offset(new java.math.BigDecimal("0.01")));
+        assertThat(new java.math.BigDecimal(JsonPath.<Object>read(plan, "$.complement").toString())).isEqualByComparingTo(complement);
+
+        // A later agreed salary above the basic: the basic stays, the complement is replaced from that month.
+        mvc.perform(json(post("/api/users/" + user + "/salaries").session(hr), """
+                        {"effectiveFrom":"2026-11-01","grossMonthly":500,"currency":"USD"}"""))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.grossMonthly").value(307.0));
+        mvc.perform(get("/api/users/" + user + "/pay-elements").session(hr))
+                .andExpect(jsonPath("$[?(@.elementCode=='COMPLEMENT' && @.startMonth=='2026-11-01')].amount").value(193.0))
+                .andExpect(jsonPath("$[?(@.elementCode=='COMPLEMENT' && @.startMonth=='2026-09-01')].endMonth").value("2026-10-01"));
+        mvc.perform(json(post("/api/users/" + user + "/salaries").session(hr), """
+                        {"effectiveFrom":"2026-12-01","grossMonthly":300,"currency":"USD"}"""))
+                .andExpect(status().is(422));
+        // Other tests count the active employees with a grade category (yearly leave grants): take this one out.
+        jdbc.sql("update app_user set status = 'DISABLED' where id = ?").param(user).update();
     }
 
     @Test

@@ -127,13 +127,14 @@ public class Departures {
         if (hiredOn != null && in.lastDay().isBefore(hiredOn)) {
             throw new BusinessRuleException("The last day is before the hire date.");
         }
-        var salary = salaries.on(userId, in.lastDay()).orElseThrow(
+        // The agreed salary: the basic and the negotiated complement.
+        var salary = salaries.agreed(userId, in.lastDay()).orElseThrow(
                 () -> new BusinessRuleException("There is no basic salary on the last day: record it first."));
         LocalDate on = in.lastDay();
         List<String> why = new ArrayList<>();
         BigDecimal perMonth = statutory.rate("SETTLEMENT_DAYS_PER_MONTH", on);
         BigDecimal daily = salary.grossMonthly().divide(perMonth, 4, RoundingMode.HALF_UP);
-        why.add(Texts.t("Daily rate: basic salary %s %s ÷ %s days = %s.", salary.grossMonthly().toPlainString(),
+        why.add(Texts.t("Daily rate: monthly salary %s %s ÷ %s days = %s.", salary.grossMonthly().toPlainString(),
                 salary.currency(), perMonth.stripTrailingZeros().toPlainString(), money(daily).toPlainString()));
 
         Period served = hiredOn == null ? Period.ZERO : Period.between(hiredOn, on.plusDays(1));

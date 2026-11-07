@@ -140,7 +140,7 @@ public class AttendanceDays {
 
         Earnings earnings = null;
         if (withEarnings && scheduledMonth > 0) {
-            earnings = salaries.on(user.getId(), asOf.isBefore(from) ? from : asOf).map(s -> {
+            earnings = salaries.agreed(user.getId(), asOf.isBefore(from) ? from : asOf).map(s -> {
                 BigDecimal rate = s.grossMonthly().divide(BigDecimal.valueOf(scheduledMonth), 10, RoundingMode.HALF_UP);
                 BigDecimal earned = rate.multiply(BigDecimal.valueOf(payable)).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal overtimeEarned = rate.multiply(weightedInMonth).setScale(2, RoundingMode.HALF_UP);

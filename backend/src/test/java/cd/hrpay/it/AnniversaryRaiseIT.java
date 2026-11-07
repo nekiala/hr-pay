@@ -31,7 +31,8 @@ class AnniversaryRaiseIT extends IntegrationTest {
         long user = JsonPath.<Number>read(created, "$.id").longValue();
         String grades = mvc.perform(get("/api/grades").session(hr)).andReturn().getResponse().getContentAsString();
         long g2a = JsonPath.<List<Number>>read(grades, "$[?(@.code=='M1')].id").getFirst().longValue();
-        // Hired on a permanent contract on 10 March 2025 at a negotiated 800 (grade M1 base 731, MAITRISE raise 2.5%).
+        // Hired on a permanent contract on 10 March 2025 at an agreed 800: the M1 basic 731 and a complement of 69
+        // (MAITRISE raise 2.5%, on the basic).
         mvc.perform(json(post("/api/users/" + user + "/contracts").session(hr), """
                         {"contractType":"PERMANENT","startDate":"2025-03-10","gradeId":%d,"expatriate":false,
                          "negotiatedBasic":800}""".formatted(g2a)))
@@ -49,13 +50,13 @@ class AnniversaryRaiseIT extends IntegrationTest {
         assertThat(on.applied()).hasSize(1);
         var r = on.applied().getFirst();
         assertThat(r.raiseAmount()).isEqualByComparingTo("18.28");      // 2.5% of 731
-        assertThat(r.newBasic()).isEqualByComparingTo("818.28");
+        assertThat(r.newBasic()).isEqualByComparingTo("749.28");      // the basic; the complement of 69 stays
         assertThat(r.effectiveFrom()).isEqualTo(LocalDate.parse("2026-04-01"));
         assertThat(raises.applyDue(LocalDate.parse("2026-03-20"), user).applied()).isEmpty();
 
         mvc.perform(get("/api/users/" + user + "/salaries").session(hr))
                 .andExpect(jsonPath("$[0].effectiveFrom").value("2026-04-01"))
-                .andExpect(jsonPath("$[0].grossMonthly").value(818.28));
+                .andExpect(jsonPath("$[0].grossMonthly").value(749.28));
         mvc.perform(get("/api/raises").session(hr)).andExpect(status().isOk());
 
         int listed = raises.sendSummary();
