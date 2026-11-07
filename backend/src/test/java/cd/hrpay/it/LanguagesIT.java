@@ -103,7 +103,7 @@ class LanguagesIT extends IntegrationTest {
                     .contains("Fête nationale", "Fête de la République").doesNotContain("Patrice Lumumba Day");
             assertThat(jdbc.sql("select distinct trim(currency) from grade").query(String.class).list()).containsExactly("XAF");
             assertThat(jdbc.sql("select count(*) from statutory_rate where note like '%to verify%'").query(Integer.class).single())
-                    .isEqualTo(15);
+                    .isEqualTo(13);
             assertThat(declarations.kinds()).containsExactly("CNSS", "IPR", "TUS");
         });
 

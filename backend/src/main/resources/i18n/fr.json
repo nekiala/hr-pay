@@ -895,5 +895,20 @@
  "Write a message of at most 5,000 characters.": "Écrivez un message de 5 000 caractères au plus.",
  "Write the French and the English text.": "Écrivez le texte en français et en anglais.",
  "Tel. %s": "Tél. %s",
- "CNSS no. %s": "N° CNSS %s"
+ "CNSS no. %s": "N° CNSS %s",
+ "%s month(s)": "%s mois",
+ "During the notice, the person may take %s paid day(s) a week to look for a job.": "Pendant le préavis, la personne peut prendre %s jour(s) payé(s) par semaine pour chercher un emploi.",
+ "Notice for %s: %s plus %s %s per full year of service × %s years = %s %s.": "Préavis pour %s : %s plus %s %s par année entière de service × %s ans = %s %s.",
+ "Notice given on %s: it runs from %s to %s.": "Préavis notifié le %s : il court du %s au %s.",
+ "Notice not given or not worked by the employee: %s %s, taken from the settlement.": "Préavis non donné ou non presté par le travailleur : %s %s, retenus sur le décompte.",
+ "Notice not worked, paid by the employer: %s %s.": "Préavis non presté, payé par l'employeur : %s %s.",
+ "Pay the settlement within 2 working days of the last day (art. 100), and give the certificate of employment within 2 working days (art. 79).": "Payez le décompte dans les 2 jours ouvrables qui suivent le dernier jour (art. 100) et remettez le certificat de travail dans les 2 jours ouvrables (art. 79).",
+ "The employee resigns: they owe %s of it, %s %s.": "Le travailleur démissionne : il en doit %s, soit %s %s.",
+ "The notice is waived: nothing is paid or owed for it.": "Le préavis est dispensé : rien n'est payé ni dû à ce titre.",
+ "Warning: the person was on approved leave on the day notice was given. Notice cannot be given during leave or a suspension: give it again after the leave.": "Attention : la personne était en congé approuvé le jour où le préavis a été notifié. Le préavis ne peut pas être notifié pendant un congé ou une suspension : notifiez-le à nouveau après le congé.",
+ "calendar days": "jours calendaires",
+ "the legal minimum (no grade category)": "le minimum légal (pas de catégorie de grade)",
+ "working days": "jours ouvrables",
+ "Notice is given on or before the last day.": "Le préavis est notifié au plus tard le dernier jour.",
+ "Give the months as a whole number.": "Donnez les mois en nombre entier."
 }

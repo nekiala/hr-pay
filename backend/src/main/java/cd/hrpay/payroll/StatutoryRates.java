@@ -63,6 +63,12 @@ public class StatutoryRates {
                 .orElseThrow(() -> new BusinessRuleException("No " + code + " rate is in force on " + on + "."));
     }
 
+    /** The rate in force, or zero when none is set. */
+    public BigDecimal rateOrZero(String code, LocalDate on) {
+        return jdbc.sql("select value from statutory_rate where code = ? and effective_from <= ? order by effective_from desc limit 1")
+                .params(code, on).query(BigDecimal.class).optional().orElse(BigDecimal.ZERO);
+    }
+
     @Transactional
     public RateEntry addRate(String code, LocalDate effectiveFrom, BigDecimal value, String note) {
         String unit = jdbc.sql("select unit from statutory_rate_type where code = ?").param(code).query(String.class)

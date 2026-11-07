@@ -49,12 +49,23 @@ public class Departures {
     static final Set<String> SEVERANCE_REASONS = Set.of("DISMISSAL", "REDUNDANCY", "RETIREMENT");
 
     /** HR's choices; the amounts are worked out from them unless HR gives its own. */
-    public record Input(LocalDate lastDay, String reason, String notice, BigDecimal noticeDays, BigDecimal leaveDays,
-                        BigDecimal severanceAmount, BigDecimal thirteenthAmount, String note) {}
+    public record Input(LocalDate lastDay, String reason, LocalDate noticeDate, String noticeGivenBy, String notice,
+                        BigDecimal noticeDays, BigDecimal leaveDays, BigDecimal severanceAmount,
+                        BigDecimal thirteenthAmount, String note) {}
+
+    /**
+     * A grade category's notice: a base (days or months), days added per full year of service, whether days are
+     * working days (every day but Sunday and public holidays) or calendar days, and the share of it a person who
+     * resigns owes.
+     */
+    public record NoticeRule(String category, BigDecimal base, String baseUnit, BigDecimal daysPerYear, String dayKind,
+                             BigDecimal resignationShare) {}
 
     public record Departure(Long id, long userId, String name, String registrationNo, LocalDate hireDate,
-                            LocalDate lastDay, String reason, String notice, String currency, BigDecimal basicMonthly,
+                            LocalDate lastDay, String reason, LocalDate noticeDate, String noticeGivenBy,
+                            LocalDate noticeEnd, String notice, String currency, BigDecimal basicMonthly,
                             BigDecimal dailyRate, BigDecimal serviceYears, BigDecimal noticeDays, BigDecimal noticeAmount,
+                            BigDecimal noticeOwed,
                             BigDecimal leaveDays, BigDecimal leaveAmount, BigDecimal severanceAmount,
                             BigDecimal thirteenthAmount, BigDecimal total, BigDecimal loanBalance, String note,
                             String status, String createdBy, String confirmedBy, OffsetDateTime confirmedAt,
@@ -131,20 +142,11 @@ public class Departures {
         why.add(Texts.t("Service: %s years and %s months since %s.", served.getYears(), served.getMonths(),
                 hiredOn == null ? "?" : Texts.day(hiredOn)));
 
-        String notice = in.notice() == null ? defaultNotice(in.reason()) : in.notice();
-        BigDecimal noticeDays = in.noticeDays();
-        if (noticeDays == null) {
-            noticeDays = "PAID".equals(notice)
-                    ? statutory.rate("NOTICE_BASE_DAYS", on).add(statutory.rate("NOTICE_DAYS_PER_YEAR", on)
-                            .multiply(BigDecimal.valueOf(served.getYears())))
-                    : BigDecimal.ZERO;
-        }
+        Notice n = notice(u, in, hiredOn, why);
+        String notice = n.mode();
+        BigDecimal noticeDays = n.unobserved();
         BigDecimal noticeAmount = "PAID".equals(notice) ? money(daily.multiply(noticeDays)) : BigDecimal.ZERO.setScale(2);
-        why.add(switch (notice) {
-            case "PAID" -> Texts.t("Notice not worked, paid: %s days.", noticeDays.stripTrailingZeros().toPlainString());
-            case "WORKED" -> Texts.t("Notice worked: paid as normal working days, nothing more.");
-            default -> Texts.t("No notice is due for this reason.");
-        });
+        BigDecimal noticeOwed = "OWED".equals(notice) ? money(daily.multiply(noticeDays)) : BigDecimal.ZERO.setScale(2);
 
         BigDecimal leaveDays = in.leaveDays();
         if (leaveDays == null) {
@@ -187,22 +189,145 @@ public class Departures {
             why.add(Texts.t("Loans and advances still due (%s %s) are taken from the last payslip, within the allowed share of net pay.",
                     money(loanBalance).toPlainString(), salary.currency()));
         }
-        BigDecimal total = noticeAmount.add(leaveAmount).add(severance).add(thirteenth);
+        BigDecimal total = noticeAmount.add(leaveAmount).add(severance).add(thirteenth).subtract(noticeOwed);
+        if ("CD".equals(company.country())) {
+            why.add(Texts.t("Pay the settlement within 2 working days of the last day (art. 100), and give the certificate of employment within 2 working days (art. 79)."));
+        }
         Departure saved = find(userId).orElse(null);
         return new Departure(saved == null ? null : saved.id(), userId, u.getFirstName() + " " + u.getLastName(),
-                u.getRegistrationNo(), hiredOn, on, in.reason(), notice, salary.currency(), salary.grossMonthly(), daily,
-                years, noticeDays, noticeAmount, leaveDays, leaveAmount, severance, thirteenth, total, money(loanBalance),
+                u.getRegistrationNo(), hiredOn, on, in.reason(), in.noticeDate(), n.givenBy(), n.end(), notice,
+                salary.currency(), salary.grossMonthly(), daily, years, noticeDays, noticeAmount, noticeOwed, leaveDays,
+                leaveAmount, severance, thirteenth, total, money(loanBalance),
                 in.note(), saved == null ? "DRAFT" : saved.status(), saved == null ? null : saved.createdBy(),
                 saved == null ? null : saved.confirmedBy(), saved == null ? null : saved.confirmedAt(),
                 saved == null ? null : saved.certificateNo(), monthStatus(YearMonth.from(on)), why);
     }
 
-    static String defaultNotice(String reason) {
+    /** Who gives notice for a reason: the employer when it ends the contract, the employee when they resign. */
+    static String defaultGivenBy(String reason) {
         return switch (reason) {
-            case "DISMISSAL", "REDUNDANCY" -> "PAID";
-            case "RESIGNATION", "RETIREMENT" -> "WORKED";
-            default -> "NONE";
+            case "DISMISSAL", "REDUNDANCY", "RETIREMENT" -> "EMPLOYER";
+            case "RESIGNATION" -> "EMPLOYEE";
+            default -> null;
         };
+    }
+
+    /** The notice worked out: who gave it, when it ends, how it was settled, and the days not observed. */
+    record Notice(String givenBy, LocalDate end, String mode, BigDecimal unobserved) {}
+
+    public NoticeRule rule(AppUser u) {
+        if (u.getGradeCategoryId() != null) {
+            var r = jdbc.sql("""
+                    select name as category, notice_base as base, notice_base_unit as base_unit, notice_days_per_year as days_per_year,
+                           notice_day_kind as day_kind, notice_resignation_share as resignation_share
+                    from grade_category where id = ?""").param(u.getGradeCategoryId()).query(NoticeRule.class).optional();
+            if (r.isPresent()) {
+                return r.get();
+            }
+        }
+        boolean cg = "CG".equals(company.country());
+        return new NoticeRule(null, cg ? BigDecimal.ONE : BigDecimal.valueOf(14), cg ? "MONTHS" : "DAYS",
+                cg ? BigDecimal.ZERO : BigDecimal.valueOf(7), cg ? "CALENDAR" : "WORKING", cg ? BigDecimal.ONE : new BigDecimal("0.5"));
+    }
+
+    private Notice notice(AppUser u, Input in, LocalDate hiredOn, List<String> why) {
+        String givenBy = in.noticeGivenBy() != null ? in.noticeGivenBy() : defaultGivenBy(in.reason());
+        if (givenBy == null || "GROSS_MISCONDUCT".equals(in.reason())) {
+            String mode = in.notice() != null && !"OWED".equals(in.notice()) && !"PAID".equals(in.notice()) ? in.notice() : "NONE";
+            why.add(Texts.t("No notice is due for this reason."));
+            return new Notice(null, null, mode, BigDecimal.ZERO);
+        }
+        if (in.noticeDate() != null && in.noticeDate().isAfter(in.lastDay())) {
+            throw new BusinessRuleException("Notice is given on or before the last day.");
+        }
+        NoticeRule r = rule(u);
+        boolean working = "WORKING".equals(r.dayKind());
+        LocalDate from = in.noticeDate() != null ? in.noticeDate() : in.lastDay();
+        int years = hiredOn == null ? 0 : Period.between(hiredOn, from).getYears();
+        LocalDate start = from.plusDays(1);
+        Set<LocalDate> holidays = working ? holidays(start, start.plusYears(2)) : Set.of();
+        // The employer's notice: the base, then the days per full year of service.
+        LocalDate end = "MONTHS".equals(r.baseUnit())
+                ? start.plusMonths(r.base().intValue()).minusDays(1)
+                : addDays(start.minusDays(1), r.base().intValue(), working, holidays);
+        end = addDays(end, r.daysPerYear().multiply(BigDecimal.valueOf(years)).setScale(0, RoundingMode.CEILING).intValue(), working, holidays);
+        int length = countDays(start, end, working, holidays);
+        String unit = working ? Texts.t("working days") : Texts.t("calendar days");
+        String base = "MONTHS".equals(r.baseUnit()) ? Texts.t("%s month(s)", r.base().stripTrailingZeros().toPlainString())
+                : r.base().stripTrailingZeros().toPlainString() + " " + unit;
+        why.add(Texts.t("Notice for %s: %s plus %s %s per full year of service × %s years = %s %s.",
+                r.category() == null ? Texts.t("the legal minimum (no grade category)") : r.category(), base,
+                r.daysPerYear().stripTrailingZeros().toPlainString(), unit, years, length, unit));
+        if ("EMPLOYEE".equals(givenBy) && r.resignationShare().compareTo(BigDecimal.ONE) < 0) {
+            length = BigDecimal.valueOf(length).multiply(r.resignationShare()).setScale(0, RoundingMode.CEILING).intValue();
+            end = addDays(start.minusDays(1), length, working, holidays);
+            why.add(Texts.t("The employee resigns: they owe %s of it, %s %s.",
+                    r.resignationShare().multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString() + " %", length, unit));
+        }
+        int unobserved;
+        if (in.noticeDate() == null) {
+            unobserved = length;
+            end = addDays(in.lastDay(), length, working, holidays);
+        } else {
+            why.add(Texts.t("Notice given on %s: it runs from %s to %s.", Texts.day(in.noticeDate()), Texts.day(start), Texts.day(end)));
+            unobserved = in.lastDay().isBefore(end) ? countDays(in.lastDay().plusDays(1), end, working, holidays) : 0;
+            if (onLeave(u.getId(), in.noticeDate())) {
+                why.add(Texts.t("Warning: the person was on approved leave on the day notice was given. Notice cannot be given during leave or a suspension: give it again after the leave."));
+            }
+        }
+        String mode = in.notice() != null ? in.notice()
+                : unobserved == 0 ? "WORKED" : "EMPLOYEE".equals(givenBy) ? "OWED" : "PAID";
+        BigDecimal days = in.noticeDays() != null && ("PAID".equals(mode) || "OWED".equals(mode)) ? in.noticeDays()
+                : "PAID".equals(mode) || "OWED".equals(mode) ? BigDecimal.valueOf(unobserved) : BigDecimal.ZERO;
+        why.add(switch (mode) {
+            case "PAID" -> Texts.t("Notice not worked, paid by the employer: %s %s.", days.stripTrailingZeros().toPlainString(), unit);
+            case "OWED" -> Texts.t("Notice not given or not worked by the employee: %s %s, taken from the settlement.",
+                    days.stripTrailingZeros().toPlainString(), unit);
+            case "WORKED" -> Texts.t("Notice worked: paid as normal working days, nothing more.");
+            default -> Texts.t("The notice is waived: nothing is paid or owed for it.");
+        });
+        BigDecimal search = statutory.rateOrZero("JOB_SEARCH_DAYS_PER_WEEK", in.lastDay());
+        if (search.signum() > 0 && !"NONE".equals(mode)) {
+            why.add(Texts.t("During the notice, the person may take %s paid day(s) a week to look for a job.",
+                    search.stripTrailingZeros().toPlainString()));
+        }
+        return new Notice(givenBy, end, mode, days);
+    }
+
+    private Set<LocalDate> holidays(LocalDate from, LocalDate to) {
+        return new java.util.HashSet<>(jdbc.sql("select observed_date from holiday_occurrence where observed_date between ? and ?")
+                .params(from, to).query(LocalDate.class).list());
+    }
+
+    private static boolean counts(LocalDate d, boolean working, Set<LocalDate> holidays) {
+        return !working || (d.getDayOfWeek() != java.time.DayOfWeek.SUNDAY && !holidays.contains(d));
+    }
+
+    /** The day on which n more counted days have passed after {@code after}. */
+    static LocalDate addDays(LocalDate after, int n, boolean working, Set<LocalDate> holidays) {
+        LocalDate d = after;
+        for (int counted = 0; counted < n; ) {
+            d = d.plusDays(1);
+            if (counts(d, working, holidays)) {
+                counted++;
+            }
+        }
+        return d;
+    }
+
+    static int countDays(LocalDate from, LocalDate to, boolean working, Set<LocalDate> holidays) {
+        int n = 0;
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            if (counts(d, working, holidays)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    private boolean onLeave(long userId, LocalDate day) {
+        return jdbc.sql("select count(*) from leave_request where user_id = ? and status = 'APPROVED' and start_date <= ? and end_date >= ?")
+                .params(userId, day, day).query(Integer.class).single() > 0;
     }
 
     /**
@@ -232,14 +357,16 @@ public class Departures {
                 .optional().orElse("OPEN");
     }
 
-    private record Row(long id, long userId, LocalDate lastDay, String reason, String notice, BigDecimal noticeDays,
+    private record Row(long id, long userId, LocalDate lastDay, String reason, LocalDate noticeDate, String noticeGivenBy,
+                       LocalDate noticeEnd, String notice, BigDecimal noticeDays,
                        BigDecimal leaveDays, BigDecimal severanceAmount, BigDecimal thirteenthAmount, String note,
                        String status, String createdBy, String confirmedBy, OffsetDateTime confirmedAt,
                        String certificateNo, LocalDate contractEndBefore) {}
 
     private Optional<Row> row(long userId) {
         return jdbc.sql("""
-                select id, user_id, last_day, reason, notice, notice_days, leave_days, severance_amount, thirteenth_amount,
+                select id, user_id, last_day, reason, notice_date, notice_given_by, notice_end, notice, notice_days, leave_days,
+                       severance_amount, thirteenth_amount,
                        note, status, created_by, confirmed_by, confirmed_at, certificate_no, contract_end_before
                 from departure where user_id = ?""").param(userId).query(Row.class).optional();
     }
@@ -249,14 +376,16 @@ public class Departures {
         return row(userId).map(r -> {
             AppUser u = user(userId);
             var d = jdbc.sql("""
-                    select currency, basic_monthly, daily_rate, service_years, notice_amount, leave_amount
+                    select currency, basic_monthly, daily_rate, service_years, notice_amount, leave_amount, notice_owed
                     from departure where id = ?""").param(r.id())
                     .query((rs, i) -> new Object[] {rs.getString(1), rs.getBigDecimal(2), rs.getBigDecimal(3),
-                            rs.getBigDecimal(4), rs.getBigDecimal(5), rs.getBigDecimal(6)}).single();
-            BigDecimal total = ((BigDecimal) d[4]).add((BigDecimal) d[5]).add(r.severanceAmount()).add(r.thirteenthAmount());
+                            rs.getBigDecimal(4), rs.getBigDecimal(5), rs.getBigDecimal(6), rs.getBigDecimal(7)}).single();
+            BigDecimal total = ((BigDecimal) d[4]).add((BigDecimal) d[5]).add(r.severanceAmount()).add(r.thirteenthAmount())
+                    .subtract((BigDecimal) d[6]);
             return new Departure(r.id(), userId, u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), hired(u),
-                    r.lastDay(), r.reason(), r.notice(), (String) d[0], (BigDecimal) d[1], (BigDecimal) d[2],
-                    (BigDecimal) d[3], r.noticeDays(), (BigDecimal) d[4], r.leaveDays(), (BigDecimal) d[5],
+                    r.lastDay(), r.reason(), r.noticeDate(), r.noticeGivenBy(), r.noticeEnd(), r.notice(), (String) d[0],
+                    (BigDecimal) d[1], (BigDecimal) d[2], (BigDecimal) d[3], r.noticeDays(), (BigDecimal) d[4],
+                    (BigDecimal) d[6], r.leaveDays(), (BigDecimal) d[5],
                     r.severanceAmount(), r.thirteenthAmount(), total, null, r.note(), r.status(), r.createdBy(),
                     r.confirmedBy(), r.confirmedAt(), r.certificateNo(), monthStatus(YearMonth.from(r.lastDay())), List.of());
         });
@@ -265,7 +394,7 @@ public class Departures {
     public List<Summary> list() {
         return jdbc.sql("""
                 select d.id, d.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, d.last_day, d.reason,
-                       d.status, d.currency, d.notice_amount + d.leave_amount + d.severance_amount + d.thirteenth_amount as total
+                       d.status, d.currency, d.notice_amount + d.leave_amount + d.severance_amount + d.thirteenth_amount - d.notice_owed as total
                 from departure d join app_user u on u.id = d.user_id order by d.last_day desc limit 200""")
                 .query(Summary.class).list();
     }
@@ -280,22 +409,25 @@ public class Departures {
         Departure d = propose(userId, in);
         if (existing == null) {
             jdbc.sql("""
-                    insert into departure (user_id, last_day, reason, notice, currency, basic_monthly, daily_rate,
-                        service_years, notice_days, notice_amount, leave_days, leave_amount, severance_amount,
-                        thirteenth_amount, note, created_by)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
-                    .params(userId, d.lastDay(), d.reason(), d.notice(), d.currency(), d.basicMonthly(), d.dailyRate(),
-                            d.serviceYears(), d.noticeDays(), d.noticeAmount(), d.leaveDays(), d.leaveAmount(),
-                            d.severanceAmount(), d.thirteenthAmount(), blank(in.note()), CurrentUser.email())
+                    insert into departure (user_id, last_day, reason, notice_date, notice_given_by, notice_end, notice, currency,
+                        basic_monthly, daily_rate, service_years, notice_days, notice_amount, notice_owed, leave_days,
+                        leave_amount, severance_amount, thirteenth_amount, note, created_by)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
+                    .params(userId, d.lastDay(), d.reason(), d.noticeDate(), d.noticeGivenBy(), d.noticeEnd(), d.notice(),
+                            d.currency(), d.basicMonthly(), d.dailyRate(), d.serviceYears(), d.noticeDays(), d.noticeAmount(),
+                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.thirteenthAmount(),
+                            blank(in.note()), CurrentUser.email())
                     .update();
         } else {
             jdbc.sql("""
-                    update departure set last_day = ?, reason = ?, notice = ?, currency = ?, basic_monthly = ?, daily_rate = ?,
-                        service_years = ?, notice_days = ?, notice_amount = ?, leave_days = ?, leave_amount = ?,
-                        severance_amount = ?, thirteenth_amount = ?, note = ? where id = ?""")
-                    .params(d.lastDay(), d.reason(), d.notice(), d.currency(), d.basicMonthly(), d.dailyRate(),
-                            d.serviceYears(), d.noticeDays(), d.noticeAmount(), d.leaveDays(), d.leaveAmount(),
-                            d.severanceAmount(), d.thirteenthAmount(), blank(in.note()), existing.id())
+                    update departure set last_day = ?, reason = ?, notice_date = ?, notice_given_by = ?, notice_end = ?,
+                        notice = ?, currency = ?, basic_monthly = ?, daily_rate = ?, service_years = ?, notice_days = ?,
+                        notice_amount = ?, notice_owed = ?, leave_days = ?, leave_amount = ?, severance_amount = ?,
+                        thirteenth_amount = ?, note = ? where id = ?""")
+                    .params(d.lastDay(), d.reason(), d.noticeDate(), d.noticeGivenBy(), d.noticeEnd(), d.notice(),
+                            d.currency(), d.basicMonthly(), d.dailyRate(), d.serviceYears(), d.noticeDays(), d.noticeAmount(),
+                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.thirteenthAmount(),
+                            blank(in.note()), existing.id())
                     .update();
         }
         audit.record("departure.saved", "user", userId, Map.of("lastDay", d.lastDay().toString(), "reason", d.reason(),
@@ -331,6 +463,8 @@ public class Departures {
         String note = Texts.t("final settlement, last day %s", Texts.day(d.lastDay()));
         writeEntry(userId, "NOTICE_PAY", month, d.noticeAmount(), d.currency(),
                 Texts.t("%s days", d.noticeDays().stripTrailingZeros().toPlainString()));
+        writeEntry(userId, "NOTICE_OWED", month, d.noticeOwed(), d.currency(),
+                Texts.t("%s days", d.noticeDays().stripTrailingZeros().toPlainString()));
         writeEntry(userId, "LEAVE_PAYOUT", month, d.leaveAmount(), d.currency(),
                 Texts.t("%s days", d.leaveDays().stripTrailingZeros().toPlainString()));
         writeEntry(userId, "SEVERANCE", month, d.severanceAmount(), d.currency(), note);
@@ -351,7 +485,7 @@ public class Departures {
                 where id = ?""")
                 .params(CurrentUser.email(), contract == null ? null : contract.endDate(), r.id()).update();
         audit.record("departure.confirmed", "user", userId, Map.of("lastDay", d.lastDay().toString(), "reason", d.reason(),
-                "notice", d.noticeAmount().toPlainString(), "leave", d.leaveAmount().toPlainString(),
+                "notice", d.noticeAmount().toPlainString(), "noticeOwed", d.noticeOwed().toPlainString(), "leave", d.leaveAmount().toPlainString(),
                 "severance", d.severanceAmount().toPlainString(), "thirteenth", d.thirteenthAmount().toPlainString(),
                 "currency", d.currency()));
         return find(userId).orElseThrow();
@@ -378,7 +512,7 @@ public class Departures {
         if (r.status().equals("CONFIRMED")) {
             YearMonth month = YearMonth.from(r.lastDay());
             PayrollRuns.requireOpen(jdbc, month);
-            for (String code : List.of("NOTICE_PAY", "LEAVE_PAYOUT", "SEVERANCE", "THIRTEENTH_MONTH")) {
+            for (String code : List.of("NOTICE_PAY", "NOTICE_OWED", "LEAVE_PAYOUT", "SEVERANCE", "THIRTEENTH_MONTH")) {
                 jdbc.sql("delete from pay_entry where user_id = ? and element_id = ? and month = ?")
                         .params(userId, elementId(code), month.atDay(1)).update();
             }

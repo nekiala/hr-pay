@@ -130,5 +130,8 @@
  "The final settlement prices a day as the monthly basic salary divided by this.": "Le décompte final calcule un jour comme le salaire de base mensuel divisé par ce nombre.",
  "Days of notice for any length of service.": "Jours de préavis quelle que soit l'ancienneté.",
  "Days of notice added for each full year of service.": "Jours de préavis ajoutés par année complète d'ancienneté.",
- "Days of pay per year of service on dismissal, redundancy or retirement, from the law or the collective agreement.": "Jours de salaire par année d'ancienneté en cas de licenciement, de licenciement économique ou de retraite, selon la loi ou la convention collective."
+ "Days of pay per year of service on dismissal, redundancy or retirement, from the law or the collective agreement.": "Jours de salaire par année d'ancienneté en cas de licenciement, de licenciement économique ou de retraite, selon la loi ou la convention collective.",
+ "Notice, free days a week to look for a job": "Préavis, jours libres par semaine pour chercher un emploi",
+ "Paid days the person may take each week of the notice to look for a new job.": "Jours payés que la personne peut prendre chaque semaine du préavis pour chercher un nouvel emploi.",
+ "Notice not given (owed by the employee)": "Préavis non presté (dû par le travailleur)"
 }

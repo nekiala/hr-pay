@@ -41,6 +41,59 @@ class PayrollCompletenessIT extends IntegrationTest {
     }
 
     @Test
+    void theNoticeFollowsTheGradeCategoryAndWhoGaveIt() throws Exception {
+        MockHttpSession hr = login(HR);
+        long esther = id("employee2@demo.hrpay.cd");
+        record Before(Long category, java.time.LocalDate hired) {}
+        Before before = jdbc.sql("select grade_category_id as category, hire_date as hired from app_user where id = ?").param(esther).query(Before.class).single();
+        long cat1 = jdbc.sql("select id from grade_category where code = 'CAT1'").query(Long.class).single();
+        // The categories carry their notice; only master-data managers change it.
+        mvc.perform(get("/api/leave/categories").session(hr))
+                .andExpect(jsonPath("$[?(@.code=='CAT2')].noticeBaseUnit").value("MONTHS"))
+                .andExpect(jsonPath("$[?(@.code=='CAT3')].noticeDaysPerYear").value(16.0));
+        mvc.perform(json(put("/api/grade-categories/" + cat1 + "/notice").session(login(EMPLOYEE)),
+                "{\"base\":14,\"baseUnit\":\"DAYS\",\"daysPerYear\":7,\"dayKind\":\"WORKING\",\"resignationShare\":0.5}"))
+                .andExpect(status().isForbidden());
+        jdbc.sql("update app_user set grade_category_id = ?, hire_date = '2026-01-05' where id = ?").params(cat1, esther).update();
+        try {
+            // Resigning in the first year: half of 14 working days, counted from the day after, Sundays left out.
+            mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-06-05","reason":"RESIGNATION","noticeDate":"2026-06-01"}"""))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.noticeGivenBy").value("EMPLOYEE"))
+                    .andExpect(jsonPath("$.noticeEnd").value("2026-06-09"))
+                    .andExpect(jsonPath("$.notice").value("OWED"))
+                    .andExpect(jsonPath("$.noticeDays").value(3))
+                    .andExpect(jsonPath("$.noticeOwed").value(org.hamcrest.Matchers.greaterThan(0.0)))
+                    .andExpect(jsonPath("$.noticeAmount").value(0.0));
+            // Worked to its end: nothing is owed.
+            mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-06-09","reason":"RESIGNATION","noticeDate":"2026-06-01"}"""))
+                    .andExpect(jsonPath("$.notice").value("WORKED")).andExpect(jsonPath("$.noticeOwed").value(0.0));
+            // The employer's notice is the whole 14 days; leaving earlier, the rest is paid.
+            mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-06-09","reason":"DISMISSAL","noticeDate":"2026-06-01"}"""))
+                    .andExpect(jsonPath("$.noticeGivenBy").value("EMPLOYER"))
+                    .andExpect(jsonPath("$.noticeEnd").value("2026-06-17"))
+                    .andExpect(jsonPath("$.notice").value("PAID"))
+                    .andExpect(jsonPath("$.noticeDays").value(7));
+            // Saved and confirmed, what is owed is a deduction on the last payslip.
+            mvc.perform(json(put("/api/users/" + esther + "/departure").session(hr), """
+                    {"lastDay":"2026-06-05","reason":"RESIGNATION","noticeDate":"2026-06-01","leaveDays":0}""")).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.noticeOwed").value(org.hamcrest.Matchers.greaterThan(0.0)));
+            mvc.perform(post("/api/users/" + esther + "/departure/confirm").session(hr).with(csrf())).andExpect(status().isOk());
+            assertThat(jdbc.sql("""
+                    select count(*) from pay_entry e join pay_element p on p.id = e.element_id
+                    where e.user_id = ? and p.code = 'NOTICE_OWED' and p.kind = 'DEDUCTION'""").param(esther).query(Integer.class).single())
+                    .isEqualTo(1);
+            mvc.perform(delete("/api/users/" + esther + "/departure").session(hr).with(csrf())).andExpect(status().isNoContent());
+        } finally {
+            jdbc.sql("update app_user set grade_category_id = ?, hire_date = ? where id = ?")
+                    .params(before.category(), before.hired(), esther).update();
+        }
+    }
+
+    @Test
     void aDepartureEndsTheContractAndItsSettlementIsOnTheLastPayslip() throws Exception {
         rates.store("""
                 {"data":[{"currency_code":"USD","rate_date":"2026-04-30","indicative_rate":"2300"}]}""");

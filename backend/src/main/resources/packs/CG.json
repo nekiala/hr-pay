@@ -13,7 +13,12 @@
      "annual_leave_days": 20.0,
      "active": true,
      "anniversary_raise_percent": 2.0,
-     "raise_timing": "NEXT_MONTH"
+     "raise_timing": "NEXT_MONTH",
+     "notice_base": 1.0,
+     "notice_base_unit": "MONTHS",
+     "notice_days_per_year": 0.0,
+     "notice_day_kind": "CALENDAR",
+     "notice_resignation_share": 1.0
     },
     {
      "id": 2,
@@ -22,7 +27,12 @@
      "annual_leave_days": 24.0,
      "active": true,
      "anniversary_raise_percent": 2.5,
-     "raise_timing": "NEXT_MONTH"
+     "raise_timing": "NEXT_MONTH",
+     "notice_base": 2.0,
+     "notice_base_unit": "MONTHS",
+     "notice_days_per_year": 0.0,
+     "notice_day_kind": "CALENDAR",
+     "notice_resignation_share": 1.0
     },
     {
      "id": 3,
@@ -31,7 +41,12 @@
      "annual_leave_days": 26.0,
      "active": true,
      "anniversary_raise_percent": 3.0,
-     "raise_timing": "NEXT_MONTH"
+     "raise_timing": "NEXT_MONTH",
+     "notice_base": 3.0,
+     "notice_base_unit": "MONTHS",
+     "notice_days_per_year": 0.0,
+     "notice_day_kind": "CALENDAR",
+     "notice_resignation_share": 1.0
     }
    ]
   },
@@ -948,6 +963,24 @@
      "system": true,
      "display_order": 18,
      "active": true
+    },
+    {
+     "id": 28,
+     "code": "NOTICE_OWED",
+     "name": "Notice not given (owed by the employee)",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 135,
+     "active": true
     }
    ]
   },
@@ -1040,25 +1073,18 @@
      "display_order": 300
     },
     {
-     "code": "NOTICE_BASE_DAYS",
-     "name": "Notice, base days",
-     "unit": "COUNT",
-     "description": "Days of notice for any length of service.",
-     "display_order": 310
-    },
-    {
-     "code": "NOTICE_DAYS_PER_YEAR",
-     "name": "Notice, days per year of service",
-     "unit": "COUNT",
-     "description": "Days of notice added for each full year of service.",
-     "display_order": 320
-    },
-    {
      "code": "SEVERANCE_DAYS_PER_YEAR",
      "name": "Severance, days per year of service",
      "unit": "COUNT",
      "description": "Days of pay per year of service on dismissal, redundancy or retirement, from the law or the collective agreement.",
      "display_order": 330
+    },
+    {
+     "code": "JOB_SEARCH_DAYS_PER_WEEK",
+     "name": "Notice, free days a week to look for a job",
+     "unit": "COUNT",
+     "description": "Paid days the person may take each week of the notice to look for a new job.",
+     "display_order": 310
     }
    ]
   },
@@ -1163,27 +1189,19 @@
      "created_by": "system"
     },
     {
-     "id": 13,
-     "code": "NOTICE_BASE_DAYS",
-     "effective_from": "2020-01-01",
-     "value": 30.0,
-     "note": "Sample, to verify (Republic of the Congo)",
-     "created_by": "system"
-    },
-    {
-     "id": 14,
-     "code": "NOTICE_DAYS_PER_YEAR",
-     "effective_from": "2020-01-01",
-     "value": 0.0,
-     "note": "Sample, to verify (Republic of the Congo)",
-     "created_by": "system"
-    },
-    {
      "id": 15,
      "code": "SEVERANCE_DAYS_PER_YEAR",
      "effective_from": "2020-01-01",
      "value": 7.5,
      "note": "Sample, to verify (Republic of the Congo)",
+     "created_by": "system"
+    },
+    {
+     "id": 16,
+     "code": "JOB_SEARCH_DAYS_PER_WEEK",
+     "effective_from": "2020-01-01",
+     "value": 2.0,
+     "note": "Code du travail art. 40",
      "created_by": "system"
     }
    ]
