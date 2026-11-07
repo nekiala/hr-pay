@@ -374,3 +374,70 @@ export type LeaveRequest = {
 }
 export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
 export const days = (n: number) => `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} day${Number(n) === 1 ? '' : 's'}`
+
+export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: 'USD' | 'CDF'; active: boolean }
+export type Occupation = { id: number; code: string; name: string; active: boolean }
+export type Contract = {
+  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
+  gradeId: number; gradeCode: string; gradeName: string; categoryId: number; occupationId: number | null; occupationName: string | null
+  expatriate: boolean; note: string | null; createdBy: string; createdAt: string
+}
+export type Profile = {
+  birthDate: string | null; gender: 'FEMALE' | 'MALE' | null; nationality: string | null
+  maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED'; cnssNumber: string | null; taxNumber: string | null
+  paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
+  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null
+}
+export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
+export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }
+export const CONTRACT_TYPES = { PERMANENT: 'Permanent', FIXED_TERM: 'Fixed term', INTERN: 'Intern', CONSULTANT: 'Consultant' }
+
+export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
+export type PayMethod = 'COMPUTED' | 'FIXED' | 'PERCENT_OF_BASIC' | 'PER_DAY_WORKED' | 'PER_CHILD' | 'MANUAL'
+export type PayElement = {
+  id: number; code: string; name: string; kind: PayElementKind; method: PayMethod
+  defaultAmount: number | null; defaultCurrency: 'USD' | 'CDF' | null; percent: number | null
+  subjectToCnss: boolean; taxableIpr: boolean; iprExemptCapPercent: number | null
+  prorated: boolean; defaultForAll: boolean; system: boolean; displayOrder: number; active: boolean
+}
+export const PAY_METHODS: Record<PayMethod, string> = {
+  COMPUTED: 'Calculated by payroll', FIXED: 'Fixed amount per month', PERCENT_OF_BASIC: '% of basic salary',
+  PER_DAY_WORKED: 'Amount per day worked', PER_CHILD: 'Amount per child in charge', MANUAL: 'Entered each month',
+}
+export const PAY_KINDS: Record<PayElementKind, string> = { EARNING: 'Earning', DEDUCTION: 'Deduction', EMPLOYER_CHARGE: 'Employer charge' }
+export type PayAssignment = {
+  id: number; userId: number; elementId: number; elementCode: string; elementName: string
+  amount: number | null; currency: 'USD' | 'CDF' | null; percent: number | null; excluded: boolean
+  startMonth: string; endMonth: string | null; note: string | null; createdBy: string; createdAt: string
+}
+export type PayEntry = {
+  id: number; userId: number; userName: string; elementId: number; elementCode: string; elementName: string
+  kind: PayElementKind; month: string; amount: number; currency: 'USD' | 'CDF'; note: string | null
+  createdBy: string; createdAt: string
+}
+
+export type PayrollRun = {
+  id: number; month: string; status: 'CALCULATED' | 'APPROVED' | 'CLOSED'; usdCdf: number; rateDate: string; rateSource: string
+  employeeCount: number; projected: boolean; calculatedBy: string; calculatedAt: string
+  approvedBy: string | null; approvedAt: string | null; closedBy: string | null; closedAt: string | null
+}
+export type PayslipSummary = {
+  id: number; userId: number; userName: string; registrationNo: string; number: string | null; currency: string
+  gross: number; employeeDeductions: number; net: number; employerCharges: number; warningCount: number
+}
+export type RunView = {
+  run: PayrollRun; payslips: PayslipSummary[]; skipped: string[]
+  totals: { currency: string; payslips: number; gross: number; employeeDeductions: number; net: number; employerCharges: number }[]
+}
+export type PayslipLine = { elementCode: string; label: string; kind: 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'; base: number | null; rate: number | null; amount: number; displayOrder: number; loanId: number | null }
+export type Payslip = {
+  id: number; runId: number; month: string; runStatus: PayrollRun['status']; userId: number; number: string | null; currency: string
+  gross: number; cnssBase: number; taxableBase: number; taxableBaseCdf: number; employeeDeductions: number; net: number
+  employerCharges: number; scheduledMinutes: number; paidMinutes: number; daysWorked: number; usdCdf: number; rateDate: string
+  projected: boolean; snapshot: Record<string, string | number | boolean | null>; warnings: string[]; lines: PayslipLine[]
+}
+export type Loan = {
+  id: number; userId: number; userName: string; kind: 'LOAN' | 'ADVANCE'; principal: number; currency: 'USD' | 'CDF'
+  installment: number; startMonth: string; grantedOn: string; status: 'ACTIVE' | 'REPAID' | 'CANCELLED'
+  repaid: number; balance: number; note: string | null; createdBy: string; createdAt: string
+}

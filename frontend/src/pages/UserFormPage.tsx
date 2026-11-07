@@ -181,7 +181,10 @@ export default function UserFormPage() {
       )}
 
       {!isNew && user && can('attendance.read.all') && (
-        <p><Link className="button secondary" to={`/users/${id}/attendance`}>View attendance and earnings</Link></p>
+        <p className="row">
+          <Link className="button secondary" to={`/users/${id}/attendance`}>View attendance and earnings</Link>
+          {can('salary.read') && <Link className="button secondary" to={`/users/${id}/file`}>Contract and family</Link>}
+        </p>
       )}
 
       {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} />}
