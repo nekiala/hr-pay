@@ -7,3 +7,5 @@ app:
   sample-data:
     enabled: true
     password: Demo@2026!
+  exchange-rates:
+    fetch-enabled: false

@@ -22,6 +22,7 @@ import ReportsPage from './pages/ReportsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
 import PayElementsPage from './pages/PayElementsPage'
+import StatutoryRatesPage from './pages/StatutoryRatesPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import { useLocation } from 'react-router-dom'
@@ -35,10 +36,10 @@ function Guard({ permission, children }: { permission?: string; children: ReactN
   return <>{children}</>
 }
 
-function PayElementsRoute() {
+function PayElementsRoute({ page }: { page?: 'rates' }) {
   const { can } = useAuth()
   return can('salary.read') || can('masterdata.manage')
-    ? <PayElementsPage />
+    ? (page === 'rates' ? <StatutoryRatesPage /> : <PayElementsPage />)
     : <p className="notice">You do not have permission to open this page.</p>
 }
 
@@ -83,6 +84,7 @@ export default function App() {
           {can('overtime_policy.manage') && <NavLink to="/overtime" end>Overtime rules</NavLink>}
           {can('masterdata.manage') && <NavLink to="/payroll/settings">Grades</NavLink>}
           {(can('salary.read') || can('masterdata.manage')) && <NavLink to="/payroll/elements">Pay elements</NavLink>}
+          {(can('salary.read') || can('masterdata.manage')) && <NavLink to="/payroll/rates">Rates</NavLink>}
           {(can('report.attendance.export') || can('report.finance.export')) && <NavLink to="/reports">Reports</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
           {can('audit.read') && <NavLink to="/outbox">Messages</NavLink>}
@@ -113,6 +115,7 @@ export default function App() {
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payroll/elements" element={<PayElementsRoute />} />
+          <Route path="/payroll/rates" element={<PayElementsRoute page="rates" />} />
           <Route path="/payroll/settings" element={<Guard permission="masterdata.manage"><PayrollSettingsPage /></Guard>} />
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
