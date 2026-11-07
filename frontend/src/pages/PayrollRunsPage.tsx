@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ApiError, api, money, type PayrollRun, type RunView } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { ThirteenthMonthCard } from '../components/ThirteenthMonthCard'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const STATUS = { CALCULATED: 'Calculated, waiting for approval', APPROVED: 'Approved, ready to close', CLOSED: 'Closed' }
@@ -186,6 +187,7 @@ export default function PayrollRunsPage() {
           )}
         </div>
       )}
+      {can('salary.read') && <ThirteenthMonthCard />}
     </section>
   )
 }

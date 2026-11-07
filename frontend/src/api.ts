@@ -441,3 +441,22 @@ export type Loan = {
   installment: number; startMonth: string; grantedOn: string; status: 'ACTIVE' | 'REPAID' | 'CANCELLED'
   repaid: number; balance: number; note: string | null; createdBy: string; createdAt: string
 }
+
+export type EvalStatus = 'DRAFT' | 'SUBMITTED' | 'ACKNOWLEDGED' | 'CONTESTED' | 'APPROVED'
+export const EVAL_STATUS: Record<EvalStatus, string> = {
+  DRAFT: 'Draft', SUBMITTED: 'Waiting for the employee', ACKNOWLEDGED: 'Acknowledged, waiting for HR',
+  CONTESTED: 'Contested', APPROVED: 'Approved',
+}
+export type EvalScore = { criterionId: number; code: string; name: string; source: 'MANAGER' | 'ATTENDANCE'; weight: number; score: number | null; comment: string | null }
+export type Evaluation = {
+  id: number; userId: number; userName: string; templateId: number; templateName: string; periodStart: string; periodEnd: string
+  evaluatorId: number; evaluatorName: string; status: EvalStatus; totalPercent: number | null; managerComment: string | null
+  employeeComment: string | null; hrComment: string | null; submittedAt: string | null; answeredAt: string | null
+  approvedBy: string | null; approvedAt: string | null; scores: EvalScore[] | null
+}
+export type EvalCriterion = { id: number; code: string; name: string; description: string | null; source: 'MANAGER' | 'ATTENDANCE'; active: boolean }
+export type EvalTemplate = {
+  id: number; name: string; frequency: 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL'; gradeCategoryId: number | null; active: boolean
+  criteria: { criterionId: number; code: string; name: string; source: string; weight: number }[]
+}
+export const FREQUENCY = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', SEMI_ANNUAL: 'Every six months' }

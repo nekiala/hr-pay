@@ -26,7 +26,8 @@ public class StatutoryRates {
 
     public record BracketSet(LocalDate effectiveFrom, List<IprCalculator.Bracket> brackets) {}
 
-    public static final List<String> SETTINGS = List.of("INPP_BAND", "RATE_DAY");
+    public static final List<String> SETTINGS = List.of("INPP_BAND", "RATE_DAY", "THIRTEENTH_ENABLED", "THIRTEENTH_BASE",
+            "THIRTEENTH_FALLBACK_PERCENT", "THIRTEENTH_PAY_MONTH", "THIRTEENTH_PRORATE");
 
     private final JdbcClient jdbc;
     private final AuditService audit;
@@ -162,6 +163,10 @@ public class StatutoryRates {
         boolean valid = switch (key) {
             case "INPP_BAND" -> List.of("SMALL", "MEDIUM", "LARGE").contains(value);
             case "RATE_DAY" -> List.of("LAST_OF_MONTH", "RUN_DATE").contains(value);
+            case "THIRTEENTH_ENABLED", "THIRTEENTH_PRORATE" -> List.of("true", "false").contains(value);
+            case "THIRTEENTH_BASE" -> List.of("AVERAGE_BASIC", "LAST_BASIC").contains(value);
+            case "THIRTEENTH_FALLBACK_PERCENT" -> value.matches("\\d{1,3}(\\.\\d{1,2})?") && new BigDecimal(value).compareTo(BigDecimal.valueOf(100)) <= 0;
+            case "THIRTEENTH_PAY_MONTH" -> value.matches("[1-9]|1[0-2]");
             default -> throw new NotFoundException("Unknown setting " + key + ".");
         };
         if (!valid) {

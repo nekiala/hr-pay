@@ -88,8 +88,12 @@ public class PayElements {
     @Transactional
     public Element save(Long id, Element e) {
         if (id != null && element(id).system()) {
-            jdbc.sql("update pay_element set name = ?, display_order = ? where id = ?")
-                    .params(e.name(), e.displayOrder(), id).update();
+            Element current = element(id);
+            boolean earning = current.kind().equals("EARNING");
+            // Built-in earnings keep their CNSS and IPR treatment configurable (for example the 13th month).
+            jdbc.sql("update pay_element set name = ?, display_order = ?, subject_to_cnss = ?, taxable_ipr = ? where id = ?")
+                    .params(e.name(), e.displayOrder(), earning ? e.subjectToCnss() : current.subjectToCnss(),
+                            earning ? e.taxableIpr() : current.taxableIpr(), id).update();
             audit.record("pay_element.saved", "pay_element", id, Map.of("name", e.name()));
             return element(id);
         }
