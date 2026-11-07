@@ -29,7 +29,7 @@ dependencies {
     // Sessions in PostgreSQL, so several API servers share them and a restart signs no one out.
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     // PDF payslips.
-    implementation("com.github.librepdf:openpdf:2.2.4")
+    implementation("com.github.librepdf:openpdf:3.0.5")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 
