@@ -91,6 +91,10 @@ app:
   sample-data:
     enabled: ${SAMPLE_DATA:false}
     password: ${SAMPLE_PASSWORD:Demo@2026!}
+  # A public demo: the database is WIPED at every start and the app restarts every night at 3:00 (Kinshasa) to start
+  # fresh with the sample data. Only for a server of its own; it refuses to start without SAMPLE_DATA=true.
+  demo:
+    enabled: ${DEMO_MODE:false}
   # Frontend origin allowed to call the API in development.
   cors-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   # Address employees reach the app at; used in the kiosk QR code.

@@ -299,6 +299,17 @@ To check with the payroll expert (Albert Mbodo) before going live: the settlemen
 - **Check-ins without a connection**: each site chooses *not allowed*, *allowed, approved by the manager* (the default) or *recorded when the location is in the site's area*. The phone keeps the time and location and sends them when the connection comes back, at most 3 days later and with the phone's clock no more than 5 minutes ahead; the same check-in sent twice counts once. Anything not recorded becomes a correction request for the manager.
 - Reloading any page of the built app now works (it used to give a 404 for pages added after phase 9).
 
+## Go-to-market and support (phase 17)
+
+- **Set-up guide** (`/setup`, company administrators): ten steps from an empty company to the first payroll. Most are read from the data (company details, sites, structure, holidays, employees, first payroll); the reviews (schedules, grades, legal rates, pay elements) are marked done by hand. The first steps show on the home page until hidden.
+- **Help** (`/help`): short articles in French and English, searchable, and a "?" in the top bar that opens the article for the page you are on. The short videos are still to record.
+- **Support requests**: *Report a problem* in the user menu sends the subject, the page, the app version and the browser. The person follows the answer under Help; company administrators see all the company's requests. The provider answers from *Support desk* (`/platform/support`); the person gets a notification and an email.
+- **Terms**: terms of service, data processing agreement, privacy policy and service levels, in French and English, public at `/legal/terms`, `/legal/dpa`, `/legal/privacy-policy`, `/legal/sla`. A company administrator accepts the terms and the DPA at sign-in, and again after each new version the provider publishes (*Terms and policies*). The starting texts in `backend/src/main/resources/legal/` are **drafts for a lawyer**, with `[brackets]` to fill in.
+- **Version and status**: the version (`0.17.0`) is in `/api/version`, *What's new* lists the changes of each version, and `/status` is a public page with the checks and the incidents the provider posts (*Service status*).
+- **Dashboards** (`/dashboards`, `dashboard.read`: admins, HR, finance): headcount at month end, hires and departures, turnover, unpaid absence and payroll cost by direction (gross plus employer charges, in US dollars at each payroll's rate), 6 to 24 months, with a table view.
+- **Trials**: the public form at `/trial` records a request (one per email while it waits, five an hour from one IP address). Nothing is created until the provider approves it in *Trial requests* with a plan and modules; the company then starts its trial and its administrator gets a link, valid 7 days, to choose a password.
+- **Product website** in `website/` (static, French and English) and a **demo server** mode (`DEMO_MODE`, see `deploy/README.md`).
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -317,6 +328,7 @@ To check with the payroll expert (Albert Mbodo) before going live: the settlemen
 | `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | empty | Turns on "Sign in with Microsoft" (work accounts, from each company's own tenant). |
 | `HRPAY_DATA_KEY` or `HRPAY_DATA_KEY_FILE` | empty | Key encrypting bank accounts, ID numbers and authenticator secrets. Keep a copy elsewhere. |
 | `APP_PUSH_PUBLIC_KEY`, `APP_PUSH_PRIVATE_KEY`, `APP_PUSH_SUBJECT` | empty | Web Push (VAPID) keys for phone notifications; see phase 16. Without them notifications show in the app only. |
+| `DEMO_MODE` | `false` | Public demo server only: erases the database at every start and restarts each night. Needs `SAMPLE_DATA=true`. Never in production. |
 | `TWO_STEP_ENFORCED` | `true` | Set to `false` only to let roles marked "two-step required" sign in without it (for example on a test copy). |
 
 For production, build the app and copy it into the API's static folder so both are served from one origin:

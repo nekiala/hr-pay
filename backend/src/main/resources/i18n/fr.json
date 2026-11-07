@@ -877,5 +877,21 @@
  "temporary password": "mot de passe provisoire",
  "Only a company administrator can be reset from here.": "Seul un administrateur de l'entreprise peut être réinitialisé ici.",
  "This account is disabled. Reactivate it first.": "Ce compte est désactivé. Réactivez-le d'abord.",
- "This link no longer works. Ask for a new one from the sign-in page.": "Ce lien ne fonctionne plus. Demandez-en un nouveau depuis la page de connexion."
+ "This link no longer works. Ask for a new one from the sign-in page.": "Ce lien ne fonctionne plus. Demandez-en un nouveau depuis la page de connexion.",
+ "Hello %s,\n\nSupport answered your request \"%s\":\n\n%s\n\nReply or close the request in HR Pay, on the Help page.": "Bonjour %s,\n\nLe support a répondu à votre demande « %s » :\n\n%s\n\nRépondez ou fermez la demande dans HR Pay, sur la page Aide.",
+ "Hello %s,\n\nYour HR Pay trial is ready. Open this link to choose your password and sign in:": "Bonjour %s,\n\nVotre essai de HR Pay est prêt. Ouvrez ce lien pour choisir votre mot de passe et vous connecter :",
+ "New message on a support request": "Nouveau message sur une demande de support",
+ "New support request": "Nouvelle demande de support",
+ "Support answered request %s": "Le support a répondu à la demande %s",
+ "Support request %s from %s": "Demande de support %s de %s",
+ "The link works once, for 7 days. Your email address is your sign-in name. The set-up guide on the home page takes you through the first steps.": "Le lien fonctionne une fois, pendant 7 jours. Votre adresse e-mail est votre identifiant. Le guide de mise en place, sur la page d'accueil, vous accompagne dans les premières étapes.",
+ "Trial requested by %s": "Essai demandé par %s",
+ "Your HR Pay trial is ready": "Votre essai de HR Pay est prêt",
+ "A newer version was published. Read it again.": "Une version plus récente a été publiée. Relisez-la.",
+ "Choose a problem, a question or an idea.": "Choisissez un problème, une question ou une idée.",
+ "Incident not found.": "Incident introuvable.",
+ "This incident is already resolved.": "Cet incident est déjà résolu.",
+ "This step is done from its own page.": "Cette étape se fait depuis sa propre page.",
+ "Write a message of at most 5,000 characters.": "Écrivez un message de 5 000 caractères au plus.",
+ "Write the French and the English text.": "Écrivez le texte en français et en anglais."
 }

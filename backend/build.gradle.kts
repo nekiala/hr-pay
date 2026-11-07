@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "cd.hrpay"
-version = "0.9.0"
+version = "0.17.0"
 
 java {
     toolchain {

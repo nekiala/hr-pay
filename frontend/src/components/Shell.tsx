@@ -4,12 +4,15 @@ import {
   Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
+  ChartNoAxesCombined, CircleHelp, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
 import { t } from '../i18n'
 import { NotificationBell } from './NotificationBell'
 import { useOfflineSync } from '../pwa'
+import { articleFor } from '../help'
+import { hasNews, ReportProblem, serverVersion } from '../pages/HelpPage'
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 type Item = { to: string; label: string; icon: Icon; end?: boolean; show: boolean }
@@ -42,6 +45,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/overtime/approvals', label: t('Approve overtime'), icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
         { to: '/evaluations', label: t('Evaluations'), icon: Star, end: true, show: has('EVALUATIONS') },
         { to: '/org', label: t('Org chart'), icon: Network, show: true },
+        { to: '/dashboards', label: t('Dashboards'), icon: ChartNoAxesCombined, show: can('dashboard.read') },
       ],
     },
     {
@@ -91,6 +95,10 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/platform/companies', label: t('Companies'), icon: Building, show: can('platform.manage') },
         { to: '/platform/billing', label: t('Invoices'), icon: CreditCard, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
         { to: '/platform/licence', label: t('Licence'), icon: BadgeCheck, show: can('platform.manage') && me?.company?.mode === 'ON_PREMISE' },
+        { to: '/platform/support', label: t('Support desk'), icon: Headset, show: can('platform.manage') },
+        { to: '/platform/trials', label: t('Trial requests'), icon: Inbox, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
+        { to: '/platform/legal', label: t('Terms and policies'), icon: Scale, show: can('platform.manage') },
+        { to: '/platform/status', label: t('Service status'), icon: Siren, show: can('platform.manage') },
         { to: '/system', label: t('System'), icon: Activity, show: can('system.monitor') },
         { to: '/audit', label: t('Audit log'), icon: ScrollText, show: can('audit.read') },
         { to: '/outbox', label: t('Messages'), icon: Mail, show: can('audit.read') },
@@ -127,6 +135,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(readTheme)
+  const [reporting, setReporting] = useState(false)
+  const [demo, setDemo] = useState(false)
+  useEffect(() => { void serverVersion().then((v) => setDemo(v.demo)) }, [])
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -187,6 +198,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <button type="button" className="icon-button menu-button" aria-label={t('Open the menu')} onClick={() => setNavOpen(true)}><Menu size={22} /></button>
           <span className="topbar-title">{current?.label ?? (location.pathname === '/' ? t('Home') : '')}</span>
           <div className="topbar-right">
+            <NavLink to={articleFor(location.pathname) ? `/help/${articleFor(location.pathname)!.id}` : '/help'} className="icon-button"
+              aria-label={t('Help on this page')} title={t('Help on this page')}><CircleHelp size={18} aria-hidden /></NavLink>
             <NotificationBell />
             <button type="button" className="icon-button theme-toggle" aria-label={dark ? t('Use the light theme') : t('Use the dark theme')}
               title={dark ? t('Light theme') : t('Dark theme')} onClick={() => setTheme(dark ? 'light' : 'dark')}>
@@ -201,6 +214,9 @@ export function Shell({ children }: { children: ReactNode }) {
               {menuOpen && (
                 <div className="menu" role="menu">
                   <NavLink to="/account" role="menuitem"><UserRound size={16} aria-hidden />{' '}{t('My account')}</NavLink>
+                  <NavLink to="/help" role="menuitem"><CircleHelp size={16} aria-hidden />{' '}{t('Help')}</NavLink>
+                  <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setReporting(true) }}><MessageSquareWarning size={16} aria-hidden />{' '}{t('Report a problem')}</button>
+                  <NavLink to="/whats-new" role="menuitem"><Sparkles size={16} aria-hidden />{' '}{t('What’s new')}{hasNews() && <span className="dot" aria-label={t('New')} />}</NavLink>
                   <div className="menu-theme" role="group" aria-label={t('Appearance')}>
                     <button type="button" className={theme === 'dark' ? 'on' : ''} onClick={() => setTheme('dark')}><Moon size={15} aria-hidden />{' '}{t('Dark')}</button>
                     <button type="button" className={theme === 'light' ? 'on' : ''} onClick={() => setTheme('light')}><Sun size={15} aria-hidden />{' '}{t('Light')}</button>
@@ -213,6 +229,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main>
+          {demo && <p className="notice no-print">{t('Demo: everything you change here is erased every night.')}</p>}
           {me.support && (
             <div className="support-bar no-print" role="status">
               <span><LifeBuoy size={16} aria-hidden /> <strong>{t('Support visit:')}{' '}{me.support.companyName}.</strong>{' '}{t('You see what its users see, read-only, until')}{' '}{longDay(me.support.expiresAt)}{t('. Every page you open is shown to the company.')}</span>
@@ -226,6 +243,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
           {children}
+          {reporting && <ReportProblem onClose={() => setReporting(false)} onDone={(id) => { setReporting(false); navigate(`/support/${id}`) }} />}
         </main>
         <BottomNav />
       </div>

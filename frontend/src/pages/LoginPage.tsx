@@ -7,6 +7,8 @@ import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 import { LanguageToggle } from '../components/Language'
 import { RecoveryCodes, TwoStepCode, TwoStepSetupFlow } from '../components/TwoStep'
+import { serverVersion } from './HelpPage'
+import { PublicLinks } from './PublicPages'
 import { t } from '../i18n'
 
 /** What a refused Google or Microsoft sign-in means, by the reason the server gave. */
@@ -28,11 +30,13 @@ export default function LoginPage() {
   const [providers, setProviders] = useState({ google: false, microsoft: false })
   const [step, setStep] = useState<TwoStepNeeded | null>(null)
   const [codes, setCodes] = useState<{ codes: string[]; me: Me } | null>(null)
+  const [demo, setDemo] = useState(false)
   const errorCode = params.get('error')
   const [error, setError] = useState<string | null>(errorCode ? PROVIDER_ERRORS[errorCode] ?? PROVIDER_ERRORS.provider : null)
 
   useEffect(() => {
     api<{ google: boolean; microsoft: boolean }>('/api/auth/providers').then(setProviders).catch(() => undefined)
+    void serverVersion().then((v) => setDemo(v.demo))
     // Back from Google or Microsoft with a second step to do.
     if (params.get('step') === 'two') {
       api<TwoStepNeeded>('/api/auth/two-step').then(setStep).catch((e: Error) => setError(e.message))
@@ -105,8 +109,20 @@ export default function LoginPage() {
         {providers.google && (
           <a className="button secondary" href="/oauth2/authorization/google">{t('Sign in with Google')}</a>
         )}
+        {demo && (
+          <div className="notice small">
+            <strong>{t('Demo')}</strong>{' '}{t('Sign in as one of these people, password Demo@2026!. Everything is erased every night.')}
+            <div className="row">
+              {[['admin', t('Administrator')], ['hr', t('HR')], ['finance', t('Finance')], ['employee1', t('Employee')]].map(([u, label]) => (
+                <button key={u} type="button" className="secondary" onClick={() => { setEmail(`${u}@demo.hrpay.cd`); setPassword('Demo@2026!') }}>{label}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <LanguageToggle />
+        <p className="small" style={{ textAlign: "center", margin: 0 }}><Link to="/trial">{t('Try HR Pay free for 30 days')}</Link></p>
       </Form>
+      <PublicLinks />
     </div>
   )
 }

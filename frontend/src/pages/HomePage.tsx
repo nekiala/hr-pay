@@ -6,6 +6,7 @@ import {
 import { api, money, type HolidayOccurrence, type PayrollRun, type RunView } from '../api'
 import { useAuth } from '../auth'
 import MonthView from '../components/MonthView'
+import { SetupGuideCard } from './SetupPage'
 import { locale, plural, t } from '../i18n'
 
 type Presence = { date: string; counts: Record<string, number> }
@@ -89,6 +90,8 @@ export default function HomePage() {
           <Link className="button" to="/check-in"><Clock size={16} />{' '}{t('Check in or end my day')}</Link>
         </div>
       </div>
+
+      {can('company.manage') && !me.support && <SetupGuideCard home />}
 
       {r && r.status !== 'CLOSED' && (
         <div className="banner">
