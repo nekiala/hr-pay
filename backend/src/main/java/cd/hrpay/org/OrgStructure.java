@@ -516,13 +516,24 @@ public class OrgStructure {
     }
 
     /**
-     * The people a person approves for: everyone in the units they head or deputise and all units below them,
-     * plus anyone whose manager was set to them by hand. Never the person themself.
+     * The people a person approves for: everyone in the units they head and all units below them, plus anyone whose
+     * manager was set to them by hand. A deputy covers the unit only while it has no head, or while the head is on
+     * approved leave or an approved mission today. Never the person themself.
      */
     public Set<Long> teamOf(long managerId) {
         return new HashSet<>(jdbc.sql("""
-                with recursive branch(id) as (
-                    select unit_id from org_head where user_id = ? and valid_to is null
+                with recursive head_away(unit_id) as (
+                    select h.unit_id from org_head h
+                    where h.role = 'HEAD' and h.valid_to is null and (
+                        exists (select 1 from leave_request l where l.user_id = h.user_id and l.status = 'APPROVED'
+                                and ? between l.start_date and l.end_date)
+                        or exists (select 1 from mission m where m.user_id = h.user_id and m.status = 'APPROVED'
+                                   and m.work_date = ?))
+                ), branch(id) as (
+                    select d.unit_id from org_head d
+                    where d.user_id = ? and d.valid_to is null and (d.role = 'HEAD'
+                        or not exists (select 1 from org_head x where x.unit_id = d.unit_id and x.role = 'HEAD' and x.valid_to is null)
+                        or d.unit_id in (select unit_id from head_away))
                     union
                     select u.id from org_unit u join branch b on u.parent_id = b.id where u.valid_to is null
                 )
@@ -530,7 +541,7 @@ public class OrgStructure {
                 where a.valid_to is null and a.unit_id in (select id from branch) and a.user_id <> ?
                 union
                 select id from app_user where manager_id = ? and id <> ?""")
-                .params(managerId, managerId, managerId, managerId).query(Long.class).list());
+                .params(today(), today(), managerId, managerId, managerId, managerId).query(Long.class).list());
     }
 
     public boolean inTeam(long managerId, long userId) {

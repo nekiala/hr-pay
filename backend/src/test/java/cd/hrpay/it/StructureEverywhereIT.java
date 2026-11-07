@@ -60,6 +60,58 @@ class StructureEverywhereIT extends IntegrationTest {
                 .andExpect(jsonPath("$.manager.userName").value("Sarah Tshibangu"));
     }
 
+    @Autowired
+    cd.hrpay.org.OrgStructure org;
+
+    @Autowired
+    org.springframework.jdbc.core.simple.JdbcClient jdbc;
+
+    long createUser(MockHttpSession admin, long unit) throws Exception {
+        String body = newUser(null).replace("\"orgUnitId\":1", "\"orgUnitId\":" + unit);
+        String created = mvc.perform(json(post("/api/users").session(admin), body)).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.<Number>read(created, "$.id").longValue();
+    }
+
+    @Test
+    void deputyCoversTheUnitOnlyWhileTheHeadIsAwayOrMissing() throws Exception {
+        MockHttpSession hr = login(HR);
+        MockHttpSession admin = login(ADMIN);
+        String levels = mvc.perform(get("/api/org/levels").session(hr)).andReturn().getResponse().getContentAsString();
+        long service = JsonPath.<List<Number>>read(levels, "$[?(@.code=='SERVICE')].id").getFirst().longValue();
+        String unit = mvc.perform(json(post("/api/org/units").session(hr), """
+                        {"code":"SDEPUTY","name":"Service test des adjoints","levelId":%d,"parentId":%d,"validFrom":"2026-01-01"}"""
+                        .formatted(service, unitId(hr, "DOP"))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        long sd = JsonPath.<Number>read(unit, "$.id").longValue();
+        long head = createUser(admin, sd);
+        long deputy = createUser(admin, sd);
+        long member = createUser(admin, sd);
+        mvc.perform(json(put("/api/org/units/" + sd + "/head").session(hr), "{\"userId\":" + head + ",\"role\":\"HEAD\",\"from\":\"2026-01-01\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(json(put("/api/org/units/" + sd + "/head").session(hr), "{\"userId\":" + deputy + ",\"role\":\"DEPUTY\",\"from\":\"2026-01-01\"}"))
+                .andExpect(status().isOk());
+
+        // The head is there: the head covers the member (and the deputy); the deputy covers nobody.
+        assertThat(org.teamOf(head)).contains(member, deputy);
+        assertThat(org.teamOf(deputy)).doesNotContain(member);
+        // The head of the Direction above covers the whole branch.
+        assertThat(org.teamOf(id("manager@demo.hrpay.cd"))).contains(head, deputy, member);
+
+        // The head is on approved leave today: the deputy steps in.
+        long annual = jdbc.sql("select id from leave_type where code = 'ANNUAL'").query(Long.class).single();
+        jdbc.sql("""
+                insert into leave_request (user_id, leave_type_id, start_date, end_date, working_days, status, requested_by)
+                values (?, ?, ?, ?, 1, 'APPROVED', 'test')""").params(head, annual, org.today(), org.today()).update();
+        assertThat(org.teamOf(deputy)).contains(member).doesNotContain(deputy);
+        jdbc.sql("delete from leave_request where user_id = ?").param(head).update();
+        assertThat(org.teamOf(deputy)).doesNotContain(member);
+
+        // The unit has no head: the deputy covers it.
+        mvc.perform(json(post("/api/org/units/" + sd + "/head/end").session(hr), "{\"role\":\"HEAD\"}")).andExpect(status().isOk());
+        assertThat(org.teamOf(deputy)).contains(member);
+    }
+
     @Test
     void usersFilterByUnitIncludesTheUnitsBelow() throws Exception {
         MockHttpSession hr = login(HR);
