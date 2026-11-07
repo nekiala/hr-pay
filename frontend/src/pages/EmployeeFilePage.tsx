@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, CONTRACT_TYPES, api, money, type EmployeeFileView, type Grade, type Occupation, type Profile, type User } from '../api'
+import { ApiError, CONTRACT_TYPES, api, money, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -22,15 +22,22 @@ export default function EmployeeFilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, negotiatedBasic: '', note: '' })
   const [dependant, setDependant] = useState({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
+  const [elements, setElements] = useState<PayElement[]>([])
+  const [items, setItems] = useState<PayAssignment[]>([])
+  const [item, setItem] = useState({ elementId: '', mode: 'amount', amount: '', currency: 'USD', percent: '', startMonth: new Date().toISOString().slice(0, 7), endMonth: '', note: '' })
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const load = () => api<EmployeeFileView>(`/api/users/${id}/file`).then((f) => { setFile(f); setProfile(f.profile) }).catch((e: Error) => setError(e.message))
+  const load = () => Promise.all([
+    api<EmployeeFileView>(`/api/users/${id}/file`).then((f) => { setFile(f); setProfile(f.profile) }),
+    api<PayAssignment[]>(`/api/users/${id}/pay-elements`).then(setItems),
+  ]).catch((e: Error) => setError(e.message))
   useEffect(() => {
     load()
     api<User>(`/api/users/${id}`).then(setUser).catch(() => undefined)
     api<Grade[]>('/api/grades').then(setGrades).catch(() => undefined)
     api<Occupation[]>('/api/occupations').then(setOccupations).catch(() => undefined)
+    api<PayElement[]>('/api/pay-elements').then(setElements).catch(() => undefined)
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -70,6 +77,24 @@ export default function EmployeeFilePage() {
       setDependant({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
     }, 'Added.')
   }
+
+  const addItem = (e: FormEvent) => {
+    e.preventDefault()
+    void run(async () => {
+      await api(`/api/users/${id}/pay-elements`, {
+        method: 'POST',
+        body: {
+          elementId: Number(item.elementId), excluded: item.mode === 'exclude', note: item.note || null,
+          amount: item.mode === 'amount' ? Number(item.amount) : null, currency: item.mode === 'amount' ? item.currency : null,
+          percent: item.mode === 'percent' ? Number(item.percent) : null, startMonth: item.startMonth, endMonth: item.endMonth || null,
+        },
+      })
+      setItem({ ...item, elementId: '', amount: '', percent: '', endMonth: '', note: '' })
+    }, 'Standing item saved.')
+  }
+  const standing = elements.filter((x) => x.active && x.method !== 'COMPUTED' && x.method !== 'MANUAL')
+  const chosen = standing.find((x) => x.id === Number(item.elementId))
+  const month = (d: string | null) => (d ? d.slice(0, 7) : '')
 
   const p = profile
   const setP = (patch: Partial<Profile>) => p && setProfile({ ...p, ...patch })
@@ -173,6 +198,64 @@ export default function EmployeeFilePage() {
           {editable && <button type="submit">Save details</button>}
         </form>
       )}
+
+      <div className="card">
+        <h3>Standing pay items</h3>
+        <p className="hint">Allowances that every employee gets ({standing.filter((x) => x.defaultForAll).map((x) => x.name).join(', ') || 'none'}) apply automatically. Add an item here to give this employee a different amount, an extra allowance, or to exclude one.</p>
+        {items.length === 0 && <p className="muted">No standing items: the defaults apply.</p>}
+        {items.map((a) => (
+          <div key={a.id} className="row">
+            <span>
+              <strong>{a.elementName}</strong>{' · '}
+              {a.excluded ? 'excluded' : a.amount !== null ? money(a.amount, a.currency ?? 'USD') : `${a.percent}% of basic`}
+              {' · '}from {month(a.startMonth)}{a.endMonth ? ` to ${month(a.endMonth)}` : ''}{a.note ? ` · ${a.note}` : ''}
+            </span>
+            {editable && !a.endMonth && (
+              <button className="secondary void" onClick={() => {
+                const last = prompt('Last month it applies (YYYY-MM). Leave empty to remove it.', new Date().toISOString().slice(0, 7))
+                if (last === null) return
+                void run(() => api(`/api/users/${id}/pay-elements/${a.id}/end`, { method: 'PUT', body: { lastMonth: last || null } }), 'Updated.')
+              }}>End</button>
+            )}
+          </div>
+        ))}
+        {editable && (
+          <form onSubmit={addItem}>
+            <div className="grid3">
+              <label>Element
+                <select value={item.elementId} required onChange={(e) => {
+                  const el = standing.find((x) => x.id === Number(e.target.value))
+                  setItem({ ...item, elementId: e.target.value, mode: el?.method === 'PERCENT_OF_BASIC' ? 'percent' : 'amount', currency: el?.defaultCurrency ?? item.currency })
+                }}>
+                  <option value="">Choose</option>
+                  {standing.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+              </label>
+              <label>For this employee
+                <select value={item.mode} onChange={(e) => setItem({ ...item, mode: e.target.value })}>
+                  <option value="amount">{chosen?.method === 'PER_DAY_WORKED' ? 'Amount per day' : chosen?.method === 'PER_CHILD' ? 'Amount per child' : 'Amount'}</option>
+                  {chosen?.method === 'PERCENT_OF_BASIC' && <option value="percent">% of basic</option>}
+                  <option value="exclude">Exclude</option>
+                </select>
+              </label>
+              {item.mode === 'amount' && (
+                <div className="grid2">
+                  <label>Amount<input type="number" min={0} step={0.01} value={item.amount} required onChange={(e) => setItem({ ...item, amount: e.target.value })} /></label>
+                  <label>Currency<select value={item.currency} onChange={(e) => setItem({ ...item, currency: e.target.value })}><option>USD</option><option>CDF</option></select></label>
+                </div>
+              )}
+              {item.mode === 'percent' && (
+                <label>Percentage<input type="number" min={0} max={100} step={0.001} value={item.percent} required onChange={(e) => setItem({ ...item, percent: e.target.value })} /></label>
+              )}
+              {item.mode === 'exclude' && <span />}
+              <label>First month<input type="month" value={item.startMonth} required onChange={(e) => setItem({ ...item, startMonth: e.target.value })} /></label>
+              <label>Last month (optional)<input type="month" value={item.endMonth} onChange={(e) => setItem({ ...item, endMonth: e.target.value })} /></label>
+              <label>Note<input value={item.note} maxLength={300} onChange={(e) => setItem({ ...item, note: e.target.value })} /></label>
+            </div>
+            <button type="submit" className="secondary">Add item</button>
+          </form>
+        )}
+      </div>
 
       <div className="card">
         <h3>Spouse and children</h3>

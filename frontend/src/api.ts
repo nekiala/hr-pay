@@ -391,3 +391,27 @@ export type Profile = {
 export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
 export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }
 export const CONTRACT_TYPES = { PERMANENT: 'Permanent', FIXED_TERM: 'Fixed term', INTERN: 'Intern', CONSULTANT: 'Consultant' }
+
+export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
+export type PayMethod = 'COMPUTED' | 'FIXED' | 'PERCENT_OF_BASIC' | 'PER_DAY_WORKED' | 'PER_CHILD' | 'MANUAL'
+export type PayElement = {
+  id: number; code: string; name: string; kind: PayElementKind; method: PayMethod
+  defaultAmount: number | null; defaultCurrency: 'USD' | 'CDF' | null; percent: number | null
+  subjectToCnss: boolean; taxableIpr: boolean; iprExemptCapPercent: number | null
+  prorated: boolean; defaultForAll: boolean; system: boolean; displayOrder: number; active: boolean
+}
+export const PAY_METHODS: Record<PayMethod, string> = {
+  COMPUTED: 'Calculated by payroll', FIXED: 'Fixed amount per month', PERCENT_OF_BASIC: '% of basic salary',
+  PER_DAY_WORKED: 'Amount per day worked', PER_CHILD: 'Amount per child in charge', MANUAL: 'Entered each month',
+}
+export const PAY_KINDS: Record<PayElementKind, string> = { EARNING: 'Earning', DEDUCTION: 'Deduction', EMPLOYER_CHARGE: 'Employer charge' }
+export type PayAssignment = {
+  id: number; userId: number; elementId: number; elementCode: string; elementName: string
+  amount: number | null; currency: 'USD' | 'CDF' | null; percent: number | null; excluded: boolean
+  startMonth: string; endMonth: string | null; note: string | null; createdBy: string; createdAt: string
+}
+export type PayEntry = {
+  id: number; userId: number; userName: string; elementId: number; elementCode: string; elementName: string
+  kind: PayElementKind; month: string; amount: number; currency: 'USD' | 'CDF'; note: string | null
+  createdBy: string; createdAt: string
+}

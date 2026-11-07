@@ -125,3 +125,7 @@ tr.absent td:nth-child(2) { color: var(--danger); }
 td.actions { white-space: nowrap; }
 td.actions button + button { margin-left: 6px; }
 .row.grant { align-items: end; margin-top: 12px; }
+.month-pick { display: inline-flex; gap: 8px; align-items: center; }
+.month-pick input { width: auto; }
+.sub-form { border-top: 1px solid var(--border, #e3e6ea); margin-top: 16px; padding-top: 12px; }
+tr.muted td { color: inherit; opacity: .6; }
