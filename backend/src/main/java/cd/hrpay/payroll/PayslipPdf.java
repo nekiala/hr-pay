@@ -162,7 +162,8 @@ public class PayslipPdf {
     }
 
     private byte[] drawIn(PayrollRuns.Payslip p, String template, YearToDate ytd) {
-        Context c = new Context(p, company.get(), company.payslipSettings(), company.logo().orElse(null), ytd);
+        Context c = new Context(p, company.get(), company.payslipSettings(), company.logo().orElse(null), ytd,
+                company.localCurrency(), company.country());
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         Document doc = new Document(PageSize.A4, 36, 36, 30, 30);
         PdfWriter.getInstance(doc, bytes);
@@ -179,13 +180,18 @@ public class PayslipPdf {
     }
 
     private record Context(PayrollRuns.Payslip p, Company.Details employer, Company.PayslipSettings settings,
-                           Company.Logo logo, YearToDate ytd) {
+                           Company.Logo logo, YearToDate ytd, String local, String country) {
         Map<String, Object> s() {
             return p.snapshot();
         }
 
         String cur() {
             return p.currency();
+        }
+
+        /** The income tax's name: IPR in the DRC, ITS in the Republic of the Congo. */
+        String tax() {
+            return "CG".equals(country) ? "ITS" : "IPR";
         }
     }
 
@@ -249,13 +255,13 @@ public class PayslipPdf {
         doc.add(paidBy(c));
 
         YearToDate y = c.ytd();
-        Paragraph ytd = new Paragraph(Texts.t("Year to date %s (%s): gross %s · CNSS %s · IPR %s · net %s", y.year(), months(y.months()),
-                money(y.gross(), y.currency()), money(y.cnss(), y.currency()), money(y.ipr(), y.currency()),
+        Paragraph ytd = new Paragraph(Texts.t("Year to date %s (%s): gross %s · CNSS %s · %s %s · net %s", y.year(), months(y.months()),
+                money(y.gross(), y.currency()), money(y.cnss(), y.currency()), c.tax(), money(y.ipr(), y.currency()),
                 money(y.net(), y.currency())), SMALL_BOLD);
         ytd.setSpacingBefore(6);
         doc.add(ytd);
-        Paragraph employer = new Paragraph(Texts.t("Employer charges this month: %s. Taxable income for IPR: %s.",
-                money(c.p().employerCharges(), c.cur()), money(c.p().taxableBase(), c.cur())), SMALL);
+        Paragraph employer = new Paragraph(Texts.t("Employer charges this month: %s. Taxable income for %s: %s.",
+                money(c.p().employerCharges(), c.cur()), c.tax(), money(c.p().taxableBase(), c.cur())), SMALL);
         doc.add(employer);
         footer(doc, c);
     }
@@ -316,8 +322,8 @@ public class PayslipPdf {
         doc.add(t);
         doc.add(paidBy(c));
         doc.add(yearTable(c));
-        Paragraph bases = new Paragraph(Texts.t("Taxable income for IPR: %s (%s). CNSS base: %s.", money(c.p().taxableBase(), cur),
-                money(c.p().taxableBaseCdf(), "CDF"), money(c.p().cnssBase(), cur)), SMALL);
+        Paragraph bases = new Paragraph(Texts.t("Taxable income for %s: %s (%s). CNSS base: %s.", c.tax(), money(c.p().taxableBase(), cur),
+                money(c.p().taxableBaseCdf(), c.local()), money(c.p().cnssBase(), cur)), SMALL);
         bases.setSpacingBefore(4);
         doc.add(bases);
         footer(doc, c);
@@ -358,7 +364,7 @@ public class PayslipPdf {
         add(legal, Texts.t("Id. Nat."), e.nationalId());
         add(legal, "NIF", e.taxNumber());
         add(legal, "CNSS", e.cnssNumber());
-        if (full) {
+        if (full && "CD".equals(c.country())) {
             add(legal, "INPP", e.inppNumber());
             add(legal, "ONEM", e.onemNumber());
         }
@@ -413,7 +419,7 @@ public class PayslipPdf {
         facts.add(new String[] {Texts.t("Monthly basic"), money(new BigDecimal(text(s.get("basicMonthly")).isEmpty() ? "0"
                 : text(s.get("basicMonthly"))), c.cur())});
         if (c.cur().equals("USD") && c.p().usdCdf() != null) {
-            facts.add(new String[] {Texts.t("BCC rate"), "$1 = " + c.p().usdCdf().stripTrailingZeros().toPlainString() + " CDF ("
+            facts.add(new String[] {Texts.t("BCC rate"), "$1 = " + c.p().usdCdf().stripTrailingZeros().toPlainString() + " " + c.local() + " ("
                     + c.p().rateDate() + ")"});
         }
         PdfPTable grid = table(repeat(perRow));
@@ -490,7 +496,7 @@ public class PayslipPdf {
             pay += ": " + text(s.get("mobileMoneyOperator")) + " " + text(s.get("mobileMoneyNumber"));
         }
         if (c.cur().equals("USD") && c.p().usdCdf() != null) {
-            pay += Texts.t(" · net in CDF: %s", money(c.p().net().multiply(c.p().usdCdf()).setScale(0, RoundingMode.HALF_UP), "CDF"));
+            pay += Texts.t(" · net in %s: %s", c.local(), money(c.p().net().multiply(c.p().usdCdf()).setScale(0, RoundingMode.HALF_UP), c.local()));
         }
         Paragraph paid = new Paragraph(Texts.t("Paid by %s", pay), NORMAL);
         paid.setSpacingBefore(5);
@@ -504,7 +510,7 @@ public class PayslipPdf {
         PdfPCell yh = cell(Texts.t("Year to date %s (%s, in %s)", y.year(), months(y.months()), y.currency()), BOLD, Element.ALIGN_LEFT, true);
         yh.setColspan(5);
         year.addCell(yh);
-        for (String h : List.of("", Texts.t("Gross"), "CNSS", "IPR", Texts.t("Net"))) {
+        for (String h : List.of("", Texts.t("Gross"), "CNSS", c.tax(), Texts.t("Net"))) {
             year.addCell(cell(h, BOLD, h.isEmpty() ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, false));
         }
         year.addCell(cell(Texts.t("Total"), NORMAL, Element.ALIGN_LEFT, false));

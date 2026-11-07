@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, longDay, MODULE_NAMES, type CompanySummary, type Module, type Plan } from '../api'
+import { api, COUNTRY_NAMES, longDay, MODULE_NAMES, type CompanySummary, type Module, type Plan } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
@@ -52,6 +52,7 @@ export default function CompaniesPage() {
 
   const [name, setName] = useState('')
   const [country, setCountry] = useState('CD')
+  const [companyLanguage, setCompanyLanguage] = useState<'fr' | 'en'>('fr')
   const [plan, setPlan] = useState('UP_TO_50')
   const [modules, setModules] = useState<Module[]>(ALL)
   const [admin, setAdmin] = useState({ firstName: '', lastName: '', email: '', phone: '' })
@@ -77,7 +78,7 @@ export default function CompaniesPage() {
     e.preventDefault()
     if (modules.length === 0) { setFormError(t('Choose at least one module.')); return }
     try {
-      const result = await api<Created>('/api/platform/companies', { method: 'POST', body: { name, countryCode: country, planCode: plan, modules, admin } })
+      const result = await api<Created>('/api/platform/companies', { method: 'POST', body: { name, countryCode: country, planCode: plan, modules, admin, language: companyLanguage } })
       setAdding(false)
       // Open the next dialog only once the form's dialog is gone: Firefox's page crashed when one modal dialog
       // closed and another opened in the same frame.
@@ -134,7 +135,7 @@ export default function CompaniesPage() {
                     {c.supportOpen && <span className="badge warn small">{t('Support open')}</span>}
                     <div className="muted small">{c.lastSignIn ? t('Last sign-in {a}', { a: longDay(c.lastSignIn) }) : t('No sign-in yet')}</div>
                   </td>
-                  <td>{countries[c.countryCode] ?? c.countryCode}</td>
+                  <td>{COUNTRY_NAMES[c.countryCode] ?? countries[c.countryCode] ?? c.countryCode}</td>
                   <td>{c.planName}</td>
                   <td className="num">{over ? <span className="badge warn">{c.employees} / {c.maxEmployees}</span> : c.employees}</td>
                   <td>{c.modules.map((m) => MODULE_NAMES[m]).join(', ')}</td>
@@ -158,7 +159,12 @@ export default function CompaniesPage() {
             <div className="grid2">
               <label>{t('Company name')}<input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} /></label>
               <label>{t('Country')}<select value={country} onChange={(e) => setCountry(e.target.value)}>
-                  {Object.entries(countries).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                  {Object.entries(countries).map(([code, label]) => <option key={code} value={code}>{COUNTRY_NAMES[code] ?? label}</option>)}
+                </select>
+              </label>
+              <label>{t('Company language')}<select value={companyLanguage} onChange={(e) => setCompanyLanguage(e.target.value as 'fr' | 'en')}>
+                  <option value="fr" lang="fr">Français</option>
+                  <option value="en" lang="en">English</option>
                 </select>
               </label>
             </div>

@@ -24,7 +24,10 @@ import tools.jackson.databind.node.ObjectNode;
 public class CountryPacks {
 
     /** The countries with a pack, and how they are named on screen. */
-    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo");
+    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo", "CG", "Republic of the Congo");
+
+    /** Each country's own currency, the one taxes are declared in. */
+    public static final Map<String, String> CURRENCIES = Map.of("CD", "CDF", "CG", "XAF");
 
     private final JdbcClient jdbc;
     private final JsonMapper json;

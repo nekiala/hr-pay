@@ -4,9 +4,9 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
-import { t, locale } from '../i18n'
+import { locale, localCurrency, t } from '../i18n'
 
-type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null }
+type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null }
 type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string }
 type Band = { lowerBound: number; upperBound: number | null; ratePercent: number }
 type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string> }
@@ -14,13 +14,14 @@ type FxRate = { id: number; currency: string; rateDate: string; cdfPerUnit: numb
 type FxOverview = { today: string; latest: FxRate | null; stale: boolean; recent: FxRate[] }
 type IprResult = { beforeReduction: number; reduction: number; capped: number; tax: number }
 
-const cdf = (n: number) => new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 }).format(n) + ' CDF'
-const show = (r: { unit: RateType['unit'] }, v: number | null) => (v === null ? '—' : r.unit === 'PERCENT' ? `${v}%` : r.unit === 'CDF' ? cdf(v) : String(v))
+const cdf = (n: number) => new Intl.NumberFormat(locale(), { maximumFractionDigits: 2 }).format(n) + ' ' + localCurrency()
+const show = (r: { unit: RateType['unit'] }, v: number | null) => (v === null ? '—' : r.unit === 'PERCENT' ? `${v}%` : r.unit === 'CDF' || r.unit === 'XAF' ? cdf(v) : String(v))
 const today = () => new Date().toISOString().slice(0, 10)
 const firstOfNextMonth = () => { const d = new Date(); return new Date(Date.UTC(d.getFullYear(), d.getMonth() + 1, 1)).toISOString().slice(0, 10) }
 
 export default function StatutoryRatesPage() {
-  const { can } = useAuth()
+  const { can, me } = useAuth()
+  const congo = me?.company?.country === 'CG'
   const editable = can('masterdata.manage')
   const fxEditable = editable || can('salary.write')
   const [on, setOn] = useState(today())
@@ -74,7 +75,9 @@ export default function StatutoryRatesPage() {
   return (
     <section>
       <h2>{t('Statutory rates')}</h2>
-      <p className="notice">{t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')}</p>
+      <p className="notice">{congo
+        ? t('Sample values from memory for the Republic of the Congo. A Congolese payroll accountant must confirm every rate, the ceilings and the ITS bands before the first real payroll.')
+        : t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <label className="month-pick">{t('Rates in force on')}{' '}<input type="date" value={on} onChange={(e) => setOn(e.target.value || today())} /></label>
@@ -159,7 +162,9 @@ export default function StatutoryRatesPage() {
 
       <div className="card">
         <h3>{t('IPR barème')}</h3>
-        <p className="hint">{t('Annual taxable income bands in CDF, in force since')}{' '}{data?.ipr.effectiveFrom}{t('. Each month the taxable income is multiplied by 12, taxed on these bands and divided by 12; then the reduction per dependant and the cap apply.')}</p>
+        {congo
+          ? <p className="hint">{t('Yearly bands for one part, in XAF, in force since {a}. Each month the taxable income is multiplied by 12, less the professional deduction, divided by the household\'s parts (1, plus 1 for a spouse and ½ per child in charge), taxed on these bands, multiplied back by the parts and divided by 12.', { a: data?.ipr.effectiveFrom ?? '' })}</p>
+          : <p className="hint">{t('Annual taxable income bands in CDF, in force since')}{' '}{data?.ipr.effectiveFrom}{t('. Each month the taxable income is multiplied by 12, taxed on these bands and divided by 12; then the reduction per dependant and the cap apply.')}</p>}
         {!scale && (
           <div className="table-wrap">
             <table>
@@ -212,6 +217,7 @@ export default function StatutoryRatesPage() {
           </Form>
         )}
 
+        {!congo && <>
         <h4>{t('Try it')}</h4>
         <Form className="grid3" onSubmit={(e) => {
           e.preventDefault()
@@ -226,17 +232,18 @@ export default function StatutoryRatesPage() {
         {trialResult && (
           <p>{t('Barème:')}{' '}{cdf(trialResult.beforeReduction)}{' '}{t('· dependants: −')}{cdf(trialResult.reduction)}{trialResult.capped > 0 ? t(' · cap: −{a}', { a: cdf(trialResult.capped) }) : ''} · <strong>{t('IPR')}{' '}{cdf(trialResult.tax)}</strong></p>
         )}
+        </>}
       </div>
 
       <div className="card">
         <h3>{t('Settings')}</h3>
-        <label>{t('Company size for INPP')}<select value={data?.settings.INPP_BAND ?? 'LARGE'} disabled={!editable}
+        {!congo && <label>{t('Company size for INPP')}<select value={data?.settings.INPP_BAND ?? 'LARGE'} disabled={!editable}
             onChange={(e) => void run(() => api('/api/statutory/settings/INPP_BAND', { method: 'PUT', body: { value: e.target.value } }), t('Saved.'))}>
             <option value="SMALL">{t('Up to 50 employees')}</option>
             <option value="MEDIUM">{t('51 to 300 employees')}</option>
             <option value="LARGE">{t('More than 300 employees')}</option>
           </select>
-        </label>
+        </label>}
         <label>{t('Exchange rate used by a payroll run')}<select value={data?.settings.RATE_DAY ?? 'LAST_OF_MONTH'} disabled={!editable}
             onChange={(e) => void run(() => api('/api/statutory/settings/RATE_DAY', { method: 'PUT', body: { value: e.target.value } }), t('Saved.'))}>
             <option value="LAST_OF_MONTH">{t('Last BCC rate of the pay month')}</option>

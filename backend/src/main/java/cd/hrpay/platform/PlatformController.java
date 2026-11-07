@@ -59,7 +59,8 @@ public class PlatformController {
                              @NotBlank @Email @Size(max = 320) String email, @NotBlank String phone) {}
 
     public record NewCompany(@NotBlank @Size(max = 150) String name, @NotBlank String countryCode,
-                             @NotBlank String planCode, @NotEmpty Set<String> modules, @Valid @NotNull AdminInput admin) {}
+                             @NotBlank String planCode, @NotEmpty Set<String> modules, @Valid @NotNull AdminInput admin,
+                             @jakarta.validation.constraints.Pattern(regexp = "fr|en", message = "Choose French or English.") String language) {}
 
     public record Created(CompanyView company, String adminEmail, String temporaryPassword) {}
 
@@ -141,10 +142,11 @@ public class PlatformController {
         String by = CurrentUser.email();
         long id = tx.execute(s -> {
             long companyId = tenants.callAsPlatform(() -> jdbc.sql("""
-                    insert into company (name, address, country_code, plan_code, modules, created_by)
-                    values (?, ?, ?, ?, ?, ?) returning id""")
+                    insert into company (name, address, country_code, plan_code, modules, created_by, language, local_currency)
+                    values (?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                     .params(body.name().trim(), CountryPacks.COUNTRIES.get(body.countryCode()), body.countryCode(), plan,
-                            modules, by)
+                            modules, by, body.language() == null ? "fr" : body.language(),
+                            CountryPacks.CURRENCIES.get(body.countryCode()))
                     .query(Long.class).single());
             tenants.runAs(companyId, () -> {
                 packs.apply(body.countryCode());

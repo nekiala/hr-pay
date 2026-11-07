@@ -150,6 +150,18 @@ public class PayrollRuns {
 
     // ---- calculate ---------------------------------------------------------------------------------------------
 
+    /** The Republic of the Congo's rates: CNSS with its ceilings, the tax on salaries (TUS) and the ITS bands. */
+    private PayslipCalculator.Rates congoRates(BigDecimal usdLocal, LocalDate on, String local) {
+        Map<String, BigDecimal> more = new java.util.HashMap<>();
+        for (String code : List.of("CNSS_CEILING", "CNSS_FAMILY", "CNSS_ACCIDENT", "CNSS_FAMILY_CEILING", "TUS",
+                "ITS_PROFESSIONAL_DEDUCTION", "ITS_MAX_PARTS", "SMIG_MONTHLY")) {
+            more.put(code, statutory.rate(code, on));
+        }
+        return new PayslipCalculator.Rates(usdLocal, statutory.rate("CNSS_EMPLOYEE", on), statutory.rate("CNSS_EMPLOYER", on),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, statutory.rate("DEBT_MAX_SHARE", on),
+                statutory.brackets(on).brackets(), BigDecimal.ZERO, 0, BigDecimal.valueOf(100), null, "CG", local, Map.copyOf(more));
+    }
+
     @Transactional
     public RunView calculate(YearMonth month) {
         LocalDate first = month.atDay(1);
@@ -163,16 +175,19 @@ public class PayrollRuns {
             throw new BusinessRuleException("The payroll for " + month + " is " + existing.status().toLowerCase()
                     + (existing.status().equals("APPROVED") ? ": send it back before calculating again." : "."));
         }
+        String country = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class).single();
+        String local = jdbc.sql("select local_currency from company where id = current_company_id()").query(String.class).single();
         // The rate: last BCC rate of the month, or today's, as configured.
         LocalDate rateDay = statutory.setting("RATE_DAY").equals("RUN_DATE") || last.isAfter(today) ? today : last;
-        ExchangeRates.Rate usd = exchange.on("USD", rateDay).orElseThrow(() ->
-                new BusinessRuleException("No USD exchange rate is stored for " + rateDay + " or before. Enter the BCC rate first."));
-        PayslipCalculator.Rates rates = new PayslipCalculator.Rates(usd.cdfPerUnit(),
-                statutory.rate("CNSS_EMPLOYEE", last), statutory.rate("CNSS_EMPLOYER", last), statutory.inppRate(last),
-                statutory.rate("ONEM", last), statutory.rate("IERE", last), statutory.rate("DEBT_MAX_SHARE", last),
-                statutory.brackets(last).brackets(), statutory.rate("IPR_DEPENDANT_REDUCTION", last),
-                statutory.rate("IPR_MAX_DEPENDANTS", last).intValue(), statutory.rate("IPR_CAP", last),
-                statutory.rate("SMIG_DAILY", last));
+        ExchangeRates.Rate usd = exchange.local(local, rateDay);
+        PayslipCalculator.Rates rates = "CG".equals(country)
+                ? congoRates(usd.cdfPerUnit(), last, local)
+                : new PayslipCalculator.Rates(usd.cdfPerUnit(),
+                        statutory.rate("CNSS_EMPLOYEE", last), statutory.rate("CNSS_EMPLOYER", last), statutory.inppRate(last),
+                        statutory.rate("ONEM", last), statutory.rate("IERE", last), statutory.rate("DEBT_MAX_SHARE", last),
+                        statutory.brackets(last).brackets(), statutory.rate("IPR_DEPENDANT_REDUCTION", last),
+                        statutory.rate("IPR_MAX_DEPENDANTS", last).intValue(), statutory.rate("IPR_CAP", last),
+                        statutory.rate("SMIG_DAILY", last));
         boolean projected = !last.isBefore(today);
 
         long runId;
@@ -419,7 +434,7 @@ public class PayrollRuns {
                 head.currency(), head.gross(), head.cnssBase(), head.taxableBase(), head.taxableBaseCdf(),
                 head.employeeDeductions(), head.net(), head.employerCharges(), head.scheduledMinutes(),
                 head.paidMinutes(), head.daysWorked(), head.usdCdf(), head.rateDate(), head.projected(),
-                withSeniority(head), head.warnings(), lines);
+                withSeniority(head), head.warnings().stream().map(cd.hrpay.i18n.Texts::translate).toList(), lines);
     }
 
     /** Marital status codes printed on payslips. */

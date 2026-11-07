@@ -9,7 +9,7 @@ import { Button } from '../components/Button'
 import { t, locale } from '../i18n'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
-const STATUS = { CALCULATED: t('Calculated, waiting for approval'), APPROVED: t('Approved, ready to close'), CLOSED: t('Closed') }
+const STATUS = { CALCULATED: t('Calculated, waiting for approval'), APPROVED: t('Approved, ready to close'), CLOSED: t('Month closed') }
 type Raise = { id: number; userId: number; userName: string; anniversaryDate: string; years: number; effectiveFrom: string; gradeCode: string; percent: number; raiseAmount: number; oldBasic: number; newBasic: number; currency: string; notifiedAt: string | null }
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '')
 
@@ -96,7 +96,7 @@ export default function PayrollRunsPage() {
           <label className="month-pick">{t('Month')}{' '}<input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} /></label>
           {runs.length > 0 && (
             <span className="muted">{t('Recent:')}{' '}{runs.slice(0, 6).map((r) => (
-              <Button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({r.status.toLowerCase()})</Button>
+              <Button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({(STATUS[r.status as keyof typeof STATUS] ?? r.status).split(',')[0].toLowerCase()})</Button>
             ))}</span>
           )}
         </div>

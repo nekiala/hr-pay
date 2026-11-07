@@ -1,5 +1,7 @@
 package cd.hrpay.payment;
 
+import cd.hrpay.i18n.Texts;
+
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
 import cd.hrpay.common.ConflictException;
@@ -26,6 +28,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class Declarations {
 
     public static final List<String> KINDS = List.of("CNSS", "IPR", "INPP", "ONEM", "IERE");
+
+    /** The declarations of each country: the DRC's, and the Republic of the Congo's (IPR there is the ITS). */
+    public static final Map<String, List<String>> KINDS_BY_COUNTRY = Map.of("CD", KINDS, "CG", List.of("CNSS", "IPR", "TUS"));
+
+    private String country() {
+        return jdbc.sql("select country_code from company where id = current_company_id()").query(String.class).optional().orElse("CD");
+    }
+
+    private String local() {
+        return jdbc.sql("select local_currency from company where id = current_company_id()").query(String.class).optional().orElse("CDF");
+    }
+
+    public List<String> kinds() {
+        return KINDS_BY_COUNTRY.getOrDefault(country(), KINDS);
+    }
 
     public record Row(long userId, String registrationNo, String name, String idNumber, String currency, BigDecimal base,
                       BigDecimal baseCdf, BigDecimal employeeCdf, BigDecimal employerCdf, BigDecimal totalCdf,
@@ -65,17 +82,18 @@ public class Declarations {
                 .orElseThrow(() -> new NotFoundException("No payroll for " + month + " yet."));
     }
 
-    private static void requireKind(String kind) {
-        if (!KINDS.contains(kind)) {
+    private void requireKind(String kind) {
+        if (!kinds().contains(kind)) {
             throw new NotFoundException("Unknown declaration " + kind + ".");
         }
     }
 
+    /** An amount in the local currency (CDF or XAF), at the payroll's rate. */
     private static BigDecimal cdf(BigDecimal amount, String currency, BigDecimal usdCdf) {
         if (amount == null) {
             return BigDecimal.ZERO.setScale(2);
         }
-        return (currency.equals("CDF") ? amount : amount.multiply(usdCdf)).setScale(2, RoundingMode.HALF_UP);
+        return (currency.equals("USD") ? amount.multiply(usdCdf) : amount).setScale(2, RoundingMode.HALF_UP);
     }
 
     public Declaration declaration(YearMonth month, String kind) {
@@ -87,7 +105,7 @@ public class Declarations {
             default -> null;
         };
         String employerCode = switch (kind) {
-            case "CNSS" -> "CNSS_EMPLOYER";
+            case "CNSS" -> "CNSS_EMPLOYER%";   // in the Republic of the Congo: pensions, family benefits and accidents
             case "IPR" -> null;
             default -> kind;
         };
@@ -103,8 +121,8 @@ public class Declarations {
                 select p.user_id, u.registration_no, u.first_name || ' ' || u.last_name as name, trim(p.currency) as currency,
                        p.cnss_base, p.taxable_base, p.taxable_base_cdf, p.snapshot ->> ? as id_number,
                        (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employee_amount,
-                       (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employer_amount,
-                       (select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employer_base
+                       (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code like ?) as employer_amount,
+                       (select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code like ?) as employer_base
                 , p.unit_id from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? order by u.last_name, u.first_name""")
                 .params(idKey == null ? "-" : idKey, employeeCode == null ? "-" : employeeCode,
@@ -132,11 +150,11 @@ public class Declarations {
                 }).list().stream().filter(java.util.Objects::nonNull).forEach(rows::add);
         if (idKey != null) {
             rows.stream().filter(r -> r.idNumber() == null || r.idNumber().isBlank())
-                    .forEach(r -> warnings.add(r.name() + " has no " + (kind.equals("CNSS") ? "CNSS number" : "tax number (NIF)")
-                            + " in the employee file."));
+                    .forEach(r -> warnings.add(kind.equals("CNSS") ? Texts.t("%s has no CNSS number in the employee file.", r.name())
+                            : Texts.t("%s has no tax number (NIF) in the employee file.", r.name())));
         }
         if (!run.status().equals("CLOSED")) {
-            warnings.add(0, "The " + month + " payroll is not closed yet: these amounts can still change.");
+            warnings.add(0, Texts.t("The %s payroll is not closed yet: these amounts can still change.", month));
         }
         return new Declaration(month.toString(), kind, run.status(), run.usdCdf(), run.rateDate(), rows,
                 sum(rows, Row::baseCdf), sum(rows, Row::employeeCdf), sum(rows, Row::employerCdf), sum(rows, Row::totalCdf),
@@ -153,7 +171,7 @@ public class Declarations {
     }
 
     public List<Summary> summary(YearMonth month) {
-        return KINDS.stream().map(k -> {
+        return kinds().stream().map(k -> {
             Declaration d = declaration(month, k);
             return new Summary(k, d.rows().size(), d.totalCdf(), d.filed());
         }).toList();

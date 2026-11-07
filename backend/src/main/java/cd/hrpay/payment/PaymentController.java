@@ -47,7 +47,7 @@ public class PaymentController {
     public record LogoInput(@NotBlank String contentType, @NotBlank @Size(max = 800_000) String base64) {}
 
     public record PrepareInput(@NotNull @Pattern(regexp = "BANK|MOBILE_MONEY|CASH") String method,
-                               @NotBlank @Size(max = 100) String provider, @NotNull @Pattern(regexp = "USD|CDF") String currency) {}
+                               @NotBlank @Size(max = 100) String provider, @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency) {}
 
     public record PaidInput(@NotNull LocalDate paidOn, @Size(max = 100) String reference) {}
 
@@ -250,7 +250,7 @@ public class PaymentController {
         PrintWriter out = Csv.start(response, d.kind().toLowerCase() + "-" + d.month() + ".csv");
         String employerId = switch (d.kind()) {
             case "CNSS" -> c.cnssNumber();
-            case "IPR", "IERE" -> c.taxNumber();
+            case "IPR", "IERE", "TUS" -> c.taxNumber();
             case "INPP" -> c.inppNumber();
             default -> c.onemNumber();
         };

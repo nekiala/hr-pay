@@ -4,7 +4,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
-import { t } from '../i18n'
+import { localCurrency, t } from '../i18n'
 
 function lastMonth() {
   const d = new Date()
@@ -83,11 +83,11 @@ function CostCard({ month }: { month: string }) {
               {rows.map((r) => (
                 <tr key={r.id}><td>{r.name}</td>{detail && <td>{r.costCentre ?? ''}</td>}<td className="num">{r.headcount}</td><td className="num">{r.payslips}</td>
                   <td className="num">{usd(r.grossUsd)}</td><td className="num">{usd(r.employerUsd)}</td><td className="num">{usd(r.costUsd)}</td>
-                  {data.usdCdf && <td className="num">{r.costCdf === null ? '' : money(r.costCdf, 'CDF')}</td>}</tr>
+                  {data.usdCdf && <td className="num">{r.costCdf === null ? '' : money(r.costCdf, localCurrency())}</td>}</tr>
               ))}
               <tr className="subtotal"><td>{t('Total')}</td>{detail && <td />}<td className="num">{data.total.headcount}</td><td className="num">{data.total.payslips}</td>
                 <td className="num">{usd(data.total.grossUsd)}</td><td className="num">{usd(data.total.employerUsd)}</td><td className="num">{usd(data.total.costUsd)}</td>
-                {data.usdCdf && <td className="num">{data.total.costCdf === null ? '' : money(data.total.costCdf, 'CDF')}</td>}</tr>
+                {data.usdCdf && <td className="num">{data.total.costCdf === null ? '' : money(data.total.costCdf, localCurrency())}</td>}</tr>
             </tbody>
           </table>
         </div>

@@ -7,6 +7,17 @@ alter table app_user add column language varchar(2) check (language in ('fr', 'e
 -- rates and the "local" amounts of payroll are in this currency.
 alter table company add column local_currency varchar(3) not null default 'CDF';
 
+-- Amounts may be in XAF, the Republic of the Congo's franc, besides US dollars and Congolese francs.
+alter table employee_salary drop constraint employee_salary_currency_check, add constraint employee_salary_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table grade drop constraint grade_currency_check, add constraint grade_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table pay_element drop constraint pay_element_default_currency_check, add constraint pay_element_default_currency_check check (default_currency in ('USD', 'CDF', 'XAF'));
+alter table employee_pay_element drop constraint employee_pay_element_currency_check, add constraint employee_pay_element_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table pay_entry drop constraint pay_entry_currency_check, add constraint pay_entry_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table loan drop constraint loan_currency_check, add constraint loan_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table holiday_adjustment drop constraint holiday_adjustment_currency_check, add constraint holiday_adjustment_currency_check check (currency in ('USD', 'CDF', 'XAF'));
+alter table statutory_rate_type drop constraint statutory_rate_type_unit_check,
+    add constraint statutory_rate_type_unit_check check (unit in ('PERCENT', 'COUNT', 'CDF', 'XAF'));
+
 -- Rows of every company are renamed: this migration reads past the company separation.
 set local app.bypass = 'on';
 

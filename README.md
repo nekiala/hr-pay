@@ -233,6 +233,22 @@ checked by a lawyer against the DRC's Code du numérique (2023).
 **Dependencies.** Dependabot opens weekly update pull requests (`.github/dependabot.yml`); CI fails on high or
 critical advisories in the browser app (`npm audit`) and in the container image (Trivy). See `SECURITY.md`.
 
+## French and country packs (phase 13)
+
+- The interface, payslips, declarations, invoices, emails and WhatsApp codes are in French, with English kept. Each
+  company has a language (French by default) and each person can choose their own on My account; the sign-in page has
+  a switch. Numbers and dates follow the language (fr-FR or en-GB). Interface texts are in `frontend/src/fr.ts`,
+  server texts in `src/main/resources/i18n/fr.json`, keyed by their English text.
+- Each company has a country, chosen when the platform creates it: the DRC (CDF, CNSS, IPR, INPP, ONEM, IERE) or the
+  Republic of the Congo (XAF, CNSS, ITS, TUS). The country pack sets grades, holidays, overtime tiers, pay elements,
+  statutory rates and declarations.
+- **Republic of the Congo, to verify with Albert Mbodo before any real payroll** (all values are samples from memory):
+  CNSS pension 4% employee and 8% employer up to 1,200,000 XAF a month; family benefits 10.03% and work accidents
+  2.25% (employer) up to 600,000 XAF; TUS 7.5% of gross; ITS with 20% professional deduction and the family quotient
+  (1 part, +1 for a spouse, +0.5 per child, at most 6.5), bands per part 1% / 10% / 25% / 40% at 464,000 / 1,000,000 /
+  3,000,000 XAF a year; SMIG 90,000 XAF; overtime 110% / 125% / 150% / 200%; the 7 public holidays; the declaration
+  formats and the payslip mentions.
+
 ## Configuration
 
 | Variable | Default | Purpose |

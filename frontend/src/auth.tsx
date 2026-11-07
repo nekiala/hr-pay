@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api, type Me, type TwoStepNeeded } from './api'
-import { language, setLanguage, t } from './i18n'
+import { language, setCountry, setLanguage, t } from './i18n'
 
 type AuthState = {
   me: Me | null
@@ -16,6 +16,7 @@ type AuthState = {
 
 /** Shows the app in the person's language: a change reloads the page, so every text is read again. */
 function follow(m: Me | null): Me | null {
+  if (m?.company) setCountry(m.company.country, m.company.localCurrency)
   if (m && m.language !== language()) {
     setLanguage(m.language)
     window.location.reload()

@@ -37,7 +37,7 @@ export default function BillingPage() {
     try {
       const v = await api<View>('/api/billing')
       setView(v)
-      if (v.subscription) { setCycle(v.subscription.cycle); setCurrency(v.subscription.currency) }
+      if (v.subscription) { setCycle(v.subscription.cycle); setCurrency(v.subscription.currency as 'USD' | 'CDF') }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('Could not load the billing.'))
     }

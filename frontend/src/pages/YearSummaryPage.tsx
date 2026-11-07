@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
-import { t } from '../i18n'
+import { localCurrency, t } from '../i18n'
 
 type Row = { userId: number; name: string; registrationNo: string; currency: string; months: number; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; iprCdf: number }
 type Month = { month: string; payslipId: number; number: string; currency: string; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; taxableCdf: number; iprCdf: number; paidOn: string | null }
@@ -108,7 +108,7 @@ export function AnnualStatementPage() {
                   </tfoot>
                 </table>
               </div>
-              <p className="small">{t('Taxable income for IPR over the year:')}{' '}{money(s.taxableCdf, 'CDF')}{t('. IPR withheld:')}{' '}{money(s.iprCdf, 'CDF')}.</p>
+              <p className="small">{t('Taxable income for IPR over the year:')}{' '}{money(s.taxableCdf, localCurrency())}{t('. IPR withheld:')}{' '}{money(s.iprCdf, localCurrency())}.</p>
             </>
           )}
         </div>

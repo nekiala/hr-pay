@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, fileToBase64, type Employer, type PayslipSettings } from '../api'
+import { ApiError, api, COUNTRY_NAMES, fileToBase64, type Employer, type PayslipSettings } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 import { useAuth } from '../auth'
@@ -22,8 +22,6 @@ const TEMPLATES: { code: PayslipSettings['template']; name: string; about: strin
 ]
 
 /** The employer: name, address and legal numbers, the logo, and how payslips look. */
-/** The country names a company may have, as the server knows them. */
-export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }
 
 /** The company's language: the one its people see unless they choose their own, and its documents are written in. */
 function LanguageCard() {

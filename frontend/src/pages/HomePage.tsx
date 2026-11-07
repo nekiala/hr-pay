@@ -69,11 +69,11 @@ export default function HomePage() {
 
   type StepState = 'done' | 'now' | 'todo'
   const steps: { name: string; state: StepState; detail: string; pct: number }[] = r ? [
-    { name: 'Calculated', state: 'done', detail: t("{a} payslips", { a: r.employeeCount }), pct: 100 },
+    { name: t('Calculated'), state: 'done', detail: t("{a} payslips", { a: r.employeeCount }), pct: 100 },
     { name: t('Approved by Finance'), state: r.status === 'CALCULATED' ? 'now' : 'done', detail: r.approvedBy ? t('by {a}', { a: r.approvedBy.split('@')[0] }) : t('Waiting'), pct: r.status === 'CALCULATED' ? 50 : 100 },
     { name: t('Month closed'), state: r.status === 'CLOSED' ? 'done' : r.status === 'APPROVED' ? 'now' : 'todo', detail: r.closedAt ? t('Payslips numbered') : t('Not yet'), pct: r.status === 'CLOSED' ? 100 : 0 },
-    ...(payments ? [{ name: 'Paid', state: (payments.paid >= payments.payslips ? 'done' : 'now') as StepState, detail: t('{a} of {b} people', { a: payments.paid, b: payments.payslips }), pct: payments.payslips ? Math.round((payments.paid / payments.payslips) * 100) : 0 }] : []),
-    ...(declared ? [{ name: 'Declared', state: (filed === declared.declarations.length ? 'done' : payments && payments.paid < payments.payslips ? 'todo' : 'now') as StepState, detail: t('{a} of {b} filed', { a: filed, b: declared.declarations.length }), pct: declared.declarations.length ? Math.round((filed / declared.declarations.length) * 100) : 0 }] : []),
+    ...(payments ? [{ name: t('Paid'), state: (payments.paid >= payments.payslips ? 'done' : 'now') as StepState, detail: t('{a} of {b} people', { a: payments.paid, b: payments.payslips }), pct: payments.payslips ? Math.round((payments.paid / payments.payslips) * 100) : 0 }] : []),
+    ...(declared ? [{ name: t('Declared'), state: (filed === declared.declarations.length ? 'done' : payments && payments.paid < payments.payslips ? 'todo' : 'now') as StepState, detail: t('{a} of {b} filed', { a: filed, b: declared.declarations.length }), pct: declared.declarations.length ? Math.round((filed / declared.declarations.length) * 100) : 0 }] : []),
   ] : []
 
   return (

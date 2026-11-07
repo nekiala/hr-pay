@@ -20,10 +20,37 @@ import java.util.stream.Collectors;
  */
 public final class PayslipCalculator {
 
+    /**
+     * The month's rates. {@code usdCdf} is the price of one US dollar in the local currency ({@code local}: CDF in
+     * the DRC, XAF in the Republic of the Congo); {@code country} picks the rules (CD or CG); {@code more} holds the
+     * rates only one country has, by their code (for CG: CNSS_CEILING, CNSS_FAMILY, CNSS_ACCIDENT,
+     * CNSS_FAMILY_CEILING, TUS, ITS_PROFESSIONAL_DEDUCTION, ITS_MAX_PARTS, SMIG_MONTHLY).
+     */
     public record Rates(BigDecimal usdCdf, BigDecimal cnssEmployee, BigDecimal cnssEmployer, BigDecimal inpp,
                         BigDecimal onem, BigDecimal iere, BigDecimal debtMaxShare, List<IprCalculator.Bracket> iprBrackets,
                         BigDecimal iprDependantReduction, int iprMaxDependants, BigDecimal iprCap,
-                        BigDecimal smigDailyCdf) {}
+                        BigDecimal smigDailyCdf, String country, String local, Map<String, BigDecimal> more) {
+
+        /** The DRC's rates, in CDF. */
+        public Rates(BigDecimal usdCdf, BigDecimal cnssEmployee, BigDecimal cnssEmployer, BigDecimal inpp,
+                     BigDecimal onem, BigDecimal iere, BigDecimal debtMaxShare, List<IprCalculator.Bracket> iprBrackets,
+                     BigDecimal iprDependantReduction, int iprMaxDependants, BigDecimal iprCap, BigDecimal smigDailyCdf) {
+            this(usdCdf, cnssEmployee, cnssEmployer, inpp, onem, iere, debtMaxShare, iprBrackets, iprDependantReduction,
+                    iprMaxDependants, iprCap, smigDailyCdf, "CD", "CDF", Map.of());
+        }
+
+        boolean congo() {
+            return "CG".equals(country);
+        }
+
+        BigDecimal more(String code) {
+            BigDecimal v = more.get(code);
+            if (v == null) {
+                throw new IllegalStateException("The rate " + code + " is missing");
+            }
+            return v;
+        }
+    }
 
     public record LoanDue(long loanId, String kind, BigDecimal installment, BigDecimal balance, String currency) {}
 
@@ -167,15 +194,25 @@ public final class PayslipCalculator {
             }
         }
 
-        BigDecimal cnssEmployee = money(cnssBase.multiply(r.cnssEmployee()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
-        lines.add(new Line("CNSS_EMPLOYEE", byCode.get("CNSS_EMPLOYEE").name(), "DEDUCTION", cnssBase, r.cnssEmployee(),
+        String local = r.local();
+        // In the Republic of the Congo the pension contributions stop at a monthly ceiling.
+        BigDecimal pensionBase = r.congo() ? cnssBase.min(convert(r.more("CNSS_CEILING"), local, cur, r.usdCdf())) : cnssBase;
+        BigDecimal cnssEmployee = money(pensionBase.multiply(r.cnssEmployee()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+        lines.add(new Line("CNSS_EMPLOYEE", byCode.get("CNSS_EMPLOYEE").name(), "DEDUCTION", pensionBase, r.cnssEmployee(),
                 cnssEmployee, byCode.get("CNSS_EMPLOYEE").displayOrder(), null));
 
         BigDecimal taxableBase = taxable.subtract(cnssEmployee).max(BigDecimal.ZERO);
-        BigDecimal taxableCdf = convert(taxableBase, cur, "CDF", r.usdCdf());
-        IprCalculator.Result ipr = IprCalculator.monthly(taxableCdf, in.dependantsInCharge(), r.iprBrackets(),
-                r.iprDependantReduction(), r.iprMaxDependants(), r.iprCap());
-        BigDecimal iprAmount = convert(ipr.tax(), "CDF", cur, r.usdCdf());
+        BigDecimal taxableCdf = convert(taxableBase, cur, local, r.usdCdf());
+        BigDecimal taxLocal;
+        if (r.congo()) {
+            boolean spouse = in.dependantsInCharge() > in.childrenInCharge();
+            BigDecimal parts = ItsCalculator.parts(spouse, in.childrenInCharge(), r.more("ITS_MAX_PARTS"));
+            taxLocal = ItsCalculator.monthly(taxableCdf, parts, r.iprBrackets(), r.more("ITS_PROFESSIONAL_DEDUCTION")).tax();
+        } else {
+            taxLocal = IprCalculator.monthly(taxableCdf, in.dependantsInCharge(), r.iprBrackets(),
+                    r.iprDependantReduction(), r.iprMaxDependants(), r.iprCap()).tax();
+        }
+        BigDecimal iprAmount = convert(taxLocal, local, cur, r.usdCdf());
         lines.add(new Line("IPR", byCode.get("IPR").name(), "DEDUCTION", taxableBase, null, iprAmount,
                 byCode.get("IPR").displayOrder(), null));
 
@@ -207,17 +244,31 @@ public final class PayslipCalculator {
 
         // 7. Employer charges.
         BigDecimal employer = BigDecimal.ZERO;
-        employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER", cnssBase, r.cnssEmployer()));
-        employer = employer.add(charge(lines, byCode, "INPP", gross, r.inpp()));
-        employer = employer.add(charge(lines, byCode, "ONEM", gross, r.onem()));
-        if (in.expatriate()) {
-            employer = employer.add(charge(lines, byCode, "IERE", gross, r.iere()));
+        if (r.congo()) {
+            // Pensions up to their ceiling; family benefits and work accidents up to theirs; the tax on salaries (TUS) on the gross.
+            BigDecimal familyBase = cnssBase.min(convert(r.more("CNSS_FAMILY_CEILING"), local, cur, r.usdCdf()));
+            employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER", pensionBase, r.cnssEmployer()));
+            employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER_FAMILY", familyBase, r.more("CNSS_FAMILY")));
+            employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER_ACCIDENT", familyBase, r.more("CNSS_ACCIDENT")));
+            employer = employer.add(charge(lines, byCode, "TUS", gross, r.more("TUS")));
+        } else {
+            employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER", cnssBase, r.cnssEmployer()));
+            employer = employer.add(charge(lines, byCode, "INPP", gross, r.inpp()));
+            employer = employer.add(charge(lines, byCode, "ONEM", gross, r.onem()));
+            if (in.expatriate()) {
+                employer = employer.add(charge(lines, byCode, "IERE", gross, r.iere()));
+            }
         }
 
         // 8. Checks.
-        if (r.smigDailyCdf() != null && in.scheduledDays() > 0) {
+        if (r.congo()) {
+            BigDecimal smig = r.more().get("SMIG_MONTHLY");
+            if (smig != null && convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smig) < 0) {
+                warnings.add("The basic salary is below the monthly minimum wage (SMIG).");
+            }
+        } else if (r.smigDailyCdf() != null && in.scheduledDays() > 0) {
             BigDecimal smigMonth = r.smigDailyCdf().multiply(BigDecimal.valueOf(in.scheduledDays()));
-            if (convert(in.basicMonthly(), cur, "CDF", r.usdCdf()).compareTo(smigMonth) < 0) {
+            if (convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smigMonth) < 0) {
                 warnings.add("The basic salary is below the minimum wage (SMIG) for " + in.scheduledDays() + " days.");
             }
         }

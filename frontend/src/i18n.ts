@@ -30,8 +30,32 @@ export const locale = () => (current === 'fr' ? 'fr-FR' : 'en-GB')
 
 const dictionary = fr as Record<string, string>
 
+// The country's own words: in the Republic of the Congo the local currency is XAF and the income tax is the ITS, where
+// the texts (written for the DRC) say CDF and IPR. Kept in this browser so the first screen already uses them.
+const COUNTRY = 'hrpay.country'
+let terms: [RegExp, string][] = []
+
+function applyTerms(country: string | null, local: string | null) {
+  terms = country === 'CG' ? [[/\bCDF\b/g, local || 'XAF'], [/\bIPR\b/g, 'ITS']] : []
+}
+
+try {
+  const saved = JSON.parse(localStorage.getItem(COUNTRY) ?? 'null') as { country: string; local: string } | null
+  if (saved) applyTerms(saved.country, saved.local)
+} catch { /* no storage */ }
+
+/** The signed-in company's country and local currency, for the texts that name them. */
+export function setCountry(country: string | null | undefined, local: string | null | undefined) {
+  applyTerms(country ?? null, local ?? null)
+  try { localStorage.setItem(COUNTRY, JSON.stringify({ country, local })) } catch { /* no storage */ }
+}
+
+/** The local currency the texts use: CDF, or the company's own. */
+export const localCurrency = () => terms.find(([re]) => re.source.includes('CDF'))?.[1] ?? 'CDF'
+
 export function t(english: string, vars?: Record<string, string | number | null | undefined>): string {
   let text = current === 'fr' ? dictionary[english] ?? english : english
+  for (const [re, word] of terms) text = text.replace(re, word)
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       text = text.split(`{${k}}`).join(v === null || v === undefined ? '' : typeof v === 'number' ? v.toLocaleString(locale()) : v)

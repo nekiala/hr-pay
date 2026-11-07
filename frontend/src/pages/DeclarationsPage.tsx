@@ -6,9 +6,9 @@ import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
-import { t } from '../i18n'
+import { localCurrency, t } from '../i18n'
 
-type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE'
+type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE' | 'TUS'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
 type Summary = { kind: Kind; employees: number; totalCdf: number; filed: Filed | null }
 type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
@@ -24,13 +24,14 @@ const KIND: Record<Kind, { name: string; to: string }> = {
   INPP: { name: t('INPP (training levy)'), to: 'INPP' },
   ONEM: { name: t('ONEM (employment office)'), to: 'ONEM' },
   IERE: { name: t('IERE (expatriates)'), to: 'DGI' },
+  TUS: { name: t('TUS (single tax on salaries)'), to: t('Tax office') },
 }
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', t('Name')], ['address', t('Address')], ['cnssNumber', t('CNSS employer number')], ['taxNumber', 'NIF'], ['nationalId', t('Id. Nat.')],
   ['rccm', 'RCCM'], ['inppNumber', t('INPP number')], ['onemNumber', t('ONEM number')], ['bankName', t('Bank')], ['bankAccount', t('Account salaries are paid from')],
 ]
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
-const cdf = (n: number) => money(n, 'CDF')
+const cdf = (n: number) => money(n, localCurrency())
 
 /** Subtotals by Direction, for the cost owners; the file sent stays company-wide. */
 function ByDirection({ rows }: { rows: Row[] }) {
@@ -138,7 +139,7 @@ export default function DeclarationsPage() {
                     <tr key={r.userId}>
                       <td>{i + 1}</td><td>{r.name} <span className="muted">{r.registrationNo}</span>{r.unitName && <div className="hint no-print">{r.unitName}</div>}</td>
                       {(decl.kind === 'CNSS' || decl.kind === 'IPR') && <td>{r.idNumber ?? <span className="error">{t('missing')}</span>}</td>}
-                      <td>{cdf(r.baseCdf)}{r.currency !== 'CDF' && <div className="hint">{money(r.base, r.currency)}</div>}</td>
+                      <td>{cdf(r.baseCdf)}{r.currency !== localCurrency() && <div className="hint">{money(r.base, r.currency)}</div>}</td>
                       {employeeCol && <td>{cdf(r.employeeCdf)}</td>}{employerCol && <td>{cdf(r.employerCdf)}</td>}<td>{cdf(r.totalCdf)}</td>
                     </tr>
                   ))}

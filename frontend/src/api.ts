@@ -129,7 +129,7 @@ export type Subscription = {
   companyId: number
   status: 'TRIAL' | 'ACTIVE' | 'CANCELLED'
   cycle: 'MONTHLY' | 'YEARLY'
-  currency: 'USD' | 'CDF'
+  currency: string
   trialEnds: string | null
   nextInvoiceOn: string | null
   autoSuspend: boolean
@@ -147,7 +147,7 @@ export type Invoice = {
   periodTo: string
   planName: string
   cycle: 'MONTHLY' | 'YEARLY'
-  currency: 'USD' | 'CDF'
+  currency: string
   usdCdf: number | null
   priceUsd: number
   subtotal: number
@@ -554,7 +554,7 @@ export type Salary = {
   userId: number
   effectiveFrom: string
   grossMonthly: number
-  currency: 'USD' | 'CDF'
+  currency: string
   note: string | null
   createdBy: string
   createdAt: string
@@ -606,7 +606,7 @@ export const fileToBase64 = (file: File) => new Promise<string>((resolve, reject
 export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
 export const days = (n: number) => plural('{a} day', '{a} days', Number(n), { a: Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 }) })
 
-export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: 'USD' | 'CDF'; active: boolean }
+export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: string; active: boolean }
 export type Occupation = { id: number; code: string; name: string; active: boolean }
 export type Contract = {
   id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
@@ -627,7 +627,7 @@ export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
 export type PayMethod = 'COMPUTED' | 'FIXED' | 'PERCENT_OF_BASIC' | 'PER_DAY_WORKED' | 'PER_CHILD' | 'MANUAL'
 export type PayElement = {
   id: number; code: string; name: string; kind: PayElementKind; method: PayMethod
-  defaultAmount: number | null; defaultCurrency: 'USD' | 'CDF' | null; percent: number | null
+  defaultAmount: number | null; defaultCurrency: string | null; percent: number | null
   subjectToCnss: boolean; taxableIpr: boolean; iprExemptCapPercent: number | null
   prorated: boolean; defaultForAll: boolean; system: boolean; displayOrder: number; active: boolean
 }
@@ -638,12 +638,12 @@ export const PAY_METHODS: Record<PayMethod, string> = {
 export const PAY_KINDS: Record<PayElementKind, string> = { EARNING: t('Earning'), DEDUCTION: t('Deduction'), EMPLOYER_CHARGE: t('Employer charge') }
 export type PayAssignment = {
   id: number; userId: number; elementId: number; elementCode: string; elementName: string
-  amount: number | null; currency: 'USD' | 'CDF' | null; percent: number | null; excluded: boolean
+  amount: number | null; currency: string | null; percent: number | null; excluded: boolean
   startMonth: string; endMonth: string | null; note: string | null; createdBy: string; createdAt: string
 }
 export type PayEntry = {
   id: number; userId: number; userName: string; elementId: number; elementCode: string; elementName: string
-  kind: PayElementKind; month: string; amount: number; currency: 'USD' | 'CDF'; note: string | null
+  kind: PayElementKind; month: string; amount: number; currency: string; note: string | null
   createdBy: string; createdAt: string
 }
 
@@ -669,7 +669,7 @@ export type Payslip = {
   projected: boolean; snapshot: Record<string, string | number | boolean | null>; warnings: string[]; lines: PayslipLine[]
 }
 export type Loan = {
-  id: number; userId: number; userName: string; kind: 'LOAN' | 'ADVANCE'; principal: number; currency: 'USD' | 'CDF'
+  id: number; userId: number; userName: string; kind: 'LOAN' | 'ADVANCE'; principal: number; currency: string
   installment: number; startMonth: string; grantedOn: string; status: 'ACTIVE' | 'REPAID' | 'CANCELLED'
   repaid: number; balance: number; note: string | null; createdBy: string; createdAt: string
 }
@@ -696,3 +696,6 @@ export const FREQUENCY = { MONTHLY: t('Monthly'), QUARTERLY: t('Quarterly'), SEM
 
 export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
 export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean }
+
+/** The countries a company may be in, by their code. */
+export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }

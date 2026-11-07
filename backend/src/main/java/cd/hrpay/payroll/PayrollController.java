@@ -34,7 +34,7 @@ public class PayrollController {
 
     public record LoanInput(@NotNull Long userId, @NotNull @Pattern(regexp = "LOAN|ADVANCE") String kind,
                             @NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal principal,
-                            @NotNull @Pattern(regexp = "USD|CDF") String currency,
+                            @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency,
                             @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal installment,
                             @NotNull YearMonth startMonth, @NotNull LocalDate grantedOn, @Size(max = 300) String note) {}
 
