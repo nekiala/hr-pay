@@ -4,6 +4,10 @@ import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.AppProperties;
 import cd.hrpay.role.Role;
 import cd.hrpay.role.RoleRepository;
+import cd.hrpay.schedule.UserSchedule;
+import cd.hrpay.schedule.UserScheduleRepository;
+import cd.hrpay.schedule.WorkSchedule;
+import cd.hrpay.schedule.WorkScheduleRepository;
 import cd.hrpay.site.Site;
 import cd.hrpay.site.SiteIpRange;
 import cd.hrpay.site.SiteRepository;
@@ -11,6 +15,7 @@ import cd.hrpay.user.AppUser;
 import cd.hrpay.user.PasswordPolicy;
 import cd.hrpay.user.UserRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,9 +54,14 @@ public class DataSetup implements ApplicationRunner {
     private final SiteRepository sites;
     private final PasswordEncoder passwordEncoder;
     private final AuditService audit;
+    private final WorkScheduleRepository schedules;
+    private final UserScheduleRepository assignments;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
-                     PasswordEncoder passwordEncoder, AuditService audit) {
+                     PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
+                     UserScheduleRepository assignments) {
+        this.schedules = schedules;
+        this.assignments = assignments;
         this.properties = properties;
         this.users = users;
         this.roles = roles;
@@ -82,9 +92,28 @@ public class DataSetup implements ApplicationRunner {
     }
 
     private void loadSampleData(String password) {
-        if (users.findByEmailIgnoreCase(SAMPLE_USERS.getFirst().email()).isPresent()) {
+        if (users.findByEmailIgnoreCase(SAMPLE_USERS.getFirst().email()).isEmpty()) {
+            loadSampleUsers(password);
+        }
+        assignSampleSchedules();
+    }
+
+    /** Gives every sample user the standard schedule from 1 January 2026, if they have none. */
+    private void assignSampleSchedules() {
+        WorkSchedule standard = schedules.findByCode("STANDARD").orElse(null);
+        if (standard == null) {
             return;
         }
+        for (SampleUser s : SAMPLE_USERS) {
+            users.findByEmailIgnoreCase(s.email()).ifPresent(user -> {
+                if (assignments.findByUserIdOrderByEffectiveFromDesc(user.getId()).isEmpty()) {
+                    assignments.save(new UserSchedule(user.getId(), standard, LocalDate.of(2026, 1, 1)));
+                }
+            });
+        }
+    }
+
+    private void loadSampleUsers(String password) {
         Site site = new Site("KIN-HQ");
         site.setName("Kinshasa head office (sample)");
         site.setTimeZone("Africa/Kinshasa");

@@ -1,0 +1,118 @@
+import { useEffect, useState } from 'react'
+import { ApiError, api, hours, WEEKDAYS, type Schedule, type ScheduleDay } from '../api'
+import { useAuth } from '../auth'
+import { ErrorText } from '../components/ErrorText'
+
+type Draft = Omit<Schedule, 'id' | 'weeklyMinutes'> & { id?: number }
+
+const blank = (): Draft => ({
+  code: '', name: '', graceMinutes: 10, deductLateArrival: true, deductEarlyDeparture: true, active: true,
+  days: WEEKDAYS.map((_, i) => ({
+    weekday: i + 1, workday: i < 5, startTime: i < 5 ? '08:00' : null, endTime: i < 5 ? '17:00' : null,
+    lunchEnabled: i < 5, lunchStart: i < 5 ? '12:00' : null, lunchMinutes: i < 5 ? 60 : null, lunchPaid: false,
+  })),
+})
+
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
+
+export default function SchedulesPage() {
+  const { can } = useAuth()
+  const editable = can('schedule.manage')
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [draft, setDraft] = useState<Draft | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const load = () => api<Schedule[]>('/api/schedules').then(setSchedules).catch((e: Error) => setError(e.message))
+  useEffect(() => { void load() }, [])
+
+  const setDay = (i: number, patch: Partial<ScheduleDay>) =>
+    draft && setDraft({ ...draft, days: draft.days.map((d, j) => (i === j ? { ...d, ...patch } : d)) })
+
+  const save = async () => {
+    if (!draft) return
+    setError(null)
+    setMessage(null)
+    try {
+      const body = { ...draft, days: draft.days.map((d) => ({ ...d, startTime: d.workday ? hhmm(d.startTime) : null,
+        endTime: d.workday ? hhmm(d.endTime) : null, lunchStart: d.lunchEnabled ? hhmm(d.lunchStart) : null })) }
+      const saved = await api<Schedule>(draft.id ? `/api/schedules/${draft.id}` : '/api/schedules',
+        { method: draft.id ? 'PUT' : 'POST', body })
+      setDraft(saved)
+      setMessage(`Saved. ${hours(saved.weeklyMinutes)} per week.`)
+      await load()
+    } catch (e) {
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Could not save.')
+    }
+  }
+
+  return (
+    <section>
+      <div className="row between">
+        <h2>Work schedules</h2>
+        {editable && <button onClick={() => { setDraft(blank()); setMessage(null) }}>New schedule</button>}
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Code</th><th>Hours per week</th><th>Grace</th><th>Status</th></tr></thead>
+          <tbody>
+            {schedules.map((s) => (
+              <tr key={s.id}>
+                <td><button className="link" onClick={() => { setDraft(s); setMessage(null) }}>{s.name}</button></td>
+                <td>{s.code}</td>
+                <td>{hours(s.weeklyMinutes)}</td>
+                <td>{s.graceMinutes} min</td>
+                <td><span className={`badge ${s.active ? 'ok' : 'off'}`}>{s.active ? 'Active' : 'Inactive'}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {draft && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <fieldset disabled={!editable}>
+            <div className="grid3">
+              <label>Code<input value={draft.code} disabled={!!draft.id} onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} /></label>
+              <label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+              <label>Grace period (min)<input type="number" min={0} max={120} value={draft.graceMinutes}
+                onChange={(e) => setDraft({ ...draft, graceMinutes: Number(e.target.value) })} /></label>
+            </div>
+            <label className="check"><input type="checkbox" checked={draft.deductLateArrival}
+              onChange={(e) => setDraft({ ...draft, deductLateArrival: e.target.checked })} />Deduct late arrival beyond the grace period</label>
+            <label className="check"><input type="checkbox" checked={draft.deductEarlyDeparture}
+              onChange={(e) => setDraft({ ...draft, deductEarlyDeparture: e.target.checked })} />Deduct early departure</label>
+            <label className="check"><input type="checkbox" checked={draft.active}
+              onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />Active</label>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Day</th><th>Workday</th><th>Start</th><th>End</th><th>Lunch</th><th>Lunch start</th><th>Minutes</th><th>Paid lunch</th></tr></thead>
+                <tbody>
+                  {draft.days.map((d, i) => (
+                    <tr key={d.weekday}>
+                      <td>{WEEKDAYS[d.weekday - 1]}</td>
+                      <td><input type="checkbox" checked={d.workday} onChange={(e) => setDay(i, e.target.checked
+                        ? { workday: true, startTime: '08:00', endTime: '17:00' }
+                        : { workday: false, lunchEnabled: false })} /></td>
+                      <td><input type="time" disabled={!d.workday} value={hhmm(d.startTime)} onChange={(e) => setDay(i, { startTime: e.target.value })} /></td>
+                      <td><input type="time" disabled={!d.workday} value={hhmm(d.endTime)} onChange={(e) => setDay(i, { endTime: e.target.value })} /></td>
+                      <td><input type="checkbox" disabled={!d.workday} checked={d.lunchEnabled} onChange={(e) => setDay(i, e.target.checked
+                        ? { lunchEnabled: true, lunchStart: '12:00', lunchMinutes: 60 } : { lunchEnabled: false })} /></td>
+                      <td><input type="time" disabled={!d.lunchEnabled} value={hhmm(d.lunchStart)} onChange={(e) => setDay(i, { lunchStart: e.target.value })} /></td>
+                      <td><input type="number" disabled={!d.lunchEnabled} value={d.lunchMinutes ?? ''} onChange={(e) => setDay(i, { lunchMinutes: Number(e.target.value) })} /></td>
+                      <td><input type="checkbox" disabled={!d.lunchEnabled} checked={d.lunchPaid} onChange={(e) => setDay(i, { lunchPaid: e.target.checked })} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </fieldset>
+          <ErrorText error={error} />
+          {message && <p className="success">{message}</p>}
+          {editable && <div className="row" style={{ marginTop: 12 }}><button onClick={() => void save()}>Save schedule</button>
+            <button className="secondary" onClick={() => setDraft(null)}>Close</button></div>}
+        </div>
+      )}
+    </section>
+  )
+}

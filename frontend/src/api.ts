@@ -126,3 +126,74 @@ export type AuditEntry = {
   details: string | null
   ip: string | null
 }
+
+export type ScheduleDay = {
+  weekday: number
+  workday: boolean
+  startTime: string | null
+  endTime: string | null
+  lunchEnabled: boolean
+  lunchStart: string | null
+  lunchMinutes: number | null
+  lunchPaid: boolean
+  scheduledMinutes?: number
+}
+
+export type Schedule = {
+  id: number
+  code: string
+  name: string
+  graceMinutes: number
+  deductLateArrival: boolean
+  deductEarlyDeparture: boolean
+  active: boolean
+  weeklyMinutes: number
+  days: ScheduleDay[]
+}
+
+export type ScheduleAssignment = { id: number; scheduleId: number; scheduleName: string; effectiveFrom: string }
+
+export type HolidayOccurrence = {
+  id: number
+  definitionId: number
+  name: string
+  year: number
+  officialDate: string
+  observedDate: string
+  moved: boolean
+  paid: boolean
+  announcementRef: string | null
+  setBy: string | null
+  setAt: string | null
+}
+
+export type HolidayDefinition = {
+  id: number
+  countryCode: string
+  name: string
+  usualMonth: number
+  usualDay: number
+  paid: boolean
+  active: boolean
+}
+
+export type OvertimeTier = { kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'; fromHour: number; toHour: number | null; multiplier: number }
+
+export type OvertimePolicy = {
+  id: number
+  countryCode: string
+  effectiveFrom: string
+  allowed: boolean
+  requiresApproval: boolean
+  roundingMinutes: number
+  maxWeeklyOvertimeMinutes: number | null
+  tiers: OvertimeTier[]
+}
+
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+export function hours(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`
+}

@@ -28,6 +28,7 @@ SAMPLE_DATA=true ./gradlew bootRun         # API on :8080, loads demo users
 
 cd ../frontend
 npm install && npm run dev                 # app on http://localhost:5173
+                                           # API on another port: SERVER_PORT=8081 for the API, API_URL=http://localhost:8081 npm run dev
 ```
 
 Sample users (password `Demo@2026!`): `admin@demo.hrpay.cd`, `hr@demo.hrpay.cd`, `finance@demo.hrpay.cd`,

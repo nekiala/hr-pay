@@ -9,6 +9,9 @@ import RolesPage from './pages/RolesPage'
 import SitesPage from './pages/SitesPage'
 import SiteFormPage from './pages/SiteFormPage'
 import AuditPage from './pages/AuditPage'
+import SchedulesPage from './pages/SchedulesPage'
+import HolidaysPage from './pages/HolidaysPage'
+import OvertimePage from './pages/OvertimePage'
 import type { ReactNode } from 'react'
 
 function Guard({ permission, children }: { permission?: string; children: ReactNode }) {
@@ -42,6 +45,9 @@ export default function App() {
           {can('user.read') && <NavLink to="/users">Users</NavLink>}
           {can('role.read') && <NavLink to="/roles">Roles</NavLink>}
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
+          {(can('schedule.manage') || can('user.read')) && <NavLink to="/schedules">Schedules</NavLink>}
+          <NavLink to="/holidays">Holidays</NavLink>
+          {can('overtime_policy.manage') && <NavLink to="/overtime">Overtime</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
         </nav>
         <span className="who">
@@ -60,6 +66,9 @@ export default function App() {
           <Route path="/sites" element={<SitesPage />} />
           <Route path="/sites/new" element={<Guard permission="site.manage"><SiteFormPage /></Guard>} />
           <Route path="/sites/:id" element={<SiteFormPage />} />
+          <Route path="/schedules" element={<SchedulesPage />} />
+          <Route path="/holidays" element={<HolidaysPage />} />
+          <Route path="/overtime" element={<Guard permission="overtime_policy.manage"><OvertimePage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<p className="notice">Page not found.</p>} />

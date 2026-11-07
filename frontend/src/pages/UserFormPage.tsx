@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, type Role, type Site, type User } from '../api'
+import { ApiError, api, type Role, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -22,6 +22,10 @@ export default function UserFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [message, setMessage] = useState<string | null>(null)
+  const [schedules, setSchedules] = useState<Schedule[]>([])
+  const [assignments, setAssignments] = useState<ScheduleAssignment[]>([])
+  const [newSchedule, setNewSchedule] = useState('')
+  const [scheduleFrom, setScheduleFrom] = useState(new Date().toISOString().slice(0, 10))
 
   const canAssign = can('role.assign')
   const canEdit = isNew ? can('user.create') : can('user.update')
@@ -30,6 +34,8 @@ export default function UserFormPage() {
     api<Role[]>('/api/roles').then(setRoles).catch(() => undefined)
     if (can('site.read') || can('site.manage')) api<Site[]>('/api/sites').then(setSites).catch(() => undefined)
     if (id) {
+      api<Schedule[]>('/api/schedules').then(setSchedules).catch(() => undefined)
+      api<ScheduleAssignment[]>(`/api/users/${id}/schedules`).then(setAssignments).catch(() => undefined)
       api<User>(`/api/users/${id}`).then((u) => {
         setUser(u)
         setSelectedRoles(u.roles)
@@ -85,6 +91,12 @@ export default function UserFormPage() {
     await api(`/api/users/${id}/password`, { method: 'POST', body: { password: resetPassword } })
     setResetPassword('')
     setMessage('Temporary password set. The user must change it at next sign-in.')
+  })
+
+  const assignSchedule = () => handle(async () => {
+    await api(`/api/users/${id}/schedules`, { method: 'POST', body: { scheduleId: Number(newSchedule), effectiveFrom: scheduleFrom } })
+    setAssignments(await api<ScheduleAssignment[]>(`/api/users/${id}/schedules`))
+    setMessage('Schedule assigned.')
   })
 
   const toggleRole = (code: string) =>
@@ -147,6 +159,26 @@ export default function UserFormPage() {
         {message && <p className="success">{message}</p>}
         {canEdit && <button type="submit">{isNew ? 'Create user' : 'Save changes'}</button>}
       </form>
+
+      {!isNew && user && (
+        <div className="card">
+          <h3>Work schedule</h3>
+          {assignments.length === 0 && <p className="muted">No schedule yet. Without one, no hours are expected.</p>}
+          {assignments.map((a) => (
+            <p key={a.id}>{a.scheduleName} <span className="muted">from {a.effectiveFrom}</span></p>
+          ))}
+          {can('schedule.manage') && (
+            <div className="row">
+              <select value={newSchedule} onChange={(e) => setNewSchedule(e.target.value)}>
+                <option value="">Choose a schedule</option>
+                {schedules.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <input type="date" value={scheduleFrom} onChange={(e) => setScheduleFrom(e.target.value)} />
+              <button className="secondary" disabled={!newSchedule} onClick={() => void assignSchedule()}>Assign</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {!isNew && user && canAssign && (
         <div className="card">
