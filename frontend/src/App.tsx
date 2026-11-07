@@ -36,6 +36,9 @@ import PaymentsPage from './pages/PaymentsPage'
 import PaymentFilePage from './pages/PaymentFilePage'
 import DeclarationsPage from './pages/DeclarationsPage'
 import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
+import OrgChartPage from './pages/OrgChartPage'
+import OrgUnitPage from './pages/OrgUnitPage'
+import OrgSettingsPage from './pages/OrgSettingsPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -103,6 +106,7 @@ export default function App() {
           <NavLink to="/check-in">Check in</NavLink>
           {(can('leave.request') || can('leave.manage') || can('leave.approve.team')) && <NavLink to="/leave" end>Leave</NavLink>}
           {(can('mission.request') || can('mission.approve.all') || can('mission.approve.team')) && <NavLink to="/missions">Missions</NavLink>}
+          <NavLink to="/org">Org chart</NavLink>
           {can('user.read') && <NavLink to="/users">Users</NavLink>}
           {can('role.read') && <NavLink to="/roles">Roles</NavLink>}
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
@@ -138,6 +142,9 @@ export default function App() {
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
+          <Route path="/org" element={<OrgChartPage />} />
+          <Route path="/org/units/:id" element={<OrgUnitPage />} />
+          <Route path="/org/manage" element={<Guard permission="org.manage"><OrgSettingsPage /></Guard>} />
           <Route path="/roles" element={<Guard permission="role.read"><RolesPage /></Guard>} />
           <Route path="/sites" element={<SitesPage />} />
           <Route path="/sites/new" element={<Guard permission="site.manage"><SiteFormPage /></Guard>} />

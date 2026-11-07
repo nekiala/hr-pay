@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SpaForwardController {
 
-    @GetMapping({"/", "/login", "/users/**", "/roles/**", "/sites/**", "/audit/**", "/account/**", "/schedules/**", "/holidays/**",
+    @GetMapping({"/", "/login", "/users/**", "/roles/**", "/org/**", "/sites/**", "/audit/**", "/account/**", "/schedules/**", "/holidays/**",
             "/overtime/**", "/check-in/**", "/kiosk/**", "/outbox/**", "/my/**", "/team/**", "/leave/**", "/reports/**", "/missions/**",
             "/payroll/**", "/payslips/**",
             "/evaluations/**"})

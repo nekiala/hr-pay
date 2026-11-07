@@ -55,7 +55,7 @@ class RbacIT extends IntegrationTest {
     void emailRegistrationNumberAndPhoneMustBeUnique() throws Exception {
         MockHttpSession hr = login(HR);
         String base = """
-                {"user":{"email":"%s","registrationNo":"%s","phone":"%s","firstName":"A","lastName":"B"}}""";
+                {"orgUnitId":1,"user":{"email":"%s","registrationNo":"%s","phone":"%s","firstName":"A","lastName":"B"}}""";
         mvc.perform(json(post("/api/users").session(hr), base.formatted("uniq@test.cd", "UNQ-1", "+243899000001")))
                 .andExpect(status().isCreated());
         mvc.perform(json(post("/api/users").session(hr), base.formatted("UNIQ@test.cd", "UNQ-2", "+243899000002")))

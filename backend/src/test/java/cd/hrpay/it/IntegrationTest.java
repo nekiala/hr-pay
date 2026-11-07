@@ -69,6 +69,6 @@ public abstract class IntegrationTest {
         String user = """
                 {"email":"user%1$d.%2$d@test.cd","registrationNo":"T-%1$d-%2$d","phone":"+24382%2$07d",
                  "firstName":"Test","lastName":"User %1$d"}""".formatted(n, (int) (System.nanoTime() % 10_000_000));
-        return roles == null ? "{\"user\":" + user + "}" : "{\"user\":" + user + ",\"roles\":" + roles + "}";
+        return roles == null ? "{\"orgUnitId\":1,\"user\":" + user + "}" : "{\"orgUnitId\":1,\"roles\":" + roles + ",\"user\":" + user + "}";
     }
 }
