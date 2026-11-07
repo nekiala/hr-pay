@@ -2021,6 +2021,8 @@ const fr: Record<string, string> = {
   "Save the draft": "Enregistrer le brouillon",
   "Check-ins made without a connection (phone app)": "Pointages faits sans connexion (application téléphone)",
   "Documents and checklists": "Documents et listes de contrôle",
+  "Open a unit to rename it, move it, name its head or close it.": "Ouvrez une unité pour la renommer, la déplacer, nommer son chef ou la fermer.",
+  "No unit yet.": "Aucune unité pour l'instant.",
 }
 
 export default fr
