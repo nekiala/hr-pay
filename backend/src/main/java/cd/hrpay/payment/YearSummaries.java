@@ -36,7 +36,7 @@ public class YearSummaries {
                    (select b.paid_on from payment_line pl join payment_batch b on b.id = pl.batch_id
                     where pl.payslip_id = p.id and b.status = 'PAID') as paid_on
             from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id
-            where r.status = 'CLOSED' and extract(year from r.month) = ?""";
+            where r.status = 'CLOSED' and p.number is not null and extract(year from r.month) = ?""";
 
     private record Raw(long userId, String name, String registrationNo, String cnssNumber, String taxNumber, Month month) {}
 

@@ -139,7 +139,7 @@ public class PayrollController {
         PayrollRuns.Payslip p = runs.payslip(id);
         boolean all = CurrentUser.has("payslip.read.all") || CurrentUser.has("payroll.run") || CurrentUser.has("payroll.approve");
         boolean own = Objects.equals(p.userId(), CurrentUser.id()) && CurrentUser.has("payslip.read.own")
-                && p.runStatus().equals("CLOSED");
+                && p.runStatus().equals("CLOSED") && p.number() != null;
         if (!all && !own) {
             throw new AccessDeniedException("You cannot see this payslip.");
         }

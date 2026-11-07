@@ -56,8 +56,14 @@ export default function PayslipPage() {
         {staff ? <Link to="/payroll">{t('← Payroll')}</Link> : <Link to="/my/payslips">{t('← My payslips')}</Link>}
         {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">{t('Download PDF')}</a>
         {' · '}<Button className="link" onClick={() => window.print()}>{t('Print')}</Button>
+        {can('payroll.run') && slip.runStatus === 'CLOSED' && slip.kind === 'REGULAR' && <>{' · '}<Link to={`/payslips/${id}/correct`}>{t('Correct')}</Link></>}
       </p>
-      {slip.runStatus !== 'CLOSED' && <p className="notice">{t('Draft: this payroll is')}{' '}{slip.runStatus.toLowerCase()}{' '}{t('and not yet closed.')}</p>}
+      {slip.kind === 'COMPLEMENTARY' && (
+        <p className="notice">{t('Complementary payslip: it corrects payslip {a}.', { a: slip.correctsNumber ?? '' })}
+          {' '}{slip.reason}{slip.number === null ? ` ${t('It waits for Finance\'s approval.')}` : ''}
+          {staff && slip.correctsId && <>{' '}<Link to={`/payslips/${slip.correctsId}`}>{t('Open the payslip it corrects')}</Link></>}</p>
+      )}
+      {slip.runStatus !== 'CLOSED' && slip.kind === 'REGULAR' && <p className="notice">{t('Draft: this payroll is')}{' '}{slip.runStatus.toLowerCase()}{' '}{t('and not yet closed.')}</p>}
       {slip.warnings.length > 0 && staff && (
         <div className="notice no-print"><strong>{t('To check')}</strong><ul>{slip.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
       )}
@@ -78,7 +84,7 @@ export default function PayslipPage() {
         )}
         <div className="payslip-head">
           <div>
-            <h2>{t('Payslip ·')}{' '}{monthName(slip.month)}</h2>
+            <h2>{slip.kind === 'COMPLEMENTARY' ? t('Complementary payslip ·') : t('Payslip ·')}{' '}{monthName(slip.month)}</h2>
             <p className="muted">{slip.number ?? t('Not numbered yet')}</p>
           </div>
           <div className="right">

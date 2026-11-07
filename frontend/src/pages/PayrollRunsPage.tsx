@@ -99,6 +99,10 @@ export default function PayrollRunsPage() {
               <Button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({(STATUS[r.status as keyof typeof STATUS] ?? r.status).split(',')[0].toLowerCase()})</Button>
             ))}</span>
           )}
+          <span className="muted small">
+            <Link to="/payroll/corrections">{t('Corrections and back pay')}</Link>{' · '}
+            <Link to="/payroll/compare">{t('Compare with the old payroll')}</Link>
+          </span>
         </div>
 
         {!run && <p className="muted">{t('No payroll for')}{' '}{month}{' '}{t('yet.')}</p>}
@@ -190,7 +194,7 @@ export default function PayrollRunsPage() {
                     <tr key={p.id}>
                       <td>{p.userName} <span className="muted">{p.registrationNo}</span></td>
                       <td>{p.unitName ?? ''}</td>
-                      <td>{p.number ?? ''}</td>
+                      <td>{p.number ?? ''}{p.kind === 'COMPLEMENTARY' && <>{' '}<span className="badge warn">{p.number ? t('Complementary') : t('Complementary, waiting')}</span></>}</td>
                       <td>{money(p.gross, p.currency)}</td>
                       <td>{money(p.employeeDeductions, p.currency)}</td>
                       <td><strong>{money(p.net, p.currency)}</strong></td>

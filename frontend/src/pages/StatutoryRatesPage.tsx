@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
+import { SignOff } from '../components/SignOff'
 import { locale, localCurrency, t } from '../i18n'
 
 type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null }
@@ -75,9 +76,9 @@ export default function StatutoryRatesPage() {
   return (
     <section>
       <h2>{t('Statutory rates')}</h2>
-      <p className="notice">{congo
+      <SignOff notice={congo
         ? t('Sample values from memory for the Republic of the Congo. A Congolese payroll accountant must confirm every rate, the ceilings and the ITS bands before the first real payroll.')
-        : t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')}</p>
+        : t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')} />
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <label className="month-pick">{t('Rates in force on')}{' '}<input type="date" value={on} onChange={(e) => setOn(e.target.value || today())} /></label>

@@ -148,7 +148,7 @@ public class PayslipPdf {
         PayrollRuns.Payslip p = new PayrollRuns.Payslip(0, 0, month, "SAMPLE", 0, "SAMPLE-0001", "USD",
                 new BigDecimal("1275.00"), new BigDecimal("900.00"), new BigDecimal("855.00"), new BigDecimal("1881000"),
                 new BigDecimal("143.50"), new BigDecimal("1131.50"), new BigDecimal("144.00"), 10560, 10560, 22,
-                new BigDecimal("2200"), month, false, s, List.of(), lines);
+                new BigDecimal("2200"), month, false, s, List.of(), lines, "REGULAR", null, null, null);
         YearToDate ytd = new YearToDate(month.getYear(), month.getMonthValue(), "USD",
                 new BigDecimal("1275.00").multiply(BigDecimal.valueOf(month.getMonthValue())),
                 new BigDecimal("45.00").multiply(BigDecimal.valueOf(month.getMonthValue())),
@@ -378,7 +378,8 @@ public class PayslipPdf {
     private Paragraph titleLine(Context c) {
         PayrollRuns.Payslip p = c.p();
         Paragraph title = new Paragraph();
-        title.add(new Chunk(Texts.t("Payslip · %s", Texts.month(p.month())), TITLE));
+        title.add(new Chunk(p.complementary() ? Texts.t("Complementary payslip · %s", Texts.month(p.month()))
+                : Texts.t("Payslip · %s", Texts.month(p.month())), TITLE));
         title.add(new Chunk("    " + (p.number() == null ? Texts.t("not numbered yet") : Texts.t("No. %s", p.number()))
                 + Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth()))), SMALL));
         title.setSpacingBefore(8);
@@ -386,6 +387,13 @@ public class PayslipPdf {
     }
 
     private static void draftNotice(Document doc, Context c) {
+        if (c.p().complementary()) {
+            doc.add(new Paragraph(Texts.t("Corrects payslip No. %s: %s", text(c.p().correctsNumber()), text(c.p().reason())), NOTICE));
+            if (c.p().number() == null) {
+                doc.add(new Paragraph(Texts.t("DRAFT: this complementary payslip waits for Finance's approval."), NOTICE));
+            }
+            return;
+        }
         if ("SAMPLE".equals(c.p().runStatus())) {
             doc.add(new Paragraph(Texts.t("SAMPLE: made-up figures to show the layout."), NOTICE));
         } else if (!"CLOSED".equals(c.p().runStatus())) {
