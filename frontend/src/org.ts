@@ -10,6 +10,8 @@ export type OrgUnit = {
   parentId: number | null; costCentre: string | null; validFrom: string; validTo: string | null; open: boolean
   head: OrgHead | null; deputy: OrgHead | null; members: number | null; totalMembers: number | null
 }
+/** Who someone reports to; manual when the manager was set by hand on their record. */
+export type OrgBoss = { userId: number; userName: string; manual: boolean }
 export type OrgMember = {
   userId: number; name: string; registrationNo: string; unitId: number; unitName: string; since: string
   reportsToId: number | null; reportsToName: string | null; heads: number[]

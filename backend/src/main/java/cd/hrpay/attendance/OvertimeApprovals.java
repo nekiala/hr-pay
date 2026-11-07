@@ -20,7 +20,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Overtime is paid only once approved, by HR for everyone or by the direct manager for their team. */
+/** Overtime is paid only once approved, by HR for everyone or by a manager for their team (see OrgStructure.teamOf). */
 @Service
 public class OvertimeApprovals {
 
@@ -32,6 +32,12 @@ public class OvertimeApprovals {
     private final UserRepository userRepository;
     private final UserService users;
     private final AuditService audit;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public OvertimeApprovals(AttendanceDays attendance, OvertimeDecisions decisions, UserRepository userRepository,
                              UserService users, AuditService audit) {
@@ -44,7 +50,7 @@ public class OvertimeApprovals {
 
     private List<AppUser> scope() {
         List<AppUser> list = CurrentUser.has("overtime.approve.all") ? userRepository.findAll()
-                : CurrentUser.has("overtime.approve.team") ? userRepository.findByManagerId(CurrentUser.id())
+                : CurrentUser.has("overtime.approve.team") ? userRepository.findAllById(org.teamOf(CurrentUser.id()))
                 : List.of();
         return list.stream().filter(AppUser::isActive).filter(u -> !u.getId().equals(CurrentUser.id())).toList();
     }
@@ -54,7 +60,7 @@ public class OvertimeApprovals {
             return false;
         }
         return CurrentUser.has("overtime.approve.all")
-                || (CurrentUser.has("overtime.approve.team") && CurrentUser.id().equals(user.getManagerId()));
+                || (CurrentUser.has("overtime.approve.team") && org.inTeam(CurrentUser.id(), user.getId()));
     }
 
     @Transactional

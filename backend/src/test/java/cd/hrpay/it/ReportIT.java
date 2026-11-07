@@ -15,17 +15,17 @@ class ReportIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"attendance-2026-10.csv\""))
                 .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(summary).startsWith("﻿Registration no,Name,Site");
+        assertThat(summary).startsWith("﻿Registration no,Name,Direction,Unit,Site");
         assertThat(summary).contains("EMP-0002,Esther Kalala");
 
         String daily = mvc.perform(get("/api/reports/attendance.csv").param("month", "2026-10").param("detail", "true")
                         .session(login(HR)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(daily).contains("EMP-0002,Esther Kalala,2026-10-01,");
+        assertThat(daily).contains("EMP-0002,Esther Kalala,Direction des opérations,Service logistique,2026-10-01,");
 
         String finance = mvc.perform(get("/api/reports/finance.csv").param("month", "2026-10").session(login(FINANCE)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(finance).contains("EMP-0001,Jean Mukendi,USD,4500.00");
+        assertThat(finance).contains("EMP-0001,Jean Mukendi,Direction des opérations,Service logistique,,USD,4500.00");
 
         mvc.perform(get("/api/reports/finance.csv").param("month", "2026-10").session(login(EMPLOYEE)))
                 .andExpect(status().isForbidden());

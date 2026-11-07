@@ -38,7 +38,15 @@ public class PayrollRuns {
 
     public record PayslipSummary(long id, long userId, String userName, String registrationNo, String number,
                                  String currency, BigDecimal gross, BigDecimal employeeDeductions, BigDecimal net,
-                                 BigDecimal employerCharges, int warningCount) {}
+                                 BigDecimal employerCharges, int warningCount, Long unitId, String unitName,
+                                 Long directionId, String directionName) {
+
+        PayslipSummary placed(Map<Long, cd.hrpay.org.OrgStructure.Placement> units) {
+            var p = unitId == null ? null : units.get(unitId);
+            return p == null ? this : new PayslipSummary(id, userId, userName, registrationNo, number, currency, gross,
+                    employeeDeductions, net, employerCharges, warningCount, unitId, p.unitName(), p.directionId(), p.directionName());
+        }
+    }
 
     public record Line(String elementCode, String label, String kind, BigDecimal base, BigDecimal rate,
                        BigDecimal amount, int displayOrder, Long loanId) {}
@@ -69,6 +77,12 @@ public class PayrollRuns {
     private final AuditService audit;
     private final Clock clock;
     private final JsonMapper json = JsonMapper.builder().build();
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
@@ -114,9 +128,12 @@ public class PayrollRuns {
         List<PayslipSummary> slips = jdbc.sql("""
                 select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, u.registration_no, p.number,
                        trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.employer_charges,
-                       jsonb_array_length(p.warnings) as warning_count
+                       jsonb_array_length(p.warnings) as warning_count, p.unit_id, null as unit_name,
+                       null::bigint as direction_id, null as direction_name
                 from payslip p join app_user u on u.id = p.user_id where p.run_id = ?
                 order by u.last_name, u.first_name""").param(run.id()).query(PayslipSummary.class).list();
+        var units = org.placementsOfUnits();
+        slips = slips.stream().map(x -> x.placed(units)).toList();
         List<Total> totals = jdbc.sql("""
                 select trim(currency) as currency, count(*) as payslips, sum(gross) as gross,
                        sum(employee_deductions) as employee_deductions, sum(net) as net,
@@ -174,6 +191,8 @@ public class PayrollRuns {
         boolean payThirteenth = t13.enabled() && month.getMonthValue() == t13.payMonth();
         List<String> skipped = new ArrayList<>();
         int count = 0;
+        Map<Long, cd.hrpay.org.OrgStructure.Placement> placements = org.placementsOn(last);
+        Map<Long, cd.hrpay.org.OrgStructure.Placement> nowPlaced = org.placementsOn(today);
         List<Long> employees = jdbc.sql("""
                 select distinct c.user_id from employee_contract c join app_user u on u.id = c.user_id
                 where c.start_date <= ? and (c.end_date is null or c.end_date >= ?) and u.status = 'ACTIVE'
@@ -241,15 +260,23 @@ public class PayrollRuns {
             snapshot.put("bankAccount", profile.bankAccount());
             snapshot.put("mobileMoneyOperator", profile.mobileMoneyOperator());
             snapshot.put("mobileMoneyNumber", profile.mobileMoneyNumber());
+            var place = placements.getOrDefault(userId, nowPlaced.get(userId));
+            if (place != null) {
+                snapshot.put("unit", place.unitName());
+                snapshot.put("unitPath", place.path());
+                snapshot.put("direction", place.directionName());
+                snapshot.put("costCentre", place.costCentre());
+            }
 
             long slipId = jdbc.sql("""
                     insert into payslip (run_id, user_id, currency, gross, cnss_base, taxable_base, taxable_base_cdf,
                         employee_deductions, net, employer_charges, scheduled_minutes, paid_minutes, days_worked,
-                        snapshot, warnings)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb)) returning id""")
+                        snapshot, warnings, unit_id)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?) returning id""")
                     .params(runId, userId, r.currency(), r.gross(), r.cnssBase(), r.taxableBase(), r.taxableBaseCdf(),
                             r.employeeDeductions(), r.net(), r.employerCharges(), summary.scheduledMinutesMonth(), paid,
-                            daysWorked, json.writeValueAsString(snapshot), json.writeValueAsString(warnings))
+                            daysWorked, json.writeValueAsString(snapshot), json.writeValueAsString(warnings),
+                            place == null ? null : place.unitId())
                     .query(Long.class).single();
             for (PayslipCalculator.Line l : r.lines()) {
                 jdbc.sql("""
@@ -373,7 +400,8 @@ public class PayrollRuns {
     public List<PayslipSummary> closedPayslipsOf(long userId) {
         return jdbc.sql("""
                 select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, u.registration_no, p.number,
-                       trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.employer_charges, 0 as warning_count
+                       trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.employer_charges, 0 as warning_count,
+                       p.unit_id, null as unit_name, null::bigint as direction_id, null as direction_name
                 from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id
                 where p.user_id = ? and r.status = 'CLOSED' order by r.month desc""").param(userId)
                 .query(PayslipSummary.class).list();

@@ -19,6 +19,7 @@ export default function PayrollRunsPage() {
   const [raises, setRaises] = useState<Raise[]>([])
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [direction, setDirection] = useState('')
 
   const loadRuns = () => api<PayrollRun[]>('/api/payroll/runs').then(setRuns).catch((e: Error) => setError(e.message))
   const loadView = (m: string) =>
@@ -43,6 +44,17 @@ export default function PayrollRunsPage() {
   }
 
   const run = view?.run
+  // Subtotals per Direction and currency, from the unit each payslip was made for.
+  const byDirection = new Map<string, { name: string; currency: string; payslips: number; gross: number; deductions: number; net: number; employer: number }>()
+  for (const p of view?.payslips ?? []) {
+    const key = `${p.directionId ?? 0}|${p.currency}`
+    const t = byDirection.get(key) ?? { name: p.directionName ?? 'No unit', currency: p.currency, payslips: 0, gross: 0, deductions: 0, net: 0, employer: 0 }
+    t.payslips++; t.gross += p.gross; t.deductions += p.employeeDeductions; t.net += p.net; t.employer += p.employerCharges
+    byDirection.set(key, t)
+  }
+  const directions = [...new Map((view?.payslips ?? []).map((p) => [String(p.directionId ?? 0), p.directionName ?? 'No unit'])).entries()]
+    .sort((a, b) => a[1].localeCompare(b[1]))
+  const shown = (view?.payslips ?? []).filter((p) => !direction || String(p.directionId ?? 0) === direction)
   const warnings = view?.payslips.reduce((n, p) => n + p.warningCount, 0) ?? 0
 
   return (
@@ -117,16 +129,42 @@ export default function PayrollRunsPage() {
             </div>
           </div>
 
+          {byDirection.size > 0 && (
+            <div className="card">
+              <h3>By Direction</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead><tr><th>Direction</th><th>Payslips</th><th>Gross</th><th>Employee deductions</th><th>Net to pay</th><th>Employer charges</th></tr></thead>
+                  <tbody>
+                    {[...byDirection.values()].sort((a, b) => a.name.localeCompare(b.name) || a.currency.localeCompare(b.currency)).map((t) => (
+                      <tr key={t.name + t.currency}><td>{t.name}</td><td>{t.payslips}</td><td>{money(t.gross, t.currency)}</td><td>{money(t.deductions, t.currency)}</td><td>{money(t.net, t.currency)}</td><td>{money(t.employer, t.currency)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="hint">Each payslip counts in the Direction of the unit the employee was in at the end of the month.</p>
+            </div>
+          )}
+
           <div className="card">
             <h3>Payslips</h3>
+            {directions.length > 1 && (
+              <label className="inline-filter">Direction
+                <select value={direction} onChange={(e) => setDirection(e.target.value)}>
+                  <option value="">All</option>
+                  {directions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                </select>
+              </label>
+            )}
             {warnings > 0 && <p className="notice">{warnings} warning(s) to check before approval: open the payslips marked ⚠.</p>}
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Employee</th><th>No.</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Employer</th><th></th></tr></thead>
+                <thead><tr><th>Employee</th><th>Unit</th><th>No.</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Employer</th><th></th></tr></thead>
                 <tbody>
-                  {view.payslips.map((p) => (
+                  {shown.map((p) => (
                     <tr key={p.id}>
                       <td>{p.userName} <span className="muted">{p.registrationNo}</span></td>
+                      <td>{p.unitName ?? ''}</td>
                       <td>{p.number ?? ''}</td>
                       <td>{money(p.gross, p.currency)}</td>
                       <td>{money(p.employeeDeductions, p.currency)}</td>

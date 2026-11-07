@@ -101,7 +101,14 @@ cd backend && ./gradlew test
 - Every employee belongs to exactly one unit at a time. New users need a unit; moves are dated and kept (hire, transfer, promotion, reorganisation, correction). A correction fixes the current line instead of adding one.
 - Who someone reports to: the head of their unit, or, if it is vacant or they are the head, the nearest head above.
 - The org chart (units or people) is visible to everyone and prints to PDF; headcounts and names of members need `user.read`. The structure can be exported and imported as CSV (`code,name,level,parent,cost_centre,head_registration_no`, all or nothing).
-- `org.manage` (HR) edits the structure. Phase 6 will use the structure for approvals, payslips and reports.
+- `org.manage` (HR) edits the structure.
+
+## The structure across the app (phase 6)
+
+- **Who approves**: a head (or deputy) approves missions, overtime and leave, and scores evaluations, for everyone in the units they head and every unit below. A manager set by hand on a user is an exception: that person also approves, and becomes who the employee "reports to". Migration V18 removed hand-set managers that only repeated the structure.
+- **Users**: the list shows each person's unit and can be filtered by a unit, including the units below it. The employee file shows the unit.
+- **Payslips** keep the unit, Direction and cost centre (the unit's own or the nearest one above) of the employee at the end of the month. The payroll page has subtotals and a filter by Direction.
+- **Reports**: the attendance and finance spreadsheets have Direction and unit columns and can be limited to a unit. Reports › Headcount and payroll cost by Direction gives people, payslips, gross, employer charges and total cost per Direction or per unit, in USD and in CDF at the payroll rate, also as CSV.
 
 ## Configuration
 

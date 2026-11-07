@@ -68,6 +68,12 @@ public class Evaluations {
     private final AttendanceDays attendance;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public Evaluations(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, AuditService audit, Clock clock) {
         this.jdbc = jdbc;
@@ -201,7 +207,7 @@ public class Evaluations {
         long me = CurrentUser.id();
         String where = switch (scope) {
             case "mine" -> "where e.user_id = " + me + " and e.status <> 'DRAFT'";
-            case "team" -> "where (e.evaluator_id = " + me + " or u.manager_id = " + me + ") and e.user_id <> " + me;
+            case "team" -> "where e.user_id <> " + me;
             case "all" -> {
                 if (!isHr()) {
                     throw new AccessDeniedException("Only HR sees every evaluation.");
@@ -210,8 +216,13 @@ public class Evaluations {
             }
             default -> throw new BusinessRuleException("Unknown list " + scope + ".");
         };
-        return jdbc.sql(EVAL_SELECT + where + " and (cast(? as varchar) is null or e.status = ?) order by e.period_start desc, u.last_name")
+        List<Evaluation> list = jdbc.sql(EVAL_SELECT + where + " and (cast(? as varchar) is null or e.status = ?) order by e.period_start desc, u.last_name")
                 .params(status, status).query(Evaluation.class).list();
+        if (scope.equals("team")) {
+            java.util.Set<Long> team = org.teamOf(me);
+            return list.stream().filter(e -> e.evaluatorId() == me || team.contains(e.userId())).toList();
+        }
+        return list;
     }
 
     /** Starts the evaluation of an employee for the period containing the date. */
@@ -222,8 +233,8 @@ public class Evaluations {
         if (userId == me) {
             throw new AccessDeniedException("You cannot evaluate yourself.");
         }
-        if (!isHr() && !(CurrentUser.has("evaluation.score.team") && Objects.equals(user.getManagerId(), me))) {
-            throw new AccessDeniedException("Only the employee's direct manager or HR can evaluate them.");
+        if (!isHr() && !(CurrentUser.has("evaluation.score.team") && org.inTeam(me, userId))) {
+            throw new AccessDeniedException("Only the employee's manager or HR can evaluate them.");
         }
         Template t = templateFor(user);
         LocalDate[] p = period(t.frequency(), inPeriod);
@@ -351,7 +362,7 @@ public class Evaluations {
         long me = CurrentUser.id();
         List<AppUser> people = isHr()
                 ? users.findAll().stream().filter(AppUser::isActive).filter(u -> u.getId() != me).toList()
-                : CurrentUser.has("evaluation.score.team") ? users.findByManagerId(me).stream().filter(AppUser::isActive).toList()
+                : CurrentUser.has("evaluation.score.team") ? users.findAllById(org.teamOf(me)).stream().filter(AppUser::isActive).toList()
                 : List.of();
         List<Map<String, Object>> rows = new ArrayList<>();
         for (AppUser u : people) {
@@ -382,7 +393,7 @@ public class Evaluations {
         long me = CurrentUser.id();
         boolean own = e.userId() == me && !e.status().equals("DRAFT");
         boolean evaluator = e.evaluatorId() == me;
-        boolean manager = users.findById(e.userId()).map(u -> Objects.equals(u.getManagerId(), me)).orElse(false);
+        boolean manager = org.inTeam(me, e.userId());
         if (!own && !evaluator && !manager && !isHr()) {
             throw new AccessDeniedException("You cannot see this evaluation.");
         }

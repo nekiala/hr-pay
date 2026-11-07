@@ -58,13 +58,18 @@ public class UserController {
     public record UserView(Long id, String email, String registrationNo, String phone, String firstName,
                            String lastName, Long siteId, String siteName, UserStatus status, Set<String> roles,
                            boolean hasPassword, OffsetDateTime lastLoginAt, OffsetDateTime createdAt,
-                           Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate) {
+                           Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate, Long unitId, String unitName) {
         static UserView of(AppUser u) {
             return new UserView(u.getId(), u.getEmail(), u.getRegistrationNo(), u.getPhone(), u.getFirstName(),
                     u.getLastName(), u.getSite() == null ? null : u.getSite().getId(),
                     u.getSite() == null ? null : u.getSite().getName(), u.getStatus(), u.roleCodes(),
                     u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt(), u.getManagerId(),
-                    u.getGradeCategoryId(), u.getHireDate());
+                    u.getGradeCategoryId(), u.getHireDate(), null, null);
+        }
+
+        UserView withUnit(Long unitId, String unitName) {
+            return new UserView(id, email, registrationNo, phone, firstName, lastName, siteId, siteName, status, roles,
+                    hasPassword, lastLoginAt, createdAt, managerId, gradeCategoryId, hireDate, unitId, unitName);
         }
     }
 
@@ -89,20 +94,37 @@ public class UserController {
     @PreAuthorize("hasAuthority('user.read')")
     @Transactional(readOnly = true)
     public UserPage list(@RequestParam(required = false) String q,
+                         @RequestParam(required = false) Long unitId,
                          @RequestParam(defaultValue = "0") int page,
                          @RequestParam(defaultValue = "25") int size) {
         String query = q == null || q.isBlank() ? null : q.trim();
-        Page<AppUser> result = users.search(query, PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100),
-                Sort.by("lastName", "firstName")));
-        return new UserPage(result.map(UserView::of).toList(), result.getNumber(), result.getSize(),
-                result.getTotalElements());
+        PageRequest paging = PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100), Sort.by("lastName", "firstName"));
+        var unitOf = org.unitsOn(org.today());
+        var units = org.placementsOfUnits();
+        Page<AppUser> result;
+        if (unitId != null) {
+            // The unit and everything below it.
+            Set<Long> branch = org.branch(unitId);
+            List<Long> ids = unitOf.entrySet().stream().filter(e -> branch.contains(e.getValue())).map(java.util.Map.Entry::getKey).toList();
+            result = ids.isEmpty() ? Page.empty(paging) : users.searchIn(query, ids, paging);
+        } else {
+            result = users.search(query, paging);
+        }
+        return new UserPage(result.map(u -> withUnit(UserView.of(u), unitOf, units)).toList(), result.getNumber(),
+                result.getSize(), result.getTotalElements());
+    }
+
+    private static UserView withUnit(UserView v, java.util.Map<Long, Long> unitOf, java.util.Map<Long, cd.hrpay.org.OrgStructure.Placement> units) {
+        Long unit = unitOf.get(v.id());
+        var p = unit == null ? null : units.get(unit);
+        return p == null ? v : v.withUnit(p.unitId(), p.unitName());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('user.read')")
     @Transactional(readOnly = true)
     public UserView get(@PathVariable Long id) {
-        return UserView.of(service.find(id));
+        return withUnit(UserView.of(service.find(id)), org.unitsOn(org.today()), org.placementsOfUnits());
     }
 
     @PostMapping

@@ -16,7 +16,7 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
 
     @Query("""
             select m from Mission m where m.status = cd.hrpay.mission.Mission.Status.PENDING
-            and m.userId in (select u.id from AppUser u where u.managerId = :managerId)
+            and m.userId in :userIds
             order by m.workDate, m.startTime""")
-    List<Mission> findPendingForTeam(Long managerId);
+    List<Mission> findPendingForUsers(java.util.Collection<Long> userIds);
 }

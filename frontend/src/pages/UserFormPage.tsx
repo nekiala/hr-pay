@@ -325,10 +325,10 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
 
   return (
     <div className="card">
-      <h3>Direct manager</h3>
-      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">None</span>}
+      <h3>Manager set by hand</h3>
+      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">None: the head of the unit is used</span>}
         {editable && manager && <> <button className="secondary void" onClick={() => void save(null)}>Remove</button></>}</p>
-      <p className="hint">The direct manager approves this employee's missions, overtime and leave, and scores evaluations.</p>
+      <p className="hint">Normally people report to the head of their unit (or the nearest head above), who approves their missions, overtime and leave and scores their evaluations. Set a manager here only for an exception; heads above still see this person in their branch.</p>
       {editable && (
         <>
           <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} />

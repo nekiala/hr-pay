@@ -184,3 +184,5 @@ dl.facts dd { margin: 0; }
 }
 .org-tools { align-items: center; }
 .org-tools select { width: auto; }
+.inline-filter { display: inline-flex; flex-direction: column; margin: 0 0 12px; }
+.inline-filter select { width: auto; min-width: 240px; }

@@ -37,6 +37,9 @@ public class OrgStructure {
                        Long parentId, String costCentre, LocalDate validFrom, LocalDate validTo, boolean open,
                        Head head, Head deputy, Integer members, Integer totalMembers) {}
 
+    /** Who someone reports to: the manager set by hand on their record, or else the head from the structure. */
+    public record Boss(long userId, String userName, boolean manual) {}
+
     public record Member(long userId, String name, String registrationNo, long unitId, String unitName,
                          LocalDate since, Long reportsToId, String reportsToName, List<Long> heads) {}
 
@@ -68,7 +71,7 @@ public class OrgStructure {
         this.clock = clock;
     }
 
-    LocalDate today() {
+    public LocalDate today() {
         return LocalDate.now(clock.withZone(ZoneId.of("Africa/Kinshasa")));
     }
 
@@ -455,8 +458,8 @@ public class OrgStructure {
     // ---- people and managers ---------------------------------------------------------------------------------
 
     /**
-     * Everyone active, with their unit and who they report to: the head of their unit, or of the nearest unit above
-     * when it is vacant or headed by themself.
+     * Everyone active, with their unit and who they report to: the manager set by hand on their record if any, else
+     * the head of their unit, or of the nearest unit above when it is vacant or headed by themself.
      */
     public List<Member> people() {
         Map<Long, UnitRow> units = openUnits();
@@ -464,19 +467,26 @@ public class OrgStructure {
         Map<Long, List<Long>> headsBy = new HashMap<>();
         heads.values().forEach(h -> headsBy.computeIfAbsent(h.userId(), k -> new ArrayList<>()).add(h.unitId()));
         return jdbc.sql("""
-                select a.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, a.unit_id, a.valid_from
-                from org_assignment a join app_user u on u.id = a.user_id
+                select a.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, a.unit_id, a.valid_from,
+                       m.id as manual_id, m.first_name || ' ' || m.last_name as manual_name
+                from org_assignment a join app_user u on u.id = a.user_id left join app_user m on m.id = u.manager_id
                 where a.valid_to is null and u.status = 'ACTIVE' order by u.last_name, u.first_name""")
                 .query((rs, i) -> {
                     long userId = rs.getLong("user_id");
                     long unitId = rs.getLong("unit_id");
-                    Head boss = reportsTo(userId, unitId, units, heads);
+                    Long manualId = rs.getObject("manual_id", Long.class);
+                    Boss boss = manualId != null ? new Boss(manualId, rs.getString("manual_name"), true)
+                            : toBoss(reportsTo(userId, unitId, units, heads));
                     UnitRow unit = units.get(unitId);
                     return new Member(userId, rs.getString("name"), rs.getString("registration_no"), unitId,
                             unit == null ? null : unit.name(), rs.getObject("valid_from", LocalDate.class),
                             boss == null ? null : boss.userId(), boss == null ? null : boss.userName(),
                             headsBy.getOrDefault(userId, List.of()));
                 }).list();
+    }
+
+    private static Boss toBoss(Head h) {
+        return h == null ? null : new Boss(h.userId(), h.userName(), false);
     }
 
     private static Head reportsTo(long userId, long unitId, Map<Long, UnitRow> units, Map<Long, Head> heads) {
@@ -493,9 +503,103 @@ public class OrgStructure {
         return null;
     }
 
-    /** Who an employee reports to today, from the structure. Empty for the top of the company. */
-    public Optional<Head> managerOf(long userId) {
-        return openAssignment(userId).map(a -> reportsTo(userId, a.unitId(), openUnits(), openHeads("HEAD")));
+    /** Who an employee reports to today. Empty for the top of the company. */
+    public Optional<Boss> managerOf(long userId) {
+        Optional<Boss> manual = jdbc.sql("""
+                select m.id as user_id, m.first_name || ' ' || m.last_name as user_name, true as manual
+                from app_user u join app_user m on m.id = u.manager_id
+                where u.id = ?""").param(userId).query(Boss.class).optional();
+        if (manual.isPresent()) {
+            return manual;
+        }
+        return openAssignment(userId).map(a -> toBoss(reportsTo(userId, a.unitId(), openUnits(), openHeads("HEAD"))));
+    }
+
+    /**
+     * The people a person approves for: everyone in the units they head or deputise and all units below them,
+     * plus anyone whose manager was set to them by hand. Never the person themself.
+     */
+    public Set<Long> teamOf(long managerId) {
+        return new HashSet<>(jdbc.sql("""
+                with recursive branch(id) as (
+                    select unit_id from org_head where user_id = ? and valid_to is null
+                    union
+                    select u.id from org_unit u join branch b on u.parent_id = b.id where u.valid_to is null
+                )
+                select a.user_id from org_assignment a
+                where a.valid_to is null and a.unit_id in (select id from branch) and a.user_id <> ?
+                union
+                select id from app_user where manager_id = ? and id <> ?""")
+                .params(managerId, managerId, managerId, managerId).query(Long.class).list());
+    }
+
+    public boolean inTeam(long managerId, long userId) {
+        return teamOf(managerId).contains(userId);
+    }
+
+    // ---- placement: unit, Direction and cost centre for payslips and reports ---------------------------------
+
+    /**
+     * Where a unit sits for reporting. The Direction is the unit's ancestor right under the top unit (or the top unit
+     * itself); the cost centre is the unit's own, or else the nearest one above.
+     */
+    public record Placement(long unitId, String unitCode, String unitName, long directionId, String directionName,
+                            String costCentre, String path) {}
+
+    public Map<Long, Placement> placementsOfUnits() {
+        Map<Long, UnitRow> all = allUnits();
+        Map<Long, Placement> out = new HashMap<>();
+        for (UnitRow u : all.values()) {
+            List<String> names = new ArrayList<>();
+            String cc = null;
+            UnitRow direction = u;
+            UnitRow cur = u;
+            Set<Long> seen = new HashSet<>();
+            while (cur != null && seen.add(cur.id())) {
+                names.addFirst(cur.name());
+                if (cc == null && cur.costCentre() != null) {
+                    cc = cur.costCentre();
+                }
+                UnitRow parent = cur.parentId() == null ? null : all.get(cur.parentId());
+                if (parent != null && parent.parentId() == null) {
+                    direction = cur;
+                }
+                cur = parent;
+            }
+            out.put(u.id(), new Placement(u.id(), u.code(), u.name(), direction.id(), direction.name(), cc,
+                    String.join(" › ", names)));
+        }
+        return out;
+    }
+
+    /** Each person's unit on a date, from the assignment history. */
+    public Map<Long, Long> unitsOn(LocalDate on) {
+        Map<Long, Long> out = new HashMap<>();
+        jdbc.sql("""
+                select user_id, unit_id from org_assignment
+                where valid_from <= ? and (valid_to is null or valid_to >= ?)""").params(on, on)
+                .query((rs, i) -> out.put(rs.getLong(1), rs.getLong(2))).list();
+        return out;
+    }
+
+    /** Each person's placement on a date; people without a unit then are left out. */
+    public Map<Long, Placement> placementsOn(LocalDate on) {
+        Map<Long, Placement> units = placementsOfUnits();
+        Map<Long, Placement> out = new HashMap<>();
+        unitsOn(on).forEach((user, unit) -> {
+            Placement p = units.get(unit);
+            if (p != null) {
+                out.put(user, p);
+            }
+        });
+        return out;
+    }
+
+    /** The unit and every unit below it, open or closed. */
+    public Set<Long> branch(long unitId) {
+        return new HashSet<>(jdbc.sql("""
+                with recursive b(id) as (select ?::bigint union select u.id from org_unit u join b on u.parent_id = b.id)
+                select id from b""").param(unitId).query(Long.class).list());
     }
 
     public Optional<Assignment> currentAssignment(long userId) {
