@@ -99,6 +99,21 @@ class PayElementsIT extends IntegrationTest {
     }
 
     @Test
+    void aNegotiatedComplementIsSalaryGivenPerPerson() throws Exception {
+        MockHttpSession hr = login(HR);
+        mvc.perform(get("/api/pay-elements").session(hr))
+                .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].method").value("FIXED"))
+                .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].subjectToCnss").value(true))
+                .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].taxableIpr").value(true))
+                .andExpect(jsonPath("$[?(@.code=='COMPLEMENT')].defaultForAll").value(false));
+        mvc.perform(json(post("/api/users/" + id("employee3@demo.hrpay.cd") + "/pay-elements").session(hr), """
+                        {"elementId":%d,"amount":125.97,"currency":"USD","excluded":false,"startMonth":"2028-01",
+                         "note":"Agreed at hiring"}""".formatted(element(hr, "COMPLEMENT"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.amount").value(125.97));
+    }
+
+    @Test
     void oneOffEntriesAreOnePerElementAndMonth() throws Exception {
         MockHttpSession hr = login(HR);
         long employee = id("employee2@demo.hrpay.cd");

@@ -981,6 +981,24 @@
      "system": true,
      "display_order": 135,
      "active": true
+    },
+    {
+     "id": 29,
+     "code": "COMPLEMENT",
+     "name": "Salary complement (negotiated)",
+     "kind": "EARNING",
+     "method": "FIXED",
+     "default_amount": 0.0,
+     "default_currency": "XAF",
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": true,
+     "default_for_all": false,
+     "system": false,
+     "display_order": 15,
+     "active": true
     }
    ]
   },
