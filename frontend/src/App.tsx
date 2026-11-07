@@ -57,6 +57,10 @@ import PayrollCorrectionsPage, { DeparturesPage } from './pages/PayrollCorrectio
 import AccountingPage from './pages/AccountingPage'
 import ComparePage from './pages/ComparePage'
 import { useLocation } from 'react-router-dom'
+import ImportPage from './pages/ImportPage'
+import IntegrationsPage from './pages/IntegrationsPage'
+import TimeClocksPage from './pages/TimeClocksPage'
+import ExportLayoutsPage from './pages/ExportLayoutsPage'
 import { Shell } from './components/Shell'
 import type { ReactNode } from 'react'
 import { t } from './i18n'
@@ -97,6 +101,13 @@ function PaymentsRoute({ file }: { file?: boolean }) {
   const { can } = useAuth()
   return can('payroll.pay') || can('payslip.read.all')
     ? (file ? <PaymentFilePage /> : <PaymentsPage />)
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
+}
+
+function LayoutsRoute() {
+  const { can } = useAuth()
+  return can('accounting.export') || can('payroll.pay')
+    ? <ExportLayoutsPage />
     : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
@@ -184,6 +195,10 @@ export default function App() {
           <Route path="/privacy/requests" element={<Guard permission="privacy.manage"><PersonalDataPage /></Guard>} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
+          <Route path="/imports" element={<Guard permission="data.import"><ImportPage /></Guard>} />
+          <Route path="/integrations" element={<Guard permission="api.manage"><IntegrationsPage /></Guard>} />
+          <Route path="/time-clocks" element={<Guard permission="api.manage"><TimeClocksPage /></Guard>} />
+          <Route path="/export-layouts" element={<LayoutsRoute />} />
           <Route path="/login" element={<AfterLogin />} />
           <Route path="*" element={<p className="notice">{t('Page not found.')}</p>} />
         </Routes>

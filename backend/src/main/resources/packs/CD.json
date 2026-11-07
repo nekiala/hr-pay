@@ -1870,6 +1870,18 @@
     {
      "role_id": 3,
      "permission_code": "accounting.export"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "data.import"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "data.import"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "api.manage"
     }
    ]
   }

@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { Button } from '../components/Button'
 import { ErrorText } from '../components/ErrorText'
 import { t } from '../i18n'
+import { LayoutDownload } from './ExportLayoutsPage'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 
@@ -44,6 +45,7 @@ export default function AccountingPage() {
         {journal && <>
           <a className="button secondary" href={`/api/accounting/${month}.xlsx${query}`}>{t('Download Excel')}</a>
           <a className="button secondary" href={`/api/accounting/${month}.csv${query}`}>{t('Download CSV')}</a>
+          <LayoutDownload target="ACCOUNTING" path={(id) => `/api/accounting/${month}/layout/${id}${query}`} />
         </>}
       </div>
       <ErrorText error={error} />

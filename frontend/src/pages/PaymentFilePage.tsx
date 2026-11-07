@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, money } from '../api'
+import { api, money, type LayoutTarget } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { METHOD, type PayMethodKind } from './PaymentsPage'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
+import { useAuth } from '../auth'
+import { LayoutDownload } from './ExportLayoutsPage'
 
 type Line = { payslipId: number; userId: number; beneficiary: string; registrationNo: string | null; account: string | null; amount: number; currency: string
   unitId: number | null; directionName: string | null; unitName: string | null }
@@ -18,6 +20,7 @@ type Employer = { name: string; address: string | null; bankName: string | null;
 /** A payment file on screen; for cash, the list people sign when they collect their pay. */
 export default function PaymentFilePage() {
   const { id } = useParams()
+  const { can } = useAuth()
   const [view, setView] = useState<View | null>(null)
   const [employer, setEmployer] = useState<Employer | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +49,7 @@ export default function PaymentFilePage() {
     <section className="narrow">
       <p className="no-print"><Link to={`/payroll/payments?month=${view.month}`}>{t('← Payments')}{' '}{view.month}</Link>
         {' · '}<Button className="link" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
+        {can('payroll.pay') && <>{' '}<LayoutDownload target={view.batch.method as LayoutTarget} path={(l) => `/api/payment-batches/${view.batch.id}/layout/${l}`} /></>}
         {directions.length > 1 && <>{' · '}
           <select value={direction} onChange={(e) => setDirection(e.target.value)}>
             <option value="">{t('Every Direction')}</option>

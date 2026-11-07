@@ -21,3 +21,6 @@ app:
   security:
     # TwoStepIT turns the roles' requirement on for its own tests.
     two-step-enforced: false
+  webhooks:
+    # Deliveries are sent by the tests themselves, never in the background.
+    every: PT10H

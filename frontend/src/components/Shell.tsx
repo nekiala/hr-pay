@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
@@ -75,6 +75,10 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/overtime', label: t('Overtime rules'), icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/roles', label: t('Roles'), icon: KeyRound, show: can('role.read') },
         { to: '/privacy/requests', label: t('Personal data'), icon: ShieldCheck, show: can('privacy.manage') },
+        { to: '/imports', label: t('Import data'), icon: FileUp, show: can('data.import') },
+        { to: '/export-layouts', label: t('File layouts'), icon: Columns3, show: pay && any('accounting.export', 'payroll.pay') },
+        { to: '/time-clocks', label: t('Time clocks'), icon: Fingerprint, show: att && can('api.manage') },
+        { to: '/integrations', label: t('API and webhooks'), icon: Plug, show: can('api.manage') },
       ],
     },
     {
