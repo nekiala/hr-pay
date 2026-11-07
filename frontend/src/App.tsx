@@ -19,6 +19,8 @@ import UserAttendancePage from './pages/UserAttendancePage'
 import MissionsPage from './pages/MissionsPage'
 import LeavePage from './pages/LeavePage'
 import ReportsPage from './pages/ReportsPage'
+import EmployeeFilePage from './pages/EmployeeFilePage'
+import PayrollSettingsPage from './pages/PayrollSettingsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import { useLocation } from 'react-router-dom'
@@ -71,6 +73,7 @@ export default function App() {
           <NavLink to="/holidays">Holidays</NavLink>
           {(can('overtime.approve.all') || can('overtime.approve.team')) && <NavLink to="/overtime/approvals">Approve overtime</NavLink>}
           {can('overtime_policy.manage') && <NavLink to="/overtime" end>Overtime rules</NavLink>}
+          {can('masterdata.manage') && <NavLink to="/payroll/settings">Grades</NavLink>}
           {(can('report.attendance.export') || can('report.finance.export')) && <NavLink to="/reports">Reports</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
           {can('audit.read') && <NavLink to="/outbox">Messages</NavLink>}
@@ -86,6 +89,7 @@ export default function App() {
           <Route path="/account" element={<ChangePasswordPage />} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
+          <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
           <Route path="/roles" element={<Guard permission="role.read"><RolesPage /></Guard>} />
@@ -99,6 +103,7 @@ export default function App() {
           <Route path="/missions" element={<MissionsPage />} />
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/payroll/settings" element={<Guard permission="masterdata.manage"><PayrollSettingsPage /></Guard>} />
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />

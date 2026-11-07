@@ -34,7 +34,8 @@ public class LeaveService {
     public record LeaveType(long id, String code, String name, boolean paid, boolean usesBalance,
                             boolean requiresDocument, Integer maxDays, boolean active) {}
 
-    public record GradeCategory(long id, String code, String name, BigDecimal annualLeaveDays, boolean active) {}
+    public record GradeCategory(long id, String code, String name, BigDecimal annualLeaveDays, boolean active,
+                                BigDecimal anniversaryRaisePercent) {}
 
     public record LeaveRequest(long id, long userId, String employeeName, String registrationNo, long leaveTypeId,
                                String leaveType, LocalDate startDate, LocalDate endDate, BigDecimal workingDays,
@@ -81,7 +82,7 @@ public class LeaveService {
     }
 
     public List<GradeCategory> categories() {
-        return jdbc.sql("select id, code, name, annual_leave_days, active from grade_category order by code")
+        return jdbc.sql("select id, code, name, annual_leave_days, active, anniversary_raise_percent from grade_category order by code")
                 .query(GradeCategory.class).list();
     }
 
@@ -201,7 +202,7 @@ public class LeaveService {
     @Transactional
     public void adjust(long userId, long typeId, BigDecimal days, String note) {
         users.find(userId);
-        if (userId == CurrentUser.id()) {
+        if (java.util.Objects.equals(userId, CurrentUser.id())) {
             throw new AccessDeniedException("You cannot adjust your own leave balance.");
         }
         if (days.signum() == 0) {
@@ -289,7 +290,7 @@ public class LeaveService {
     }
 
     private boolean canDecide(LeaveRequest r) {
-        if (r.userId() == CurrentUser.id()) {
+        if (java.util.Objects.equals(r.userId(), CurrentUser.id())) {
             return false;
         }
         return CurrentUser.has("leave.manage") || (CurrentUser.has("leave.approve.team")
@@ -331,7 +332,7 @@ public class LeaveService {
     @Transactional
     public LeaveRequest cancel(long id, String note) {
         LeaveRequest r = find(id);
-        boolean own = r.userId() == CurrentUser.id();
+        boolean own = java.util.Objects.equals(r.userId(), CurrentUser.id());
         if (r.status().equals("PENDING") && own) {
             setStatus(id, "CANCELLED", note);
         } else if (r.status().equals("APPROVED") && CurrentUser.has("leave.manage") && !own) {

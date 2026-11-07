@@ -374,3 +374,20 @@ export type LeaveRequest = {
 }
 export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
 export const days = (n: number) => `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} day${Number(n) === 1 ? '' : 's'}`
+
+export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: 'USD' | 'CDF'; active: boolean }
+export type Occupation = { id: number; code: string; name: string; active: boolean }
+export type Contract = {
+  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
+  gradeId: number; gradeCode: string; gradeName: string; categoryId: number; occupationId: number | null; occupationName: string | null
+  expatriate: boolean; note: string | null; createdBy: string; createdAt: string
+}
+export type Profile = {
+  birthDate: string | null; gender: 'FEMALE' | 'MALE' | null; nationality: string | null
+  maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED'; cnssNumber: string | null; taxNumber: string | null
+  paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
+  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null
+}
+export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
+export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }
+export const CONTRACT_TYPES = { PERMANENT: 'Permanent', FIXED_TERM: 'Fixed term', INTERN: 'Intern', CONSULTANT: 'Consultant' }

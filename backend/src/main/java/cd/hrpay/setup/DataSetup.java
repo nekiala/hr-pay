@@ -59,11 +59,14 @@ public class DataSetup implements ApplicationRunner {
     private final cd.hrpay.salary.SalaryService salaries;
     private final cd.hrpay.leave.LeaveService leave;
     private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
+    private final cd.hrpay.payroll.EmployeeFile files;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
                      PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
                      UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries,
-                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc,
+                     cd.hrpay.payroll.EmployeeFile files) {
+        this.files = files;
         this.salaries = salaries;
         this.leave = leave;
         this.jdbc = jdbc;
@@ -106,6 +109,7 @@ public class DataSetup implements ApplicationRunner {
         addSampleSalaries();
         assignSampleManager();
         assignSampleEmployment();
+        addSampleContracts();
         allowLocalIpv6();
     }
 
@@ -119,6 +123,34 @@ public class DataSetup implements ApplicationRunner {
                 site.replaceIpRanges(ranges);
             }
         });
+    }
+
+    /** Contracts, personal details and a family for the sample staff, so payroll can be tried. */
+    private void addSampleContracts() {
+        Map<String, String> gradeByRole = Map.of("EMPLOYEE", "G1B", "HR", "G2B", "FINANCE", "G2B", "MANAGER", "G3B");
+        Map<String, String> occupationByRole = Map.of("EMPLOYEE", "ENGINEER", "HR", "HR_OFFICER", "FINANCE", "ACCOUNTANT",
+                "MANAGER", "MANAGER");
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            users.findByEmailIgnoreCase(s.email()).filter(u -> files.contracts(u.getId()).isEmpty()).ifPresent(u -> {
+                long grade = jdbc.sql("select id from grade where code = ?").param(gradeByRole.get(s.role())).query(Long.class).single();
+                Long occupation = jdbc.sql("select id from occupation where code = ?").param(occupationByRole.get(s.role()))
+                        .query(Long.class).optional().orElse(null);
+                files.startContract(u.getId(), "PERMANENT", LocalDate.of(2024, 1, 15), null, grade, occupation, false, null,
+                        "Sample contract");
+                boolean married = s.email().startsWith("employee1") || s.role().equals("MANAGER");
+                files.saveProfile(u.getId(), new cd.hrpay.payroll.EmployeeFile.Profile(LocalDate.of(1988, 5, 12), null,
+                        "Congolese", married ? "MARRIED" : "SINGLE", "CNSS-" + s.registrationNo(), "NIF-" + s.registrationNo(),
+                        "BANK", "Rawbank (sample)", "0001-" + s.registrationNo(), null, null));
+                if (married) {
+                    files.addDependant(u.getId(), "Spouse of " + s.firstName(), "SPOUSE", LocalDate.of(1990, 3, 2), true, null);
+                    files.addDependant(u.getId(), "First child", "CHILD", LocalDate.of(2015, 9, 1), true, null);
+                    files.addDependant(u.getId(), "Second child", "CHILD", LocalDate.of(2019, 2, 20), true, null);
+                }
+            });
+        }
     }
 
     /** Sample grade categories and hire dates, then this year's annual leave. */
