@@ -61,7 +61,7 @@ jobs:
       - run: docker build -t hr-pay:ci .
       - run: docker build -t hr-pay-backup:ci deploy/backup
       # The image as it ships: operating system packages and every jar inside it.
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: hr-pay:ci
           severity: CRITICAL,HIGH
