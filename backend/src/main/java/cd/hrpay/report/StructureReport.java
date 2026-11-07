@@ -132,12 +132,13 @@ public class StructureReport {
         return map.computeIfAbsent(id, k -> new Acc(id, name, costCentre));
     }
 
-    @GetMapping("/structure.csv")
+    @GetMapping({"/structure.csv", "/structure.xlsx"})
     @PreAuthorize("hasAuthority('payslip.read.all')")
-    public void structureCsv(@RequestParam YearMonth month, HttpServletResponse response) throws IOException {
+    public void structureCsv(@RequestParam YearMonth month, jakarta.servlet.http.HttpServletRequest request,
+                             HttpServletResponse response) throws IOException {
         Result r = structure(month);
-        PrintWriter out = Csv.start(response, "cost-by-unit-" + month + ".csv");
-        Csv.row(out, "Level", "Direction or unit", "Cost centre", "Headcount", "Payslips", "Gross (USD)", "Net (USD)",
+        cd.hrpay.common.Sheet out = cd.hrpay.common.Sheet.open(request, response, "cost-by-unit-" + month);
+        out.row("Level", "Direction or unit", "Cost centre", "Headcount", "Payslips", "Gross (USD)", "Net (USD)",
                 "Employer charges (USD)", "Total cost (USD)", "Total cost (CDF)");
         for (Row x : r.directions()) {
             write(out, "Direction", x);
@@ -146,12 +147,12 @@ public class StructureReport {
             write(out, "Unit", x);
         }
         write(out, "Total", r.total());
-        out.flush();
+        out.finish();
         audit.record("report.structure_exported", "report", null, Map.of("month", month.toString()));
     }
 
-    private static void write(PrintWriter out, String level, Row x) {
-        Csv.row(out, level, x.name(), x.costCentre(), x.headcount(), x.payslips(), x.grossUsd(), x.netUsd(),
+    private static void write(cd.hrpay.common.Sheet out, String level, Row x) {
+        out.row(level, x.name(), x.costCentre(), x.headcount(), x.payslips(), x.grossUsd(), x.netUsd(),
                 x.employerUsd(), x.costUsd(), x.costCdf());
     }
 }

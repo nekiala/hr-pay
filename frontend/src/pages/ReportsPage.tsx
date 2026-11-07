@@ -23,7 +23,7 @@ export default function ReportsPage() {
   return (
     <section className="narrow">
       <h2>Reports</h2>
-      <p className="muted">Spreadsheets (CSV) that open in Excel. The current month runs to today. Each download is recorded in the audit log.</p>
+      <p className="muted">Spreadsheets as Excel workbooks or CSV files. The current month runs to today. Each download is recorded in the audit log.</p>
       <div className="grid2">
         <label>Month<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
         <label>Unit (with the units below it)<UnitSelect units={units} value={unit} placeholder="Everyone" onChange={setUnit} /></label>
@@ -33,8 +33,10 @@ export default function ReportsPage() {
           <h3>Attendance</h3>
           <p className="hint">{can('attendance.read.all') ? 'All active employees.' : 'Your team: everyone in the units you head, and below.'} Paid and worked hours, late days, absences, leave, overtime, with each person's Direction and unit.</p>
           <div className="row">
-            <a className="button" href={`/api/reports/attendance.csv?${q}`}>One row per employee</a>
-            <a className="button secondary" href={`/api/reports/attendance.csv?${q}&detail=true`}>One row per day</a>
+            <a className="button" href={`/api/reports/attendance.xlsx?${q}`}>One row per employee (Excel)</a>
+            <a className="button secondary" href={`/api/reports/attendance.xlsx?${q}&detail=true`}>One row per day (Excel)</a>
+            <a className="link" href={`/api/reports/attendance.csv?${q}`}>CSV</a>
+            <a className="link" href={`/api/reports/attendance.csv?${q}&detail=true`}>CSV per day</a>
           </div>
         </div>
       )}
@@ -42,7 +44,10 @@ export default function ReportsPage() {
         <div className="card">
           <h3>Finance</h3>
           <p className="hint">Gross salary earned to date and approved overtime pay, per employee, before taxes and deductions, with Direction, unit and cost centre.</p>
-          <a className="button" href={`/api/reports/finance.csv?${q}`}>Download</a>
+          <div className="row">
+            <a className="button" href={`/api/reports/finance.xlsx?${q}`}>Download (Excel)</a>
+            <a className="link" href={`/api/reports/finance.csv?${q}`}>CSV</a>
+          </div>
         </div>
       )}
       {can('payslip.read.all') && <CostCard month={month} />}
@@ -88,7 +93,8 @@ function CostCard({ month }: { month: string }) {
           </table>
         </div>
       )}
-      <p><a className="button secondary" href={`/api/reports/structure.csv?month=${month}`}>Download (CSV)</a></p>
+      <p className="row"><a className="button secondary" href={`/api/reports/structure.xlsx?month=${month}`}>Download (Excel)</a>
+        <a className="link" href={`/api/reports/structure.csv?month=${month}`}>CSV</a></p>
     </div>
   )
 }

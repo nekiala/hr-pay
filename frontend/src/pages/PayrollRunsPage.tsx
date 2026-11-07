@@ -10,6 +10,8 @@ const STATUS = { CALCULATED: 'Calculated, waiting for approval', APPROVED: 'Appr
 type Raise = { id: number; userId: number; userName: string; anniversaryDate: string; years: number; effectiveFrom: string; gradeCode: string; percent: number; raiseAmount: number; oldBasic: number; newBasic: number; currency: string; notifiedAt: string | null }
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 
+type HolidayAdjustment = { id: number; userId: number; userName: string; payslipId: number; closedMonth: string; amount: number; currency: string; targetMonth: string; note: string; createdBy: string }
+
 export default function PayrollRunsPage() {
   const { can } = useAuth()
   const [runs, setRuns] = useState<PayrollRun[]>([])
@@ -20,6 +22,8 @@ export default function PayrollRunsPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [direction, setDirection] = useState('')
+  const [adjustments, setAdjustments] = useState<HolidayAdjustment[]>([])
+  useEffect(() => { api<HolidayAdjustment[]>('/api/payroll/holiday-adjustments').then(setAdjustments).catch(() => undefined) }, [])
 
   const loadRuns = () => api<PayrollRun[]>('/api/payroll/runs').then(setRuns).catch((e: Error) => setError(e.message))
   const loadView = (m: string) =>
@@ -57,11 +61,29 @@ export default function PayrollRunsPage() {
   const shown = (view?.payslips ?? []).filter((p) => !direction || String(p.directionId ?? 0) === direction)
   const warnings = view?.payslips.reduce((n, p) => n + p.warningCount, 0) ?? 0
 
+  const pending = adjustments.filter((a) => a.targetMonth.slice(0, 7) >= month)
   return (
     <section>
       <h2>Payroll</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
+      {pending.length > 0 && (
+        <details className="card">
+          <summary>Holiday changes carried into a later payroll ({pending.length})</summary>
+          <p className="hint">A holiday moved inside a closed month changes that month's basic pay. The difference is added to the payroll shown; calculate it again to include it.</p>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Employee</th><th>Closed month</th><th>Amount</th><th>Into</th><th>Why</th></tr></thead>
+              <tbody>
+                {pending.map((a) => (
+                  <tr key={a.id}><td>{a.userName}</td><td>{a.closedMonth}</td><td>{money(a.amount, a.currency)}</td>
+                    <td>{a.targetMonth.slice(0, 7)}</td><td className="small">{a.note}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
 
       <div className="card">
         <div className="row">

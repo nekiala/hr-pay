@@ -30,6 +30,8 @@ import MyPayslipsPage from './pages/MyPayslipsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import CorrectionsPage from './pages/CorrectionsPage'
+import PresencePage from './pages/PresencePage'
+import PrivacyPage, { PrivacyGate } from './components/PrivacyNotice'
 import EvaluationsPage from './pages/EvaluationsPage'
 import EvaluationPage from './pages/EvaluationPage'
 import EvaluationSettingsPage from './pages/EvaluationSettingsPage'
@@ -107,6 +109,7 @@ export default function App() {
           <NavLink to="/check-in">Check in</NavLink>
           {(can('leave.request') || can('leave.manage') || can('leave.approve.team')) && <NavLink to="/leave" end>Leave</NavLink>}
           {(can('mission.request') || can('mission.approve.all') || can('mission.approve.team')) && <NavLink to="/missions">Missions</NavLink>}
+          {(can('attendance.read.all') || can('attendance.read.team')) && <NavLink to="/presence">Presence</NavLink>}
           {(can('attendance.correct.request') || can('attendance.correct.propose') || can('attendance.correct')) && <NavLink to="/corrections">Corrections</NavLink>}
           <NavLink to="/org">Org chart</NavLink>
           {can('user.read') && <NavLink to="/users">Users</NavLink>}
@@ -177,12 +180,16 @@ export default function App() {
           <Route path="/evaluations/:id" element={<EvaluationPage />} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
+          <Route path="/presence" element={<PresencePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<AfterLogin />} />
           <Route path="*" element={<p className="notice">Page not found.</p>} />
         </Routes>
       </main>
+      <footer className="footer no-print"><NavLink to="/privacy">Privacy</NavLink></footer>
+      <PrivacyGate />
     </div>
   )
 }

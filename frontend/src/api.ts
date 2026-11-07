@@ -68,6 +68,7 @@ export type Me = {
   roles: string[]
   permissions: string[]
   mustChangePassword: boolean
+  privacyAccepted: boolean
 }
 
 export type User = {
