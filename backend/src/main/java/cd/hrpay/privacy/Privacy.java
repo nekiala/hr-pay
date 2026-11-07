@@ -88,11 +88,20 @@ public class Privacy {
                 .param(days).update();
     }
 
+    private cd.hrpay.ops.JobLocks locks;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLocks(cd.hrpay.ops.JobLocks locks) {
+        this.locks = locks;
+    }
+
     @Scheduled(cron = "${app.privacy.cron:0 45 2 * * *}", zone = "Africa/Kinshasa")
     public void nightly() {
-        int erased = erase();
-        if (erased > 0) {
-            log.info("Erased the GPS position of {} check-in(s) older than the retention.", erased);
-        }
+        locks.run("gps-erase", java.time.Duration.ofMinutes(30), () -> {
+            int erased = erase();
+            if (erased > 0) {
+                log.info("Erased the GPS position of {} check-in(s) older than the retention.", erased);
+            }
+        });
     }
 }

@@ -1,4 +1,7 @@
 spring:
+  # Tests keep sessions in MockMvc's memory; SessionStoreIT checks the PostgreSQL store on a real server.
+  autoconfigure:
+    exclude: org.springframework.boot.session.jdbc.autoconfigure.JdbcSessionAutoConfiguration
   datasource:
     url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/hrpay_test}
   flyway:

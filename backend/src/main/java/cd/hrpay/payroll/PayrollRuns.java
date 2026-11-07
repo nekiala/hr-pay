@@ -77,6 +77,9 @@ public class PayrollRuns {
     private final AuditService audit;
     private final Clock clock;
     private final JsonMapper json = JsonMapper.builder().build();
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entities;
     private cd.hrpay.org.OrgStructure org;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -289,6 +292,12 @@ public class PayrollRuns {
                         .update();
             }
             count++;
+            // The loop only reads entities (payslips are written with SQL). Letting thousands pile up in the session
+            // makes every query check them all for changes: clear it as we go.
+            if (count % 50 == 0) {
+                entities.flush();
+                entities.clear();
+            }
         }
         jdbc.sql("update payroll_run set employee_count = ? where id = ?").params(count, runId).update();
         audit.record("payroll.calculated", "payroll_run", runId, Map.of("month", month.toString(), "payslips", count,

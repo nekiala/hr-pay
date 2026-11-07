@@ -5,12 +5,20 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/hrpay}
     username: ${DB_USER:hrpay}
     password: ${DB_PASSWORD:hrpay}
+    hikari:
+      # Database connections per app server; PostgreSQL allows 100 by default.
+      maximum-pool-size: ${DB_POOL_SIZE:20}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
   flyway:
     enabled: true
+  # Sessions live in PostgreSQL (tables made by Flyway), shared by every API server and kept across restarts.
+  session:
+    jdbc:
+      initialize-schema: never
+      cleanup-cron: "0 */5 * * * *"
 
 server:
   port: ${SERVER_PORT:8081}
@@ -28,7 +36,24 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info
+  endpoint:
+    health:
+      # Liveness and readiness at /actuator/health/liveness and /readiness, for Docker and load balancers.
+      probes:
+        enabled: true
+      show-details: never
+  info:
+    build:
+      enabled: true
+    java:
+      enabled: true
+
+logging:
+  structured:
+    format:
+      # "ecs" writes one JSON line per log entry, for log collectors; empty keeps the readable format.
+      console: ${LOG_FORMAT:}
 
 app:
   # Creates the first administrator when the user table is empty.
@@ -50,6 +75,9 @@ app:
     whatsapp-phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
     whatsapp-template: ${WHATSAPP_TEMPLATE:hrpay_otp}
     whatsapp-language: ${WHATSAPP_LANGUAGE:fr}
+  # The production set-up runs a backup job; when true, an alert goes out if no backup succeeded for 26 hours.
+  backups:
+    expected: ${BACKUPS_EXPECTED:false}
   # BCC exchange rates (CDF per unit). Fetched at start-up and twice a day; HR can enter one by hand.
   exchange-rates:
     url: ${EXCHANGE_RATES_URL:https://exchange-api.ntoprog.org/api/v1/exchange-rates/current}

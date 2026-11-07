@@ -46,13 +46,23 @@ public class AutoClose {
         this.clock = clock;
     }
 
+    private cd.hrpay.ops.JobLocks locks;
+    private org.springframework.transaction.support.TransactionTemplate tx;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLocks(cd.hrpay.ops.JobLocks locks, org.springframework.transaction.PlatformTransactionManager txManager) {
+        this.locks = locks;
+        this.tx = new org.springframework.transaction.support.TransactionTemplate(txManager);
+    }
+
     @Scheduled(initialDelayString = "PT1M", fixedDelayString = "${app.auto-close-every:PT15M}")
-    @Transactional
     public void scheduled() {
-        int closed = run();
-        if (closed > 0) {
-            log.info("Auto-closed {} open day(s)", closed);
-        }
+        locks.run("auto-close", java.time.Duration.ofMinutes(10), () -> {
+            Integer closed = tx.execute(s -> run());
+            if (closed != null && closed > 0) {
+                log.info("Auto-closed {} open day(s)", closed);
+            }
+        });
     }
 
     /** Returns how many days were closed. */

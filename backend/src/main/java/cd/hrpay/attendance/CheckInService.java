@@ -87,15 +87,31 @@ public class CheckInService {
                 challenge.expiresAt());
     }
 
-    @Transactional
+    private org.springframework.transaction.support.TransactionTemplate tx;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setTransactions(org.springframework.transaction.PlatformTransactionManager txManager) {
+        this.tx = new org.springframework.transaction.support.TransactionTemplate(txManager);
+    }
+
+    /**
+     * Not one transaction on purpose: the code is checked in its own transaction (a wrong attempt must count even
+     * when the request fails), and only then is the check-in recorded. Nesting the two made every confirmation hold
+     * two database connections, which ran the pool dry when many people confirmed at the same moment.
+     */
     public ClockEvent confirmCheckIn(AppUser user, UUID challengeId, String code) {
-        OtpService.Verified ok = otp.verify(challengeId, user, PURPOSE, code);
         if (openCheckIn(user.getId()).isPresent()) {
             throw new BusinessRuleException("You are already checked in.");
         }
-        Verified verified = json.readValue(ok.contextJson(), Verified.class);
-        // Arrival time is when the employee started, not when the code arrived.
-        return record(user, ClockEvent.Type.IN, ok.createdAt(), verified);
+        OtpService.Verified ok = otp.verify(challengeId, user, PURPOSE, code);
+        return tx.execute(status -> {
+            if (openCheckIn(user.getId()).isPresent()) {
+                throw new BusinessRuleException("You are already checked in.");
+            }
+            Verified verified = json.readValue(ok.contextJson(), Verified.class);
+            // Arrival time is when the employee started, not when the code arrived.
+            return record(user, ClockEvent.Type.IN, ok.createdAt(), verified);
+        });
     }
 
     @Transactional

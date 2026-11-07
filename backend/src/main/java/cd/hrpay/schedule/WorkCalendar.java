@@ -48,9 +48,13 @@ public class WorkCalendar {
     public List<DayPlan> plan(AppUser user, LocalDate from, LocalDate to) {
         String country = user.getSite() == null ? "CD" : user.getSite().getCountryCode();
         Set<LocalDate> holidayDates = holidays.observedDates(country, from, to);
+        // One query for the period, newest first: the schedule of a day is the first one in force by then.
+        List<UserSchedule> history = assignments.findByUserIdOrderByEffectiveFromDesc(user.getId());
         List<DayPlan> result = new ArrayList<>();
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            Optional<WorkSchedule> schedule = scheduleOn(user.getId(), d);
+            LocalDate day0 = d;
+            Optional<WorkSchedule> schedule = history.stream().filter(a -> !a.getEffectiveFrom().isAfter(day0)).findFirst()
+                    .map(UserSchedule::getSchedule);
             boolean holiday = holidayDates.contains(d);
             if (schedule.isEmpty()) {
                 result.add(new DayPlan(d, false, holiday, null, null, false, null, 0, false, 0, 0, false, false, null));
