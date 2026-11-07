@@ -52,17 +52,18 @@ public class SiteController {
             boolean gpsRequired,
             @Min(5) @Max(5_000) int maxAccuracyM,
             boolean active,
+            Boolean qrRequired,
             @NotNull List<@Valid IpRangeInput> ipRanges) {}
 
     public record IpRangeView(Long id, String cidr, String label) {}
 
     public record SiteView(Long id, String code, String name, String countryCode, String timeZone,
                            BigDecimal centerLat, BigDecimal centerLng, Integer radiusM, boolean gpsRequired,
-                           int maxAccuracyM, boolean active, List<IpRangeView> ipRanges) {
+                           int maxAccuracyM, boolean active, boolean qrRequired, List<IpRangeView> ipRanges) {
         static SiteView of(Site s) {
             return new SiteView(s.getId(), s.getCode(), s.getName(), s.getCountryCode(), s.getTimeZone(),
                     s.getCenterLat(), s.getCenterLng(), s.getRadiusM(), s.isGpsRequired(), s.getMaxAccuracyM(),
-                    s.isActive(), s.getIpRanges().stream()
+                    s.isActive(), s.isQrRequired(), s.getIpRanges().stream()
                             .map(r -> new IpRangeView(r.getId(), r.getCidr(), r.getLabel())).toList());
         }
     }
@@ -155,6 +156,7 @@ public class SiteController {
         site.setGpsRequired(body.gpsRequired());
         site.setMaxAccuracyM(body.maxAccuracyM());
         site.setActive(body.active());
+        site.setQrRequired(Boolean.TRUE.equals(body.qrRequired()));
         site.replaceIpRanges(ranges);
     }
 
@@ -168,6 +170,7 @@ public class SiteController {
         m.put("gpsRequired", s.isGpsRequired());
         m.put("maxAccuracyM", s.getMaxAccuracyM());
         m.put("active", s.isActive());
+        m.put("qrRequired", s.isQrRequired());
         m.put("ipRanges", s.getIpRanges().stream().map(SiteIpRange::getCidr).toList());
         return m;
     }

@@ -197,3 +197,47 @@ export function hours(minutes: number) {
   const m = minutes % 60
   return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`
 }
+
+export type ClockEventView = {
+  id: number
+  type: 'IN' | 'OUT'
+  occurredAt: string
+  workDate: string
+  source: 'SELF' | 'HR_MANUAL' | 'AUTO_CLOSE' | 'MISSION'
+  qrVerified: boolean
+  trustedDevice: boolean
+  note: string | null
+}
+
+export type AttendanceStatus = {
+  checkedIn: boolean
+  since: string | null
+  site: { name: string; timeZone: string; qrRequired: boolean; gpsRequired: boolean; maxAccuracyM: number } | null
+  trustedDevice: boolean
+  trustedDeviceName: string | null
+  today: ClockEventView[]
+}
+
+export type StartResponse = {
+  status: 'CHECKED_IN' | 'CODE_SENT'
+  event: ClockEventView | null
+  challengeId: string | null
+  channels: string[] | null
+  expiresAt: string | null
+}
+
+export type Position = { lat: number | null; lng: number | null; accuracyM: number | null }
+
+/** Asks the browser for a fresh, precise position. Resolves with nulls if refused or unavailable. */
+export function currentPosition(): Promise<Position> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve({ lat: null, lng: null, accuracyM: null })
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: Number(p.coords.latitude.toFixed(6)), lng: Number(p.coords.longitude.toFixed(6)), accuracyM: Math.round(p.coords.accuracy) }),
+      () => resolve({ lat: null, lng: null, accuracyM: null }),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  })
+}
+
+export const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

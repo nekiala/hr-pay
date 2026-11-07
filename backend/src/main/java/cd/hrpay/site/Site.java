@@ -35,6 +35,8 @@ public class Site {
     @Column(name = "max_accuracy_m")
     private int maxAccuracyM = 100;
     private boolean active = true;
+    private boolean qrRequired;
+    private String kioskKey;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
@@ -46,6 +48,13 @@ public class Site {
 
     public Site(String code) {
         this.code = code;
+        this.kioskKey = newKioskKey();
+    }
+
+    public static String newKioskKey() {
+        byte[] bytes = new byte[24];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.HexFormat.of().formatHex(bytes);
     }
 
     @PreUpdate
@@ -100,4 +109,8 @@ public class Site {
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public List<SiteIpRange> getIpRanges() { return ipRanges; }
+    public boolean isQrRequired() { return qrRequired; }
+    public void setQrRequired(boolean qrRequired) { this.qrRequired = qrRequired; }
+    public String getKioskKey() { return kioskKey; }
+    public void setKioskKey(String kioskKey) { this.kioskKey = kioskKey; }
 }

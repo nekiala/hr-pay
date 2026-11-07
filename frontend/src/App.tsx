@@ -12,6 +12,10 @@ import AuditPage from './pages/AuditPage'
 import SchedulesPage from './pages/SchedulesPage'
 import HolidaysPage from './pages/HolidaysPage'
 import OvertimePage from './pages/OvertimePage'
+import CheckInPage from './pages/CheckInPage'
+import KioskPage from './pages/KioskPage'
+import OutboxPage from './pages/OutboxPage'
+import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 function Guard({ permission, children }: { permission?: string; children: ReactNode }) {
@@ -22,15 +26,24 @@ function Guard({ permission, children }: { permission?: string; children: ReactN
   return <>{children}</>
 }
 
+/** After signing in, go back to where the user was heading (for example the check-in link from the QR code). */
+function AfterLogin() {
+  const next = new URLSearchParams(useLocation().search).get('next')
+  return <Navigate to={next && next.startsWith('/') && !next.startsWith('//') ? next : '/'} replace />
+}
+
 export default function App() {
   const { me, loading, can, signOut } = useAuth()
+  const location = useLocation()
 
+  // The kiosk screen needs no sign-in.
+  if (location.pathname === '/kiosk') return <Routes><Route path="/kiosk" element={<KioskPage />} /></Routes>
   if (loading) return <p className="center">Loading…</p>
   if (!me) {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />} />
       </Routes>
     )
   }
@@ -42,6 +55,7 @@ export default function App() {
         <span className="brand">HR Pay</span>
         <nav>
           <NavLink to="/" end>Home</NavLink>
+          <NavLink to="/check-in">Check in</NavLink>
           {can('user.read') && <NavLink to="/users">Users</NavLink>}
           {can('role.read') && <NavLink to="/roles">Roles</NavLink>}
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
@@ -49,6 +63,7 @@ export default function App() {
           <NavLink to="/holidays">Holidays</NavLink>
           {can('overtime_policy.manage') && <NavLink to="/overtime">Overtime</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
+          {can('audit.read') && <NavLink to="/outbox">Messages</NavLink>}
         </nav>
         <span className="who">
           <NavLink to="/account">{me.firstName} {me.lastName}</NavLink>
@@ -69,8 +84,10 @@ export default function App() {
           <Route path="/schedules" element={<SchedulesPage />} />
           <Route path="/holidays" element={<HolidaysPage />} />
           <Route path="/overtime" element={<Guard permission="overtime_policy.manage"><OvertimePage /></Guard>} />
+          <Route path="/check-in" element={<CheckInPage />} />
+          <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
-          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<AfterLogin />} />
           <Route path="*" element={<p className="notice">Page not found.</p>} />
         </Routes>
       </main>

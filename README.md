@@ -15,7 +15,7 @@ The design is in the project design document. Delivery is in five phases:
 
 ## Stack
 
-- `backend/`: Spring Boot 4.1, Java 21, PostgreSQL 16, Flyway, Spring Security (session cookie + CSRF, optional Google sign-in)
+- `backend/`: Spring Boot 4.1, Java 26, PostgreSQL 16, Flyway, Spring Security (session cookie + CSRF, optional Google sign-in)
 - `frontend/`: React 19 + TypeScript, Vite
 
 ## Run locally
@@ -24,11 +24,11 @@ The design is in the project design document. Delivery is in five phases:
 docker compose up -d                       # PostgreSQL on :5432 (databases hrpay and hrpay_test)
 
 cd backend
-SAMPLE_DATA=true ./gradlew bootRun         # API on :8080, loads demo users
+SAMPLE_DATA=true ./gradlew bootRun         # API on :8081, loads demo users (needs JDK 26)
 
 cd ../frontend
 npm install && npm run dev                 # app on http://localhost:5173
-                                           # API on another port: SERVER_PORT=8081 for the API, API_URL=http://localhost:8081 npm run dev
+                                           # other API port: SERVER_PORT=9090 ./gradlew bootRun, API_URL=http://localhost:9090 npm run dev
 ```
 
 Sample users (password `Demo@2026!`): `admin@demo.hrpay.cd`, `hr@demo.hrpay.cd`, `finance@demo.hrpay.cd`,

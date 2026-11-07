@@ -96,6 +96,19 @@ public class DataSetup implements ApplicationRunner {
             loadSampleUsers(password);
         }
         assignSampleSchedules();
+        allowLocalIpv6();
+    }
+
+    /** Browsers on the same machine may reach the API over ::1; the sample site allows it too. */
+    private void allowLocalIpv6() {
+        sites.findByCodeIgnoreCase("KIN-HQ").ifPresent(site -> {
+            if (site.getIpRanges().stream().noneMatch(r -> r.getCidr().equals("0:0:0:0:0:0:0:1/128"))) {
+                List<SiteIpRange> ranges = new java.util.ArrayList<>(site.getIpRanges().stream()
+                        .map(r -> new SiteIpRange(r.getCidr(), r.getLabel())).toList());
+                ranges.add(new SiteIpRange("0:0:0:0:0:0:0:1/128", "Local development (IPv6)"));
+                site.replaceIpRanges(ranges);
+            }
+        });
     }
 
     /** Gives every sample user the standard schedule from 1 January 2026, if they have none. */
