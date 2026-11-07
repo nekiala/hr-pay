@@ -79,6 +79,13 @@ Tests run against the `hrpay_test` database, which they wipe and re-create:
 cd backend && ./gradlew test
 ```
 
+## Evaluations and 13th month (phase 3)
+
+- **Templates** set how often people are evaluated (monthly, quarterly, every six months) and the weight of each criterion (weights add up to 100). One active template per grade category; a template with no category applies to everyone else.
+- **Criteria** are scored 0 to 100 by the direct manager, or by the app when the criterion is "from attendance": 100, minus 5 per late day and 10 per absent day in the period (up to today for a period still running).
+- **Flow:** the manager (or HR) starts the evaluation for a period, scores it and submits it. The employee acknowledges it, or disagrees with a comment, which sends it back. The manager can revise and resubmit; HR approves, and must write a decision when the employee contested. Nobody evaluates or approves their own evaluation.
+- **13th month** (settings under Payroll, `THIRTEENTH_*`): base (average or last basic of the year) x the year's score, prorated by months under contract if set. The year's score is the average of the approved evaluations ending in that year, weighted by the months each covers; with none, HR's fallback % is used. It is added as the `THIRTEENTH_MONTH` line (subject to CNSS and IPR by default, editable under Pay elements) in the payroll of the pay month.
+
 ## Configuration
 
 | Variable | Default | Purpose |
