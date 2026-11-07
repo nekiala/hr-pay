@@ -6,6 +6,7 @@ import { ErrorText } from '../components/ErrorText'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const STATUS = { CALCULATED: 'Calculated, waiting for approval', APPROVED: 'Approved, ready to close', CLOSED: 'Closed' }
+type Raise = { id: number; userId: number; userName: string; anniversaryDate: string; years: number; effectiveFrom: string; gradeCode: string; percent: number; raiseAmount: number; oldBasic: number; newBasic: number; currency: string; notifiedAt: string | null }
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '')
 
 export default function PayrollRunsPage() {
@@ -14,13 +15,15 @@ export default function PayrollRunsPage() {
   const [month, setMonth] = useState(lastMonth())
   const [view, setView] = useState<RunView | null>(null)
   const [busy, setBusy] = useState(false)
+  const [raises, setRaises] = useState<Raise[]>([])
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const loadRuns = () => api<PayrollRun[]>('/api/payroll/runs').then(setRuns).catch((e: Error) => setError(e.message))
   const loadView = (m: string) =>
     api<RunView>(`/api/payroll/runs/${m}`).then(setView).catch((e) => { setView(null); if (!(e instanceof ApiError && e.status === 404)) setError(e.message) })
-  useEffect(() => { void loadRuns() }, [])
+  const loadRaises = () => (can('salary.read') ? api<Raise[]>('/api/raises').then(setRaises).catch(() => undefined) : Promise.resolve())
+  useEffect(() => { void loadRuns(); void loadRaises() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void loadView(month) }, [month])
 
   const act = async (path: string, done: string, body?: unknown) => {
@@ -136,6 +139,52 @@ export default function PayrollRunsPage() {
             </div>
           </div>
         </>
+      )}
+
+      {can('salary.read') && (
+        <div className="card">
+          <h3>Anniversary raises</h3>
+          <p className="hint">Applied automatically each morning for permanent staff; the rate and start month are set per grade category under Grades. HR gets one email on the 1st of each month.</p>
+          {raises.length === 0 ? <p className="muted">No raises applied yet.</p> : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Employee</th><th>Anniversary</th><th>Raise</th><th>Basic</th><th>From</th><th>HR told</th></tr></thead>
+                <tbody>
+                  {raises.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.userName}</td>
+                      <td>{r.anniversaryDate} ({r.years} yr)</td>
+                      <td>{money(r.raiseAmount, r.currency)} <span className="muted">({r.percent}% of {r.gradeCode})</span></td>
+                      <td>{money(r.oldBasic, r.currency)} → <strong>{money(r.newBasic, r.currency)}</strong></td>
+                      <td>{r.effectiveFrom}</td>
+                      <td>{r.notifiedAt ? 'Yes' : 'Not yet'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {can('salary.write') && (
+            <div className="row">
+              <button className="secondary" disabled={busy} onClick={async () => {
+                setError(null); setMessage(null)
+                try {
+                  const o = await api<{ applied: Raise[]; skipped: string[] }>('/api/raises/apply', { method: 'POST' })
+                  setMessage(`${o.applied.length} raise(s) applied.${o.skipped.length ? ' To do by hand: ' + o.skipped.join(' ') : ''}`)
+                  await loadRaises()
+                } catch (e) { setError((e as Error).message) }
+              }}>Check today's anniversaries now</button>
+              <button className="secondary" disabled={busy} onClick={async () => {
+                setError(null); setMessage(null)
+                try {
+                  const r = await api<{ listed: number }>('/api/raises/notify', { method: 'POST' })
+                  setMessage(r.listed ? `Email sent to HR listing ${r.listed} raise(s).` : 'No new raise to report.')
+                  await loadRaises()
+                } catch (e) { setError((e as Error).message) }
+              }}>Email HR the list now</button>
+            </div>
+          )}
+        </div>
       )}
     </section>
   )

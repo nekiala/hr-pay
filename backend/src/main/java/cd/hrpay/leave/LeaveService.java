@@ -35,7 +35,7 @@ public class LeaveService {
                             boolean requiresDocument, Integer maxDays, boolean active) {}
 
     public record GradeCategory(long id, String code, String name, BigDecimal annualLeaveDays, boolean active,
-                                BigDecimal anniversaryRaisePercent) {}
+                                BigDecimal anniversaryRaisePercent, String raiseTiming) {}
 
     public record LeaveRequest(long id, long userId, String employeeName, String registrationNo, long leaveTypeId,
                                String leaveType, LocalDate startDate, LocalDate endDate, BigDecimal workingDays,
@@ -82,7 +82,7 @@ public class LeaveService {
     }
 
     public List<GradeCategory> categories() {
-        return jdbc.sql("select id, code, name, annual_leave_days, active, anniversary_raise_percent from grade_category order by code")
+        return jdbc.sql("select id, code, name, annual_leave_days, active, anniversary_raise_percent, raise_timing from grade_category order by code")
                 .query(GradeCategory.class).list();
     }
 

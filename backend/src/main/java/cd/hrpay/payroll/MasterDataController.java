@@ -38,7 +38,8 @@ public class MasterDataController {
     public record OccupationInput(@NotBlank @Pattern(regexp = CODE) String code, @NotBlank @Size(max = 150) String name,
                                   boolean active) {}
 
-    public record RaiseInput(@NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal percent) {}
+    public record RaiseInput(@NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal percent,
+                             @Pattern(regexp = "ANNIVERSARY_MONTH|NEXT_MONTH") String timing) {}
 
     public record ContractInput(@NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT") String contractType,
                                 @NotNull LocalDate startDate, LocalDate endDate, @NotNull Long gradeId, Long occupationId,
@@ -94,6 +95,9 @@ public class MasterDataController {
     @PreAuthorize("hasAuthority('masterdata.manage')")
     public Map<String, BigDecimal> setRaise(@PathVariable long id, @Valid @RequestBody RaiseInput b) {
         masterData.setRaisePercent(id, b.percent());
+        if (b.timing() != null) {
+            masterData.setRaiseTiming(id, b.timing());
+        }
         return Map.of("percent", masterData.raisePercent(id));
     }
 

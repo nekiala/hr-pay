@@ -3,7 +3,7 @@ import { ApiError, api, type GradeCategory, type Grade, type Occupation } from '
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
-type CategoryWithRaise = GradeCategory & { anniversaryRaisePercent?: number }
+type CategoryWithRaise = GradeCategory & { anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH' }
 
 export default function PayrollSettingsPage() {
   const { can } = useAuth()
@@ -47,17 +47,23 @@ export default function PayrollSettingsPage() {
 
       <div className="card">
         <h3>Anniversary raise by grade category</h3>
-        <p className="hint">Each year on a permanent employee's contract anniversary, the basic salary rises by this percentage of their grade's base salary.</p>
+        <p className="hint">Each year on a permanent employee's contract anniversary, the basic salary rises by this percentage of their grade's base salary. The raise is applied automatically each morning, and HR gets one email on the 1st of each month listing the raises.</p>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Category</th><th>Raise (%)</th><th></th></tr></thead>
+            <thead><tr><th>Category</th><th>Raise (%)</th><th>Starts</th><th></th></tr></thead>
             <tbody>
               {categories.map((c) => (
                 <tr key={c.id}>
                   <td>{c.name}</td>
                   <td><input type="number" min={0} max={100} step={0.25} className="narrow-input" disabled={!editable}
                     value={c.anniversaryRaisePercent ?? 0} onChange={(e) => setCategory(c.id, { anniversaryRaisePercent: Number(e.target.value) })} /></td>
-                  <td>{editable && <button className="secondary" onClick={() => void run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0 } }), `${c.code} saved.`)}>Save</button>}</td>
+                  <td>
+                    <select value={c.raiseTiming ?? 'NEXT_MONTH'} disabled={!editable} onChange={(e) => setCategory(c.id, { raiseTiming: e.target.value as CategoryWithRaise['raiseTiming'] })}>
+                      <option value="ANNIVERSARY_MONTH">1st of the anniversary month</option>
+                      <option value="NEXT_MONTH">1st of the following month</option>
+                    </select>
+                  </td>
+                  <td>{editable && <button className="secondary" onClick={() => void run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0, timing: c.raiseTiming ?? 'NEXT_MONTH' } }), `${c.code} saved.`)}>Save</button>}</td>
                 </tr>
               ))}
             </tbody>

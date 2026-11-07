@@ -66,6 +66,14 @@ public class MasterData {
         audit.record("grade_category.raise_percent", "grade_category", categoryId, Map.of("percent", percent));
     }
 
+    @Transactional
+    public void setRaiseTiming(long categoryId, String timing) {
+        if (jdbc.sql("update grade_category set raise_timing = ? where id = ?").params(timing, categoryId).update() == 0) {
+            throw new NotFoundException("Grade category not found.");
+        }
+        audit.record("grade_category.raise_timing", "grade_category", categoryId, Map.of("timing", timing));
+    }
+
     public BigDecimal raisePercent(long categoryId) {
         return jdbc.sql("select anniversary_raise_percent from grade_category where id = ?").param(categoryId)
                 .query(BigDecimal.class).single();

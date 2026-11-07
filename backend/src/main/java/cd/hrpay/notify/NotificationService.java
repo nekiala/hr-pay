@@ -49,7 +49,7 @@ public class NotificationService {
         return List.of(email);
     }
 
-    private Delivery sendEmail(AppUser user, String subject, String body) {
+    public Delivery sendEmail(AppUser user, String subject, String body) {
         JavaMailSender sender = mail.getIfAvailable();
         if (sender == null) {
             record(user, Channel.EMAIL, user.getEmail(), subject, body, "LOGGED", null);
