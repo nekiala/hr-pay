@@ -43,7 +43,9 @@ public class ReadOnlyGuard implements WebMvcConfigurer, HandlerInterceptor {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Support access is read-only: nothing can be changed during a support visit.");
         }
-        if (path.startsWith("/api/auth/") || path.startsWith("/api/billing") || path.equals("/api/privacy/accept")) {
+        // Asking for help and accepting the terms stay possible in a read-only company.
+        if (path.startsWith("/api/auth/") || path.startsWith("/api/billing") || path.equals("/api/privacy/accept")
+                || path.startsWith("/api/tickets") || path.equals("/api/legal/accept")) {
             return true;
         }
         Entitlements.Current current = entitlements.current();

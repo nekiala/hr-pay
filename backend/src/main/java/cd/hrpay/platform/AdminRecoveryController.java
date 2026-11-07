@@ -124,7 +124,7 @@ public class AdminRecoveryController {
                 delivery = messages.email(user, () -> Texts.t("Your HR Pay password was reset"),
                         () -> Texts.t("Hello %s,\n\nYour HR Pay provider's support reset your password, at your company's request. They will give you a temporary password; you choose your own at the next sign-in.\n\nIf nobody at your company asked for this, tell your HR department.", user.getFirstName())).status();
             } else {
-                delivery = resets.send(user, by, request.getRemoteAddr(), true).status();
+                delivery = resets.send(user, by, request.getRemoteAddr(), PasswordResets.Reason.PROVIDER).status();
             }
             if (body.resetTwoStep()) {
                 twoStep.remove(user, by);

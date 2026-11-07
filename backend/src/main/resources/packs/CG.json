@@ -1791,6 +1791,18 @@
     {
      "role_id": 2,
      "permission_code": "lifecycle.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "dashboard.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "dashboard.read"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "dashboard.read"
     }
    ]
   }

@@ -88,16 +88,16 @@ public class PasswordResets {
                 audit.recordAs(key, "auth.password_reset_refused", "user", user.getId(), Map.of("reason", "too_many"));
                 return null;
             }
-            send(user, key, ip, false);
+            send(user, key, ip, Reason.SELF);
             return null;
         }));
     }
 
-    /**
-     * Makes a link for the person and emails it; called inside their company. byProvider changes the email's wording:
-     * the person did not ask for it themselves.
-     */
-    public NotificationService.Delivery send(AppUser user, String by, String ip, boolean byProvider) {
+    /** Why the link is sent: asked for by the person, sent by the provider's support, or the welcome of a new trial. */
+    public enum Reason { SELF, PROVIDER, WELCOME }
+
+    /** Makes a link for the person and emails it; called inside their company. A welcome link lasts 7 days. */
+    public NotificationService.Delivery send(AppUser user, String by, String ip, Reason reason) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -105,11 +105,17 @@ public class PasswordResets {
                 insert into password_reset (user_id, token_hash, expires_at, requested_by, requested_ip)
                 values (?, ?, ?, ?, ?)""")
                 .params(user.getId(), Documents.sha256(token.getBytes(java.nio.charset.StandardCharsets.US_ASCII)),
-                        now().plus(VALID), cut(by, 320), cut(ip, 64))
+                        now().plus(reason == Reason.WELCOME ? Duration.ofDays(7) : VALID), cut(by, 320), cut(ip, 64))
                 .update();
         String link = properties.publicUrl().replaceAll("/+$", "") + "/reset-password?token=" + token;
-        audit.recordAs(by, "auth.password_reset_sent", "user", user.getId(), Map.of("byProvider", byProvider));
-        return messages.email(user, () -> Texts.t("Choose a new HR Pay password"), () -> (byProvider
+        audit.recordAs(by, "auth.password_reset_sent", "user", user.getId(), Map.of("reason", reason.name()));
+        if (reason == Reason.WELCOME) {
+            return messages.email(user, () -> Texts.t("Your HR Pay trial is ready"), () ->
+                    Texts.t("Hello %s,\n\nYour HR Pay trial is ready. Open this link to choose your password and sign in:", user.getFirstName())
+                    + "\n\n" + link + "\n\n"
+                    + Texts.t("The link works once, for 7 days. Your email address is your sign-in name. The set-up guide on the home page takes you through the first steps."));
+        }
+        return messages.email(user, () -> Texts.t("Choose a new HR Pay password"), () -> (reason == Reason.PROVIDER
                 ? Texts.t("Hello %s,\n\nYour HR Pay provider's support sent you this link to choose a new password, at your company's request.", user.getFirstName())
                 : Texts.t("Hello %s,\n\nSomeone asked to choose a new password for your HR Pay account. If it was you, open this link:", user.getFirstName()))
                 + "\n\n" + link + "\n\n"

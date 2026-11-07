@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HR Pay · Pointage, congés et paie pour la RDC et le Congo</title>
+<meta name="description" content="Pointage, congés, évaluations et paie conforme pour les entreprises de la RDC et de la République du Congo. Essai gratuit de 30 jours.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root { --bg:#f7f8fa; --surface:#fff; --ink:#111827; --muted:#5b6472; --border:#e3e6ea; --accent:#0f766e; --accent-ink:#fff; --soft:#e6f4f2; }
+@media (prefers-color-scheme: dark) { :root { --bg:#0f1316; --surface:#171c20; --ink:#eef1f3; --muted:#a2acb6; --border:#2a3238; --accent:#2bb3a3; --accent-ink:#06201d; --soft:#123330; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color:var(--accent); }
+.wrap { max-width:1080px; margin:0 auto; padding:0 20px; }
+header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 0; }
+.brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:19px; color:var(--ink); text-decoration:none; }
+.brand img { width:30px; height:30px; }
+nav { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn { display:inline-block; padding:10px 18px; border-radius:8px; font-weight:600; text-decoration:none; border:1px solid var(--border); color:var(--ink); background:var(--surface); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+.lang { background:none; border:0; color:var(--muted); cursor:pointer; font:inherit; padding:8px; }
+.hero { padding:56px 0 40px; display:grid; gap:20px; }
+.hero h1 { font-size:clamp(30px, 5vw, 48px); line-height:1.15; letter-spacing:-.02em; margin:0; max-width:18ch; }
+.hero p { font-size:18px; color:var(--muted); max-width:60ch; margin:0; }
+.hero .actions { display:flex; gap:10px; flex-wrap:wrap; }
+.grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; }
+.card h3 { margin:0 0 6px; font-size:17px; }
+.card p { margin:0; color:var(--muted); font-size:15px; }
+section { padding:36px 0; }
+section > h2 { font-size:26px; margin:0 0 18px; letter-spacing:-.01em; }
+.band { background:var(--soft); border-radius:16px; padding:28px; display:grid; gap:12px; }
+.band h2 { margin:0; }
+ul.ticks { padding:0; margin:0; list-style:none; display:grid; gap:8px; }
+ul.ticks li::before { content:"✓"; color:var(--accent); font-weight:700; margin-right:8px; }
+footer { border-top:1px solid var(--border); margin-top:40px; padding:24px 0 40px; color:var(--muted); font-size:14px; display:flex; gap:16px; flex-wrap:wrap; justify-content:space-between; }
+footer a { color:var(--muted); margin-right:14px; }
+[hidden] { display:none !important; }
+</style>
+</head>
+<!-- Set the two addresses once: the app (sign-in, trial form, status, terms) and the demo server. -->
+<body data-app="https://app.example.com" data-demo="https://demo.example.com">
+
+<div class="wrap">
+<header>
+  <a class="brand" href="#"><img src="favicon.svg" alt="">HR Pay</a>
+  <nav>
+    <button class="lang" type="button" data-switch>English</button>
+    <a class="btn" data-app-path="/login"><span lang="fr">Se connecter</span><span lang="en" hidden>Sign in</span></a>
+    <a class="btn primary" data-app-path="/trial"><span lang="fr">Essai gratuit</span><span lang="en" hidden>Free trial</span></a>
+  </nav>
+</header>
+
+<!-- ===================================== Français ===================================== -->
+<main lang="fr">
+  <div class="hero">
+    <h1>Pointage, congés et paie, au même endroit.</h1>
+    <p>HR Pay suit la présence de vos équipes et calcule une paie conforme en RDC et en République du Congo : CNSS, IPR, INPP, ONEM, allocations familiales, en monnaie locale et en dollars.</p>
+    <div class="actions">
+      <a class="btn primary" data-app-path="/trial">Essayer gratuitement 30 jours</a>
+      <a class="btn" data-demo-path="/login">Voir la démo</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>Ce que fait HR Pay</h2>
+    <div class="grid">
+      <div class="card"><h3>Pointage fiable</h3><p>Depuis le téléphone avec la position GPS ou le réseau du site, un code à usage unique, ou une pointeuse ZKTeco. Même sans connexion.</p></div>
+      <div class="card"><h3>Congés et missions</h3><p>Demandes et approbations selon votre organigramme, soldes par catégorie de grade, jours fériés tels que fixés par le gouvernement.</p></div>
+      <div class="card"><h3>Paie conforme</h3><p>Barèmes, cotisations et allocations du pays, heures supplémentaires approuvées, prêts, 13e mois, bulletins PDF, fichiers de virement et déclarations.</p></div>
+      <div class="card"><h3>Évaluations</h3><p>Critères pondérés, note du responsable, validation RH et contestation par l'employé.</p></div>
+      <div class="card"><h3>Dossier de l'employé</h3><p>Embauches et départs guidés, documents, contrats signés par code, attestations.</p></div>
+      <div class="card"><h3>Tableaux de bord</h3><p>Effectif, rotation, absence et coût de la paie par direction, mois par mois.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="band">
+      <h2>En ligne ou sur vos serveurs</h2>
+      <ul class="ticks">
+        <li>En ligne : nous hébergeons, sauvegardons et mettons à jour.</li>
+        <li>Sur vos serveurs : une licence, et vos données ne quittent pas l'entreprise.</li>
+        <li>Prix selon la taille de l'entreprise ; demandez l'essai et nous vous envoyons l'offre.</li>
+        <li>En français et en anglais, sur ordinateur et sur téléphone.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Pour démarrer</h2>
+    <div class="grid">
+      <div class="card"><h3>1. Demandez l'essai</h3><p>Quelques informations sur votre entreprise. Nous vous contactons pour l'ouvrir.</p></div>
+      <div class="card"><h3>2. Suivez le guide</h3><p>Le guide de mise en place vous mène de l'entreprise vide à la première paie.</p></div>
+      <div class="card"><h3>3. Importez vos employés</h3><p>Depuis Excel, puis vérifiez les grades et les taux avec votre comptable.</p></div>
+    </div>
+  </section>
+</main>
+
+<!-- ===================================== English ====================================== -->
+<main lang="en" hidden>
+  <div class="hero">
+    <h1>Attendance, leave and payroll, in one place.</h1>
+    <p>HR Pay tracks your teams' attendance and runs compliant payroll in DR Congo and the Republic of the Congo: CNSS, income tax, INPP, ONEM and family allowances, in local currency and US dollars.</p>
+    <div class="actions">
+      <a class="btn primary" data-app-path="/trial">Try it free for 30 days</a>
+      <a class="btn" data-demo-path="/login">See the demo</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>What HR Pay does</h2>
+    <div class="grid">
+      <div class="card"><h3>Reliable check-in</h3><p>From the phone with GPS or the site's network, a one-time code, or a ZKTeco clock. Even without a connection.</p></div>
+      <div class="card"><h3>Leave and missions</h3><p>Requests and approvals that follow your org chart, balances by grade category, public holidays as the government sets them.</p></div>
+      <div class="card"><h3>Compliant payroll</h3><p>The country's tax bands, contributions and allowances, approved overtime, loans, 13th month, PDF payslips, bank files and declarations.</p></div>
+      <div class="card"><h3>Evaluations</h3><p>Weighted criteria, the manager's score, HR approval and the employee's right to contest.</p></div>
+      <div class="card"><h3>Employee records</h3><p>Guided hiring and departures, documents, contracts signed with a code, certificates.</p></div>
+      <div class="card"><h3>Dashboards</h3><p>Headcount, turnover, absence and payroll cost by direction, month by month.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="band">
+      <h2>Online or on your own servers</h2>
+      <ul class="ticks">
+        <li>Online: we host, back up and update it.</li>
+        <li>On your servers: a licence, and your data never leaves the company.</li>
+        <li>Priced by company size; ask for a trial and we send you the offer.</li>
+        <li>In French and English, on computers and phones.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Getting started</h2>
+    <div class="grid">
+      <div class="card"><h3>1. Ask for a trial</h3><p>A few details about your company. We contact you to open it.</p></div>
+      <div class="card"><h3>2. Follow the guide</h3><p>The set-up guide takes you from an empty company to the first payroll.</p></div>
+      <div class="card"><h3>3. Import your people</h3><p>From Excel, then check grades and rates with your accountant.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>
+    <a data-app-path="/status"><span lang="fr">État du service</span><span lang="en" hidden>Service status</span></a>
+    <a data-app-path="/legal/terms"><span lang="fr">Conditions d'utilisation</span><span lang="en" hidden>Terms of service</span></a>
+    <a data-app-path="/legal/privacy-policy"><span lang="fr">Confidentialité</span><span lang="en" hidden>Privacy policy</span></a>
+    <a data-app-path="/legal/dpa"><span lang="fr">Traitement des données</span><span lang="en" hidden>Data processing</span></a>
+    <a data-app-path="/legal/sla"><span lang="fr">Niveaux de service</span><span lang="en" hidden>Service levels</span></a>
+  </div>
+  <div>© HR Pay</div>
+</footer>
+</div>
+
+<script>
+(function () {
+  var app = document.body.dataset.app, demo = document.body.dataset.demo;
+  var lang = /(^|[?&])lang=en/.test(location.search) ? 'en'
+    : /(^|[?&])lang=fr/.test(location.search) ? 'fr'
+    : ((navigator.language || 'fr').slice(0, 2) === 'en' ? 'en' : 'fr');
+  function apply() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[lang]:not(html)').forEach(function (el) { el.hidden = el.getAttribute('lang') !== lang; });
+    document.querySelectorAll('[data-app-path]').forEach(function (a) {
+      a.href = app + a.dataset.appPath;
+    });
+    document.querySelectorAll('[data-demo-path]').forEach(function (a) { a.href = demo + a.dataset.demoPath; });
+    document.querySelector('[data-switch]').textContent = lang === 'fr' ? 'English' : 'Français';
+  }
+  document.querySelector('[data-switch]').addEventListener('click', function () { lang = lang === 'fr' ? 'en' : 'fr'; apply(); });
+  apply();
+})();
+</script>
+</body>
+</html>

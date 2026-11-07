@@ -125,3 +125,15 @@ no one out.
 ## Settings
 
 All settings are in `.env`; `.env.example` explains each one. Never commit `.env`: it holds the passwords.
+
+## Demo server
+
+A public demo runs on its own server, never on the production one, with:
+
+```
+SAMPLE_DATA=true
+DEMO_MODE=true
+TWO_STEP_ENFORCED=false
+```
+
+`DEMO_MODE` refuses to start without `SAMPLE_DATA`. At every start it **erases the whole database** and loads the sample company again, and it stops the app at 03:00 (Kinshasa time) so the restart policy brings it back fresh each night. The sign-in page then shows the demo accounts, and every page shows a "demo" banner. Do not point it at a database that holds anything worth keeping.

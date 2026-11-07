@@ -2,6 +2,11 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import HelpPage, { ArticlePage, TicketPage, WhatsNewPage } from './pages/HelpPage'
+import SetupPage from './pages/SetupPage'
+import DashboardsPage from './pages/DashboardsPage'
+import { LegalPage, StatusPage, TermsGate, TrialPage } from './pages/PublicPages'
+import { IncidentsPage, LegalAdminPage, SupportDeskPage, TrialsPage } from './pages/PlatformDeskPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AccountPage from './pages/AccountPage'
 import PersonalDataPage from './pages/PersonalDataPage'
@@ -129,6 +134,16 @@ export default function App() {
   if (location.pathname === '/kiosk') return <Routes><Route path="/kiosk" element={<KioskPage />} /></Routes>
   // The page an emailed link opens: it works signed out, and setting the password signs every browser out.
   if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
+  // Pages anyone can open, signed in or not: the status page, the terms and the trial request.
+  if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname.startsWith('/legal/')) {
+    return (
+      <Routes>
+        <Route path="/status" element={<StatusPage />} />
+        <Route path="/trial" element={<TrialPage />} />
+        <Route path="/legal/:kind" element={<LegalPage />} />
+      </Routes>
+    )
+  }
   if (loading) return <p className="center">{t('Loading…')}</p>
   if (!me) {
     return (
@@ -145,6 +160,17 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/help" element={<HelpPage />} />
+          <Route path="/help/:id" element={<ArticlePage />} />
+          <Route path="/support/:id" element={<TicketPage />} />
+          <Route path="/whats-new" element={<WhatsNewPage />} />
+          <Route path="/setup" element={<Guard permission="company.manage"><SetupPage /></Guard>} />
+          <Route path="/dashboards" element={<Guard permission="dashboard.read"><DashboardsPage /></Guard>} />
+          <Route path="/platform/support" element={<Guard permission="platform.manage"><SupportDeskPage /></Guard>} />
+          <Route path="/platform/support/:id" element={<Guard permission="platform.manage"><TicketPage provider /></Guard>} />
+          <Route path="/platform/trials" element={<Guard permission="platform.manage"><TrialsPage /></Guard>} />
+          <Route path="/platform/legal" element={<Guard permission="platform.manage"><LegalAdminPage /></Guard>} />
+          <Route path="/platform/status" element={<Guard permission="platform.manage"><IncidentsPage /></Guard>} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
@@ -212,6 +238,7 @@ export default function App() {
           <Route path="*" element={<p className="notice">{t('Page not found.')}</p>} />
         </Routes>
       <PrivacyGate />
+      <TermsGate />
     </Shell>
   )
 }
