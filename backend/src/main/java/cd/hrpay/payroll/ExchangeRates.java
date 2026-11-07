@@ -64,6 +64,23 @@ public class ExchangeRates {
                 .params(currency, days).query(Rate.class).list();
     }
 
+    /**
+     * The price of one US dollar in the local currency, on or before the date. In CDF it is the BCC's USD rate; in
+     * another currency (XAF) it is worked out from the BCC's rates of both, which are in CDF.
+     */
+    public Rate local(String local, LocalDate date) {
+        Rate usd = on("USD", date).orElseThrow(() -> new BusinessRuleException(
+                "No USD exchange rate is stored for " + date + " or before. Enter the BCC rate first."));
+        if ("CDF".equals(local)) {
+            return usd;
+        }
+        Rate other = on(local, date).orElseThrow(() -> new BusinessRuleException(
+                "No " + local + " exchange rate is stored for " + date + " or before. Enter the BCC rate first."));
+        BigDecimal perUsd = usd.cdfPerUnit().divide(other.cdfPerUnit(), 6, RoundingMode.HALF_UP);
+        return new Rate(usd.id(), "USD", usd.rateDate().isAfter(other.rateDate()) ? other.rateDate() : usd.rateDate(),
+                perUsd, usd.source(), usd.sourceUrl(), usd.enteredBy(), usd.fetchedAt());
+    }
+
     /** The latest rate on or before the date. */
     public Optional<Rate> on(String currency, LocalDate date) {
         return jdbc.sql("""
@@ -72,15 +89,16 @@ public class ExchangeRates {
                 .params(currency, date).query(Rate.class).optional();
     }
 
-    /** Converts with the CDF-per-unit rate given; CDF is the pivot. Rounded to 2 decimals. */
+    /** Converts between US dollars and the local currency at the rate given (local units per dollar). Rounded to 2 decimals. */
     public static BigDecimal convert(BigDecimal amount, String from, String to, BigDecimal usdCdf) {
         if (from.equals(to)) {
             return amount.setScale(2, RoundingMode.HALF_UP);
         }
-        if (from.equals("USD") && to.equals("CDF")) {
+        // The other currency is the company's local one (CDF or XAF), priced at usdCdf for one dollar.
+        if (from.equals("USD")) {
             return amount.multiply(usdCdf).setScale(2, RoundingMode.HALF_UP);
         }
-        if (from.equals("CDF") && to.equals("USD")) {
+        if (to.equals("USD")) {
             return amount.divide(usdCdf, 2, RoundingMode.HALF_UP);
         }
         throw new BusinessRuleException("Cannot convert " + from + " to " + to + ".");

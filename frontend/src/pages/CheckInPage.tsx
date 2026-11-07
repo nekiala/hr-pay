@@ -4,8 +4,9 @@ import { api, currentPosition, time, type AttendanceStatus, type StartResponse }
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
+import { t } from '../i18n'
 
-const sourceLabel = { SELF: '', HR_MANUAL: ' (entered by HR)', AUTO_CLOSE: ' (closed automatically)', MISSION: ' (mission)' }
+const sourceLabel = { SELF: '', HR_MANUAL: t(' (entered by HR)'), AUTO_CLOSE: t(' (closed automatically)'), MISSION: t(' (mission)') }
 
 export default function CheckInPage() {
   const { signOut } = useAuth()
@@ -31,7 +32,7 @@ export default function CheckInPage() {
   }
 
   const presence = async () => {
-    setBusy('Getting your location…')
+    setBusy(t('Getting your location…'))
     const none = { lat: null, lng: null, accuracyM: null }
     const onMission = status?.checkedIn && status.mission
     // On a mission the location is recorded when available but not required.
@@ -46,12 +47,12 @@ export default function CheckInPage() {
     setDone(null)
     try {
       const body = await presence()
-      setBusy('Checking…')
+      setBusy(t('Checking…'))
       const result = await api<StartResponse>('/api/attendance/check-in', { method: 'POST', body })
-      if (result.status === 'CHECKED_IN') await finished(`Checked in at ${time(result.event!.occurredAt, status?.site?.timeZone)}.`)
+      if (result.status === 'CHECKED_IN') await finished(t('Checked in at {a}.', { a: time(result.event!.occurredAt, status?.site?.timeZone) }))
       else setChallenge(result)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Check-in failed.')
+      setError(e instanceof Error ? e.message : t('Check-in failed.'))
     } finally {
       setBusy(null)
     }
@@ -60,63 +61,63 @@ export default function CheckInPage() {
   const confirm = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
-    setBusy('Verifying the code…')
+    setBusy(t('Verifying the code…'))
     try {
       const event = await api<{ occurredAt: string }>('/api/attendance/check-in/confirm', {
         method: 'POST', body: { challengeId: challenge!.challengeId, code },
       })
-      await finished(`Checked in at ${time(event.occurredAt, status?.site?.timeZone)}.`)
+      await finished(t('Checked in at {a}.', { a: time(event.occurredAt, status?.site?.timeZone) }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Wrong code.')
+      setError(err instanceof Error ? err.message : t('Wrong code.'))
     } finally {
       setBusy(null)
     }
   }
 
   const checkOut = async () => {
-    if (!confirm_('End your day now?')) return
+    if (!confirm_(t('End your day now?'))) return
     setError(null)
     setDone(null)
     try {
       const body = await presence()
-      setBusy('Checking…')
+      setBusy(t('Checking…'))
       const event = await api<{ occurredAt: string }>('/api/attendance/check-out', { method: 'POST', body })
-      await finished(`Day ended at ${time(event.occurredAt, status?.site?.timeZone)}.`)
+      await finished(t('Day ended at {a}.', { a: time(event.occurredAt, status?.site?.timeZone) }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Check-out failed.')
+      setError(e instanceof Error ? e.message : t('Check-out failed.'))
     } finally {
       setBusy(null)
     }
   }
 
   if (!status) return <ErrorText error={error} />
-  if (!status.site) return <p className="notice">You are not assigned to a site yet. Contact HR.</p>
+  if (!status.site) return <p className="notice">{t('You are not assigned to a site yet. Contact HR.')}</p>
 
   return (
     <section className="narrow">
       <div className="card checkin">
-        <p className="muted">{status.site.name}{status.trustedDevice ? ` · office computer: ${status.trustedDeviceName}` : ''}</p>
-        <h2>{status.checkedIn ? `Checked in since ${time(status.since!, status?.site?.timeZone)}` : 'Not checked in'}</h2>
-        {qrToken && <p className="success small">QR code scanned.</p>}
+        <p className="muted">{status.site.name}{status.trustedDevice ? t(' · office computer: {a}', { a: status.trustedDeviceName }) : ''}</p>
+        <h2>{status.checkedIn ? t('Checked in since {a}', { a: time(status.since!, status?.site?.timeZone) }) : t('Not checked in')}</h2>
+        {qrToken && <p className="success small">{t('QR code scanned.')}</p>}
         {status.mission && status.checkedIn && (
-          <p className="hint">You are on an approved mission ({status.mission.location}, {status.mission.startTime.slice(0, 5)}–{status.mission.endTime.slice(0, 5)}). You can end your day from there.</p>
+          <p className="hint">{t('You are on an approved mission (')}{status.mission.location}, {status.mission.startTime.slice(0, 5)}–{status.mission.endTime.slice(0, 5)}{t('). You can end your day from there.')}</p>
         )}
         {status.site.qrRequired && !qrToken && !status.trustedDevice && !status.checkedIn && (
-          <p className="hint">Scan the QR code on the screen at the entrance to check in.</p>
+          <p className="hint">{t('Scan the QR code on the screen at the entrance to check in.')}</p>
         )}
 
         {challenge ? (
           <Form onSubmit={confirm} className="stack">
-            <p>We sent a 6-digit code by {challenge.channels?.map((c) => (c === 'EMAIL' ? 'email' : 'WhatsApp')).join(' and ')}.</p>
+            <p>{t('We sent a 6-digit code by')}{' '}{challenge.channels?.map((c) => (c === 'EMAIL' ? 'email' : t('WhatsApp'))).join(' and ')}.</p>
             <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} className="code-input" autoFocus />
-            <Button type="submit" disabled={code.length !== 6} pending={!!busy} pendingText={busy ?? undefined}>Confirm arrival</Button>
-            <Button type="button" className="secondary" onClick={() => setChallenge(null)}>Cancel</Button>
+            <Button type="submit" disabled={code.length !== 6} pending={!!busy} pendingText={busy ?? undefined}>{t('Confirm arrival')}</Button>
+            <Button type="button" className="secondary" onClick={() => setChallenge(null)}>{t('Cancel')}</Button>
           </Form>
         ) : status.checkedIn ? (
-          <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkOut()}>End my day</Button>
+          <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkOut()}>{t('End my day')}</Button>
         ) : (
-          <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkIn()}>Check in</Button>
+          <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkIn()}>{t('Check in')}</Button>
         )}
 
         <ErrorText error={error} />
@@ -124,10 +125,10 @@ export default function CheckInPage() {
 
         {status.today.length > 0 && (
           <>
-            <h3>Today</h3>
+            <h3>{t('Today')}</h3>
             <ul className="events">
               {status.today.map((e) => (
-                <li key={e.id}>{e.type === 'IN' ? 'Arrived' : 'Left'} at {time(e.occurredAt, status?.site?.timeZone)}{sourceLabel[e.source]}</li>
+                <li key={e.id}>{e.type === 'IN' ? t('Arrived') : t('Left')}{' '}{t('at')}{' '}{time(e.occurredAt, status?.site?.timeZone)}{sourceLabel[e.source]}</li>
               ))}
             </ul>
           </>

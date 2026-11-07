@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
+import { t, locale } from '../i18n'
 
 type Form = Omit<Site, 'id'>
 
@@ -37,7 +38,7 @@ export default function SiteFormPage() {
   const useMyLocation = () => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => setForm({ ...form, centerLat: Number(pos.coords.latitude.toFixed(6)), centerLng: Number(pos.coords.longitude.toFixed(6)) }),
-      () => setError('Could not read your location.'),
+      () => setError(t('Could not read your location.')),
       { enableHighAccuracy: true },
     )
   }
@@ -53,59 +54,58 @@ export default function SiteFormPage() {
       else {
         const { id: _ignored, ...rest } = saved
         setForm(rest)
-        setMessage('Saved.')
+        setMessage(t('Saved.'))
       }
     } catch (err) {
-      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
     }
   }
 
   return (
     <section className="narrow">
-      <h2>{isNew ? 'New site' : form.name}</h2>
+      <h2>{isNew ? t('New site') : form.name}</h2>
       <Form className="card" onSubmit={save}>
         <fieldset disabled={!editable}>
           <div className="grid2">
-            <label>Code<input value={form.code} onChange={(e) => update('code', e.target.value.toUpperCase())} required disabled={!isNew} /></label>
-            <label>Name<input value={form.name} onChange={(e) => update('name', e.target.value)} required /></label>
+            <label>{t('Code')}<input value={form.code} onChange={(e) => update('code', e.target.value.toUpperCase())} required disabled={!isNew} /></label>
+            <label>{t('Name')}<input value={form.name} onChange={(e) => update('name', e.target.value)} required /></label>
           </div>
           <div className="grid2">
-            <label>Country<input value={form.countryCode} maxLength={2} onChange={(e) => update('countryCode', e.target.value.toUpperCase())} required /></label>
-            <label>Time zone
-              <select value={form.timeZone} onChange={(e) => update('timeZone', e.target.value)}>
+            <label>{t('Country')}<input value={form.countryCode} maxLength={2} onChange={(e) => update('countryCode', e.target.value.toUpperCase())} required /></label>
+            <label>{t('Time zone')}<select value={form.timeZone} onChange={(e) => update('timeZone', e.target.value)}>
                 {[...new Set([...zones, form.timeZone])].map((z) => <option key={z}>{z}</option>)}
               </select>
             </label>
           </div>
 
-          <h3>Allowed networks</h3>
-          <p className="hint">Check-ins are accepted only from these public IP addresses or ranges (for example 41.243.16.0/24).</p>
+          <h3>{t('Allowed networks')}</h3>
+          <p className="hint">{t('Check-ins are accepted only from these public IP addresses or ranges (for example 41.243.16.0/24).')}</p>
           {form.ipRanges.map((r, i) => (
             <div className="row" key={i}>
-              <input placeholder="IP or CIDR" value={r.cidr} onChange={(e) => setRange(i, { cidr: e.target.value })} />
-              <input placeholder="Label" value={r.label ?? ''} onChange={(e) => setRange(i, { label: e.target.value })} />
-              <Button type="button" className="secondary" onClick={() => update('ipRanges', form.ipRanges.filter((_, j) => j !== i))}>Remove</Button>
+              <input placeholder={t('IP or CIDR')} value={r.cidr} onChange={(e) => setRange(i, { cidr: e.target.value })} />
+              <input placeholder={t('Label')} value={r.label ?? ''} onChange={(e) => setRange(i, { label: e.target.value })} />
+              <Button type="button" className="secondary" onClick={() => update('ipRanges', form.ipRanges.filter((_, j) => j !== i))}>{t('Remove')}</Button>
             </div>
           ))}
-          <Button type="button" className="secondary" onClick={() => update('ipRanges', [...form.ipRanges, { cidr: '', label: '' }])}>Add network</Button>
+          <Button type="button" className="secondary" onClick={() => update('ipRanges', [...form.ipRanges, { cidr: '', label: '' }])}>{t('Add network')}</Button>
 
-          <h3>GPS area</h3>
+          <h3>{t('GPS area')}</h3>
           <div className="grid3">
-            <label>Latitude<input type="number" step="0.000001" value={form.centerLat ?? ''} onChange={(e) => update('centerLat', num(e.target.value))} /></label>
-            <label>Longitude<input type="number" step="0.000001" value={form.centerLng ?? ''} onChange={(e) => update('centerLng', num(e.target.value))} /></label>
-            <label>Radius (m)<input type="number" min={10} value={form.radiusM ?? ''} onChange={(e) => update('radiusM', num(e.target.value))} /></label>
+            <label>{t('Latitude')}<input type="number" step="0.000001" value={form.centerLat ?? ''} onChange={(e) => update('centerLat', num(e.target.value))} /></label>
+            <label>{t('Longitude')}<input type="number" step="0.000001" value={form.centerLng ?? ''} onChange={(e) => update('centerLng', num(e.target.value))} /></label>
+            <label>{t('Radius (m)')}<input type="number" min={10} value={form.radiusM ?? ''} onChange={(e) => update('radiusM', num(e.target.value))} /></label>
           </div>
-          <Button type="button" className="secondary" onClick={useMyLocation}>Use my current location</Button>
+          <Button type="button" className="secondary" onClick={useMyLocation}>{t('Use my current location')}</Button>
           <div className="grid2">
-            <label className="check"><input type="checkbox" checked={form.gpsRequired} onChange={(e) => update('gpsRequired', e.target.checked)} />GPS required at check-in</label>
-            <label>Maximum GPS accuracy (m)<input type="number" min={5} value={form.maxAccuracyM} onChange={(e) => update('maxAccuracyM', Number(e.target.value))} /></label>
+            <label className="check"><input type="checkbox" checked={form.gpsRequired} onChange={(e) => update('gpsRequired', e.target.checked)} />{t('GPS required at check-in')}</label>
+            <label>{t('Maximum GPS accuracy (m)')}<input type="number" min={5} value={form.maxAccuracyM} onChange={(e) => update('maxAccuracyM', Number(e.target.value))} /></label>
           </div>
-          <label className="check"><input type="checkbox" checked={form.qrRequired} onChange={(e) => update('qrRequired', e.target.checked)} />Employees must scan the office QR code to check in</label>
-          <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => update('active', e.target.checked)} />Site is active</label>
+          <label className="check"><input type="checkbox" checked={form.qrRequired} onChange={(e) => update('qrRequired', e.target.checked)} />{t('Employees must scan the office QR code to check in')}</label>
+          <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => update('active', e.target.checked)} />{t('Site is active')}</label>
         </fieldset>
         <ErrorText error={error} />
         {message && <p className="success">{message}</p>}
-        {editable && <Button type="submit">{isNew ? 'Create site' : 'Save changes'}</Button>}
+        {editable && <Button type="submit">{isNew ? t('Create site') : t('Save changes')}</Button>}
       </Form>
       {!isNew && editable && <OfficeTools siteId={Number(id)} />}
     </section>
@@ -126,20 +126,20 @@ function OfficeTools({ siteId }: { siteId: number }) {
   const run = async (action: () => Promise<void>) => {
     setError(null)
     setMessage(null)
-    try { await action() } catch (e) { setError(e instanceof Error ? e.message : 'Something went wrong.') }
+    try { await action() } catch (e) { setError(e instanceof Error ? e.message : t('Something went wrong.')) }
   }
   const showLink = () => run(async () => setLink((await api<{ url: string }>(`/api/sites/${siteId}/kiosk-link`)).url))
   const newKey = () => ask({
-    title: 'Create a new kiosk link?', message: 'Screens using the old kiosk link will stop working.', confirmLabel: 'Create a new link', danger: true,
+    title: t('Create a new kiosk link?'), message: t('Screens using the old kiosk link will stop working.'), confirmLabel: t('Create a new link'), danger: true,
     onConfirm: () => run(async () => {
       setLink((await api<{ url: string }>(`/api/sites/${siteId}/kiosk-key`, { method: 'POST' })).url)
-      setMessage('New kiosk link created.')
+      setMessage(t('New kiosk link created.'))
     }),
   })
   const register = () => run(async () => {
-    await api(`/api/sites/${siteId}/devices`, { method: 'POST', body: { name: name.trim() || 'Office computer' } })
+    await api(`/api/sites/${siteId}/devices`, { method: 'POST', body: { name: name.trim() || t('Office computer') } })
     setName('')
-    setMessage('This computer is now an office device. Employees who sign in here skip the GPS and QR checks.')
+    setMessage(t('This computer is now an office device. Employees who sign in here skip the GPS and QR checks.'))
     await load()
   })
   const deactivate = (d: TrustedDevice) => run(async () => {
@@ -149,30 +149,30 @@ function OfficeTools({ siteId }: { siteId: number }) {
 
   return (
     <div className="card">
-      <h3>Kiosk QR screen</h3>
-      <p className="hint">Open this link on a screen at the entrance. It shows a QR code that changes every 30 seconds.</p>
+      <h3>{t('Kiosk QR screen')}</h3>
+      <p className="hint">{t('Open this link on a screen at the entrance. It shows a QR code that changes every 30 seconds.')}</p>
       <div className="row">
-        <Button type="button" className="secondary" onClick={showLink}>Show kiosk link</Button>
-        <Button type="button" className="secondary" onClick={newKey}>Create a new link</Button>
+        <Button type="button" className="secondary" onClick={showLink}>{t('Show kiosk link')}</Button>
+        <Button type="button" className="secondary" onClick={newKey}>{t('Create a new link')}</Button>
       </div>
       {link && <p><a href={link} target="_blank" rel="noreferrer">{link}</a></p>}
 
-      <h3>Office devices</h3>
-      <p className="hint">A shared office computer lets employees without a smartphone check in. The network check still applies.</p>
+      <h3>{t('Office devices')}</h3>
+      <p className="hint">{t('A shared office computer lets employees without a smartphone check in. The network check still applies.')}</p>
       <div className="row">
-        <input placeholder="Name, for example Reception laptop" value={name} onChange={(e) => setName(e.target.value)} />
-        <Button type="button" onClick={register}>Register this computer</Button>
+        <input placeholder={t('Name, for example Reception laptop')} value={name} onChange={(e) => setName(e.target.value)} />
+        <Button type="button" onClick={register}>{t('Register this computer')}</Button>
       </div>
       {devices.length > 0 && (
         <table>
-          <thead><tr><th>Name</th><th>Registered</th><th>Last used</th><th></th></tr></thead>
+          <thead><tr><th>{t('Name')}</th><th>{t('Registered')}</th><th>{t('Last used')}</th><th></th></tr></thead>
           <tbody>
             {devices.map((d) => (
               <tr key={d.id}>
                 <td>{d.name}</td>
-                <td>{new Date(d.createdAt).toLocaleDateString()}{d.createdBy ? ` by ${d.createdBy}` : ''}</td>
-                <td>{d.lastUsedAt ? new Date(d.lastUsedAt).toLocaleString() : 'Never'}</td>
-                <td>{d.active ? <Button type="button" className="secondary" onClick={() => deactivate(d)}>Deactivate</Button> : 'Inactive'}</td>
+                <td>{new Date(d.createdAt).toLocaleDateString(locale())}{d.createdBy ? t(' by {a}', { a: d.createdBy }) : ''}</td>
+                <td>{d.lastUsedAt ? new Date(d.lastUsedAt).toLocaleString(locale()) : t('Never')}</td>
+                <td>{d.active ? <Button type="button" className="secondary" onClick={() => deactivate(d)}>{t('Deactivate')}</Button> : t('Inactive')}</td>
               </tr>
             ))}
           </tbody>

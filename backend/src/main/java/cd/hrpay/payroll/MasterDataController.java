@@ -33,7 +33,7 @@ public class MasterDataController {
     public record GradeInput(@NotNull Long categoryId, @NotBlank @Pattern(regexp = CODE) String code,
                              @NotBlank @Size(max = 150) String name,
                              @NotNull @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal baseSalary,
-                             @NotNull @Pattern(regexp = "USD|CDF") String currency, boolean active) {}
+                             @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency, boolean active) {}
 
     public record OccupationInput(@NotBlank @Pattern(regexp = CODE) String code, @NotBlank @Size(max = 150) String name,
                                   boolean active) {}

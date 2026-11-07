@@ -7,6 +7,7 @@ import { OrgCard, UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
+import { locale, plural, t } from '../i18n'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
 const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', lastName: '', siteId: '' }
@@ -64,7 +65,7 @@ export default function UserFormPage() {
       if (err instanceof ApiError) {
         setError(err.message)
         setFieldErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([k, v]) => [k.replace(/^user\./, ''), v])))
-      } else setError('Something went wrong.')
+      } else setError(t('Something went wrong.'))
       return false
     }
   }
@@ -82,14 +83,14 @@ export default function UserFormPage() {
         navigate(`/users/${created.id}`, { replace: true })
       } else {
         setUser(await api<User>(`/api/users/${id}`, { method: 'PUT', body: payload() }))
-        setMessage('Saved.')
+        setMessage(t('Saved.'))
       }
     })
   }
 
   const saveRoles = () => handle(async () => {
     setUser(await api<User>(`/api/users/${id}/roles`, { method: 'PUT', body: { roles: selectedRoles } }))
-    setMessage('Roles updated.')
+    setMessage(t('Roles updated.'))
   })
 
   const toggleStatus = () => handle(async () => {
@@ -100,27 +101,27 @@ export default function UserFormPage() {
   const doReset = () => handle(async () => {
     await api(`/api/users/${id}/password`, { method: 'POST', body: { password: resetPassword } })
     setResetPassword('')
-    setMessage('Temporary password set. The user must change it at next sign-in.')
+    setMessage(t('Temporary password set. The user must change it at next sign-in.'))
   })
 
   const resetTwoStep = () => ask({
-    title: `Reset the second step of ${user?.firstName} ${user?.lastName}?`, confirmLabel: 'Reset', danger: true,
-    message: 'Their authenticator and recovery codes stop working, they are signed out everywhere, and they set the second step up again at their next sign-in.',
+    title: t('Reset the second step of {a} {b}?', { a: user?.firstName, b: user?.lastName }), confirmLabel: t('Reset'), danger: true,
+    message: t('Their authenticator and recovery codes stop working, they are signed out everywhere, and they set the second step up again at their next sign-in.'),
     onConfirm: () => handle(async () => {
       await api(`/api/users/${id}/two-step/reset`, { method: 'POST' })
-      setMessage('Second step reset. The person sets it up again at their next sign-in.')
+      setMessage(t('Second step reset. The person sets it up again at their next sign-in.'))
     }),
   })
 
   const signOutEverywhere = () => handle(async () => {
     const r = await api<{ count: number }>(`/api/users/${id}/sessions/end`, { method: 'POST' })
-    setMessage(r.count === 0 ? 'The person was not signed in anywhere.' : `Signed out of ${r.count} browser${r.count === 1 ? '' : 's'}.`)
+    setMessage(r.count === 0 ? t('The person was not signed in anywhere.') : plural('Signed out of {n} browser.', 'Signed out of {n} browsers.', r.count))
   })
 
   const assignSchedule = () => handle(async () => {
     await api(`/api/users/${id}/schedules`, { method: 'POST', body: { scheduleId: Number(newSchedule), effectiveFrom: scheduleFrom } })
     setAssignments(await api<ScheduleAssignment[]>(`/api/users/${id}/schedules`))
-    setMessage('Schedule assigned.')
+    setMessage(t('Schedule assigned.'))
   })
 
   const toggleRole = (code: string) =>
@@ -137,40 +138,36 @@ export default function UserFormPage() {
 
   return (
     <section className="narrow">
-      <h2>{isNew ? 'New user' : `${form.firstName} ${form.lastName}`}</h2>
+      <h2>{isNew ? t('New user') : `${form.firstName} ${form.lastName}`}</h2>
       {user && (
         <p className="muted">
-          {user.status === 'ACTIVE' ? 'Active' : 'Disabled'} · {user.hasPassword ? 'Password set' : 'Google sign-in only'}
-          {user.lastLoginAt ? ` · Last sign-in ${new Date(user.lastLoginAt).toLocaleString()}` : ' · Never signed in'}
+          {user.status === 'ACTIVE' ? t('Active') : t('Disabled')} · {user.hasPassword ? t('Password set') : t('Google sign-in only')}
+          {user.lastLoginAt ? t(' · Last sign-in {a}', { a: new Date(user.lastLoginAt).toLocaleString(locale()) }) : t(' · Never signed in')}
         </p>
       )}
       <Form className="card" onSubmit={save}>
         <div className="grid2">
-          {field('firstName', 'First name')}
-          {field('lastName', 'Last name')}
+          {field('firstName', t('First name'))}
+          {field('lastName', t('Last name'))}
         </div>
-        {field('email', 'Email', 'email')}
+        {field('email', t('Email'), 'email')}
         <div className="grid2">
-          {field('registrationNo', 'Registration number')}
-          {field('phone', 'Phone (WhatsApp)', 'tel', 'International format, for example +243 81 234 5678')}
+          {field('registrationNo', t('Registration number'))}
+          {field('phone', t('Phone (WhatsApp)'), 'tel', t('International format, for example +243 81 234 5678'))}
         </div>
-        <label>
-          Site
-          <select value={form.siteId} onChange={set('siteId')} disabled={!canEdit}>
-            <option value="">No site</option>
+        <label>{t('Site')}<select value={form.siteId} onChange={set('siteId')} disabled={!canEdit}>
+            <option value="">{t('No site')}</option>
             {sites.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </label>
         {isNew && (
           <>
-            <label>
-              Unit
-              <UnitSelect units={units} value={orgUnitId} required onChange={setOrgUnitId} />
-              <span className="hint">Where this person works: Direction, Service, Équipe and so on. It can be changed later, with history.</span>
+            <label>{t('Unit')}<UnitSelect units={units} value={orgUnitId} required onChange={setOrgUnitId} />
+              <span className="hint">{t('Where this person works: Direction, Service, Équipe and so on. It can be changed later, with history.')}</span>
               {fieldErrors.orgUnitId && <span className="error">{fieldErrors.orgUnitId}</span>}
             </label>
             <fieldset>
-              <legend>Roles</legend>
+              <legend>{t('Roles')}</legend>
               {roles.filter((r) => canAssign || r.code === 'EMPLOYEE').map((r) => (
                 <label key={r.code} className="check">
                   <input type="checkbox" checked={selectedRoles.includes(r.code)} onChange={() => toggleRole(r.code)} />
@@ -178,33 +175,31 @@ export default function UserFormPage() {
                 </label>
               ))}
             </fieldset>
-            <label>
-              Temporary password (optional)
-              <input type="password" value={initialPassword} onChange={(e) => setInitialPassword(e.target.value)} />
-              <span className="hint">Leave empty if the user will sign in with Google.</span>
+            <label>{t('Temporary password (optional)')}<input type="password" value={initialPassword} onChange={(e) => setInitialPassword(e.target.value)} />
+              <span className="hint">{t('Leave empty if the user will sign in with Google.')}</span>
             </label>
           </>
         )}
         <ErrorText error={error} />
         {message && <p className="success">{message}</p>}
-        {canEdit && <Button type="submit">{isNew ? 'Create user' : 'Save changes'}</Button>}
+        {canEdit && <Button type="submit">{isNew ? t('Create user') : t('Save changes')}</Button>}
       </Form>
 
       {!isNew && user && (
         <div className="card">
-          <h3>Work schedule</h3>
-          {assignments.length === 0 && <p className="muted">No schedule yet. Without one, no hours are expected.</p>}
+          <h3>{t('Work schedule')}</h3>
+          {assignments.length === 0 && <p className="muted">{t('No schedule yet. Without one, no hours are expected.')}</p>}
           {assignments.map((a) => (
-            <p key={a.id}>{a.scheduleName} <span className="muted">from {a.effectiveFrom}</span></p>
+            <p key={a.id}>{a.scheduleName} <span className="muted">{t('from')}{' '}{a.effectiveFrom}</span></p>
           ))}
           {can('schedule.manage') && (
             <div className="row">
               <select value={newSchedule} onChange={(e) => setNewSchedule(e.target.value)}>
-                <option value="">Choose a schedule</option>
+                <option value="">{t('Choose a schedule')}</option>
                 {schedules.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <input type="date" value={scheduleFrom} onChange={(e) => setScheduleFrom(e.target.value)} />
-              <Button className="secondary" disabled={!newSchedule} onClick={() => assignSchedule()}>Assign</Button>
+              <Button className="secondary" disabled={!newSchedule} onClick={() => assignSchedule()}>{t('Assign')}</Button>
             </div>
           )}
         </div>
@@ -212,8 +207,8 @@ export default function UserFormPage() {
 
       {!isNew && user && can('attendance.read.all') && (
         <p className="row">
-          <Link className="button secondary" to={`/users/${id}/attendance`}>View attendance and earnings</Link>
-          {can('salary.read') && <Link className="button secondary" to={`/users/${id}/file`}>Contract and family</Link>}
+          <Link className="button secondary" to={`/users/${id}/attendance`}>{t('View attendance and earnings')}</Link>
+          {can('salary.read') && <Link className="button secondary" to={`/users/${id}/file`}>{t('Contract and family')}</Link>}
         </p>
       )}
 
@@ -229,47 +224,44 @@ export default function UserFormPage() {
 
       {!isNew && user && canAssign && (
         <div className="card">
-          <h3>Roles</h3>
+          <h3>{t('Roles')}</h3>
           {roles.map((r) => (
             <label key={r.code} className="check">
               <input type="checkbox" checked={selectedRoles.includes(r.code)} onChange={() => toggleRole(r.code)} />
               {r.name}
             </label>
           ))}
-          <Button onClick={() => saveRoles()}>Save roles</Button>
+          <Button onClick={() => saveRoles()}>{t('Save roles')}</Button>
         </div>
       )}
 
       {!isNew && user && (can('user.disable') || can('user.update')) && user.id !== me?.id && (
         <div className="card">
-          <h3>Access</h3>
+          <h3>{t('Access')}</h3>
           {can('user.update') && (
             <div className="row">
-              <input type="password" placeholder="New temporary password" value={resetPassword}
+              <input type="password" placeholder={t('New temporary password')} value={resetPassword}
                 onChange={(e) => setResetPassword(e.target.value)} />
-              <Button className="secondary" disabled={!resetPassword} onClick={() => doReset()}>Set password</Button>
+              <Button className="secondary" disabled={!resetPassword} onClick={() => doReset()}>{t('Set password')}</Button>
             </div>
           )}
           <div className="row">
             {can('user.disable') && (
               <Button className={user.status === 'ACTIVE' ? 'danger' : ''} onClick={() => toggleStatus()}>
-                {user.status === 'ACTIVE' ? 'Disable account' : 'Enable account'}
+                {user.status === 'ACTIVE' ? t('Disable account') : t('Enable account')}
               </Button>
             )}
-            {can('user.disable') && <Button className="secondary" onClick={() => signOutEverywhere()}>Sign out everywhere</Button>}
-            {can('role.assign') && <Button className="secondary" onClick={() => resetTwoStep()}>Reset second step</Button>}
+            {can('user.disable') && <Button className="secondary" onClick={() => signOutEverywhere()}>{t('Sign out everywhere')}</Button>}
+            {can('role.assign') && <Button className="secondary" onClick={() => resetTwoStep()}>{t('Reset second step')}</Button>}
           </div>
-          {can('role.assign') && <p className="hint">Reset the second step only for someone who lost their phone and their recovery codes,
-            after checking who is asking.</p>}
+          {can('role.assign') && <p className="hint">{t('Reset the second step only for someone who lost their phone and their recovery codes, after checking who is asking.')}</p>}
         </div>
       )}
       {!isNew && user && can('privacy.manage') && (
         <div className="card">
-          <h3>Personal data</h3>
-          <p className="muted">Everything HR Pay keeps about this person, for a request under data protection law.</p>
-          <Button className="secondary" onClick={() => handle(() => download(`/api/users/${id}/data-export`, `data-${id}.json`))}>
-            Download their data
-          </Button>
+          <h3>{t('Personal data')}</h3>
+          <p className="muted">{t('Everything HR Pay keeps about this person, for a request under data protection law.')}</p>
+          <Button className="secondary" onClick={() => handle(() => download(`/api/users/${id}/data-export`, `data-${id}.json`))}>{t('Download their data')}</Button>
         </div>
       )}
     </section>
@@ -293,33 +285,33 @@ function SalaryCard({ userId }: { userId: number }) {
     try {
       await api(`/api/users/${userId}/salaries`, { method: 'POST', body: { ...form, grossMonthly: Number(form.grossMonthly) } })
       setForm({ ...form, grossMonthly: '', note: '' })
-      setMessage('Salary saved.')
+      setMessage(t('Salary saved.'))
       await load()
     } catch (err) {
-      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
     }
   }
 
   return (
     <div className="card">
-      <h3>Gross monthly salary</h3>
-      {history.length === 0 && <p className="muted">No salary yet.</p>}
+      <h3>{t('Gross monthly salary')}</h3>
+      {history.length === 0 && <p className="muted">{t('No salary yet.')}</p>}
       {history.map((s) => (
-        <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">from {s.effectiveFrom}{s.note ? ` · ${s.note}` : ''} · set by {s.createdBy}</span></p>
+        <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">{t('from')}{' '}{s.effectiveFrom}{s.note ? ` · ${s.note}` : ''}{' '}{t('· set by')}{' '}{s.createdBy}</span></p>
       ))}
       {can('salary.write') && (
         <Form className="row" onSubmit={add}>
           <input type="date" value={form.effectiveFrom} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} required />
-          <input type="number" min="0.01" step="0.01" placeholder="Gross per month" value={form.grossMonthly}
+          <input type="number" min="0.01" step="0.01" placeholder={t('Gross per month')} value={form.grossMonthly}
             onChange={(e) => setForm({ ...form, grossMonthly: e.target.value })} required />
           <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-            <option>USD</option><option>CDF</option>
+            <option>{t('USD')}</option><option>{t('CDF')}</option>
           </select>
-          <input placeholder="Reason (optional)" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-          <Button type="submit">Add</Button>
+          <input placeholder={t('Reason (optional)')} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+          <Button type="submit">{t('Add')}</Button>
         </Form>
       )}
-      <p className="hint">A new amount applies from its date; earlier amounts stay in the history.</p>
+      <p className="hint">{t('A new amount applies from its date; earlier amounts stay in the history.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -339,11 +331,11 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
 
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); return }
-    const t = setTimeout(() => {
+    const tItem = setTimeout(() => {
       api<{ items: User[] }>(`/api/users?q=${encodeURIComponent(query.trim())}&size=8`)
         .then((p) => setResults(p.items.filter((u) => u.id !== user.id))).catch(() => setResults([]))
     }, 250)
-    return () => clearTimeout(t)
+    return () => clearTimeout(tItem)
   }, [query, user.id])
 
   const save = async (managerId: number | null) => {
@@ -353,21 +345,21 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
       setQuery('')
       setResults([])
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save.')
+      setError(e instanceof Error ? e.message : t('Could not save.'))
     }
   }
 
   return (
     <div className="card">
-      <h3>Manager set by hand</h3>
-      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">None: the head of the unit is used</span>}
-        {editable && manager && <> <Button className="secondary void" onClick={() => save(null)}>Remove</Button></>}</p>
-      <p className="hint">Normally people report to the head of their unit (or the nearest head above), who approves their missions, overtime and leave and scores their evaluations. Set a manager here only for an exception; heads above still see this person in their branch.</p>
+      <h3>{t('Manager set by hand')}</h3>
+      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">{t('None: the head of the unit is used')}</span>}
+        {editable && manager && <> <Button className="secondary void" onClick={() => save(null)}>{t('Remove')}</Button></>}</p>
+      <p className="hint">{t('Normally people report to the head of their unit (or the nearest head above), who approves their missions, overtime and leave and scores their evaluations. Set a manager here only for an exception; heads above still see this person in their branch.')}</p>
       {editable && (
         <>
-          <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input placeholder={t('Search by name or registration number')} value={query} onChange={(e) => setQuery(e.target.value)} />
           {results.map((u) => (
-            <p key={u.id}><Button className="secondary void" onClick={() => save(u.id)}>Choose</Button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
+            <p key={u.id}><Button className="secondary void" onClick={() => save(u.id)}>{t('Choose')}</Button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
           ))}
         </>
       )}
@@ -391,26 +383,25 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
       onChange(await api<User>(`/api/users/${user.id}/employment`, {
         method: 'PUT', body: { gradeCategoryId: categoryId ? Number(categoryId) : null, hireDate: hireDate || null },
       }))
-      setMessage('Saved.')
+      setMessage(t('Saved.'))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save.')
+      setError(e instanceof Error ? e.message : t('Could not save.'))
     }
   }
 
   return (
     <div className="card">
-      <h3>Employment</h3>
+      <h3>{t('Employment')}</h3>
       <div className="grid2">
-        <label>Grade category
-          <select value={categoryId} disabled={!editable} onChange={(e) => setCategoryId(e.target.value)}>
-            <option value="">None</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)} leave)</option>)}
+        <label>{t('Grade category')}<select value={categoryId} disabled={!editable} onChange={(e) => setCategoryId(e.target.value)}>
+            <option value="">{t('None')}</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)}{' '}{t('leave)')}</option>)}
           </select>
         </label>
-        <label>Hire date<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
+        <label>{t('Hire date')}<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
       </div>
-      <p className="hint">The grade category sets the yearly annual leave. Grades and pay scales come with payroll.</p>
-      {editable && <Button className="secondary" onClick={() => save()}>Save employment</Button>}
+      <p className="hint">{t('The grade category sets the yearly annual leave. Grades and pay scales come with payroll.')}</p>
+      {editable && <Button className="secondary" onClick={() => save()}>{t('Save employment')}</Button>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -426,7 +417,7 @@ function LeaveCard({ userId }: { userId: number }) {
   const load = () => api<{ balances: LeaveBalance[]; ledger: LeaveLedgerEntry[] }>(`/api/leave/users/${userId}`).then(setData).catch((e: Error) => setError(e.message))
   useEffect(() => {
     load()
-    api<LeaveType[]>('/api/leave/types').then((t) => setTypes(t.filter((x) => x.usesBalance))).catch(() => undefined)
+    api<LeaveType[]>('/api/leave/types').then((tItem) => setTypes(tItem.filter((x) => x.usesBalance))).catch(() => undefined)
   }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e: FormEvent) => {
@@ -437,29 +428,29 @@ function LeaveCard({ userId }: { userId: number }) {
       setAdjust({ ...adjust, days: '', note: '' })
       await load()
     } catch (err) {
-      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
     }
   }
 
   return (
     <div className="card">
-      <h3>Leave balance</h3>
+      <h3>{t('Leave balance')}</h3>
       {data?.balances.map((b) => (
-        <p key={b.leaveTypeId}><strong>{b.leaveType}: {days(b.available)}</strong> <span className="muted">({days(b.granted)} granted, {days(b.taken)} taken{b.pending ? `, ${days(b.pending)} waiting` : ''})</span></p>
+        <p key={b.leaveTypeId}><strong>{b.leaveType}: {days(b.available)}</strong> <span className="muted">({days(b.granted)}{' '}{t('granted,')}{' '}{days(b.taken)}{' '}{t('taken')}{b.pending ? t(", {a} waiting", { a: days(b.pending) }) : ''})</span></p>
       ))}
       <Form className="row" onSubmit={submit}>
         <select value={adjust.leaveTypeId} onChange={(e) => setAdjust({ ...adjust, leaveTypeId: e.target.value })} required>
-          <option value="">Kind</option>
-          {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          <option value="">{t('Kind')}</option>
+          {types.map((tItem) => <option key={tItem.id} value={tItem.id}>{tItem.name}</option>)}
         </select>
-        <input type="number" step="0.5" placeholder="Days (+ or -)" className="narrow-input" value={adjust.days} onChange={(e) => setAdjust({ ...adjust, days: e.target.value })} required />
-        <input placeholder="Reason, for example days carried from the old system" value={adjust.note} onChange={(e) => setAdjust({ ...adjust, note: e.target.value })} required />
-        <Button type="submit" className="secondary">Adjust</Button>
+        <input type="number" step="0.5" placeholder={t('Days (+ or -)')} className="narrow-input" value={adjust.days} onChange={(e) => setAdjust({ ...adjust, days: e.target.value })} required />
+        <input placeholder={t('Reason, for example days carried from the old system')} value={adjust.note} onChange={(e) => setAdjust({ ...adjust, note: e.target.value })} required />
+        <Button type="submit" className="secondary">{t('Adjust')}</Button>
       </Form>
       <ErrorText error={error} />
       {data && data.ledger.length > 0 && (
         <details>
-          <summary>History</summary>
+          <summary>{t('History')}</summary>
           {data.ledger.map((l) => (
             <p key={l.id} className="muted">{l.entryDate} · {l.leaveType} · {l.days > 0 ? '+' : ''}{days(l.days)} · {l.kind.toLowerCase()}{l.note ? ` · ${l.note}` : ''} · {l.createdBy}</p>
           ))}

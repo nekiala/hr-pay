@@ -1,5 +1,7 @@
 package cd.hrpay.payroll;
 
+import cd.hrpay.i18n.Texts;
+
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.notify.NotificationService;
 import cd.hrpay.salary.SalaryService;
@@ -166,21 +168,24 @@ public class AnniversaryRaises {
         if (pending.isEmpty()) {
             return 0;
         }
-        StringBuilder body = new StringBuilder("Anniversary raises applied automatically:\n\n");
-        for (Raise r : pending) {
-            body.append("- %s: %d year(s) on %s. Basic %s -> %s %s from %s (%s%% of grade %s base %s).%n".formatted(
-                    r.userName(), r.years(), r.anniversaryDate(), r.oldBasic().toPlainString(),
-                    r.newBasic().toPlainString(), r.currency(), r.effectiveFrom(),
-                    r.percent().stripTrailingZeros().toPlainString(), r.gradeCode(), r.gradeBase().toPlainString()));
-        }
-        body.append("\nThe new salaries are in each employee's salary history. A wrong raise is corrected there.");
         List<AppUser> recipients = jdbc.sql("""
                 select distinct u.id from app_user u join user_role ur on ur.user_id = u.id
                 join role_permission rp on rp.role_id = ur.role_id
                 where rp.permission_code = 'salary.write' and u.status = 'ACTIVE'""")
                 .query(Long.class).list().stream().map(id -> users.findById(id).orElseThrow()).toList();
         for (AppUser hr : recipients) {
-            notifications.sendEmail(hr, "HR Pay: " + pending.size() + " anniversary raise(s)", body.toString());
+            notifications.email(hr, () -> Texts.t("HR Pay: %s anniversary raise(s)", pending.size()), () -> {
+                StringBuilder body = new StringBuilder(Texts.t("Anniversary raises applied automatically:")).append("\n\n");
+                for (Raise r : pending) {
+                    body.append(Texts.t("- %s: %s year(s) on %s. Basic %s -> %s %s from %s (%s%% of grade %s base %s).",
+                            r.userName(), r.years(), Texts.day(r.anniversaryDate()), r.oldBasic().toPlainString(),
+                            r.newBasic().toPlainString(), r.currency(), Texts.day(r.effectiveFrom()),
+                            r.percent().stripTrailingZeros().toPlainString(), r.gradeCode(), r.gradeBase().toPlainString()))
+                            .append("\n");
+                }
+                return body.append("\n").append(Texts.t("The new salaries are in each employee's salary history. A wrong raise is corrected there."))
+                        .toString();
+            });
         }
         jdbc.sql("update anniversary_raise set notified_at = now() where notified_at is null").update();
         return pending.size();

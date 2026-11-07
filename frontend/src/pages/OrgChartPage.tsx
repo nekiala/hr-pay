@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { headTitle, unitTree, type OrgLevel, type OrgMember, type OrgUnit, type TreeNode } from '../org'
 import { Button } from '../components/Button'
+import { t } from '../i18n'
 
 /** The org chart: units with their heads (or "Vacant"), and for HR a people view built from who reports to whom. */
 export default function OrgChartPage() {
@@ -41,9 +42,9 @@ export default function OrgChartPage() {
     const byParent = new Map<number | null, OrgUnit[]>()
     units.forEach((u) => byParent.set(u.parentId, [...(byParent.get(u.parentId) ?? []), u]))
     const count = (u: OrgUnit): number => {
-      const t = (here.get(u.id) ?? 0) + (byParent.get(u.id) ?? []).reduce((s, c) => s + count(c), 0)
-      total.set(u.id, t)
-      return t
+      const tItem = (here.get(u.id) ?? 0) + (byParent.get(u.id) ?? []).reduce((s, c) => s + count(c), 0)
+      total.set(u.id, tItem)
+      return tItem
     }
     (byParent.get(null) ?? []).forEach(count)
     return units.filter((u) => (total.get(u.id) ?? 0) > 0)
@@ -76,9 +77,9 @@ export default function OrgChartPage() {
     <div className={`org-box${u.staff ? ' staff' : ''}${u.head ? '' : ' vacant'}`}>
       <small>{u.levelName}</small>
       <Link to={`/org/units/${u.id}`}><strong>{u.name}</strong></Link>
-      {u.head ? <span>{u.head.userName}<br /><small>{headTitle(u, u.head, levels)}</small></span> : <span className="muted">Vacant</span>}
+      {u.head ? <span>{u.head.userName}<br /><small>{headTitle(u, u.head, levels)}</small></span> : <span className="muted">{t('Vacant')}</span>}
       {u.deputy && <small>{headTitle(u, u.deputy, levels)}: {u.deputy.userName}</small>}
-      {u.totalMembers !== null && <small>{u.members} here · {u.totalMembers} in total</small>}
+      {u.totalMembers !== null && <small>{u.members}{' '}{t('here ·')}{' '}{u.totalMembers}{' '}{t('in total')}</small>}
     </div>
   )
 
@@ -116,7 +117,7 @@ export default function OrgChartPage() {
         <div className={`org-box${n.item.heads.length ? '' : ' person'}`}>
           <Link to={`/users/${n.item.userId}`}><strong>{n.item.name}</strong></Link>
           <small>{n.item.unitName}</small>
-          {n.item.heads.length > 0 && <small>Heads {n.item.heads.map((h) => units.find((u) => u.id === h)?.name ?? `#${h}`).join(', ')}</small>}
+          {n.item.heads.length > 0 && <small>{t('Heads')}{' '}{n.item.heads.map((h) => units.find((u) => u.id === h)?.name ?? `#${h}`).join(', ')}</small>}
         </div>
         {n.children.length > 0 && (
           <Button className="secondary org-toggle no-print" onClick={() => toggle(-n.item.userId)}>
@@ -132,35 +133,33 @@ export default function OrgChartPage() {
   return (
     <section>
       <div className="row no-print org-tools">
-        <h2 style={{ marginRight: 'auto' }}>Org chart</h2>
+        <h2 style={{ marginRight: 'auto' }}>{t('Org chart')}</h2>
         {people && (
           <select value={view} onChange={(e) => setView(e.target.value as 'units' | 'people')}>
-            <option value="units">Units</option>
-            <option value="people">People</option>
+            <option value="units">{t('Units')}</option>
+            <option value="people">{t('People')}</option>
           </select>
         )}
         {view === 'units' && (
           <select value={root} onChange={(e) => setRoot(e.target.value)}>
-            <option value="">Whole company</option>
+            <option value="">{t('Whole company')}</option>
             {units.filter((u) => units.some((c) => c.parentId === u.id)).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
         )}
         {sites.length > 1 && (
           <select value={site} onChange={(e) => setSite(e.target.value)}>
-            <option value="">All sites</option>
+            <option value="">{t('All sites')}</option>
             {sites.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         )}
-        <Button className="secondary" onClick={() => setCollapsed(new Set())}>Expand all</Button>
-        <Button className="secondary" onClick={() => window.print()}>Print or save as PDF</Button>
-        {can('org.manage') && <Link className="button secondary" to="/org/manage">Levels, import and moves</Link>}
+        <Button className="secondary" onClick={() => setCollapsed(new Set())}>{t('Expand all')}</Button>
+        <Button className="secondary" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
+        {can('org.manage') && <Link className="button secondary" to="/org/manage">{t('Levels, import and moves')}</Link>}
       </div>
-      <h2 className="print-only">Org chart{site && ` · ${sites.find(([id]) => String(id) === site)?.[1]}`} · {new Date().toISOString().slice(0, 10)}</h2>
+      <h2 className="print-only">{t('Org chart')}{site && ` · ${sites.find(([id]) => String(id) === site)?.[1]}`} · {new Date().toISOString().slice(0, 10)}</h2>
       <p className="muted no-print">
-        {site && `${atSite.length} people at this site, in ${shown.length} units. `}
-        {units.length} units{vacant > 0 && `, ${vacant} without a head`}. A vacant unit's people report to the nearest head above it.
-        Cellules (staff units) are shown with a dashed border.
-      </p>
+        {site && t('{a} people at this site, in {b} units. ', { a: atSite.length, b: shown.length })}
+        {units.length}{' '}{t('units')}{vacant > 0 && t(', {a} without a head', { a: vacant })}{t('. A vacant unit\'s people report to the nearest head above it. Cellules (staff units) are shown with a dashed border.')}</p>
       <ErrorText error={error} />
       <div className="org-scroll">
         <div className="org-tree">

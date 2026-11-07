@@ -3,6 +3,7 @@ import { ApiError, api } from '../api'
 import { useAuth } from '../auth'
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
+import { t } from '../i18n'
 
 type SignIn = { microsoftTenant: string | null; microsoftAvailable: boolean; googleAvailable: boolean }
 
@@ -27,24 +28,21 @@ export function SignInCard() {
       setTenant(r.microsoftTenant ?? '')
       setSaved(true)
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save.')
+      setError(e instanceof ApiError ? e.message : t('Could not save.'))
     }
   }
   return (
     <Form className="card" onSubmit={save}>
-      <h3>Sign in with Microsoft 365</h3>
-      {!s.microsoftAvailable && <p className="notice">Microsoft sign-in is not turned on for this installation (MICROSOFT_CLIENT_ID). You can
-        still set the tenant now.</p>}
-      <p className="muted">Your people can sign in with their work account, but only from your organization's own Microsoft directory. Find its tenant ID
-        in the Microsoft Entra admin centre, under Overview. Their email in HR Pay must be their Microsoft sign-in name.</p>
-      <label>Tenant ID
-        <input value={tenant} onChange={(e) => setTenant(e.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
+      <h3>{t('Sign in with Microsoft 365')}</h3>
+      {!s.microsoftAvailable && <p className="notice">{t('Microsoft sign-in is not turned on for this installation (MICROSOFT_CLIENT_ID). You can still set the tenant now.')}</p>}
+      <p className="muted">{t('Your people can sign in with their work account, but only from your organization\'s own Microsoft directory. Find its tenant ID in the Microsoft Entra admin centre, under Overview. Their email in HR Pay must be their Microsoft sign-in name.')}</p>
+      <label>{t('Tenant ID')}<input value={tenant} onChange={(e) => setTenant(e.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
           pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" />
       </label>
-      <p className="hint">Leave empty to refuse Microsoft sign-in for your company.</p>
+      <p className="hint">{t('Leave empty to refuse Microsoft sign-in for your company.')}</p>
       <ErrorText error={error} />
-      {saved && <p className="success">Saved.</p>}
-      <Button type="submit">Save</Button>
+      {saved && <p className="success">{t('Saved.')}</p>}
+      <Button type="submit">{t('Save')}</Button>
     </Form>
   )
 }

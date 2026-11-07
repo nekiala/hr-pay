@@ -3,12 +3,13 @@ import { ApiError, api, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from './ErrorText'
 import { Button } from './Button'
+import { plural, t } from '../i18n'
 
 type Settings = { enabled: boolean; base: 'AVERAGE_BASIC' | 'LAST_BASIC'; fallbackPercent: number; payMonth: number; prorate: boolean }
 type Row = { userId: number; name: string; scorePercent: number; scoreSource: 'EVALUATIONS' | 'FALLBACK'; evaluations: number; base: number; currency: string; monthsWorked: number; amount: number }
 type Preview = { year: number; settings: Settings; rows: Row[] }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const MONTHS = [t('January'), t('February'), t('March'), t('April'), t('May'), t('June'), t('July'), t('August'), t('September'), t('October'), t('November'), t('December')]
 
 /** HR's view of the 13th month: the rules and what each employee would get for a year. */
 export function ThirteenthMonthCard() {
@@ -39,52 +40,50 @@ export function ThirteenthMonthCard() {
       for (const [key, value] of changes) {
         if (old[key] !== value) await api(`/api/statutory/settings/${key}`, { method: 'PUT', body: { value } })
       }
-      setMessage('13th month rules saved.')
+      setMessage(t('13th month rules saved.'))
       await load(year)
     } catch (e) {
-      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.'))
     }
   }
 
   return (
     <div className="card">
-      <h3>13th month</h3>
+      <h3>{t('13th month')}</h3>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {form && (
         <>
-          <p className="hint">Amount = base × the year's evaluation score (approved evaluations, weighted by the months each covers), or the fallback % for someone with no approved evaluation{form.prorate ? ', × months under contract ÷ 12' : ''}. It is added to the payslip of the pay month.</p>
+          <p className="hint">{t('Amount = base × the year\'s evaluation score (approved evaluations, weighted by the months each covers), or the fallback % for someone with no approved evaluation')}{form.prorate ? t(', × months under contract ÷ 12') : ''}{t('. It is added to the payslip of the pay month.')}</p>
           <div className="grid3">
-            <label className="check"><input type="checkbox" disabled={!editable} checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} /> Pay a 13th month</label>
-            <label>Base
-              <select disabled={!editable} value={form.base} onChange={(e) => setForm({ ...form, base: e.target.value as Settings['base'] })}>
-                <option value="AVERAGE_BASIC">Average basic over the year</option>
-                <option value="LAST_BASIC">Last basic of the year</option>
+            <label className="check"><input type="checkbox" disabled={!editable} checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />{' '}{t('Pay a 13th month')}</label>
+            <label>{t('Base')}<select disabled={!editable} value={form.base} onChange={(e) => setForm({ ...form, base: e.target.value as Settings['base'] })}>
+                <option value="AVERAGE_BASIC">{t('Average basic over the year')}</option>
+                <option value="LAST_BASIC">{t('Last basic of the year')}</option>
               </select>
             </label>
-            <label>Paid with the payroll of
-              <select disabled={!editable} value={form.payMonth} onChange={(e) => setForm({ ...form, payMonth: Number(e.target.value) })}>
+            <label>{t('Paid with the payroll of')}<select disabled={!editable} value={form.payMonth} onChange={(e) => setForm({ ...form, payMonth: Number(e.target.value) })}>
                 {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
               </select>
             </label>
-            <label>Fallback score %<input type="number" disabled={!editable} min={0} max={100} step={0.01} value={form.fallbackPercent} onChange={(e) => setForm({ ...form, fallbackPercent: Number(e.target.value) })} /></label>
-            <label className="check"><input type="checkbox" disabled={!editable} checked={form.prorate} onChange={(e) => setForm({ ...form, prorate: e.target.checked })} /> Prorate by months worked</label>
+            <label>{t('Fallback score %')}<input type="number" disabled={!editable} min={0} max={100} step={0.01} value={form.fallbackPercent} onChange={(e) => setForm({ ...form, fallbackPercent: Number(e.target.value) })} /></label>
+            <label className="check"><input type="checkbox" disabled={!editable} checked={form.prorate} onChange={(e) => setForm({ ...form, prorate: e.target.checked })} />{' '}{t('Prorate by months worked')}</label>
           </div>
-          {editable && <Button className="secondary" onClick={() => save()}>Save rules</Button>}
+          {editable && <Button className="secondary" onClick={() => save()}>{t('Save rules')}</Button>}
         </>
       )}
 
-      <h4>Preview</h4>
-      <label className="month-pick">Year <input type="number" className="narrow-input" min={2000} max={2100} value={year} onChange={(e) => e.target.value.length === 4 && setYear(Number(e.target.value))} /></label>
-      {data && (data.rows.length === 0 ? <p className="muted">Nobody under contract with a salary in {data.year}.</p> : (
+      <h4>{t('Preview')}</h4>
+      <label className="month-pick">{t('Year')}{' '}<input type="number" className="narrow-input" min={2000} max={2100} value={year} onChange={(e) => e.target.value.length === 4 && setYear(Number(e.target.value))} /></label>
+      {data && (data.rows.length === 0 ? <p className="muted">{t('Nobody under contract with a salary in')}{' '}{data.year}.</p> : (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Employee</th><th>Score</th><th>Base</th><th>Months</th><th>Amount</th></tr></thead>
+            <thead><tr><th>{t('Employee')}</th><th>{t('Score')}</th><th>{t('Base')}</th><th>{t('Months')}</th><th>{t('Amount')}</th></tr></thead>
             <tbody>
               {data.rows.map((r) => (
                 <tr key={r.userId}>
                   <td>{r.name}</td>
-                  <td>{r.scorePercent}% <span className="muted">{r.scoreSource === 'EVALUATIONS' ? `(${r.evaluations} evaluation${r.evaluations === 1 ? '' : 's'})` : '(fallback)'}</span></td>
+                  <td>{r.scorePercent}% <span className="muted">{r.scoreSource === 'EVALUATIONS' ? plural('({n} evaluation)', '({n} evaluations)', r.evaluations) : t('(fallback)')}</span></td>
                   <td>{money(r.base, r.currency)}</td>
                   <td>{r.monthsWorked}</td>
                   <td><strong>{money(r.amount, r.currency)}</strong></td>

@@ -5,16 +5,18 @@ import { api, type Me, type TwoStepNeeded } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
+import { LanguageToggle } from '../components/Language'
 import { RecoveryCodes, TwoStepCode, TwoStepSetupFlow } from '../components/TwoStep'
+import { t } from '../i18n'
 
 /** What a refused Google or Microsoft sign-in means, by the reason the server gave. */
 const PROVIDER_ERRORS: Record<string, string> = {
-  google: 'This Google account is not registered or is disabled. Contact HR.',
-  not_registered: 'This account is not registered in HR Pay. Sign in with the email address HR registered, or contact HR.',
-  disabled: 'This account is disabled. Contact HR.',
-  email_not_verified: 'Your provider did not confirm this email address.',
-  wrong_tenant: 'Your company has not allowed this Microsoft directory. Ask your administrator to set it on the Company page.',
-  provider: 'The sign-in with your provider did not succeed. Try again.',
+  google: t('This Google account is not registered or is disabled. Contact HR.'),
+  not_registered: t('This account is not registered in HR Pay. Sign in with the email address HR registered, or contact HR.'),
+  disabled: t('This account is disabled. Contact HR.'),
+  email_not_verified: t('Your provider did not confirm this email address.'),
+  wrong_tenant: t('Your company has not allowed this Microsoft directory. Ask your administrator to set it on the Company page.'),
+  provider: t('The sign-in with your provider did not succeed. Try again.'),
 }
 
 export default function LoginPage() {
@@ -45,7 +47,7 @@ export default function LoginPage() {
       setStep(await signIn(email, password))
       setPassword('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed.')
+      setError(err instanceof Error ? err.message : t('Sign-in failed.'))
     } finally {
       setBusy(false)
     }
@@ -58,7 +60,7 @@ export default function LoginPage() {
     if (params.has('step')) setParams({}, { replace: true })
   }
 
-  const brand = <h1><span className="brand-mark"><Banknote size={18} aria-hidden /></span>HR Pay</h1>
+  const brand = <h1><span className="brand-mark"><Banknote size={18} aria-hidden /></span>{t('HR Pay')}</h1>
 
   if (codes) {
     return (
@@ -74,8 +76,8 @@ export default function LoginPage() {
       <div className="login"><div className="card">
         {brand}
         {step.setup
-          ? <TwoStepSetupFlow codesAvailable={step.codesAvailable} cancelLabel="Back to sign-in"
-              intro="Your role asks for a second step at each sign-in, to protect pay and personal data. Set it up now; it takes a minute."
+          ? <TwoStepSetupFlow codesAvailable={step.codesAvailable} cancelLabel={t('Back to sign-in')}
+              intro={t('Your role asks for a second step at each sign-in, to protect pay and personal data. Set it up now; it takes a minute.')}
               onDone={(c, me) => setCodes({ codes: c, me })} onCancel={restart} />
           : <TwoStepCode needed={step} onDone={signedIn} onCancel={restart} />}
       </div></div>
@@ -86,24 +88,21 @@ export default function LoginPage() {
     <div className="login">
       <Form className="card" onSubmit={submit}>
         {brand}
-        <p className="muted">Sign in with the email address registered by HR.</p>
-        <label>
-          Email
-          <input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <p className="muted">{t('Sign in with the email address registered by HR.')}</p>
+        <label>{t('Email')}<input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
-        <label>
-          Password
-          <input type="password" autoComplete="current-password" value={password}
+        <label>{t('Password')}<input type="password" autoComplete="current-password" value={password}
             onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <ErrorText error={error} />
-        <Button type="submit" pending={busy} pendingText="Signing in…">Sign in</Button>
+        <Button type="submit" pending={busy} pendingText={t('Signing in…')}>{t('Sign in')}</Button>
         {providers.microsoft && (
-          <a className="button secondary" href="/oauth2/authorization/microsoft">Sign in with Microsoft</a>
+          <a className="button secondary" href="/oauth2/authorization/microsoft">{t('Sign in with Microsoft')}</a>
         )}
         {providers.google && (
-          <a className="button secondary" href="/oauth2/authorization/google">Sign in with Google</a>
+          <a className="button secondary" href="/oauth2/authorization/google">{t('Sign in with Google')}</a>
         )}
+        <LanguageToggle />
       </Form>
     </div>
   )

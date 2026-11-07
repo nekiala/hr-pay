@@ -36,7 +36,7 @@ public class PayElementController {
                                @NotNull @Pattern(regexp = "EARNING|DEDUCTION") String kind,
                                @NotNull @Pattern(regexp = "FIXED|PERCENT_OF_BASIC|PER_DAY_WORKED|PER_CHILD|MANUAL") String method,
                                @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal defaultAmount,
-                               @Pattern(regexp = "USD|CDF") String defaultCurrency,
+                               @Pattern(regexp = "USD|CDF|XAF") String defaultCurrency,
                                @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 3) BigDecimal percent,
                                boolean subjectToCnss, boolean taxableIpr,
                                @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 3) BigDecimal iprExemptCapPercent,
@@ -52,7 +52,7 @@ public class PayElementController {
 
     public record AssignmentInput(@NotNull Long elementId,
                                   @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal amount,
-                                  @Pattern(regexp = "USD|CDF") String currency,
+                                  @Pattern(regexp = "USD|CDF|XAF") String currency,
                                   @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 3) BigDecimal percent,
                                   boolean excluded, @NotNull YearMonth startMonth, YearMonth endMonth,
                                   @Size(max = 300) String note) {}
@@ -61,10 +61,10 @@ public class PayElementController {
 
     public record EntryInput(@NotNull Long userId, @NotNull Long elementId, @NotNull YearMonth month,
                              @NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal amount,
-                             @NotNull @Pattern(regexp = "USD|CDF") String currency, @Size(max = 300) String note) {}
+                             @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency, @Size(max = 300) String note) {}
 
     public record EntryUpdate(@NotNull @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal amount,
-                              @NotNull @Pattern(regexp = "USD|CDF") String currency, @Size(max = 300) String note) {}
+                              @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency, @Size(max = 300) String note) {}
 
     private final PayElements pay;
 

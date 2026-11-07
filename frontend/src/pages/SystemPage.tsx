@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { t, locale } from '../i18n'
 
 type Backup = { id: number; startedAt: string; finishedAt: string | null; fileName: string | null; sizeBytes: number | null; status: 'RUNNING' | 'OK' | 'FAILED'; offsite: boolean; message: string | null }
 type Job = { name: string; lockedAt: string | null; lockedBy: string | null; lastOkAt: string | null; lastError: string | null; lastErrorAt: string | null }
@@ -14,14 +15,14 @@ type Status = {
 }
 
 const JOBS: Record<string, string> = {
-  'auto-close': 'Close days left open', 'anniversary-raises': 'Anniversary raises', 'exchange-rates': 'BCC exchange rates',
-  'gps-erase': 'Erase old GPS positions', 'backup-watch': 'Check the backups', 'audit-chain': 'Check the audit log',
+  'auto-close': t('Close days left open'), 'anniversary-raises': t('Anniversary raises'), 'exchange-rates': t('BCC exchange rates'),
+  'gps-erase': t('Erase old GPS positions'), 'backup-watch': t('Check the backups'), 'audit-chain': t('Check the audit log'),
 }
 const KINDS: Record<string, string> = {
-  ERROR: 'Error', JOB_FAILED: 'Job failed', BACKUP_FAILED: 'Backup failed', BACKUP_MISSING: 'No recent backup',
-  AUDIT_CHAIN_BROKEN: 'Audit log changed',
+  ERROR: t('Error'), JOB_FAILED: t('Job failed'), BACKUP_FAILED: t('Backup failed'), BACKUP_MISSING: t('No recent backup'),
+  AUDIT_CHAIN_BROKEN: t('Audit log changed'),
 }
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—')
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale()) : '—')
 const size = (b: number | null) => (b === null ? '—' : b > 1e9 ? `${(b / 1e9).toFixed(1)} GB` : b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.round(b / 1e3)} KB`)
 const duration = (s: number) => (s >= 86400 ? `${Math.floor(s / 86400)} d ${Math.floor((s % 86400) / 3600)} h` : `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`)
 
@@ -32,7 +33,7 @@ export default function SystemPage() {
   const [open, setOpen] = useState<number | null>(null)
   useEffect(() => { api<Status>('/api/system/status').then(setS).catch((e: Error) => setError(e.message)) }, [])
 
-  if (!s) return <section><h2>System</h2><ErrorText error={error} />{!error && <p className="muted">Loading…</p>}</section>
+  if (!s) return <section><h2>{t('System')}</h2><ErrorText error={error} />{!error && <p className="muted">{t('Loading…')}</p>}</section>
   const backups = s.backups.filter((b) => !b.fileName?.startsWith('restore-test:') && !b.fileName?.startsWith('restore:'))
   const tests = s.backups.filter((b) => b.fileName?.startsWith('restore-test:'))
   const lastOk = backups.find((b) => b.status === 'OK')
@@ -40,41 +41,41 @@ export default function SystemPage() {
 
   return (
     <section>
-      <h2>System</h2>
+      <h2>{t('System')}</h2>
       <div className="tiles">
-        <div className="tile"><span>Version</span><strong>{s.version}</strong><small>built {when(s.builtAt)} · Java {s.javaVersion}</small></div>
-        <div className="tile"><span>Running for</span><strong>{duration(s.uptimeSeconds)}</strong><small>since {when(s.startedAt)}</small></div>
-        <div className="tile"><span>Database</span><strong>{size(s.databaseBytes)}</strong><small>{s.employees} active people · {s.activeSessions} signed in</small></div>
+        <div className="tile"><span>{t('Version')}</span><strong>{s.version}</strong><small>{t('built')}{' '}{when(s.builtAt)}{' '}{t('· Java')}{' '}{s.javaVersion}</small></div>
+        <div className="tile"><span>{t('Running for')}</span><strong>{duration(s.uptimeSeconds)}</strong><small>{t('since')}{' '}{when(s.startedAt)}</small></div>
+        <div className="tile"><span>{t('Database')}</span><strong>{size(s.databaseBytes)}</strong><small>{s.employees}{' '}{t('active people ·')}{' '}{s.activeSessions}{' '}{t('signed in')}</small></div>
         <div className={`tile${s.backupsExpected && stale ? ' warn' : ''}`}>
-          <span>Last backup</span>
-          <strong>{lastOk ? when(lastOk.finishedAt) : 'None yet'}</strong>
-          <small>{!s.backupsExpected ? 'No backup job on this server (development)' : lastOk ? `${size(lastOk.sizeBytes)}${lastOk.offsite ? ' · copied off-site' : ' · on this server only'}` : 'The backup job has not run yet'}</small>
+          <span>{t('Last backup')}</span>
+          <strong>{lastOk ? when(lastOk.finishedAt) : t('None yet')}</strong>
+          <small>{!s.backupsExpected ? t('No backup job on this server (development)') : lastOk ? `${size(lastOk.sizeBytes)}${lastOk.offsite ? t(' · copied off-site') : t(' · on this server only')}` : t('The backup job has not run yet')}</small>
         </div>
       </div>
 
       <div className="cards2">
         <div className="card">
-          <div className="row between"><h3>Data encryption</h3><span className={`badge ${s.dataKey ? 'ok' : 'off'}`}>{s.dataKey ? 'On' : 'Off'}</span></div>
+          <div className="row between"><h3>{t('Data encryption')}</h3><span className={`badge ${s.dataKey ? 'ok' : 'off'}`}>{s.dataKey ? t('On') : t('Off')}</span></div>
           {s.dataKey
-            ? <p className="muted">Bank and mobile money accounts, CNSS and tax numbers and authenticator secrets are stored encrypted. Keep a copy of the key (HRPAY_DATA_KEY) away from this server: backups cannot be read without it.</p>
-            : <p className="notice">No data key is set: bank accounts and ID numbers are stored readable in the database and in its backups. Set HRPAY_DATA_KEY (openssl rand -base64 32) and restart; existing values are encrypted at start-up.</p>}
+            ? <p className="muted">{t('Bank and mobile money accounts, CNSS and tax numbers and authenticator secrets are stored encrypted. Keep a copy of the key (HRPAY_DATA_KEY) away from this server: backups cannot be read without it.')}</p>
+            : <p className="notice">{t('No data key is set: bank accounts and ID numbers are stored readable in the database and in its backups. Set HRPAY_DATA_KEY (openssl rand -base64 32) and restart; existing values are encrypted at start-up.')}</p>}
         </div>
         <div className="card">
-          <div className="row between"><h3>Audit log</h3><span className={`badge ${s.auditChain.intact ? 'ok' : 'off'}`}>{s.auditChain.intact ? 'Intact' : 'Changed'}</span></div>
+          <div className="row between"><h3>{t('Audit log')}</h3><span className={`badge ${s.auditChain.intact ? 'ok' : 'off'}`}>{s.auditChain.intact ? t('Intact') : t('Changed')}</span></div>
           {s.auditChain.intact
-            ? <p className="muted">{s.auditChain.rows.toLocaleString()} entries, each chained to the one before: none was changed or removed in the database.</p>
-            : <p className="notice">Entry {s.auditChain.brokenAt} ({when(s.auditChain.brokenRowAt)}) no longer matches its hash: it, or an entry before it, was changed directly in the database. Keep a copy of the database as it is and find out who had access.</p>}
-          {s.auditChain.lastHash && <p className="small">Latest hash, to write down from time to time: <code className="secret">{s.auditChain.lastHash}</code></p>}
+            ? <p className="muted">{s.auditChain.rows.toLocaleString(locale())}{' '}{t('entries, each chained to the one before: none was changed or removed in the database.')}</p>
+            : <p className="notice">{t('Entry')}{' '}{s.auditChain.brokenAt} ({when(s.auditChain.brokenRowAt)}{t(') no longer matches its hash: it, or an entry before it, was changed directly in the database. Keep a copy of the database as it is and find out who had access.')}</p>}
+          {s.auditChain.lastHash && <p className="small">{t('Latest hash, to write down from time to time:')}{' '}<code className="secret">{s.auditChain.lastHash}</code></p>}
         </div>
       </div>
 
       <div className="card">
-        <h3>Alerts</h3>
-        <p className="hint">Unexpected errors, failed jobs and backup problems. People with the "system status" permission get an email, at most one an hour for the same problem.</p>
-        {s.alerts.length === 0 ? <p className="muted">No alerts.</p> : (
+        <h3>{t('Alerts')}</h3>
+        <p className="hint">{t('Unexpected errors, failed jobs and backup problems. People with the "system status" permission get an email, at most one an hour for the same problem.')}</p>
+        {s.alerts.length === 0 ? <p className="muted">{t('No alerts.')}</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Last seen</th><th>Kind</th><th>Problem</th><th className="num">Times</th><th>First seen</th></tr></thead>
+              <thead><tr><th>{t('Last seen')}</th><th>{t('Kind')}</th><th>{t('Problem')}</th><th className="num">{t('Times')}</th><th>{t('First seen')}</th></tr></thead>
               <tbody>
                 {s.alerts.map((a) => (
                   <tr key={a.id} onClick={() => setOpen(open === a.id ? null : a.id)} className="clickable">
@@ -90,31 +91,31 @@ export default function SystemPage() {
       </div>
 
       <div className="card">
-        <h3>Backups</h3>
-        {backups.length === 0 ? <p className="muted">No backup recorded.</p> : (
+        <h3>{t('Backups')}</h3>
+        {backups.length === 0 ? <p className="muted">{t('No backup recorded.')}</p> : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Started</th><th>File</th><th className="num">Size</th><th>Result</th><th>Off-site</th></tr></thead>
+              <thead><tr><th>{t('Started')}</th><th>{t('File')}</th><th className="num">{t('Size')}</th><th>{t('Result')}</th><th>{t('Off-site')}</th></tr></thead>
               <tbody>
                 {backups.map((b) => (
                   <tr key={b.id}>
                     <td>{when(b.startedAt)}</td><td>{b.fileName}</td><td className="num">{size(b.sizeBytes)}</td>
-                    <td>{b.status === 'OK' ? 'Done' : b.status === 'RUNNING' ? 'Running' : <span className="error">Failed{b.message ? `: ${b.message}` : ''}</span>}</td>
-                    <td>{b.offsite ? 'Yes' : 'No'}</td>
+                    <td>{b.status === 'OK' ? t('Done') : b.status === 'RUNNING' ? t('Running') : <span className="error">{t('Failed')}{b.message ? `: ${b.message}` : ''}</span>}</td>
+                    <td>{b.offsite ? t('Yes') : t('No')}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        {tests.length > 0 && <p className="hint">Last restore test: {when(tests[0].finishedAt)}, {tests[0].status === 'OK' ? 'passed' : 'failed'}. {tests[0].message}</p>}
+        {tests.length > 0 && <p className="hint">{t('Last restore test:')}{' '}{when(tests[0].finishedAt)}, {tests[0].status === 'OK' ? 'passed' : 'failed'}. {tests[0].message}</p>}
       </div>
 
       <div className="card">
-        <h3>Scheduled jobs</h3>
+        <h3>{t('Scheduled jobs')}</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Job</th><th>Last run</th><th>Last success</th><th>Last error</th></tr></thead>
+            <thead><tr><th>{t('Job')}</th><th>{t('Last run')}</th><th>{t('Last success')}</th><th>{t('Last error')}</th></tr></thead>
             <tbody>
               {s.jobs.map((j) => (
                 <tr key={j.name}>

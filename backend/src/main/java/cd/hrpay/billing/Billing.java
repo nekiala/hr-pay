@@ -1,5 +1,8 @@
 package cd.hrpay.billing;
 
+import cd.hrpay.i18n.Texts;
+import java.util.function.Supplier;
+
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
 import cd.hrpay.common.ConflictException;
@@ -38,7 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class Billing {
 
     private static final Logger log = LoggerFactory.getLogger(Billing.class);
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH);
 
     public static final Set<String> METHODS = Set.of("BANK_TRANSFER", "MPESA", "ORANGE_MONEY", "AIRTEL_MONEY", "CASH", "OTHER");
 
@@ -309,12 +311,12 @@ public class Billing {
         audit.record("invoice.issued", "invoice", id, details);
         tenants.runAs(companyId, () -> audit.recordAs(by, "invoice.issued", "invoice", id, details));
         Invoice invoice = invoice(id);
-        tellAdmins(companyId, "Invoice " + number + " from HR Pay", """
+        tellAdmins(companyId, () -> Texts.t("Invoice %s from HR Pay", number), () -> Texts.t("""
                 Invoice %s for %s, %s to %s, is issued: %s %s, to pay by %s.
 
                 Pay by bank transfer or mobile money with the reference %s. The invoice and the payment details are \
-                on the Billing page of HR Pay.%s""".formatted(number, c.planName(), DAY.format(from), DAY.format(to),
-                amount(total), s.currency(), DAY.format(invoice.dueOn()), number, instructions(settings)));
+                on the Billing page of HR Pay.%s""", number, c.planName(), Texts.day(from), Texts.day(to),
+                amount(total), s.currency(), Texts.day(invoice.dueOn()), number, instructions(settings)));
         return invoice;
     }
 
@@ -372,8 +374,8 @@ public class Billing {
         tenants.runAs(i.companyId(), () -> audit.recordAs(by, "invoice.payment_recorded", "invoice_payment", paymentId, details));
         if (full) {
             liftIfPaid(i.companyId(), today, by);
-            tellAdmins(i.companyId(), "Invoice " + i.number() + " is paid", "Thank you: invoice %s (%s %s) is paid in full."
-                    .formatted(i.number(), amount(i.total()), i.currency()));
+            tellAdmins(i.companyId(), () -> Texts.t("Invoice %s is paid", i.number()),
+                    () -> Texts.t("Thank you: invoice %s (%s %s) is paid in full.", i.number(), amount(i.total()), i.currency()));
         }
         return invoice(i.id());
     }
@@ -460,10 +462,11 @@ public class Billing {
         Map<String, Object> details = Map.of("reason", "UNPAID", "invoices", numbers);
         audit.recordAs("system", "company.suspended", "company", companyId, details);
         tenants.runAs(companyId, () -> audit.recordAs("system", "company.suspended", "company", companyId, details));
-        tellAdmins(companyId, "HR Pay is read-only: invoice unpaid", """
+        Settings current = settings();
+        tellAdmins(companyId, () -> Texts.t("HR Pay is read-only: invoice unpaid"), () -> Texts.t("""
                 Invoice(s) %s are unpaid past the grace period, so HR Pay is now read-only for your company. Everyone \
                 can still sign in, read and export everything, including payslips; changes come back as soon as the \
-                payment is recorded.%s""".formatted(numbers, instructions(settings())));
+                payment is recorded.%s""", numbers, instructions(current)));
     }
 
     /** Gives a company suspended for unpaid invoices its changes back once nothing is past the grace days. */
@@ -509,7 +512,7 @@ public class Billing {
     }
 
     public static String day(LocalDate d) {
-        return d == null ? "" : DAY.format(d);
+        return d == null ? "" : Texts.day(d);
     }
 
     public static String amount(BigDecimal v) {
@@ -531,7 +534,7 @@ public class Billing {
         return "%s-%d-%05d".formatted(prefix, year, n);
     }
 
-    private void tellAdmins(long companyId, String subject, String body) {
+    private void tellAdmins(long companyId, Supplier<String> subject, Supplier<String> body) {
         try {
             tenants.runAs(companyId, () -> {
                 List<Long> ids = jdbc.sql("""
@@ -542,7 +545,7 @@ public class Billing {
                 for (Long id : ids) {
                     AppUser admin = users.findById(id).orElse(null);
                     if (admin != null) {
-                        notifications.sendEmail(admin, subject, body);
+                        notifications.email(admin, subject, body);
                     }
                 }
             });
@@ -554,10 +557,10 @@ public class Billing {
     static String instructions(Settings s) {
         StringBuilder b = new StringBuilder();
         if (s.bankDetails() != null) {
-            b.append("\n\nBank transfer:\n").append(s.bankDetails());
+            b.append("\n\n").append(Texts.t("Bank transfer:")).append("\n").append(s.bankDetails());
         }
         if (s.mobileMoney() != null) {
-            b.append("\n\nMobile money:\n").append(s.mobileMoney());
+            b.append("\n\n").append(Texts.t("Mobile money:")).append("\n").append(s.mobileMoney());
         }
         return b.toString();
     }

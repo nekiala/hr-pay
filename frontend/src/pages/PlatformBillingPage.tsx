@@ -3,10 +3,11 @@ import { api, type BillingSettings, type Invoice, type PlanPrice } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { InvoiceTable } from '../components/Invoices'
 import { Button, Form } from '../components/Button'
+import { t } from '../i18n'
 
 type View = { mode: 'SAAS' | 'ON_PREMISE'; settings: BillingSettings; prices: PlanPrice[] }
 
-const FILTERS = [['OVERDUE', 'Overdue'], ['OPEN', 'To pay'], ['PAID', 'Paid'], ['VOID', 'Cancelled'], ['', 'All']] as const
+const FILTERS = [['OVERDUE', t('Overdue')], ['OPEN', t('To pay')], ['PAID', t('Paid')], ['VOID', t('Cancelled')], ['', t('All')]] as const
 
 /** The provider's invoices across companies, prices per plan, and billing rules. */
 export default function PlatformBillingPage() {
@@ -31,9 +32,9 @@ export default function PlatformBillingPage() {
     try {
       const v = await api<View>('/api/platform/billing', { method: 'PUT', body: settings })
       setSettings(v.settings)
-      setSaved('The billing rules are saved.')
+      setSaved(t('The billing rules are saved.'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save.')
+      setError(err instanceof Error ? err.message : t('Could not save.'))
     }
   }
 
@@ -44,9 +45,9 @@ export default function PlatformBillingPage() {
       for (const p of prices) {
         await api(`/api/platform/plans/${p.code}/price`, { method: 'PUT', body: { monthlyPrice: p.monthlyPrice, yearlyPrice: p.yearlyPrice } })
       }
-      setSaved('The prices are saved. They apply from each company\'s next invoice.')
+      setSaved(t('The prices are saved. They apply from each company\'s next invoice.'))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the prices.')
+      setError(err instanceof Error ? err.message : t('Could not save the prices.'))
     }
   }
 
@@ -56,15 +57,15 @@ export default function PlatformBillingPage() {
 
   return (
     <section>
-      <h2>Billing</h2>
+      <h2>{t('Billing')}</h2>
       <ErrorText error={error} />
       {saved && <p className="success">{saved}</p>}
-      {view?.mode === 'ON_PREMISE' && <p className="notice">This installation runs on premise: its use is covered by the licence, and no invoice is issued here.</p>}
+      {view?.mode === 'ON_PREMISE' && <p className="notice">{t('This installation runs on premise: its use is covered by the licence, and no invoice is issued here.')}</p>}
 
       <div className="card">
         <div className="row between">
-          <h3>Invoices</h3>
-          <div className="segmented" role="group" aria-label="Show">
+          <h3>{t('Invoices')}</h3>
+          <div className="segmented" role="group" aria-label={t('Show')}>
             {FILTERS.map(([code, label]) => (
               <button key={code} type="button" className={filter === code ? 'on' : ''} onClick={() => setFilter(code)}>{label}</button>
             ))}
@@ -75,12 +76,12 @@ export default function PlatformBillingPage() {
 
       <div className="cards2">
         <div className="card">
-          <h3>Prices</h3>
-          <p className="hint">In US dollars, before tax, for all the plan's modules. A company invoiced in francs pays the same at the BCC rate of the invoice's day.</p>
+          <h3>{t('Prices')}</h3>
+          <p className="hint">{t('In US dollars, before tax, for all the plan\'s modules. A company invoiced in francs pays the same at the BCC rate of the invoice\'s day.')}</p>
           <Form onSubmit={savePrices}>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Plan</th><th className="num">A month</th><th className="num">A year</th></tr></thead>
+                <thead><tr><th>{t('Plan')}</th><th className="num">{t('A month')}</th><th className="num">{t('A year')}</th></tr></thead>
                 <tbody>
                   {prices.map((p) => (
                     <tr key={p.code}>
@@ -92,27 +93,27 @@ export default function PlatformBillingPage() {
                 </tbody>
               </table>
             </div>
-            <Button type="submit">Save prices</Button>
+            <Button type="submit">{t('Save prices')}</Button>
           </Form>
         </div>
 
         {settings && (
           <div className="card">
-            <h3>Rules and payment details</h3>
+            <h3>{t('Rules and payment details')}</h3>
             <Form onSubmit={saveSettings}>
               <div className="grid3">
-                <label>Free trial (days)<input type="number" min="0" max="365" required value={settings.trialDays} onChange={(e) => set('trialDays', Number(e.target.value))} /></label>
-                <label>To pay within (days)<input type="number" min="0" max="120" required value={settings.paymentDays} onChange={(e) => set('paymentDays', Number(e.target.value))} /></label>
-                <label>Read-only after (days late)<input type="number" min="0" max="365" required value={settings.suspendAfterDays} onChange={(e) => set('suspendAfterDays', Number(e.target.value))} /></label>
-                <label>Tax name<input required maxLength={20} value={settings.taxLabel} onChange={(e) => set('taxLabel', e.target.value)} /></label>
-                <label>Tax rate (%)<input type="number" min="0" max="99.99" step="0.01" required value={settings.taxRate} onChange={(e) => set('taxRate', Number(e.target.value))} /></label>
-                <label>Invoice prefix<input required maxLength={10} value={settings.invoicePrefix} onChange={(e) => set('invoicePrefix', e.target.value)} /></label>
+                <label>{t('Free trial (days)')}<input type="number" min="0" max="365" required value={settings.trialDays} onChange={(e) => set('trialDays', Number(e.target.value))} /></label>
+                <label>{t('To pay within (days)')}<input type="number" min="0" max="120" required value={settings.paymentDays} onChange={(e) => set('paymentDays', Number(e.target.value))} /></label>
+                <label>{t('Read-only after (days late)')}<input type="number" min="0" max="365" required value={settings.suspendAfterDays} onChange={(e) => set('suspendAfterDays', Number(e.target.value))} /></label>
+                <label>{t('Tax name')}<input required maxLength={20} value={settings.taxLabel} onChange={(e) => set('taxLabel', e.target.value)} /></label>
+                <label>{t('Tax rate (%)')}<input type="number" min="0" max="99.99" step="0.01" required value={settings.taxRate} onChange={(e) => set('taxRate', Number(e.target.value))} /></label>
+                <label>{t('Invoice prefix')}<input required maxLength={10} value={settings.invoicePrefix} onChange={(e) => set('invoicePrefix', e.target.value)} /></label>
               </div>
-              <label>Bank transfer details<textarea rows={3} value={settings.bankDetails ?? ''} onChange={(e) => set('bankDetails', e.target.value)} placeholder="Bank, account holder, account number, SWIFT" /></label>
-              <label>Mobile money numbers<textarea rows={3} value={settings.mobileMoney ?? ''} onChange={(e) => set('mobileMoney', e.target.value)} placeholder="M-Pesa: +243 …&#10;Orange Money: +243 …&#10;Airtel Money: +243 …" /></label>
-              <label>Note at the foot of invoices<textarea rows={2} value={settings.invoiceNote ?? ''} onChange={(e) => set('invoiceNote', e.target.value)} /></label>
-              <p className="hint">The invoices carry your company's name, logo and legal details from the Company page.</p>
-              <Button type="submit">Save</Button>
+              <label>{t('Bank transfer details')}<textarea rows={3} value={settings.bankDetails ?? ''} onChange={(e) => set('bankDetails', e.target.value)} placeholder={t('Bank, account holder, account number, SWIFT')} /></label>
+              <label>{t('Mobile money numbers')}<textarea rows={3} value={settings.mobileMoney ?? ''} onChange={(e) => set('mobileMoney', e.target.value)} placeholder={t('M-Pesa: +243 …\nOrange Money: +243 …\nAirtel Money: +243 …')} /></label>
+              <label>{t('Note at the foot of invoices')}<textarea rows={2} value={settings.invoiceNote ?? ''} onChange={(e) => set('invoiceNote', e.target.value)} /></label>
+              <p className="hint">{t('The invoices carry your company\'s name, logo and legal details from the Company page.')}</p>
+              <Button type="submit">{t('Save')}</Button>
             </Form>
           </div>
         )}

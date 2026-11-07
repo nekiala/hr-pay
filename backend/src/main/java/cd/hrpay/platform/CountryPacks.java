@@ -24,7 +24,10 @@ import tools.jackson.databind.node.ObjectNode;
 public class CountryPacks {
 
     /** The countries with a pack, and how they are named on screen. */
-    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo");
+    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo", "CG", "Republic of the Congo");
+
+    /** Each country's own currency, the one taxes are declared in. */
+    public static final Map<String, String> CURRENCIES = Map.of("CD", "CDF", "CG", "XAF");
 
     private final JdbcClient jdbc;
     private final JsonMapper json;
@@ -40,6 +43,9 @@ public class CountryPacks {
             throw new IllegalStateException("A country pack is applied within one company");
         }
         JsonNode pack = read(country);
+        boolean french = "fr".equals(jdbc.sql("select language from company where id = current_company_id()")
+                .query(String.class).optional().orElse("fr"));
+        JsonNode names = french ? names() : null;
         Map<String, Map<Long, Long>> ids = new HashMap<>();
         for (JsonNode table : pack.get("tables")) {
             String name = table.get("table").asString();
@@ -63,6 +69,14 @@ public class CountryPacks {
                         row.put(ref.getKey(), mapped);
                     }
                 }
+                if (names != null) {   // the starting names in the company's language; codes stay as they are
+                    for (String column : List.of("name", "description", "head_title")) {
+                        JsonNode v = row.get(column);
+                        if (v != null && v.isString() && names.has(v.asString())) {
+                            row.put(column, names.get(v.asString()).asString());
+                        }
+                    }
+                }
                 JsonNode oldId = row.remove("id");
                 row.remove("company_id");
                 List<String> columns = row.propertyNames().stream().toList();
@@ -80,6 +94,15 @@ public class CountryPacks {
         // Anniversary raises start from the company's first month on HR Pay, not from the pack's date.
         jdbc.sql("update payroll_setting set value = ? where key = 'RAISES_FROM'")
                 .param(LocalDate.now().withDayOfMonth(1).toString()).update();
+    }
+
+    /** The pack's names in French, by their English name. */
+    private JsonNode names() {
+        try (InputStream in = CountryPacks.class.getResourceAsStream("/packs/names-fr.json")) {
+            return in == null ? json.createObjectNode() : json.readTree(in);
+        } catch (IOException e) {
+            throw new IllegalStateException("The French names of the packs cannot be read", e);
+        }
     }
 
     private JsonNode read(String country) {

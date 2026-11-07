@@ -7,6 +7,7 @@ import { useAsk } from '../components/Dialogs'
 import MonthView from '../components/MonthView'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { t } from '../i18n'
 
 export default function UserAttendancePage() {
   const [adding, setAdding] = useState(false)
@@ -31,7 +32,7 @@ export default function UserAttendancePage() {
       setVersion((v) => v + 1)
       return true
     } catch (e) {
-      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.'))
       return false
     }
   }
@@ -44,37 +45,37 @@ export default function UserAttendancePage() {
         body: { type: entry.type, at: `${entry.date}T${entry.time}:00`, workDate: entry.date, note: entry.note },
       })
       setEntry({ ...entry, note: '' })
-    }, 'Entry added.')
+    }, t('Entry added.'))
   }
 
   const voidEntry = (entryId: number) => ask({
-    title: 'Void this entry', message: 'It stays in the history, marked as voided.', confirmLabel: 'Void', danger: true,
-    fields: [{ label: 'Why is it wrong?', required: true, multiline: true }],
-    onConfirm: ([reason]) => run(() => api(`/api/attendance/events/${entryId}/void`, { method: 'POST', body: { reason } }), 'Entry voided.'),
+    title: t('Void this entry'), message: t('It stays in the history, marked as voided.'), confirmLabel: t('Void'), danger: true,
+    fields: [{ label: t('Why is it wrong?'), required: true, multiline: true }],
+    onConfirm: ([reason]) => run(() => api(`/api/attendance/events/${entryId}/void`, { method: 'POST', body: { reason } }), t('Entry voided.')),
   })
 
   return (
     <section>
-      <p><Link to={`/users/${id}`}>← Back to employee</Link></p>
+      <p><Link to={`/users/${id}`}>{t('← Back to employee')}</Link></p>
       <div className="row between">
-        <h2>Attendance{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
-        {canCorrect && <Button onClick={() => setAdding(true)}>Add a missing entry</Button>}
+        <h2>{t('Attendance')}{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
+        {canCorrect && <Button onClick={() => setAdding(true)}>{t('Add a missing entry')}</Button>}
       </div>
       {canCorrect && adding && (
-        <Modal title="Add a missing entry" size="md" onClose={() => setAdding(false)}>
+        <Modal title={t('Add a missing entry')} size="md" onClose={() => setAdding(false)}>
           <Form onSubmit={async (e) => { if (await add(e)) setAdding(false) }}>
-            <p className="hint">Entries are never edited. Void a wrong one with a reason, then add the right one. Both are kept in the audit log.</p>
+            <p className="hint">{t('Entries are never edited. Void a wrong one with a reason, then add the right one. Both are kept in the audit log.')}</p>
             <div className="row">
               <input type="date" value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} required />
               <input type="time" value={entry.time} onChange={(e) => setEntry({ ...entry, time: e.target.value })} required />
               <select value={entry.type} onChange={(e) => setEntry({ ...entry, type: e.target.value })}>
-                <option value="IN">Arrival</option>
-                <option value="OUT">End of day</option>
+                <option value="IN">{t('Arrival')}</option>
+                <option value="OUT">{t('End of day')}</option>
               </select>
-              <input placeholder="Reason, for example phone was off" value={entry.note}
+              <input placeholder={t('Reason, for example phone was off')} value={entry.note}
                 onChange={(e) => setEntry({ ...entry, note: e.target.value })} required maxLength={500} />
               <ErrorText error={error} />
-            <div className="modal-foot"><Button className="secondary" onClick={() => setAdding(false)}>Cancel</Button><Button type="submit">Add</Button></div>
+            <div className="modal-foot"><Button className="secondary" onClick={() => setAdding(false)}>{t('Cancel')}</Button><Button type="submit">{t('Add')}</Button></div>
             </div>
           </Form>
         </Modal>

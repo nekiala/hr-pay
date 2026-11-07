@@ -105,7 +105,7 @@ class BillingIT extends IntegrationTest {
                 .andExpect(jsonPath("$.invoices[0].tax").value(9.6))
                 .andExpect(jsonPath("$.invoices[0].total").value(69.6));
         // The administrator is told by email.
-        assertThat(tenants.callAs(c.id(), () -> jdbc.sql("select count(*) from outbox_message where subject like 'Invoice HP-%'")
+        assertThat(tenants.callAs(c.id(), () -> jdbc.sql("select count(*) from outbox_message where subject like 'Facture HP-%'")
                 .query(Integer.class).single())).isOne();
     }
 

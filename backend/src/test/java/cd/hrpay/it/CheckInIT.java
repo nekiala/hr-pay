@@ -25,7 +25,7 @@ class CheckInIT extends IntegrationTest {
     private String latestCode(String email) {
         String body = jdbc.sql("select body from outbox_message where recipient = :r order by id desc limit 1")
                 .param("r", email).query(String.class).single();
-        Matcher m = Pattern.compile("code is (\\d{6})").matcher(body);
+        Matcher m = Pattern.compile("(?:code is|est) (\\d{6})").matcher(body);
         assertThat(m.find()).isTrue();
         return m.group(1);
     }

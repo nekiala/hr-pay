@@ -1,5 +1,7 @@
 package cd.hrpay.payroll;
 
+import cd.hrpay.i18n.Texts;
+
 import cd.hrpay.payment.Company;
 import cd.hrpay.payment.YearSummaries;
 import com.lowagie.text.Chunk;
@@ -52,7 +54,18 @@ public class PayslipPdf {
     private static final Font NOTICE = new Font(Font.HELVETICA, 9, Font.BOLD, new Color(170, 60, 0));
     private static final Color SHADE = new Color(236, 240, 245);
     private static final Color RULE = new Color(150, 160, 170);
-    private static final Map<String, String> PAYMENT = Map.of("BANK", "Bank transfer", "MOBILE_MONEY", "Mobile money", "CASH", "Cash");
+    private static String payment(String method) {
+        return switch (method == null ? "" : method) {
+            case "BANK" -> Texts.t("Bank transfer");
+            case "MOBILE_MONEY" -> Texts.t("Mobile money");
+            case "CASH" -> Texts.t("Cash");
+            default -> method;
+        };
+    }
+
+    private static String months(int n) {
+        return n == 1 ? Texts.t("%s month", n) : Texts.t("%s months", n);
+    }
 
     private final YearSummaries years;
     private final Company company;
@@ -95,9 +108,13 @@ public class PayslipPdf {
 
     /** A made-up payslip in a given layout, with the company's real header, so HR can compare the layouts without showing anyone's pay. */
     public byte[] sample(String template) {
+        return Texts.in(company.language(), () -> sampleIn(template));
+    }
+
+    private byte[] sampleIn(String template) {
         java.time.LocalDate month = java.time.LocalDate.now().withDayOfMonth(1);
         Map<String, Object> s = new java.util.LinkedHashMap<>();
-        s.put("name", "Sample Employee");
+        s.put("name", Texts.t("Sample Employee"));
         s.put("registrationNo", "EMP-0000");
         s.put("contractType", "PERMANENT");
         s.put("contractStart", month.minusYears(6).minusMonths(4).toString());
@@ -105,10 +122,10 @@ public class PayslipPdf {
         s.put("seniority", "6 y 4 m");
         s.put("seniorityYears", 6);
         s.put("seniorityMonths", 4);
-        s.put("grade", "B2 · Officer");
-        s.put("occupation", "Accountant");
-        s.put("unit", "Accounting");
-        s.put("direction", "Finance");
+        s.put("grade", Texts.t("B2 · Officer"));
+        s.put("occupation", Texts.t("Accountant"));
+        s.put("unit", Texts.t("Accounting"));
+        s.put("direction", Texts.t("Finance"));
         s.put("basicMonthly", new BigDecimal("900.00"));
         s.put("childrenInCharge", 3);
         s.put("dependantsInCharge", 4);
@@ -117,16 +134,16 @@ public class PayslipPdf {
         s.put("cnssNumber", "000000000");
         s.put("taxNumber", "A0000000X");
         s.put("paymentMethod", "BANK");
-        s.put("bankName", "Sample bank");
+        s.put("bankName", Texts.t("Sample bank"));
         s.put("bankAccount", "0000 0000 0000");
         List<PayrollRuns.Line> lines = List.of(
-                new PayrollRuns.Line("BASIC", "Basic salary", "EARNING", new BigDecimal("900.00"), null, new BigDecimal("900.00"), 10, null),
-                new PayrollRuns.Line("HOUSING", "Housing allowance", "EARNING", new BigDecimal("900.00"), new BigDecimal("30"), new BigDecimal("270.00"), 20, null),
-                new PayrollRuns.Line("TRANSPORT", "Transport allowance", "EARNING", null, null, new BigDecimal("60.00"), 30, null),
-                new PayrollRuns.Line("FAMILY", "Family allowances", "EARNING", new BigDecimal("3"), null, new BigDecimal("45.00"), 40, null),
-                new PayrollRuns.Line("CNSS_EMPLOYEE", "CNSS (employee share)", "DEDUCTION", new BigDecimal("900.00"), new BigDecimal("5"), new BigDecimal("45.00"), 100, null),
-                new PayrollRuns.Line("IPR", "IPR (income tax)", "DEDUCTION", new BigDecimal("855.00"), null, new BigDecimal("98.50"), 110, null),
-                new PayrollRuns.Line("CNSS_EMPLOYER", "CNSS (employer share)", "EMPLOYER_CHARGE", new BigDecimal("900.00"), new BigDecimal("13"), new BigDecimal("117.00"), 200, null),
+                new PayrollRuns.Line("BASIC", Texts.t("Basic salary"), "EARNING", new BigDecimal("900.00"), null, new BigDecimal("900.00"), 10, null),
+                new PayrollRuns.Line("HOUSING", Texts.t("Housing allowance"), "EARNING", new BigDecimal("900.00"), new BigDecimal("30"), new BigDecimal("270.00"), 20, null),
+                new PayrollRuns.Line("TRANSPORT", Texts.t("Transport allowance"), "EARNING", null, null, new BigDecimal("60.00"), 30, null),
+                new PayrollRuns.Line("FAMILY", Texts.t("Family allowances"), "EARNING", new BigDecimal("3"), null, new BigDecimal("45.00"), 40, null),
+                new PayrollRuns.Line("CNSS_EMPLOYEE", Texts.t("CNSS (employee share)"), "DEDUCTION", new BigDecimal("900.00"), new BigDecimal("5"), new BigDecimal("45.00"), 100, null),
+                new PayrollRuns.Line("IPR", Texts.t("IPR (income tax)"), "DEDUCTION", new BigDecimal("855.00"), null, new BigDecimal("98.50"), 110, null),
+                new PayrollRuns.Line("CNSS_EMPLOYER", Texts.t("CNSS (employer share)"), "EMPLOYER_CHARGE", new BigDecimal("900.00"), new BigDecimal("13"), new BigDecimal("117.00"), 200, null),
                 new PayrollRuns.Line("INPP", "INPP", "EMPLOYER_CHARGE", new BigDecimal("900.00"), new BigDecimal("3"), new BigDecimal("27.00"), 210, null));
         PayrollRuns.Payslip p = new PayrollRuns.Payslip(0, 0, month, "SAMPLE", 0, "SAMPLE-0001", "USD",
                 new BigDecimal("1275.00"), new BigDecimal("900.00"), new BigDecimal("855.00"), new BigDecimal("1881000"),
@@ -141,11 +158,16 @@ public class PayslipPdf {
     }
 
     private byte[] draw(PayrollRuns.Payslip p, String template, YearToDate ytd) {
-        Context c = new Context(p, company.get(), company.payslipSettings(), company.logo().orElse(null), ytd);
+        return Texts.in(company.language(), () -> drawIn(p, template, ytd));
+    }
+
+    private byte[] drawIn(PayrollRuns.Payslip p, String template, YearToDate ytd) {
+        Context c = new Context(p, company.get(), company.payslipSettings(), company.logo().orElse(null), ytd,
+                company.localCurrency(), company.country());
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         Document doc = new Document(PageSize.A4, 36, 36, 30, 30);
         PdfWriter.getInstance(doc, bytes);
-        doc.addTitle("Payslip " + p.month().toString().substring(0, 7) + " " + text(p.snapshot().get("name")));
+        doc.addTitle(Texts.t("Payslip %s %s", p.month().toString().substring(0, 7), text(p.snapshot().get("name"))));
         doc.addCreator("HR Pay");
         doc.open();
         switch (template == null ? "CLASSIC" : template) {
@@ -158,13 +180,18 @@ public class PayslipPdf {
     }
 
     private record Context(PayrollRuns.Payslip p, Company.Details employer, Company.PayslipSettings settings,
-                           Company.Logo logo, YearToDate ytd) {
+                           Company.Logo logo, YearToDate ytd, String local, String country) {
         Map<String, Object> s() {
             return p.snapshot();
         }
 
         String cur() {
             return p.currency();
+        }
+
+        /** The income tax's name: IPR in the DRC, ITS in the Republic of the Congo. */
+        String tax() {
+            return "CG".equals(country) ? "ITS" : "IPR";
         }
     }
 
@@ -179,24 +206,24 @@ public class PayslipPdf {
         PdfPTable lines = table(new float[] {5, 2, 1.6f, 2.4f});
         lines.setSpacingBefore(8);
         lines.setHeaderRows(1);
-        for (String h : List.of("Item", "Base", "Rate", "Amount")) {
-            PdfPCell x = cell(h, BOLD, h.equals("Item") ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, true);
+        for (String h : List.of(Texts.t("Item"), Texts.t("Base"), Texts.t("Rate"), Texts.t("Amount"))) {
+            PdfPCell x = cell(h, BOLD, h.equals(Texts.t("Item")) ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, true);
             x.setBorder(Rectangle.BOTTOM);
             lines.addCell(x);
         }
-        section(lines, "Earnings", c, "EARNING", c.p().gross(), "Gross pay");
-        section(lines, "Deductions", c, "DEDUCTION", c.p().employeeDeductions(), "Total deductions");
+        section(lines, Texts.t("Earnings"), c, "EARNING", c.p().gross(), Texts.t("Gross pay"));
+        section(lines, Texts.t("Deductions"), c, "DEDUCTION", c.p().employeeDeductions(), Texts.t("Total deductions"));
         netRow(lines, c, 3);
         doc.add(lines);
         doc.add(paidBy(c));
         doc.add(yearTable(c));
         if (c.ytd().otherCurrencies()) {
-            doc.add(new Paragraph("Months paid in another currency are not included above.", SMALL));
+            doc.add(new Paragraph(Texts.t("Months paid in another currency are not included above."), SMALL));
         }
 
         PdfPTable charges = table(new float[] {5, 2, 1.6f, 2.4f});
         charges.setSpacingBefore(10);
-        PdfPCell ch = cell("Employer charges (not deducted from pay)", BOLD, Element.ALIGN_LEFT, true);
+        PdfPCell ch = cell(Texts.t("Employer charges (not deducted from pay)"), BOLD, Element.ALIGN_LEFT, true);
         ch.setColspan(4);
         charges.addCell(ch);
         for (PayrollRuns.Line l : c.p().lines()) {
@@ -204,7 +231,7 @@ public class PayslipPdf {
                 line(charges, l, c.cur());
             }
         }
-        total(charges, "Total employer charges", c.p().employerCharges(), c.cur(), 3);
+        total(charges, Texts.t("Total employer charges"), c.p().employerCharges(), c.cur(), 3);
         doc.add(charges);
         footer(doc, c);
     }
@@ -217,8 +244,8 @@ public class PayslipPdf {
 
         PdfPTable two = table(new float[] {1, 1});
         two.setSpacingBefore(8);
-        two.addCell(column("Earnings", c, "EARNING", c.p().gross(), "Gross pay"));
-        two.addCell(column("Deductions", c, "DEDUCTION", c.p().employeeDeductions(), "Total deductions"));
+        two.addCell(column(Texts.t("Earnings"), c, "EARNING", c.p().gross(), Texts.t("Gross pay")));
+        two.addCell(column(Texts.t("Deductions"), c, "DEDUCTION", c.p().employeeDeductions(), Texts.t("Total deductions")));
         doc.add(two);
 
         PdfPTable net = table(new float[] {3, 1});
@@ -228,13 +255,13 @@ public class PayslipPdf {
         doc.add(paidBy(c));
 
         YearToDate y = c.ytd();
-        Paragraph ytd = new Paragraph("Year to date " + y.year() + " (" + y.months() + " month" + (y.months() == 1 ? "" : "s")
-                + "): gross " + money(y.gross(), y.currency()) + " · CNSS " + money(y.cnss(), y.currency()) + " · IPR "
-                + money(y.ipr(), y.currency()) + " · net " + money(y.net(), y.currency()), SMALL_BOLD);
+        Paragraph ytd = new Paragraph(Texts.t("Year to date %s (%s): gross %s · CNSS %s · %s %s · net %s", y.year(), months(y.months()),
+                money(y.gross(), y.currency()), money(y.cnss(), y.currency()), c.tax(), money(y.ipr(), y.currency()),
+                money(y.net(), y.currency())), SMALL_BOLD);
         ytd.setSpacingBefore(6);
         doc.add(ytd);
-        Paragraph employer = new Paragraph("Employer charges this month: " + money(c.p().employerCharges(), c.cur())
-                + ". Taxable income for IPR: " + money(c.p().taxableBase(), c.cur()) + ".", SMALL);
+        Paragraph employer = new Paragraph(Texts.t("Employer charges this month: %s. Taxable income for %s: %s.",
+                money(c.p().employerCharges(), c.cur()), c.tax(), money(c.p().taxableBase(), c.cur())), SMALL);
         doc.add(employer);
         footer(doc, c);
     }
@@ -249,7 +276,7 @@ public class PayslipPdf {
         PdfPTable t = table(new float[] {2.1f, 3.6f, 1.6f, 1.1f, 1.9f, 1.9f, 1.1f, 1.9f});
         t.setSpacingBefore(8);
         t.setHeaderRows(2);
-        String[] top = {"Code", "Item", "Base", "Employee", "", "", "Employer", ""};
+        String[] top = {Texts.t("Code"), Texts.t("Item"), Texts.t("Base"), Texts.t("Employee"), "", "", Texts.t("Employer"), ""};
         int[] spans = {1, 1, 1, 3, 0, 0, 2, 0};
         for (int i = 0; i < top.length; i++) {
             if (spans[i] == 0) {
@@ -259,7 +286,7 @@ public class PayslipPdf {
             h.setColspan(spans[i]);
             t.addCell(h);
         }
-        for (String h : List.of("", "", "", "Rate", "Paid", "Withheld", "Rate", "Amount")) {
+        for (String h : List.of("", "", "", Texts.t("Rate"), Texts.t("Paid"), Texts.t("Withheld"), Texts.t("Rate"), Texts.t("Amount"))) {
             t.addCell(ruled(h, SMALL_BOLD, Element.ALIGN_CENTER, true));
         }
         // One row per item: earnings and deductions, then each employer charge on the row of its base.
@@ -279,7 +306,7 @@ public class PayslipPdf {
             t.addCell(ruled(employer ? rate(l) : "", NORMAL, Element.ALIGN_RIGHT, false));
             t.addCell(ruled(employer ? money(l.amount(), cur) : "", NORMAL, Element.ALIGN_RIGHT, false));
         }
-        PdfPCell totals = ruled("Totals", BOLD, Element.ALIGN_LEFT, true);
+        PdfPCell totals = ruled(Texts.t("Totals"), BOLD, Element.ALIGN_LEFT, true);
         totals.setColspan(4);
         t.addCell(totals);
         t.addCell(ruled(money(c.p().gross(), cur), BOLD, Element.ALIGN_RIGHT, true));
@@ -295,8 +322,8 @@ public class PayslipPdf {
         doc.add(t);
         doc.add(paidBy(c));
         doc.add(yearTable(c));
-        Paragraph bases = new Paragraph("Taxable income for IPR: " + money(c.p().taxableBase(), cur) + " ("
-                + money(c.p().taxableBaseCdf(), "CDF") + "). CNSS base: " + money(c.p().cnssBase(), cur) + ".", SMALL);
+        Paragraph bases = new Paragraph(Texts.t("Taxable income for %s: %s (%s). CNSS base: %s.", c.tax(), money(c.p().taxableBase(), cur),
+                money(c.p().taxableBaseCdf(), c.local()), money(c.p().cnssBase(), cur)), SMALL);
         bases.setSpacingBefore(4);
         doc.add(bases);
         footer(doc, c);
@@ -334,10 +361,10 @@ public class PayslipPdf {
         PdfPCell right = cell("", NORMAL, Element.ALIGN_RIGHT, false);
         List<String> legal = new ArrayList<>();
         add(legal, "RCCM", e.rccm());
-        add(legal, "Id. Nat.", e.nationalId());
+        add(legal, Texts.t("Id. Nat."), e.nationalId());
         add(legal, "NIF", e.taxNumber());
         add(legal, "CNSS", e.cnssNumber());
-        if (full) {
+        if (full && "CD".equals(c.country())) {
             add(legal, "INPP", e.inppNumber());
             add(legal, "ONEM", e.onemNumber());
         }
@@ -351,18 +378,18 @@ public class PayslipPdf {
     private Paragraph titleLine(Context c) {
         PayrollRuns.Payslip p = c.p();
         Paragraph title = new Paragraph();
-        title.add(new Chunk("Payslip · " + p.month().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)), TITLE));
-        title.add(new Chunk("    " + (p.number() == null ? "not numbered yet" : "No. " + p.number())
-                + " · period " + p.month() + " to " + p.month().withDayOfMonth(p.month().lengthOfMonth()), SMALL));
+        title.add(new Chunk(Texts.t("Payslip · %s", Texts.month(p.month())), TITLE));
+        title.add(new Chunk("    " + (p.number() == null ? Texts.t("not numbered yet") : Texts.t("No. %s", p.number()))
+                + Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth()))), SMALL));
         title.setSpacingBefore(8);
         return title;
     }
 
     private static void draftNotice(Document doc, Context c) {
         if ("SAMPLE".equals(c.p().runStatus())) {
-            doc.add(new Paragraph("SAMPLE: made-up figures to show the layout.", NOTICE));
+            doc.add(new Paragraph(Texts.t("SAMPLE: made-up figures to show the layout."), NOTICE));
         } else if (!"CLOSED".equals(c.p().runStatus())) {
-            doc.add(new Paragraph("DRAFT: this payroll is " + c.p().runStatus().toLowerCase() + " and not yet closed.", NOTICE));
+            doc.add(new Paragraph(Texts.t("DRAFT: this payroll is %s and not yet closed.", Texts.t(c.p().runStatus().toLowerCase())), NOTICE));
         }
     }
 
@@ -370,29 +397,29 @@ public class PayslipPdf {
     private PdfPTable employeeGrid(Context c, int perRow) {
         Map<String, Object> s = c.s();
         List<String[]> facts = new ArrayList<>();
-        facts.add(new String[] {"Employee", text(s.get("name"))});
-        facts.add(new String[] {"Matricule", text(s.get("registrationNo"))});
-        facts.add(new String[] {"Grade", text(s.get("grade"))});
-        facts.add(new String[] {"Occupation", dash(s.get("occupation"))});
+        facts.add(new String[] {Texts.t("Employee"), text(s.get("name"))});
+        facts.add(new String[] {Texts.t("Matricule"), text(s.get("registrationNo"))});
+        facts.add(new String[] {Texts.t("Grade"), text(s.get("grade"))});
+        facts.add(new String[] {Texts.t("Occupation"), dash(s.get("occupation"))});
         if (s.get("unit") != null) {
             String dir = text(s.get("direction"));
-            facts.add(new String[] {"Unit", join(text(s.get("unit")), dir.equals(text(s.get("unit"))) ? "" : dir)});
+            facts.add(new String[] {Texts.t("Unit"), join(text(s.get("unit")), dir.equals(text(s.get("unit"))) ? "" : dir)});
         }
-        facts.add(new String[] {"Hired", dash(s.get("hireDate"))});
-        facts.add(new String[] {"Seniority", s.get("seniorityYears") == null ? "—"
-                : s.get("seniorityYears") + " yr " + s.get("seniorityMonths") + " mo"});
-        facts.add(new String[] {"Marital status", dash(s.get("maritalCode"))});
-        facts.add(new String[] {"Children (family allowances)", text(s.get("childrenInCharge"))});
-        facts.add(new String[] {"Contract", text(s.get("contractType")).replace('_', ' ').toLowerCase()
-                + (Boolean.TRUE.equals(s.get("expatriate")) ? ", expatriate" : "")});
-        facts.add(new String[] {"CNSS no.", dash(s.get("cnssNumber"))});
+        facts.add(new String[] {Texts.t("Hired"), dash(s.get("hireDate"))});
+        facts.add(new String[] {Texts.t("Seniority"), s.get("seniorityYears") == null ? "—"
+                : Texts.t("%s yr %s mo", s.get("seniorityYears"), s.get("seniorityMonths"))});
+        facts.add(new String[] {Texts.t("Marital status"), dash(s.get("maritalCode"))});
+        facts.add(new String[] {Texts.t("Children (family allowances)"), text(s.get("childrenInCharge"))});
+        facts.add(new String[] {Texts.t("Contract"), Texts.t(text(s.get("contractType")).replace('_', ' ').toLowerCase())
+                + (Boolean.TRUE.equals(s.get("expatriate")) ? Texts.t(", expatriate") : "")});
+        facts.add(new String[] {Texts.t("CNSS no."), dash(s.get("cnssNumber"))});
         facts.add(new String[] {"NIF", dash(s.get("taxNumber"))});
-        facts.add(new String[] {"Hours paid", hours(c.p().paidMinutes()) + " of " + hours(c.p().scheduledMinutes())});
-        facts.add(new String[] {"Days worked", String.valueOf(c.p().daysWorked())});
-        facts.add(new String[] {"Monthly basic", money(new BigDecimal(text(s.get("basicMonthly")).isEmpty() ? "0"
+        facts.add(new String[] {Texts.t("Hours paid"), Texts.t("%s of %s", hours(c.p().paidMinutes()), hours(c.p().scheduledMinutes()))});
+        facts.add(new String[] {Texts.t("Days worked"), String.valueOf(c.p().daysWorked())});
+        facts.add(new String[] {Texts.t("Monthly basic"), money(new BigDecimal(text(s.get("basicMonthly")).isEmpty() ? "0"
                 : text(s.get("basicMonthly"))), c.cur())});
         if (c.cur().equals("USD") && c.p().usdCdf() != null) {
-            facts.add(new String[] {"BCC rate", "$1 = " + c.p().usdCdf().stripTrailingZeros().toPlainString() + " CDF ("
+            facts.add(new String[] {Texts.t("BCC rate"), "$1 = " + c.p().usdCdf().stripTrailingZeros().toPlainString() + " " + c.local() + " ("
                     + c.p().rateDate() + ")"});
         }
         PdfPTable grid = table(repeat(perRow));
@@ -454,7 +481,7 @@ public class PayslipPdf {
     }
 
     private static void netRow(PdfPTable t, Context c, int labelSpan) {
-        PdfPCell net = cell("Net pay", TITLE, Element.ALIGN_LEFT, true);
+        PdfPCell net = cell(Texts.t("Net pay"), TITLE, Element.ALIGN_LEFT, true);
         net.setColspan(labelSpan);
         t.addCell(net);
         t.addCell(cell(money(c.p().net(), c.cur()), TITLE, Element.ALIGN_RIGHT, true));
@@ -462,16 +489,16 @@ public class PayslipPdf {
 
     private static Paragraph paidBy(Context c) {
         Map<String, Object> s = c.s();
-        String pay = PAYMENT.getOrDefault(text(s.get("paymentMethod")), text(s.get("paymentMethod")));
+        String pay = payment(text(s.get("paymentMethod")));
         if ("BANK".equals(s.get("paymentMethod")) && s.get("bankName") != null) {
             pay += ": " + text(s.get("bankName")) + " " + text(s.get("bankAccount"));
         } else if ("MOBILE_MONEY".equals(s.get("paymentMethod"))) {
             pay += ": " + text(s.get("mobileMoneyOperator")) + " " + text(s.get("mobileMoneyNumber"));
         }
         if (c.cur().equals("USD") && c.p().usdCdf() != null) {
-            pay += " · net in CDF: " + money(c.p().net().multiply(c.p().usdCdf()).setScale(0, RoundingMode.HALF_UP), "CDF");
+            pay += Texts.t(" · net in %s: %s", c.local(), money(c.p().net().multiply(c.p().usdCdf()).setScale(0, RoundingMode.HALF_UP), c.local()));
         }
-        Paragraph paid = new Paragraph("Paid by " + pay, NORMAL);
+        Paragraph paid = new Paragraph(Texts.t("Paid by %s", pay), NORMAL);
         paid.setSpacingBefore(5);
         return paid;
     }
@@ -480,14 +507,13 @@ public class PayslipPdf {
         YearToDate y = c.ytd();
         PdfPTable year = table(new float[] {3, 2, 2, 2, 2});
         year.setSpacingBefore(10);
-        PdfPCell yh = cell("Year to date " + y.year() + " (" + y.months() + " month" + (y.months() == 1 ? "" : "s")
-                + ", in " + y.currency() + ")", BOLD, Element.ALIGN_LEFT, true);
+        PdfPCell yh = cell(Texts.t("Year to date %s (%s, in %s)", y.year(), months(y.months()), y.currency()), BOLD, Element.ALIGN_LEFT, true);
         yh.setColspan(5);
         year.addCell(yh);
-        for (String h : List.of("", "Gross", "CNSS", "IPR", "Net")) {
+        for (String h : List.of("", Texts.t("Gross"), "CNSS", c.tax(), Texts.t("Net"))) {
             year.addCell(cell(h, BOLD, h.isEmpty() ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, false));
         }
-        year.addCell(cell("Total", NORMAL, Element.ALIGN_LEFT, false));
+        year.addCell(cell(Texts.t("Total"), NORMAL, Element.ALIGN_LEFT, false));
         for (BigDecimal v : List.of(y.gross(), y.cnss(), y.ipr(), y.net())) {
             year.addCell(cell(money(v, y.currency()), NORMAL, Element.ALIGN_RIGHT, false));
         }
@@ -496,7 +522,7 @@ public class PayslipPdf {
 
     private static void footer(Document doc, Context c) {
         Paragraph keep = new Paragraph((c.settings().footer() == null ? "" : c.settings().footer() + " ")
-                + "Keep this payslip without time limit.", SMALL);
+                + Texts.t("Keep this payslip without time limit."), SMALL);
         keep.setSpacingBefore(10);
         doc.add(keep);
     }

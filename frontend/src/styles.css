@@ -509,3 +509,4 @@ button.link:hover:not(:disabled) { background: none; filter: brightness(1.15); }
 .session-list { list-style: none; margin: 0; padding: 0; }
 .session-list li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
 .session-list li:first-child { border-top: 0; }
+.language-toggle { align-self: center; margin-top: 4px; }

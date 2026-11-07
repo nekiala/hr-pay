@@ -58,7 +58,7 @@ public class YearSummaries {
             String currency = rs.getString("currency");
             BigDecimal ipr = rs.getBigDecimal("ipr");
             BigDecimal cnss = rs.getBigDecimal("cnss");
-            BigDecimal iprCdf = (currency.equals("CDF") ? ipr : ipr.multiply(rs.getBigDecimal("usd_cdf"))).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal iprCdf = (currency.equals("USD") ? ipr.multiply(rs.getBigDecimal("usd_cdf")) : ipr).setScale(2, RoundingMode.HALF_UP);
             return new Raw(rs.getLong("user_id"), rs.getString("name"), rs.getString("registration_no"),
                     crypto.decrypt(rs.getString("cnss_number")), crypto.decrypt(rs.getString("tax_number")),
                     new Month(rs.getString("month"), rs.getLong("id"), rs.getString("number"), currency,

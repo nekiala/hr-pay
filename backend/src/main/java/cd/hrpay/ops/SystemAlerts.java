@@ -1,5 +1,7 @@
 package cd.hrpay.ops;
 
+import cd.hrpay.i18n.Texts;
+
 import cd.hrpay.notify.NotificationService;
 import cd.hrpay.user.AppUser;
 import cd.hrpay.user.UserRepository;
@@ -57,9 +59,9 @@ public class SystemAlerts {
                 // Alerts are about the installation: they go to the provider company's administrators.
                 tenants.runAs(providerCompany, () -> {
                     for (AppUser admin : recipients()) {
-                        notifications.sendEmail(admin, "HR Pay alert: " + cut(summary, 120), summary
-                                + "\n\n" + (detail == null ? "" : cut(detail, 3000))
-                                + "\n\nSee the System page in HR Pay. You get at most one email an hour for the same problem.");
+                        notifications.email(admin, () -> Texts.t("HR Pay alert: %s", cut(Texts.translate(summary), 120)),
+                                () -> Texts.translate(summary) + "\n\n" + (detail == null ? "" : cut(detail, 3000)) + "\n\n"
+                                        + Texts.t("See the System page in HR Pay. You get at most one email an hour for the same problem."));
                     }
                 });
             }

@@ -27,7 +27,7 @@ public class SalaryController {
 
     public record SalaryInput(@NotNull LocalDate effectiveFrom,
                               @NotNull @DecimalMin(value = "0.01") @Digits(integer = 12, fraction = 2) BigDecimal grossMonthly,
-                              @NotNull @Pattern(regexp = "USD|CDF", message = "Use USD or CDF") String currency,
+                              @NotNull @Pattern(regexp = "USD|CDF|XAF", message = "Use USD, CDF or XAF") String currency,
                               @Size(max = 300) String note) {}
 
     private final SalaryService salaries;

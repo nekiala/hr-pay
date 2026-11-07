@@ -6,9 +6,10 @@ import { flatten, REASON, unitPath, type OrgAssignment, type OrgBoss, type OrgHe
 import { ErrorText } from './ErrorText'
 import { Button, Form } from './Button'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
 /** A select of the open units, indented by depth. */
-export function UnitSelect({ units, value, onChange, required, exclude, placeholder = 'Choose a unit' }: {
+export function UnitSelect({ units, value, onChange, required, exclude, placeholder = t('Choose a unit') }: {
   units: OrgUnit[]; value: string; onChange: (v: string) => void; required?: boolean; exclude?: number; placeholder?: string
 }) {
   return (
@@ -48,53 +49,52 @@ export function OrgCard({ userId }: { userId: number }) {
       setMove(null)
       await load()
     } catch (err) {
-      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : 'Could not save.')
+      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
     }
   }
 
   const current = info?.history.find((a) => a.validTo === null)
   return (
     <div className="card">
-      <h3>Organization</h3>
+      <h3>{t('Organization')}</h3>
       {current ? (
-        <p><Link to={`/org/units/${current.unitId}`}>{current.unitName}</Link> <span className="muted">since {current.validFrom}</span>
+        <p><Link to={`/org/units/${current.unitId}`}>{current.unitName}</Link> <span className="muted">{t('since')}{' '}{current.validFrom}</span>
           <br /><span className="small muted">{unitPath(units, current.unitId)}</span></p>
-      ) : <p className="muted">No unit.</p>}
-      <p>Reports to: {info?.manager ? <><strong>{info.manager.userName}</strong> <span className="muted">{info.manager.manual ? '(set by hand)' : '(head of the unit)'}</span></> : <span className="muted">nobody (top of the structure)</span>}</p>
+      ) : <p className="muted">{t('No unit.')}</p>}
+      <p>{t('Reports to:')}{' '}{info?.manager ? <><strong>{info.manager.userName}</strong> <span className="muted">{info.manager.manual ? t('(set by hand)') : t('(head of the unit)')}</span></> : <span className="muted">{t('nobody (top of the structure)')}</span>}</p>
       {info && info.heads.length > 0 && (
-        <p>Heads: {info.heads.map((h, i) => (
+        <p>{t('Heads:')}{' '}{info.heads.map((h, i) => (
           <span key={h.id}>{i > 0 && ', '}<Link to={`/org/units/${h.unitId}`}>{units.find((u) => u.id === h.unitId)?.name ?? `#${h.unitId}`}</Link>
-            {h.role === 'DEPUTY' && ' (deputy)'}{h.interim && ' (a.i.)'}</span>
+            {h.role === 'DEPUTY' && t(' (deputy)')}{h.interim && ' (a.i.)'}</span>
         ))}</p>
       )}
       {info && info.history.length > 1 && (
         <details>
-          <summary>History ({info.history.length})</summary>
+          <summary>{t('History (')}{info.history.length})</summary>
           <table>
-            <thead><tr><th>Unit</th><th>From</th><th>To</th><th>Why</th></tr></thead>
+            <thead><tr><th>{t('Unit')}</th><th>{t('From')}</th><th>{t('To')}</th><th>{t('Why')}</th></tr></thead>
             <tbody>{info.history.map((a) => (
               <tr key={a.id}><td>{a.unitName}</td><td>{a.validFrom}</td><td>{a.validTo ?? '—'}</td><td>{REASON[a.reason]}{a.note && <div className="hint">{a.note}</div>}</td></tr>
             ))}</tbody>
           </table>
         </details>
       )}
-      {editable && !move && <Button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'TRANSFER', note: '' })}>Move to another unit</Button>}
+      {editable && !move && <Button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'TRANSFER', note: '' })}>{t('Move to another unit')}</Button>}
       {move && (
-        <Modal title="Move to another unit" size="md" onClose={() => setMove(null)}>
+        <Modal title={t('Move to another unit')} size="md" onClose={() => setMove(null)}>
           <Form onSubmit={(e) => save(e)}>
             <div className="grid3">
-              <label>New unit<UnitSelect units={units} value={move.unitId} required exclude={current?.unitId} onChange={(v) => setMove({ ...move, unitId: v })} /></label>
-              <label>From<input type="date" required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
-              <label>Why
-                <select value={move.reason} onChange={(e) => setMove({ ...move, reason: e.target.value })}>
+              <label>{t('New unit')}<UnitSelect units={units} value={move.unitId} required exclude={current?.unitId} onChange={(v) => setMove({ ...move, unitId: v })} /></label>
+              <label>{t('From')}<input type="date" required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
+              <label>{t('Why')}<select value={move.reason} onChange={(e) => setMove({ ...move, reason: e.target.value })}>
                   {['TRANSFER', 'PROMOTION', 'REORGANISATION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
                 </select>
               </label>
             </div>
-            {move.reason === 'CORRECTION' && <p className="hint">A correction fixes the current unit without adding a line to the history.</p>}
-            <label>Note (optional)<input maxLength={300} value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} /></label>
+            {move.reason === 'CORRECTION' && <p className="hint">{t('A correction fixes the current unit without adding a line to the history.')}</p>}
+            <label>{t('Note (optional)')}<input maxLength={300} value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} /></label>
             <ErrorText error={error} />
-            <div className="modal-foot"><Button className="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+            <div className="modal-foot"><Button className="secondary" onClick={() => setMove(null)}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
           </Form>
         </Modal>
       )}

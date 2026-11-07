@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { api } from '../api'
+import { locale, t } from '../i18n'
 
 type Token = { siteName: string; url: string; secondsLeft: number }
 
@@ -17,12 +18,12 @@ export default function KioskPage() {
     let timer: ReturnType<typeof setTimeout>
     const refresh = async () => {
       try {
-        const t = await api<Token>(`/api/kiosk?site=${encodeURIComponent(params.get('site') ?? '')}&key=${encodeURIComponent(params.get('key') ?? '')}`)
-        setToken(t)
+        const tItem = await api<Token>(`/api/kiosk?site=${encodeURIComponent(params.get('site') ?? '')}&key=${encodeURIComponent(params.get('key') ?? '')}`)
+        setToken(tItem)
         setError(null)
-        timer = setTimeout(refresh, Math.max(1, t.secondsLeft) * 1000)
+        timer = setTimeout(refresh, Math.max(1, tItem.secondsLeft) * 1000)
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Kiosk unavailable')
+        setError(e instanceof Error ? e.message : t('Kiosk unavailable'))
         timer = setTimeout(refresh, 10000)
       }
     }
@@ -40,10 +41,10 @@ export default function KioskPage() {
       {error ? <p className="error">{error}</p> : (
         <>
           <h1>{token?.siteName ?? '…'}</h1>
-          <p className="clock">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
+          <p className="clock">{now.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
           <canvas ref={canvas} />
-          <p>Scan with your phone to check in or end your day.</p>
-          <p className="muted small">The code changes every 30 seconds.</p>
+          <p>{t('Scan with your phone to check in or end your day.')}</p>
+          <p className="muted small">{t('The code changes every 30 seconds.')}</p>
         </>
       )}
     </div>

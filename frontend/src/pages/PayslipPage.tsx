@@ -4,13 +4,14 @@ import { api, money, type Employer, type Payslip, type PayslipLine, type Payslip
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
+import { locale, plural, t } from '../i18n'
 
-const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 const hours = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
-const num = (n: number | null, digits = 2) => (n === null ? '' : new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(n))
+const num = (n: number | null, digits = 2) => (n === null ? '' : new Intl.NumberFormat(locale(), { maximumFractionDigits: digits }).format(n))
 type YearToDate = { year: number; months: number; currency: string; gross: number; cnss: number; ipr: number; net: number; otherCurrencies: boolean }
 const MARITAL: Record<string, string> = { S: 'single', M: 'married', D: 'divorced', W: 'widowed' }
-const PAYMENT: Record<string, string> = { BANK: 'Bank transfer', MOBILE_MONEY: 'Mobile money', CASH: 'Cash' }
+const PAYMENT: Record<string, string> = { BANK: t('Bank transfer'), MOBILE_MONEY: t('Mobile money'), CASH: t('Cash') }
 
 export default function PayslipPage() {
   const { id } = useParams()
@@ -30,7 +31,7 @@ export default function PayslipPage() {
   }, [id])
 
   if (error) return <section><ErrorText error={error} /></section>
-  if (!slip) return <section><p className="muted">Loading…</p></section>
+  if (!slip) return <section><p className="muted">{t('Loading…')}</p></section>
 
   const s = slip.snapshot
   const cur = slip.currency
@@ -52,13 +53,13 @@ export default function PayslipPage() {
   return (
     <section className="narrow payslip">
       <p className="no-print">
-        {staff ? <Link to="/payroll">← Payroll</Link> : <Link to="/my/payslips">← My payslips</Link>}
-        {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">Download PDF</a>
-        {' · '}<Button className="link" onClick={() => window.print()}>Print</Button>
+        {staff ? <Link to="/payroll">{t('← Payroll')}</Link> : <Link to="/my/payslips">{t('← My payslips')}</Link>}
+        {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">{t('Download PDF')}</a>
+        {' · '}<Button className="link" onClick={() => window.print()}>{t('Print')}</Button>
       </p>
-      {slip.runStatus !== 'CLOSED' && <p className="notice">Draft: this payroll is {slip.runStatus.toLowerCase()} and not yet closed.</p>}
+      {slip.runStatus !== 'CLOSED' && <p className="notice">{t('Draft: this payroll is')}{' '}{slip.runStatus.toLowerCase()}{' '}{t('and not yet closed.')}</p>}
       {slip.warnings.length > 0 && staff && (
-        <div className="notice no-print"><strong>To check</strong><ul>{slip.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
+        <div className="notice no-print"><strong>{t('To check')}</strong><ul>{slip.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>
       )}
 
       <div className="card">
@@ -70,74 +71,72 @@ export default function PayslipPage() {
               {employer.address && <>{employer.address}<br /></>}
               {[brand?.phone, brand?.email, brand?.website].filter(Boolean).join(' · ')}
               {(brand?.phone || brand?.email || brand?.website) && <br />}
-              <span className="muted">{[['RCCM', employer.rccm], ['Id. Nat.', employer.nationalId], ['NIF', employer.taxNumber], ['CNSS', employer.cnssNumber]]
+              <span className="muted">{[['RCCM', employer.rccm], [t('Id. Nat.'), employer.nationalId], ['NIF', employer.taxNumber], ['CNSS', employer.cnssNumber]]
                 .filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ')}</span>
             </div>
           </div>
         )}
         <div className="payslip-head">
           <div>
-            <h2>Payslip · {monthName(slip.month)}</h2>
-            <p className="muted">{slip.number ?? 'Not numbered yet'}</p>
+            <h2>{t('Payslip ·')}{' '}{monthName(slip.month)}</h2>
+            <p className="muted">{slip.number ?? t('Not numbered yet')}</p>
           </div>
           <div className="right">
-            <strong>{String(s.name)}</strong><br />
-            Matricule {String(s.registrationNo ?? '')}<br />
+            <strong>{String(s.name)}</strong><br />{t('Matricule')}{' '}{String(s.registrationNo ?? '')}<br />
             {String(s.grade ?? '')}{s.occupation ? ` · ${String(s.occupation)}` : ''}
-            {s.unit ? <><br />{String(s.unit)}{s.direction && s.direction !== s.unit ? ` · ${String(s.direction)}` : ''}{s.costCentre ? ` · CC ${String(s.costCentre)}` : ''}</> : null}
+            {s.unit ? <><br />{String(s.unit)}{s.direction && s.direction !== s.unit ? ` · ${String(s.direction)}` : ''}{s.costCentre ? t(' · CC {a}', { a: String(s.costCentre) }) : ''}</> : null}
           </div>
         </div>
         <div className="grid3 small">
-          <div>Contract: {String(s.contractType ?? '').replace('_', ' ').toLowerCase()} since {String(s.contractStart ?? '')}</div>
-          <div>CNSS no.: {String(s.cnssNumber ?? '—')} · NIF: {String(s.taxNumber ?? '—')}</div>
-          <div>Hired: {String(s.hireDate ?? s.contractStart ?? '—')}{s.seniority ? ` · seniority ${Number(s.seniorityYears)} yr ${Number(s.seniorityMonths)} mo` : ''}</div>
-          <div title={s.maritalCode ? MARITAL[String(s.maritalCode)] : undefined}>Marital status: {String(s.maritalCode ?? '—')}</div>
-          <div>Children (family allowances): {String(s.childrenInCharge ?? 0)}</div>
-          <div>Hours paid: {hours(slip.paidMinutes)} of {hours(slip.scheduledMinutes)}</div>
-          <div>Days worked: {slip.daysWorked}</div>
-          <div>Monthly basic: {money(Number(s.basicMonthly), cur)}</div>
+          <div>{t('Contract:')}{' '}{String(s.contractType ?? '').replace('_', ' ').toLowerCase()}{' '}{t('since')}{' '}{String(s.contractStart ?? '')}</div>
+          <div>{t('CNSS no.:')}{' '}{String(s.cnssNumber ?? '—')}{' '}{t('· NIF:')}{' '}{String(s.taxNumber ?? '—')}</div>
+          <div>{t('Hired:')}{' '}{String(s.hireDate ?? s.contractStart ?? '—')}{s.seniority ? t(' · seniority {a} yr {b} mo', { a: Number(s.seniorityYears), b: Number(s.seniorityMonths) }) : ''}</div>
+          <div title={s.maritalCode ? MARITAL[String(s.maritalCode)] : undefined}>{t('Marital status:')}{' '}{String(s.maritalCode ?? '—')}</div>
+          <div>{t('Children (family allowances):')}{' '}{String(s.childrenInCharge ?? 0)}</div>
+          <div>{t('Hours paid:')}{' '}{hours(slip.paidMinutes)}{' '}{t('of')}{' '}{hours(slip.scheduledMinutes)}</div>
+          <div>{t('Days worked:')}{' '}{slip.daysWorked}</div>
+          <div>{t('Monthly basic:')}{' '}{money(Number(s.basicMonthly), cur)}</div>
         </div>
 
         <div className="table-wrap">
           <table className="lines">
-            <thead><tr><th>Item</th><th className="num">Base</th><th className="num">Rate</th><th className="num">Amount</th></tr></thead>
+            <thead><tr><th>{t('Item')}</th><th className="num">{t('Base')}</th><th className="num">{t('Rate')}</th><th className="num">{t('Amount')}</th></tr></thead>
             <tbody>
-              {section('Earnings', of('EARNING'), slip.gross, 'Gross pay')}
-              {section('Deductions', of('DEDUCTION'), slip.employeeDeductions, 'Total deductions')}
-              <tr className="net"><td colSpan={3}>Net pay</td><td className="num">{money(slip.net, cur)}</td></tr>
+              {section(t('Earnings'), of('EARNING'), slip.gross, t('Gross pay'))}
+              {section(t('Deductions'), of('DEDUCTION'), slip.employeeDeductions, t('Total deductions'))}
+              <tr className="net"><td colSpan={3}>{t('Net pay')}</td><td className="num">{money(slip.net, cur)}</td></tr>
             </tbody>
           </table>
         </div>
-        <p className="small">
-          Paid by {PAYMENT[String(s.paymentMethod)] ?? String(s.paymentMethod)}
+        <p className="small">{t('Paid by')}{' '}{PAYMENT[String(s.paymentMethod)] ?? String(s.paymentMethod)}
           {s.paymentMethod === 'BANK' && s.bankName ? `: ${String(s.bankName)} ${String(s.bankAccount ?? '')}` : ''}
           {s.paymentMethod === 'MOBILE_MONEY' ? `: ${String(s.mobileMoneyOperator ?? '')} ${String(s.mobileMoneyNumber ?? '')}` : ''}
-          {cur === 'USD' && ` · net in CDF: ${new Intl.NumberFormat().format(Math.round(slip.net * slip.usdCdf))} CDF at the BCC rate of ${slip.rateDate} ($1 = ${slip.usdCdf} CDF)`}
+          {cur === 'USD' && t(' · net in CDF: {a} CDF at the BCC rate of {b} ($1 = {c} CDF)', { a: new Intl.NumberFormat(locale()).format(Math.round(slip.net * slip.usdCdf)), b: slip.rateDate, c: slip.usdCdf })}
         </p>
 
         {ytd && (
           <div className="table-wrap">
             <table className="lines">
-              <thead><tr><th>Year to date {ytd.year} ({ytd.months} month{ytd.months === 1 ? '' : 's'})</th><th className="num">Gross</th><th className="num">CNSS</th><th className="num">IPR</th><th className="num">Net</th></tr></thead>
-              <tbody><tr><td>Total</td><td className="num">{money(ytd.gross, ytd.currency)}</td><td className="num">{money(ytd.cnss, ytd.currency)}</td>
+              <thead><tr><th>{t('Year to date')}{' '}{ytd.year} ({plural('{n} month', '{n} months', ytd.months)})</th><th className="num">{t('Gross')}</th><th className="num">{t('CNSS')}</th><th className="num">{t('IPR')}</th><th className="num">{t('Net')}</th></tr></thead>
+              <tbody><tr><td>{t('Total')}</td><td className="num">{money(ytd.gross, ytd.currency)}</td><td className="num">{money(ytd.cnss, ytd.currency)}</td>
                 <td className="num">{money(ytd.ipr, ytd.currency)}</td><td className="num">{money(ytd.net, ytd.currency)}</td></tr></tbody>
             </table>
-            {ytd.otherCurrencies && <p className="hint">Months paid in another currency are not included.</p>}
+            {ytd.otherCurrencies && <p className="hint">{t('Months paid in another currency are not included.')}</p>}
           </div>
         )}
 
         <details open={staff}>
-          <summary>Employer charges (not deducted from pay)</summary>
+          <summary>{t('Employer charges (not deducted from pay)')}</summary>
           <table className="lines">
             <tbody>
               {of('EMPLOYER_CHARGE').filter((l) => l.amount > 0).map((l, i) => (
                 <tr key={i}><td>{l.label}</td><td className="num">{num(l.base)}</td><td className="num">{num(l.rate, 3)}%</td><td className="num">{money(l.amount, cur)}</td></tr>
               ))}
-              <tr className="subtotal"><td colSpan={3}>Total employer charges</td><td className="num">{money(slip.employerCharges, cur)}</td></tr>
+              <tr className="subtotal"><td colSpan={3}>{t('Total employer charges')}</td><td className="num">{money(slip.employerCharges, cur)}</td></tr>
             </tbody>
           </table>
         </details>
-        <p className="hint">Taxable income for IPR: {money(slip.taxableBase, cur)} ({new Intl.NumberFormat().format(slip.taxableBaseCdf)} CDF). CNSS base: {money(slip.cnssBase, cur)}.</p>
+        <p className="hint">{t('Taxable income for IPR:')}{' '}{money(slip.taxableBase, cur)} ({new Intl.NumberFormat(locale()).format(slip.taxableBaseCdf)}{' '}{t('CDF). CNSS base:')}{' '}{money(slip.cnssBase, cur)}.</p>
       </div>
     </section>
   )

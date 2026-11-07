@@ -1,3 +1,4 @@
+import { t } from './i18n'
 // Organizational structure: types and tree helpers shared by the org pages.
 
 export type OrgLevel = { id: number; code: string; name: string; rank: number; headTitle: string; staff: boolean; active: boolean }
@@ -23,7 +24,7 @@ export type OrgAssignment = {
 }
 
 export const REASON: Record<string, string> = {
-  HIRE: 'Hire', TRANSFER: 'Transfer', PROMOTION: 'Promotion', REORGANISATION: 'Reorganisation', CORRECTION: 'Correction',
+  HIRE: t('Hire'), TRANSFER: t('Transfer'), PROMOTION: t('Promotion'), REORGANISATION: t('Reorganisation'), CORRECTION: t('Correction'),
 }
 
 export type TreeNode<T> = { item: T; children: TreeNode<T>[] }
@@ -61,7 +62,7 @@ export function unitPath(units: OrgUnit[], id: number): string {
 }
 
 export function headTitle(u: OrgUnit, h: OrgHead, levels: OrgLevel[]): string {
-  const base = h.title ?? levels.find((l) => l.id === u.levelId)?.headTitle ?? 'Head'
-  const t = h.role === 'DEPUTY' ? `${base} adjoint` : base
-  return h.interim ? `${t} a.i.` : t
+  const base = h.title ?? levels.find((l) => l.id === u.levelId)?.headTitle ?? t('Head')
+  const tItem = h.role === 'DEPUTY' ? `${base} adjoint` : base
+  return h.interim ? `${tItem} a.i.` : tItem
 }

@@ -6,6 +6,7 @@ import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
 import { Button } from '../components/Button'
+import { t } from '../i18n'
 
 export default function UsersPage() {
   const { can } = useAuth()
@@ -33,19 +34,18 @@ export default function UsersPage() {
   return (
     <section>
       <div className="row between">
-        <h2>Users</h2>
-        {can('user.create') && <Link className="button" to="/users/new">New user</Link>}
+        <h2>{t('Users')}</h2>
+        {can('user.create') && <Link className="button" to="/users/new">{t('New user')}</Link>}
       </div>
-      <input className="search" placeholder="Search by name, email or registration number" value={query}
+      <input className="search" placeholder={t('Search by name, email or registration number')} value={query}
         onChange={(e) => { setQuery(e.target.value); setPage(0) }} />
-      <label className="inline-filter">Unit (with the units below it)
-        <UnitSelect units={units} value={unit} placeholder="All units" onChange={(v) => { setUnit(v); setPage(0) }} />
+      <label className="inline-filter">{t('Unit (with the units below it)')}<UnitSelect units={units} value={unit} placeholder={t('All units')} onChange={(v) => { setUnit(v); setPage(0) }} />
       </label>
       <ErrorText error={error} />
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Name</th><th>Registration no.</th><th>Email</th><th>Phone</th><th>Roles</th><th>Unit</th><th>Site</th><th>Status</th></tr>
+            <tr><th>{t('Name')}</th><th>{t('Registration no.')}</th><th>{t('Email')}</th><th>{t('Phone')}</th><th>{t('Roles')}</th><th>{t('Unit')}</th><th>{t('Site')}</th><th>{t('Status')}</th></tr>
           </thead>
           <tbody>
             {data?.items.map((u) => (
@@ -57,18 +57,18 @@ export default function UsersPage() {
                 <td>{u.roles.join(', ')}</td>
                 <td>{u.unitId ? <Link to={`/org/units/${u.unitId}`}>{u.unitName}</Link> : '—'}</td>
                 <td>{u.siteName ?? '—'}</td>
-                <td><span className={`badge ${u.status === 'ACTIVE' ? 'ok' : 'off'}`}>{u.status === 'ACTIVE' ? 'Active' : 'Disabled'}</span></td>
+                <td><span className={`badge ${u.status === 'ACTIVE' ? 'ok' : 'off'}`}>{u.status === 'ACTIVE' ? t('Active') : t('Disabled')}</span></td>
               </tr>
             ))}
-            {data && data.items.length === 0 && <tr><td colSpan={8} className="muted">No users found.</td></tr>}
+            {data && data.items.length === 0 && <tr><td colSpan={8} className="muted">{t('No users found.')}</td></tr>}
           </tbody>
         </table>
       </div>
       {data && (
         <div className="row pager">
-          <Button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</Button>
-          <span>Page {page + 1} of {pages} · {data.total} users</span>
-          <Button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>Next</Button>
+          <Button className="secondary" disabled={page === 0} onClick={() => setPage(page - 1)}>{t('Previous')}</Button>
+          <span>{t('Page')}{' '}{page + 1}{' '}{t('of')}{' '}{pages} · {data.total}{' '}{t('users')}</span>
+          <Button className="secondary" disabled={page + 1 >= pages} onClick={() => setPage(page + 1)}>{t('Next')}</Button>
         </div>
       )}
     </section>

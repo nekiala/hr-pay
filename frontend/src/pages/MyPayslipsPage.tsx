@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, money, type PayslipSummary } from '../api'
 import { ErrorText } from '../components/ErrorText'
+import { t } from '../i18n'
 
 export default function MyPayslipsPage() {
   const [slips, setSlips] = useState<PayslipSummary[] | null>(null)
@@ -10,19 +11,19 @@ export default function MyPayslipsPage() {
 
   return (
     <section className="narrow">
-      <h2>My payslips</h2>
-      <p><Link to="/my/year">Annual pay statement</Link></p>
+      <h2>{t('My payslips')}</h2>
+      <p><Link to="/my/year">{t('Annual pay statement')}</Link></p>
       <ErrorText error={error} />
-      {slips?.length === 0 && <p className="muted">No payslips yet. They appear here once HR closes the month.</p>}
+      {slips?.length === 0 && <p className="muted">{t('No payslips yet. They appear here once HR closes the month.')}</p>}
       {slips && slips.length > 0 && (
         <div className="card">
           <table>
-            <thead><tr><th>Payslip</th><th>Gross</th><th>Net</th><th></th></tr></thead>
+            <thead><tr><th>{t('Payslip')}</th><th>{t('Gross')}</th><th>{t('Net')}</th><th></th></tr></thead>
             <tbody>
               {slips.map((s) => (
                 <tr key={s.id}>
                   <td>{s.number}</td><td>{money(s.gross, s.currency)}</td><td><strong>{money(s.net, s.currency)}</strong></td>
-                  <td><Link to={`/payslips/${s.id}`}>Open</Link></td>
+                  <td><Link to={`/payslips/${s.id}`}>{t('Open')}</Link></td>
                 </tr>
               ))}
             </tbody>
