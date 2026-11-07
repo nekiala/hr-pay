@@ -8,8 +8,8 @@
    "rows": [
     {
      "id": 1,
-     "code": "CAT1",
-     "name": "Category 1: execution staff (sample)",
+     "code": "EXEC",
+     "name": "Execution staff (categories 1 to 5)",
      "annual_leave_days": 20.0,
      "active": true,
      "anniversary_raise_percent": 2.0,
@@ -22,8 +22,8 @@
     },
     {
      "id": 2,
-     "code": "CAT2",
-     "name": "Category 2: supervisors (sample)",
+     "code": "MAITRISE",
+     "name": "Supervisors (agents de maîtrise)",
      "annual_leave_days": 24.0,
      "active": true,
      "anniversary_raise_percent": 2.5,
@@ -36,8 +36,22 @@
     },
     {
      "id": 3,
-     "code": "CAT3",
-     "name": "Category 3: managers (sample)",
+     "code": "CADRE_COLLAB",
+     "name": "Junior managers (cadres de collaboration)",
+     "annual_leave_days": 26.0,
+     "active": true,
+     "anniversary_raise_percent": 3.0,
+     "raise_timing": "NEXT_MONTH",
+     "notice_base": 3.0,
+     "notice_base_unit": "MONTHS",
+     "notice_days_per_year": 16.0,
+     "notice_day_kind": "WORKING",
+     "notice_resignation_share": 0.5
+    },
+    {
+     "id": 4,
+     "code": "CADRE_DIR",
+     "name": "Senior managers (cadres de direction)",
      "annual_leave_days": 26.0,
      "active": true,
      "anniversary_raise_percent": 3.0,
@@ -59,54 +73,162 @@
     {
      "id": 1,
      "category_id": 1,
-     "code": "G1B",
-     "name": "Grade 1B (sample)",
-     "base_salary": 420.0,
+     "code": "E1A",
+     "name": "Cat. 1, step 1 · Ordinary labourer",
+     "base_salary": 200.0,
      "currency": "USD",
      "active": true
     },
     {
      "id": 2,
      "category_id": 1,
-     "code": "G1A",
-     "name": "Grade 1A (sample)",
-     "base_salary": 350.0,
+     "code": "E1B",
+     "name": "Cat. 1, step 2 · Heavy labourer",
+     "base_salary": 232.0,
      "currency": "USD",
      "active": true
     },
     {
      "id": 3,
-     "category_id": 2,
-     "code": "G2B",
-     "name": "Grade 2B (sample)",
-     "base_salary": 850.0,
+     "category_id": 1,
+     "code": "E2",
+     "name": "Cat. 2 · Specialised labourer",
+     "base_salary": 266.0,
      "currency": "USD",
      "active": true
     },
     {
      "id": 4,
-     "category_id": 2,
-     "code": "G2A",
-     "name": "Grade 2A (sample)",
-     "base_salary": 700.0,
+     "category_id": 1,
+     "code": "E3A",
+     "name": "Cat. 3, step 1 · Semi-skilled worker",
+     "base_salary": 307.0,
      "currency": "USD",
      "active": true
     },
     {
      "id": 5,
-     "category_id": 3,
-     "code": "G3B",
-     "name": "Grade 3B (sample)",
-     "base_salary": 2000.0,
+     "category_id": 1,
+     "code": "E3B",
+     "name": "Cat. 3, step 2 · Semi-skilled worker",
+     "base_salary": 355.0,
      "currency": "USD",
      "active": true
     },
     {
      "id": 6,
+     "category_id": 1,
+     "code": "E3C",
+     "name": "Cat. 3, step 3 · Semi-skilled worker",
+     "base_salary": 411.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 7,
+     "category_id": 1,
+     "code": "E4A",
+     "name": "Cat. 4, step 1 · Skilled worker",
+     "base_salary": 473.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 8,
+     "category_id": 1,
+     "code": "E4B",
+     "name": "Cat. 4, step 2 · Skilled worker",
+     "base_salary": 547.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 9,
+     "category_id": 1,
+     "code": "E5",
+     "name": "Cat. 5 · Highly skilled worker",
+     "base_salary": 633.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 10,
+     "category_id": 2,
+     "code": "M1",
+     "name": "Supervisor, step 1",
+     "base_salary": 731.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 11,
+     "category_id": 2,
+     "code": "M2",
+     "name": "Supervisor, step 2",
+     "base_salary": 842.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 12,
+     "category_id": 2,
+     "code": "M3",
+     "name": "Supervisor, step 3",
+     "base_salary": 974.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 13,
+     "category_id": 2,
+     "code": "M4",
+     "name": "Supervisor, step 4",
+     "base_salary": 1126.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 14,
      "category_id": 3,
-     "code": "G3A",
-     "name": "Grade 3A (sample)",
-     "base_salary": 1500.0,
+     "code": "C1",
+     "name": "Junior manager, step 1",
+     "base_salary": 1300.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 15,
+     "category_id": 3,
+     "code": "C2",
+     "name": "Junior manager, step 2",
+     "base_salary": 1501.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 16,
+     "category_id": 3,
+     "code": "C3",
+     "name": "Junior manager, step 3",
+     "base_salary": 1761.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 17,
+     "category_id": 3,
+     "code": "C4",
+     "name": "Junior manager, step 4",
+     "base_salary": 1996.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 18,
+     "category_id": 4,
+     "code": "D1",
+     "name": "Senior manager (pay negotiated)",
+     "base_salary": 2500.0,
      "currency": "USD",
      "active": true
     }

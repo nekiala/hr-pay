@@ -237,7 +237,7 @@ public class DataSetup implements ApplicationRunner {
 
     /** Contracts, personal details and a family for the sample staff, so payroll can be tried. */
     private void addSampleContracts() {
-        Map<String, String> gradeByRole = Map.of("EMPLOYEE", "G1B", "HR", "G2B", "FINANCE", "G2B", "MANAGER", "G3B");
+        Map<String, String> gradeByRole = Map.of("EMPLOYEE", "E4A", "HR", "M2", "FINANCE", "M2", "MANAGER", "C2");
         Map<String, String> occupationByRole = Map.of("EMPLOYEE", "ENGINEER", "HR", "HR_OFFICER", "FINANCE", "ACCOUNTANT",
                 "MANAGER", "MANAGER");
         for (SampleUser s : SAMPLE_USERS) {
@@ -269,7 +269,7 @@ public class DataSetup implements ApplicationRunner {
             if (s.role().equals("ADMIN")) {
                 continue;
             }
-            String category = s.role().equals("MANAGER") ? "CAT3" : s.role().equals("EMPLOYEE") ? "CAT1" : "CAT2";
+            String category = s.role().equals("MANAGER") ? "CADRE_COLLAB" : s.role().equals("EMPLOYEE") ? "EXEC" : "MAITRISE";
             Long categoryId = jdbc.sql("select id from grade_category where code = ?").param(category)
                     .query(Long.class).optional().orElse(null);
             users.findByEmailIgnoreCase(s.email()).filter(u -> u.getGradeCategoryId() == null).ifPresent(u -> {

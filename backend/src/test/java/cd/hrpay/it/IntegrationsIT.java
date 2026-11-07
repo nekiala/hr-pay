@@ -73,15 +73,15 @@ class IntegrationsIT extends IntegrationTest {
         // Contracts, salaries, leave balances and year-to-date totals of the people just imported.
         mvc.perform(json(post("/api/imports/contracts").session(hr), file("c.csv", """
                         registration_no,contract_type,start_date,grade,expatriate
-                        IMP-%1$s-1,CDI,2026-03-01,G1B,non
-                        IMP-%1$s-2,CDD,2026-03-15,G1A,no
+                        IMP-%1$s-1,CDI,2026-03-01,E4A,non
+                        IMP-%1$s-2,CDD,2026-03-15,E3A,no
                         """.formatted(n))))
                 .andExpect(jsonPath("$.saved").value(false))
                 .andExpect(jsonPath("$.results[1].errors[0]").value(Matchers.containsString("end date")));
         mvc.perform(json(post("/api/imports/contracts").session(hr), file("c.csv", """
                         registration_no,contract_type,start_date,end_date,grade,expatriate
-                        IMP-%1$s-1,CDI,2026-03-01,,G1B,non
-                        IMP-%1$s-2,CDD,2026-03-15,2027-03-14,G1A,no
+                        IMP-%1$s-1,CDI,2026-03-01,,E4A,non
+                        IMP-%1$s-2,CDD,2026-03-15,2027-03-14,E3A,no
                         """.formatted(n))))
                 .andExpect(jsonPath("$.saved").value(true));
         mvc.perform(json(post("/api/imports/salaries").session(hr), file("s.csv", """
