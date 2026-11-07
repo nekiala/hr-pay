@@ -38,6 +38,12 @@ public class MasterDataController {
     public record OccupationInput(@NotBlank @Pattern(regexp = CODE) String code, @NotBlank @Size(max = 150) String name,
                                   boolean active) {}
 
+    public record NoticeInput(@jakarta.validation.constraints.NotNull @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.DecimalMax("365") BigDecimal base,
+                              @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Pattern(regexp = "DAYS|MONTHS") String baseUnit,
+                              @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.DecimalMax("60") BigDecimal daysPerYear,
+                              @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.Pattern(regexp = "WORKING|CALENDAR") String dayKind,
+                              @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.DecimalMin("0.05") @jakarta.validation.constraints.DecimalMax("1") BigDecimal resignationShare) {}
+
     public record RaiseInput(@NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal percent,
                              @Pattern(regexp = "ANNIVERSARY_MONTH|NEXT_MONTH") String timing) {}
 
@@ -99,6 +105,12 @@ public class MasterDataController {
             masterData.setRaiseTiming(id, b.timing());
         }
         return Map.of("percent", masterData.raisePercent(id));
+    }
+
+    @PutMapping("/grade-categories/{id}/notice")
+    @PreAuthorize("hasAuthority('masterdata.manage')")
+    public void setNotice(@PathVariable long id, @Valid @RequestBody NoticeInput b) {
+        masterData.setNotice(id, b.base(), b.baseUnit(), b.daysPerYear(), b.dayKind(), b.resignationShare());
     }
 
     @GetMapping("/occupations")

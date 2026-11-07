@@ -678,12 +678,17 @@ export const DEPARTURE_REASONS: Record<DepartureReason, string> = {
   REDUNDANCY: t('Redundancy (economic reasons)'), END_OF_CONTRACT: t('End of a fixed-term contract'),
   MUTUAL_AGREEMENT: t('Mutual agreement'), RETIREMENT: t('Retirement'), DEATH: t('Death'),
 }
-export type Notice = 'WORKED' | 'PAID' | 'NONE'
-export const NOTICES: Record<Notice, string> = { WORKED: t('Worked'), PAID: t('Not worked, paid'), NONE: t('None') }
+export type Notice = 'WORKED' | 'PAID' | 'OWED' | 'NONE'
+export const NOTICES: Record<Notice, string> = {
+  WORKED: t('Worked'), PAID: t('Not worked, paid by the employer'), OWED: t('Not given by the employee, deducted'), NONE: t('None or waived'),
+}
+export type NoticeGivenBy = 'EMPLOYER' | 'EMPLOYEE'
+export const NOTICE_GIVERS: Record<NoticeGivenBy, string> = { EMPLOYER: t('The employer'), EMPLOYEE: t('The employee') }
 export type Departure = {
   id: number | null; userId: number; name: string; registrationNo: string; hireDate: string | null; lastDay: string
-  reason: DepartureReason; notice: Notice; currency: string; basicMonthly: number; dailyRate: number; serviceYears: number
-  noticeDays: number; noticeAmount: number; leaveDays: number; leaveAmount: number; severanceAmount: number
+  reason: DepartureReason; noticeDate: string | null; noticeGivenBy: NoticeGivenBy | null; noticeEnd: string | null
+  notice: Notice; currency: string; basicMonthly: number; dailyRate: number; serviceYears: number
+  noticeDays: number; noticeAmount: number; noticeOwed: number; leaveDays: number; leaveAmount: number; severanceAmount: number
   thirteenthAmount: number; total: number; loanBalance: number | null; note: string | null; status: 'DRAFT' | 'CONFIRMED'
   createdBy: string | null; confirmedBy: string | null; confirmedAt: string | null; certificateNo: string | null
   monthStatus: 'OPEN' | PayrollRun['status']; explanation: string[]

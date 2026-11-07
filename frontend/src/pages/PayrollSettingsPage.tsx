@@ -5,7 +5,10 @@ import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
 
-type CategoryWithRaise = GradeCategory & { anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH' }
+type CategoryWithRaise = GradeCategory & {
+  anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH'
+  noticeBase: number; noticeBaseUnit: 'DAYS' | 'MONTHS'; noticeDaysPerYear: number; noticeDayKind: 'WORKING' | 'CALENDAR'; noticeResignationShare: number
+}
 
 export default function PayrollSettingsPage() {
   const { can } = useAuth()
@@ -68,6 +71,48 @@ export default function PayrollSettingsPage() {
                     </select>
                   </td>
                   <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0, timing: c.raiseTiming ?? 'NEXT_MONTH' } }), t("{a} saved.", { a: c.code }))}>{t('Save')}</Button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>{t('Notice period by grade category')}</h3>
+        <p className="hint">{t('The notice the employer owes: a base, plus days for each full year of service. Working days leave out Sundays and public holidays. A person who resigns owes the share given here. DR Congo: categories 1 to 5, 14 working days + 7 per year (Labour Code art. 64); agents de maîtrise, 1 month + 9 working days per year; cadres, 3 months + 16 working days per year (arrêté of 26 October 2005); the employee owes half. A collective agreement can only give more.')}</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>{t('Category')}</th><th>{t('Base')}</th><th>{t('Per year of service')}</th><th>{t('Days counted')}</th><th>{t('Owed on resignation')}</th><th></th></tr></thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td><div className="inline-pair">
+                    <input type="number" min={0} max={365} step={c.noticeBaseUnit === 'MONTHS' ? 1 : 0.5} className="narrow-input" disabled={!editable}
+                      value={c.noticeBase} onChange={(e) => setCategory(c.id, { noticeBase: Number(e.target.value) })} />{' '}
+                    <select className="auto-width" value={c.noticeBaseUnit} disabled={!editable} onChange={(e) => setCategory(c.id, { noticeBaseUnit: e.target.value as CategoryWithRaise['noticeBaseUnit'] })}>
+                      <option value="DAYS">{t('days')}</option>
+                      <option value="MONTHS">{t('months')}</option>
+                    </select>
+                  </div></td>
+                  <td><div className="inline-pair"><input type="number" min={0} max={60} step={0.5} className="narrow-input" disabled={!editable}
+                    value={c.noticeDaysPerYear} onChange={(e) => setCategory(c.id, { noticeDaysPerYear: Number(e.target.value) })} /> <span>{t('days')}</span></div></td>
+                  <td>
+                    <select className="auto-width" value={c.noticeDayKind} disabled={!editable} onChange={(e) => setCategory(c.id, { noticeDayKind: e.target.value as CategoryWithRaise['noticeDayKind'] })}>
+                      <option value="WORKING">{t('Working days')}</option>
+                      <option value="CALENDAR">{t('Calendar days')}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select className="auto-width" value={String(c.noticeResignationShare)} disabled={!editable} onChange={(e) => setCategory(c.id, { noticeResignationShare: Number(e.target.value) })}>
+                      <option value="0.5">{t('Half')}</option>
+                      <option value="1">{t('All of it')}</option>
+                    </select>
+                  </td>
+                  <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grade-categories/${c.id}/notice`, { method: 'PUT', body: {
+                    base: c.noticeBase, baseUnit: c.noticeBaseUnit, daysPerYear: c.noticeDaysPerYear, dayKind: c.noticeDayKind, resignationShare: c.noticeResignationShare } }),
+                  t("{a} saved.", { a: c.code }))}>{t('Save')}</Button>}</td>
                 </tr>
               ))}
             </tbody>

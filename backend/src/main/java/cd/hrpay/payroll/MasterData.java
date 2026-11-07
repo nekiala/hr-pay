@@ -74,6 +74,21 @@ public class MasterData {
         audit.record("grade_category.raise_timing", "grade_category", categoryId, Map.of("timing", timing));
     }
 
+    /** The category's notice: base (days or months), days per full year of service, day kind, share owed on resignation. */
+    @Transactional
+    public void setNotice(long categoryId, BigDecimal base, String unit, BigDecimal perYear, String dayKind, BigDecimal share) {
+        if ("MONTHS".equals(unit) && base.stripTrailingZeros().scale() > 0) {
+            throw new cd.hrpay.common.BusinessRuleException("Give the months as a whole number.");
+        }
+        if (jdbc.sql("""
+                update grade_category set notice_base = ?, notice_base_unit = ?, notice_days_per_year = ?, notice_day_kind = ?,
+                notice_resignation_share = ? where id = ?""").params(base, unit, perYear, dayKind, share, categoryId).update() == 0) {
+            throw new NotFoundException("Grade category not found.");
+        }
+        audit.record("grade_category.notice", "grade_category", categoryId, Map.of("base", base.toPlainString(), "unit", unit,
+                "perYear", perYear.toPlainString(), "dayKind", dayKind, "resignationShare", share.toPlainString()));
+    }
+
     public BigDecimal raisePercent(long categoryId) {
         return jdbc.sql("select anniversary_raise_percent from grade_category where id = ?").param(categoryId)
                 .query(BigDecimal.class).single();

@@ -37,7 +37,9 @@ public class PayrollCompletenessController {
 
     public record DepartureInput(@NotNull LocalDate lastDay,
                                  @NotNull @Pattern(regexp = "RESIGNATION|DISMISSAL|GROSS_MISCONDUCT|REDUNDANCY|END_OF_CONTRACT|MUTUAL_AGREEMENT|RETIREMENT|DEATH") String reason,
-                                 @Pattern(regexp = "WORKED|PAID|NONE") String notice,
+                                 LocalDate noticeDate,
+                                 @Pattern(regexp = "EMPLOYER|EMPLOYEE") String noticeGivenBy,
+                                 @Pattern(regexp = "WORKED|PAID|OWED|NONE") String notice,
                                  @DecimalMin("0") @Digits(integer = 4, fraction = 2) BigDecimal noticeDays,
                                  @DecimalMin("0") @Digits(integer = 4, fraction = 2) BigDecimal leaveDays,
                                  @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal severanceAmount,
@@ -45,7 +47,7 @@ public class PayrollCompletenessController {
                                  @Size(max = 500) String note) {
 
         Departures.Input toInput() {
-            return new Departures.Input(lastDay, reason, notice, noticeDays, leaveDays, severanceAmount, thirteenthAmount, note);
+            return new Departures.Input(lastDay, reason, noticeDate, noticeGivenBy, notice, noticeDays, leaveDays, severanceAmount, thirteenthAmount, note);
         }
     }
 

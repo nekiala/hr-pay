@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, DEPARTURE_REASONS, longDay, money, NOTICES, type Departure, type DepartureReason, type Notice } from '../api'
+import { api, DEPARTURE_REASONS, longDay, money, NOTICE_GIVERS, NOTICES, type Departure, type DepartureReason, type Notice, type NoticeGivenBy } from '../api'
 import { useAuth } from '../auth'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
@@ -8,7 +8,7 @@ import { ErrorText } from '../components/ErrorText'
 import { t } from '../i18n'
 
 type Draft = {
-  lastDay: string; reason: DepartureReason; notice: Notice | ''; noticeDays: string; leaveDays: string
+  lastDay: string; reason: DepartureReason; noticeDate: string; noticeGivenBy: NoticeGivenBy | ''; notice: Notice | ''; noticeDays: string; leaveDays: string
   severanceAmount: string; thirteenthAmount: string; note: string
 }
 
@@ -21,19 +21,19 @@ export default function DeparturePage() {
   const ask = useAsk()
   const [saved, setSaved] = useState<Departure | null>(null)
   const [proposal, setProposal] = useState<Departure | null>(null)
-  const [draft, setDraft] = useState<Draft>({ lastDay: '', reason: 'RESIGNATION', notice: '', noticeDays: '', leaveDays: '', severanceAmount: '', thirteenthAmount: '', note: '' })
+  const [draft, setDraft] = useState<Draft>({ lastDay: '', reason: 'RESIGNATION', noticeDate: '', noticeGivenBy: '', notice: '', noticeDays: '', leaveDays: '', severanceAmount: '', thirteenthAmount: '', note: '' })
   const [error, setError] = useState<string | null>(null)
   const edit = can('payroll.run')
 
   const body = (d: Draft) => ({
-    lastDay: d.lastDay, reason: d.reason, notice: d.notice || null, noticeDays: num(d.noticeDays), leaveDays: num(d.leaveDays),
+    lastDay: d.lastDay, reason: d.reason, noticeDate: d.noticeDate || null, noticeGivenBy: d.noticeGivenBy || null, notice: d.notice || null, noticeDays: num(d.noticeDays), leaveDays: num(d.leaveDays),
     severanceAmount: num(d.severanceAmount), thirteenthAmount: num(d.thirteenthAmount), note: d.note || null,
   })
 
   const load = () => api<Departure | undefined>(`/api/users/${id}/departure`).then((d) => {
     setSaved(d ?? null)
     if (d) {
-      setDraft({ lastDay: d.lastDay, reason: d.reason, notice: d.notice, noticeDays: String(d.noticeDays), leaveDays: String(d.leaveDays),
+      setDraft({ lastDay: d.lastDay, reason: d.reason, noticeDate: d.noticeDate ?? '', noticeGivenBy: d.noticeGivenBy ?? '', notice: d.notice, noticeDays: String(d.noticeDays), leaveDays: String(d.leaveDays),
         severanceAmount: String(d.severanceAmount), thirteenthAmount: String(d.thirteenthAmount), note: d.note ?? '' })
     }
   }).catch((e: Error) => setError(e.message))
@@ -49,12 +49,13 @@ export default function DeparturePage() {
       setError((e as Error).message)
     }
   }
-  useEffect(() => { if (!saved || saved.status === 'DRAFT') void propose(draft) }, [draft.lastDay, draft.reason, draft.notice])
+  useEffect(() => { if (!saved || saved.status === 'DRAFT') void propose(draft) }, [draft.lastDay, draft.reason, draft.notice, draft.noticeDate, draft.noticeGivenBy])
 
   const set = (k: keyof Draft) => (e: { target: { value: string } }) => setDraft({ ...draft, [k]: e.target.value })
   // A new choice of reason or notice gives back the rules' amounts.
-  const choose = (k: 'reason' | 'notice') => (e: { target: { value: string } }) =>
-    setDraft({ ...draft, [k]: e.target.value, ...(k === 'reason' ? { notice: '' } : {}), noticeDays: '', severanceAmount: '' })
+  const choose = (k: 'reason' | 'notice' | 'noticeGivenBy' | 'noticeDate') => (e: { target: { value: string } }) =>
+    setDraft({ ...draft, [k]: e.target.value, ...(k !== 'notice' ? { notice: '' } : {}), ...(k === 'reason' ? { noticeGivenBy: '' } : {}),
+      noticeDays: '', severanceAmount: '' })
 
   const save = async () => {
     setError(null)
@@ -77,7 +78,7 @@ export default function DeparturePage() {
     onConfirm: async () => {
       await api(`/api/users/${id}/departure`, { method: 'DELETE' })
       setSaved(null)
-      setDraft({ ...draft, notice: '', noticeDays: '', leaveDays: '', severanceAmount: '', thirteenthAmount: '' })
+      setDraft({ ...draft, notice: '', noticeGivenBy: '', noticeDate: '', noticeDays: '', leaveDays: '', severanceAmount: '', thirteenthAmount: '' })
     },
   })
 
@@ -113,6 +114,21 @@ export default function DeparturePage() {
             </select>
           </label>
         </div>
+        <div className="grid3">
+          <label>{t('Notice given by')}
+            <select value={draft.noticeGivenBy || shown?.noticeGivenBy || ''} onChange={choose('noticeGivenBy')} disabled={confirmed || !edit}>
+              <option value="">{t('Nobody (no notice)')}</option>
+              {Object.entries(NOTICE_GIVERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
+          <label>{t('Notice given on')}<input type="date" value={draft.noticeDate} onChange={choose('noticeDate')} max={draft.lastDay || undefined} disabled={confirmed || !edit} /></label>
+          <div className="field-note">
+            {shown?.noticeEnd && <span>{t('Notice ends on {a}.', { a: longDay(shown.noticeEnd) })}{' '}
+              {!confirmed && edit && shown.noticeEnd !== draft.lastDay && draft.noticeDate &&
+                <button type="button" className="link" onClick={() => setDraft({ ...draft, lastDay: shown.noticeEnd!, notice: '', noticeDays: '' })}>{t('Make it the last day')}</button>}
+            </span>}
+          </div>
+        </div>
         {shown && (
           <>
             <div className="table-wrap">
@@ -120,11 +136,11 @@ export default function DeparturePage() {
                 <thead><tr><th>{t('Item')}</th><th>{t('Days')}</th><th className="num">{t('Amount')}</th></tr></thead>
                 <tbody>
                   <tr>
-                    <td>{t('Notice pay (not worked)')}</td>
-                    <td>{shown.notice === 'PAID'
+                    <td>{shown.notice === 'OWED' ? t('Notice owed by the employee (deducted)') : t('Notice pay (not worked)')}</td>
+                    <td>{shown.notice === 'PAID' || shown.notice === 'OWED'
                       ? <input className="narrow-input" inputMode="decimal" value={draft.noticeDays || String(shown.noticeDays)} onChange={set('noticeDays')} onBlur={() => void propose(draft)} disabled={confirmed || !edit} />
                       : '—'}</td>
-                    <td className="num">{money(shown.noticeAmount, cur)}</td>
+                    <td className="num">{shown.notice === 'OWED' ? `− ${money(shown.noticeOwed, cur)}` : money(shown.noticeAmount, cur)}</td>
                   </tr>
                   <tr>
                     <td>{t('Unused annual leave paid out')}</td>
@@ -144,8 +160,8 @@ export default function DeparturePage() {
               </table>
             </div>
             <p className="small muted">{t('Daily rate {a} · service {b} years · basic salary {c}', { a: money(shown.dailyRate, cur), b: shown.serviceYears, c: money(shown.basicMonthly, cur) })}</p>
-            {shown.explanation.length > 0 && <ul className="small">{shown.explanation.map((x) => <li key={x}>{x}</li>)}</ul>}
-            <p className="hint">{t('The last payslip adds the days worked in the month, the settlement and what is left of loans; CNSS and tax apply as set on each pay element. The rules are on the Rates page and must be checked with your payroll expert.')}</p>
+            {shown.explanation.length > 0 && <ul className="small">{shown.explanation.map((x) => <li key={x} className={x.startsWith(t('Warning:')) ? 'warn-text' : undefined}>{x}</li>)}</ul>}
+            <p className="hint">{t('The last payslip adds the days worked in the month, the settlement and what is left of loans; CNSS and tax apply as set on each pay element. The notice comes from the person’s grade category (Payroll settings), the other rules from the Rates page; check them with your payroll expert.')}</p>
           </>
         )}
         <label>{t('Note (optional)')}<textarea value={draft.note} onChange={set('note')} maxLength={500} disabled={confirmed || !edit} /></label>
