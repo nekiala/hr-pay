@@ -212,7 +212,9 @@ export default function PayElementsPage() {
                     </>
                   )}
                 </div>
-                {edit.kind === 'EARNING' && (
+              </>
+            )}
+            {edit.kind === 'EARNING' && (
                   <div className="grid3">
                     <label className="check"><input type="checkbox" checked={edit.subjectToCnss} onChange={(e) => setEdit({ ...edit, subjectToCnss: e.target.checked })} /> Subject to CNSS</label>
                     <label className="check"><input type="checkbox" checked={edit.taxableIpr} onChange={(e) => setEdit({ ...edit, taxableIpr: e.target.checked })} /> Taxable for IPR</label>
@@ -220,7 +222,9 @@ export default function PayElementsPage() {
                       <label>IPR-free share, % of basic (optional)<input type="number" min={0} max={100} step={0.001} value={edit.iprExemptCapPercent} onChange={(e) => setEdit({ ...edit, iprExemptCapPercent: e.target.value })} /></label>
                     )}
                   </div>
-                )}
+            )}
+            {!edit.system && (
+              <>
                 <div className="grid3">
                   <label className="check"><input type="checkbox" checked={edit.prorated} onChange={(e) => setEdit({ ...edit, prorated: e.target.checked })} /> Prorated by hours paid</label>
                   {edit.method !== 'MANUAL' && (
