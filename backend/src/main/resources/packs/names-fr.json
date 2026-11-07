@@ -118,5 +118,17 @@
  "ITS family parts, at most": "Parts du quotient familial ITS, au plus",
  "One part for the employee, one for a spouse in charge, a half per child in charge.": "Une part pour le salarié, une pour un conjoint à charge, une demi-part par enfant à charge.",
  "Minimum wage (SMIG), per month": "Salaire minimum (SMIG), par mois",
- "Basic pay may not fall below this monthly amount; checked, not paid.": "Le salaire de base ne peut pas descendre sous ce montant mensuel ; vérifié, pas versé."
+ "Basic pay may not fall below this monthly amount; checked, not paid.": "Le salaire de base ne peut pas descendre sous ce montant mensuel ; vérifié, pas versé.",
+ "Notice pay (not worked)": "Indemnité compensatrice de préavis",
+ "Severance pay (to verify)": "Indemnité de licenciement (à vérifier)",
+ "Back pay, earlier month": "Rappel de salaire, mois antérieur",
+ "Overpaid earlier month (less)": "Trop-perçu d'un mois antérieur (moins)",
+ "Days per month for the daily rate": "Jours par mois pour le taux journalier",
+ "Notice, base days": "Préavis, jours de base",
+ "Notice, days per year of service": "Préavis, jours par année d'ancienneté",
+ "Severance, days per year of service": "Indemnité de licenciement, jours par année",
+ "The final settlement prices a day as the monthly basic salary divided by this.": "Le décompte final calcule un jour comme le salaire de base mensuel divisé par ce nombre.",
+ "Days of notice for any length of service.": "Jours de préavis quelle que soit l'ancienneté.",
+ "Days of notice added for each full year of service.": "Jours de préavis ajoutés par année complète d'ancienneté.",
+ "Days of pay per year of service on dismissal, redundancy or retirement, from the law or the collective agreement.": "Jours de salaire par année d'ancienneté en cas de licenciement, de licenciement économique ou de retraite, selon la loi ou la convention collective."
 }

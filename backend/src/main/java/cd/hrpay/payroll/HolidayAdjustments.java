@@ -82,7 +82,7 @@ public class HolidayAdjustments {
         List<Slip> slips = jdbc.sql("""
                 select id, user_id, trim(currency) as currency, scheduled_minutes, paid_minutes,
                        (snapshot ->> 'basicMonthly')::numeric as basic
-                from payslip where run_id = ?""").param(runId).query(Slip.class).list();
+                from payslip where run_id = ? and kind = 'REGULAR'""").param(runId).query(Slip.class).list();
         int changed = 0;
         Set<Long> touched = new LinkedHashSet<>();
         for (Slip s : slips) {

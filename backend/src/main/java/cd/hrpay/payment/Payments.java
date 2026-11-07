@@ -110,7 +110,7 @@ public class Payments {
                        f.mobile_money_operator, f.mobile_money_number
                 from payslip p join app_user u on u.id = p.user_id
                 left join employee_profile f on f.user_id = p.user_id
-                where p.run_id = ? and p.net > 0 and not exists (select 1 from payment_line l where l.payslip_id = p.id)
+                where p.run_id = ? and p.net > 0 and p.number is not null and not exists (select 1 from payment_line l where l.payslip_id = p.id)
                 order by u.last_name, u.first_name""").param(runId)
                 .query((rs, i) -> {
                     String method = rs.getString("method");
@@ -163,7 +163,7 @@ public class Payments {
         List<Group> toPay = groups.values().stream()
                 .sorted(java.util.Comparator.comparing(Group::method).thenComparing(Group::provider).thenComparing(Group::currency))
                 .toList();
-        int payslips = jdbc.sql("select count(*) from payslip where run_id = ? and net > 0").param(run.id()).query(Integer.class).single();
+        int payslips = jdbc.sql("select count(*) from payslip where run_id = ? and net > 0 and (kind = 'REGULAR' or number is not null)").param(run.id()).query(Integer.class).single();
         int paid = jdbc.sql("""
                 select count(*) from payment_line l join payment_batch b on b.id = l.batch_id
                 where b.run_id = ? and b.status = 'PAID'""").param(run.id()).query(Integer.class).single();

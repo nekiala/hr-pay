@@ -118,13 +118,18 @@ public class Declarations {
         var units = org.placementsOfUnits();
         List<String> warnings = new ArrayList<>();
         jdbc.sql("""
-                select p.user_id, u.registration_no, u.first_name || ' ' || u.last_name as name, trim(p.currency) as currency,
-                       p.cnss_base, p.taxable_base, p.taxable_base_cdf, p.snapshot ->> ? as id_number,
-                       (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employee_amount,
-                       (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code like ?) as employer_amount,
-                       (select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code like ?) as employer_base
-                , p.unit_id from payslip p join app_user u on u.id = p.user_id
-                where p.run_id = ? order by u.last_name, u.first_name""")
+                select p.user_id, u.registration_no, u.first_name || ' ' || u.last_name as name,
+                       trim(min(p.currency)) as currency, sum(p.cnss_base) as cnss_base, sum(p.taxable_base) as taxable_base,
+                       sum(p.taxable_base_cdf) as taxable_base_cdf,
+                       max(p.snapshot ->> ?) filter (where p.kind = 'REGULAR') as id_number,
+                       sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?)) as employee_amount,
+                       sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code like ?)) as employer_amount,
+                       sum((select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code like ?)) as employer_base,
+                       min(p.unit_id) as unit_id
+                from payslip p join app_user u on u.id = p.user_id
+                where p.run_id = ? and (p.kind = 'REGULAR' or p.number is not null)
+                group by p.user_id, u.registration_no, u.first_name, u.last_name
+                order by u.last_name, u.first_name""")
                 .params(idKey == null ? "-" : idKey, employeeCode == null ? "-" : employeeCode,
                         employerCode == null ? "-" : employerCode, employerCode == null ? "-" : employerCode, run.id())
                 .query((rs, i) -> {
@@ -155,6 +160,12 @@ public class Declarations {
         }
         if (!run.status().equals("CLOSED")) {
             warnings.add(0, Texts.t("The %s payroll is not closed yet: these amounts can still change.", month));
+        }
+        Filed filed = filed(month, kind);
+        if (filed != null && jdbc.sql("""
+                select count(*) from payslip where run_id = ? and kind = 'COMPLEMENTARY' and approved_at > ?""")
+                .params(run.id(), filed.filedAt()).query(Integer.class).single() > 0) {
+            warnings.add(0, Texts.t("Complementary payslips were approved after this declaration was filed: the amounts include them, file an amended declaration."));
         }
         return new Declaration(month.toString(), kind, run.status(), run.usdCdf(), run.rateDate(), rows,
                 sum(rows, Row::baseCdf), sum(rows, Row::employeeCdf), sum(rows, Row::employerCdf), sum(rows, Row::totalCdf),

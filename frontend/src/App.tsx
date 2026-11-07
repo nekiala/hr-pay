@@ -51,6 +51,11 @@ import PlatformCompanyPage from './pages/PlatformCompanyPage'
 import PlatformBillingPage from './pages/PlatformBillingPage'
 import BillingPage from './pages/BillingPage'
 import LicencePage from './pages/LicencePage'
+import DeparturePage from './pages/DeparturePage'
+import CorrectPayslipPage from './pages/CorrectPayslipPage'
+import PayrollCorrectionsPage, { DeparturesPage } from './pages/PayrollCorrectionsPage'
+import AccountingPage from './pages/AccountingPage'
+import ComparePage from './pages/ComparePage'
 import { useLocation } from 'react-router-dom'
 import { Shell } from './components/Shell'
 import type { ReactNode } from 'react'
@@ -62,6 +67,13 @@ function Guard({ permission, children }: { permission?: string; children: ReactN
     return <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return <>{children}</>
+}
+
+function PayrollStaff({ children }: { children: ReactNode }) {
+  const { can } = useAuth()
+  return can('payroll.run') || can('payroll.approve')
+    ? <>{children}</>
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
 function PayElementsRoute({ page }: { page?: 'rates' }) {
@@ -120,6 +132,8 @@ export default function App() {
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
+          <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />
+          <Route path="/departures" element={<PayrollStaff><DeparturesPage /></PayrollStaff>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
           <Route path="/org" element={<OrgChartPage />} />
           <Route path="/org/units/:id" element={<OrgUnitPage />} />
@@ -144,6 +158,10 @@ export default function App() {
           <Route path="/my/year" element={<Guard permission="payslip.read.own"><AnnualStatementPage /></Guard>} />
           <Route path="/payroll/loans" element={<PayrollRoute page="loans" />} />
           <Route path="/payslips/:id" element={<PayslipPage />} />
+          <Route path="/payslips/:id/correct" element={<Guard permission="payroll.run"><CorrectPayslipPage /></Guard>} />
+          <Route path="/payroll/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
+          <Route path="/payroll/compare" element={<PayrollStaff><ComparePage /></PayrollStaff>} />
+          <Route path="/payroll/accounting" element={<Guard permission="accounting.export"><AccountingPage /></Guard>} />
           <Route path="/my/payslips" element={<Guard permission="payslip.read.own"><MyPayslipsPage /></Guard>} />
           <Route path="/payroll/elements" element={<PayElementsRoute />} />
           <Route path="/payroll/rates" element={<PayElementsRoute page="rates" />} />

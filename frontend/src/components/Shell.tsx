@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
@@ -47,6 +47,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/users', label: t('Users'), icon: Users, show: can('user.read') },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
+        { to: '/departures', label: t('Departures'), icon: DoorOpen, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/sites', label: t('Sites'), icon: MapPin, show: att && any('site.read', 'site.manage') },
       ],
     },
@@ -58,6 +59,8 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
         { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
+        { to: '/payroll/corrections', label: t('Corrections and back pay'), icon: FilePenLine, show: pay && any('payroll.run', 'payroll.approve') },
+        { to: '/payroll/accounting', label: t('Accounting'), icon: BookOpenCheck, show: pay && can('accounting.export') },
         { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
       ],
     },

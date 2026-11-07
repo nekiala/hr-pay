@@ -102,7 +102,7 @@ public class StructureReport {
         if (run.isPresent()) {
             List<Slip> slips = jdbc.sql("""
                     select unit_id, trim(currency) as currency, gross, net, employer_charges as employer
-                    from payslip where run_id = ?""").param(run.get()[0]).query(Slip.class).list();
+                    from payslip where run_id = ? and (kind = 'REGULAR' or number is not null)""").param(run.get()[0]).query(Slip.class).list();
             for (Slip s : slips) {
                 BigDecimal toUsd = s.currency().equals("USD") ? BigDecimal.ONE
                         : BigDecimal.ONE.divide(rate, 10, RoundingMode.HALF_UP);

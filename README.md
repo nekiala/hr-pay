@@ -249,6 +249,17 @@ critical advisories in the browser app (`npm audit`) and in the container image 
   3,000,000 XAF a year; SMIG 90,000 XAF; overtime 110% / 125% / 150% / 200%; the 7 public holidays; the declaration
   formats and the payslip mentions.
 
+## Payroll completeness (phase 14)
+
+- **Departure and final settlement**: open a person on the Users page and choose Departure. HR Pay works out the notice pay (when not worked), the unused annual leave paid out, the severance and the share of the 13th month from the rates on the Rates page (`SETTLEMENT_DAYS_PER_MONTH`, `NOTICE_BASE_DAYS`, `NOTICE_DAYS_PER_YEAR`, `SEVERANCE_DAYS_PER_YEAR`); HR can change each amount. Confirming (by someone other than the leaver) writes the amounts as pay entries of the last month, takes the leave out of the balance and ends the contract. The last payslip pays only the days up to the last day and takes what is left of loans, within the allowed share of net pay. The certificate of employment is a PDF numbered `CT-YYYY-NNNN`. The departure can be taken back while that month is still open.
+- **Corrections of a closed month**: a closed payslip is never changed. Choose Correct on it: the payslip is worked out again with today's data (plus any lines you add), and the difference is either a complementary payslip of that month (numbered `<number>-C<n>` once Finance approves it, by someone other than its author), carried into the next open payroll as back pay (`BACK_PAY` / `BACK_PAY_LESS`), or a reversal that takes back the whole payslip, loan repayments included. A negative net becomes a salary advance. Payments, declarations, year summaries and reports count approved complementary payslips; declarations already filed warn that an amended one is needed.
+- **Back pay**: the Corrections page lists closed payslips of the last twelve months whose basic salary on file is now different (a raise dated in the past) and pays them all in the next payroll in one go.
+- **Accounting entries** (`accounting.export`): the month's payroll as a SYSCOHADA journal (Excel or CSV), optionally split by cost centre. Default accounts: 661x pay, 662x for expatriates, 664x employer social charges, 6413 taxes on pay (INPP, ONEM), 4220 net pay owed, 421x loans and advances, 431x CNSS, 447x taxes; each pay element can have its own accounts.
+- **Parallel run**: Payroll > Compare takes the old payroll's figures for a month as CSV (registration number, gross, CNSS, tax, net) and shows, person by person, what is the same and what differs. Run both payrolls for two months before relying on HR Pay.
+- **Sign-off**: the Rates page downloads a workbook of every rate, tax band, pay element, setting and formula for the company's country, for the payroll expert to check and sign; the sign-off is recorded, and the page shows how many rates changed since.
+
+To check with the payroll expert (Albert Mbodo) before going live: the settlement rules and day counts for both countries, the severance rates (law or collective agreement), the default SYSCOHADA accounts, and every rate in the sign-off workbook. Still waiting for outside input: the real bank, mobile money, CNSS and DGI file formats, and the official IPR barème.
+
 ## Configuration
 
 | Variable | Default | Purpose |

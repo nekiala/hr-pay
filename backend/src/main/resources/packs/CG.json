@@ -876,6 +876,78 @@
      "system": true,
      "display_order": 230,
      "active": true
+    },
+    {
+     "id": 24,
+     "code": "NOTICE_PAY",
+     "name": "Notice pay (not worked)",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 82,
+     "active": true
+    },
+    {
+     "id": 25,
+     "code": "SEVERANCE",
+     "name": "Severance pay (to verify)",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 84,
+     "active": true
+    },
+    {
+     "id": 26,
+     "code": "BACK_PAY",
+     "name": "Back pay, earlier month",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 17,
+     "active": true
+    },
+    {
+     "id": 27,
+     "code": "BACK_PAY_LESS",
+     "name": "Overpaid earlier month (less)",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 18,
+     "active": true
     }
    ]
   },
@@ -959,6 +1031,34 @@
      "unit": "PERCENT",
      "description": "Loan and advance installments together may take at most this share of the net pay; the rest waits.",
      "display_order": 110
+    },
+    {
+     "code": "SETTLEMENT_DAYS_PER_MONTH",
+     "name": "Days per month for the daily rate",
+     "unit": "COUNT",
+     "description": "The final settlement prices a day as the monthly basic salary divided by this.",
+     "display_order": 300
+    },
+    {
+     "code": "NOTICE_BASE_DAYS",
+     "name": "Notice, base days",
+     "unit": "COUNT",
+     "description": "Days of notice for any length of service.",
+     "display_order": 310
+    },
+    {
+     "code": "NOTICE_DAYS_PER_YEAR",
+     "name": "Notice, days per year of service",
+     "unit": "COUNT",
+     "description": "Days of notice added for each full year of service.",
+     "display_order": 320
+    },
+    {
+     "code": "SEVERANCE_DAYS_PER_YEAR",
+     "name": "Severance, days per year of service",
+     "unit": "COUNT",
+     "description": "Days of pay per year of service on dismissal, redundancy or retirement, from the law or the collective agreement.",
+     "display_order": 330
     }
    ]
   },
@@ -1053,6 +1153,38 @@
      "value": 30.0,
      "note": "Sample, to verify (Republic of the Congo)",
      "created_by": "system"
+    },
+    {
+     "id": 12,
+     "code": "SETTLEMENT_DAYS_PER_MONTH",
+     "effective_from": "2020-01-01",
+     "value": 30.0,
+     "note": "Sample, to verify (Republic of the Congo)",
+     "created_by": "system"
+    },
+    {
+     "id": 13,
+     "code": "NOTICE_BASE_DAYS",
+     "effective_from": "2020-01-01",
+     "value": 30.0,
+     "note": "Sample, to verify (Republic of the Congo)",
+     "created_by": "system"
+    },
+    {
+     "id": 14,
+     "code": "NOTICE_DAYS_PER_YEAR",
+     "effective_from": "2020-01-01",
+     "value": 0.0,
+     "note": "Sample, to verify (Republic of the Congo)",
+     "created_by": "system"
+    },
+    {
+     "id": 15,
+     "code": "SEVERANCE_DAYS_PER_YEAR",
+     "effective_from": "2020-01-01",
+     "value": 7.5,
+     "note": "Sample, to verify (Republic of the Congo)",
+     "created_by": "system"
     }
    ]
   },
@@ -1141,6 +1273,14 @@
     {
      "key": "GPS_RETENTION_DAYS",
      "value": "90"
+    },
+    {
+     "key": "ACCOUNT_NET_PAY",
+     "value": "4220"
+    },
+    {
+     "key": "ACCOUNTING_JOURNAL",
+     "value": "PAIE"
     }
    ]
   },
@@ -1623,6 +1763,14 @@
     {
      "role_id": 2,
      "permission_code": "privacy.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "accounting.export"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "accounting.export"
     }
    ]
   }

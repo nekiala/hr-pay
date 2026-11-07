@@ -656,6 +656,7 @@ export type PayslipSummary = {
   id: number; userId: number; userName: string; registrationNo: string; number: string | null; currency: string
   gross: number; employeeDeductions: number; net: number; employerCharges: number; warningCount: number
   unitId: number | null; unitName: string | null; directionId: number | null; directionName: string | null
+  kind: 'REGULAR' | 'COMPLEMENTARY'; correctsId: number | null
 }
 export type RunView = {
   run: PayrollRun; payslips: PayslipSummary[]; skipped: string[]
@@ -667,6 +668,56 @@ export type Payslip = {
   gross: number; cnssBase: number; taxableBase: number; taxableBaseCdf: number; employeeDeductions: number; net: number
   employerCharges: number; scheduledMinutes: number; paidMinutes: number; daysWorked: number; usdCdf: number; rateDate: string
   projected: boolean; snapshot: Record<string, string | number | boolean | null>; warnings: string[]; lines: PayslipLine[]
+  kind: 'REGULAR' | 'COMPLEMENTARY'; correctsId: number | null; correctsNumber: string | null; reason: string | null
+}
+
+export type DepartureReason = 'RESIGNATION' | 'DISMISSAL' | 'GROSS_MISCONDUCT' | 'REDUNDANCY' | 'END_OF_CONTRACT' | 'MUTUAL_AGREEMENT' | 'RETIREMENT' | 'DEATH'
+export const DEPARTURE_REASONS: Record<DepartureReason, string> = {
+  RESIGNATION: t('Resignation'), DISMISSAL: t('Dismissal'), GROSS_MISCONDUCT: t('Dismissal for gross misconduct'),
+  REDUNDANCY: t('Redundancy (economic reasons)'), END_OF_CONTRACT: t('End of a fixed-term contract'),
+  MUTUAL_AGREEMENT: t('Mutual agreement'), RETIREMENT: t('Retirement'), DEATH: t('Death'),
+}
+export type Notice = 'WORKED' | 'PAID' | 'NONE'
+export const NOTICES: Record<Notice, string> = { WORKED: t('Worked'), PAID: t('Not worked, paid'), NONE: t('None') }
+export type Departure = {
+  id: number | null; userId: number; name: string; registrationNo: string; hireDate: string | null; lastDay: string
+  reason: DepartureReason; notice: Notice; currency: string; basicMonthly: number; dailyRate: number; serviceYears: number
+  noticeDays: number; noticeAmount: number; leaveDays: number; leaveAmount: number; severanceAmount: number
+  thirteenthAmount: number; total: number; loanBalance: number | null; note: string | null; status: 'DRAFT' | 'CONFIRMED'
+  createdBy: string | null; confirmedBy: string | null; confirmedAt: string | null; certificateNo: string | null
+  monthStatus: 'OPEN' | PayrollRun['status']; explanation: string[]
+}
+export type DepartureSummary = { id: number; userId: number; name: string; registrationNo: string; lastDay: string; reason: DepartureReason; status: 'DRAFT' | 'CONFIRMED'; currency: string; total: number }
+
+export type DiffLine = { code: string; label: string; kind: PayslipLine['kind']; before: number; after: number; change: number }
+export type CorrectionPreview = {
+  payslipId: number; number: string; month: string; userId: number; name: string; currency: string; lines: DiffLine[]
+  grossBefore: number; grossAfter: number; netBefore: number; netAfter: number; netChange: number; carried: number
+  pending: boolean; carriedBefore: boolean; basicPaid: number | null; basicNow: number | null; warnings: string[]
+}
+export type CorrectionMode = 'COMPLEMENTARY' | 'NEXT_PAYROLL' | 'REVERSAL'
+export type Correction = {
+  id: number; payslipId: number; number: string; month: string; userId: number; name: string; mode: CorrectionMode
+  grossChange: number; currency: string; targetMonth: string | null; complementaryId: number | null
+  complementaryNumber: string | null; net: number | null; status: 'WAITING' | 'APPROVED' | 'CARRIED'; reason: string
+  createdBy: string; createdAt: string
+}
+export type BackPayDue = { payslipId: number; number: string; month: string; userId: number; name: string; currency: string; basicPaid: number; basicNow: number; estimate: number }
+export type ElementAccounts = { elementId: number; code: string; name: string; kind: PayslipLine['kind']; expenseAccount: string | null; liabilityAccount: string | null; defaultExpense: string | null; defaultLiability: string | null }
+export type Journal = {
+  month: string; runStatus: string; journal: string; date: string; reference: string; currency: string; rate: number
+  entries: { account: string; label: string; costCentre: string | null; debit: number | null; credit: number | null }[]
+  debit: number; credit: number; payslips: number; warnings: string[]
+}
+export type Figures = { gross: number | null; cnss: number | null; tax: number | null; net: number | null }
+export type Comparison = {
+  month: string; runStatus: string; tolerance: number; matching: number; different: number; onlyOurs: number; onlyTheirs: number
+  oursTotal: Figures; theirsTotal: Figures; warnings: string[]
+  rows: { registrationNo: string; name: string | null; currency: string | null; ours: Figures | null; theirs: Figures | null; difference: Figures | null; status: 'MATCH' | 'DIFFERENT' | 'ONLY_OURS' | 'ONLY_THEIRS' }[]
+}
+export type CertificationStatus = {
+  last: { id: number; certifiedBy: string; certifiedOn: string; note: string | null; createdBy: string; createdAt: string } | null
+  ratesChangedSince: number; bracketsChangedSince: number
 }
 export type Loan = {
   id: number; userId: number; userName: string; kind: 'LOAN' | 'ADVANCE'; principal: number; currency: string
