@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: hr-pay
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hrpay}
+    username: ${DB_USER:hrpay}
+    password: ${DB_PASSWORD:hrpay}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  # Set to "native" behind a reverse proxy so the client IP (used for site checks) comes from X-Forwarded-For.
+  forward-headers-strategy: ${FORWARD_HEADERS:none}
+  servlet:
+    session:
+      timeout: 8h
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+app:
+  # Creates the first administrator when the user table is empty.
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  # Loads a demo site and sample users. Never enable in production.
+  sample-data:
+    enabled: ${SAMPLE_DATA:false}
+    password: ${SAMPLE_PASSWORD:Demo@2026!}
+  # Frontend origin allowed to call the API in development.
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173}

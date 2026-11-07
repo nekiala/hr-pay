@@ -1,0 +1,131 @@
+package cd.hrpay.user;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    static final String PHONE = "\\+?[0-9\\s()-]{8,20}";
+
+    public record UserInput(
+            @NotBlank @Email @Size(max = 254) String email,
+            @NotBlank @Size(max = 32) String registrationNo,
+            @NotBlank @Pattern(regexp = PHONE, message = "Use international format, for example +243 81 234 5678")
+            String phone,
+            @NotBlank @Size(max = 100) String firstName,
+            @NotBlank @Size(max = 100) String lastName,
+            Long siteId) {
+        UserService.UserData data() {
+            return new UserService.UserData(email, registrationNo, phone, firstName, lastName, siteId);
+        }
+    }
+
+    public record CreateUser(@Valid UserInput user, List<String> roles, String initialPassword) {}
+
+    public record RolesInput(@NotEmpty List<String> roles) {}
+
+    public record PasswordInput(@NotBlank String password) {}
+
+    public record UserView(Long id, String email, String registrationNo, String phone, String firstName,
+                           String lastName, Long siteId, String siteName, UserStatus status, Set<String> roles,
+                           boolean hasPassword, OffsetDateTime lastLoginAt, OffsetDateTime createdAt) {
+        static UserView of(AppUser u) {
+            return new UserView(u.getId(), u.getEmail(), u.getRegistrationNo(), u.getPhone(), u.getFirstName(),
+                    u.getLastName(), u.getSite() == null ? null : u.getSite().getId(),
+                    u.getSite() == null ? null : u.getSite().getName(), u.getStatus(), u.roleCodes(),
+                    u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt());
+        }
+    }
+
+    public record UserPage(List<UserView> items, int page, int size, long total) {}
+
+    private final UserRepository users;
+    private final UserService service;
+
+    public UserController(UserRepository users, UserService service) {
+        this.users = users;
+        this.service = service;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('user.read')")
+    @Transactional(readOnly = true)
+    public UserPage list(@RequestParam(required = false) String q,
+                         @RequestParam(defaultValue = "0") int page,
+                         @RequestParam(defaultValue = "25") int size) {
+        String query = q == null || q.isBlank() ? null : q.trim();
+        Page<AppUser> result = users.search(query, PageRequest.of(Math.max(page, 0), Math.clamp(size, 1, 100),
+                Sort.by("lastName", "firstName")));
+        return new UserPage(result.map(UserView::of).toList(), result.getNumber(), result.getSize(),
+                result.getTotalElements());
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('user.read')")
+    @Transactional(readOnly = true)
+    public UserView get(@PathVariable Long id) {
+        return UserView.of(service.find(id));
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('user.create')")
+    public UserView create(@Valid @RequestBody CreateUser body) {
+        return UserView.of(service.create(body.user().data(), body.roles(), body.initialPassword()));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('user.update')")
+    public UserView update(@PathVariable Long id, @Valid @RequestBody UserInput body) {
+        return UserView.of(service.update(id, body.data()));
+    }
+
+    @PutMapping("/{id}/roles")
+    @PreAuthorize("hasAuthority('role.assign')")
+    public UserView setRoles(@PathVariable Long id, @Valid @RequestBody RolesInput body) {
+        return UserView.of(service.setRoles(id, body.roles()));
+    }
+
+    @PostMapping("/{id}/disable")
+    @PreAuthorize("hasAuthority('user.disable')")
+    public UserView disable(@PathVariable Long id) {
+        return UserView.of(service.setStatus(id, UserStatus.DISABLED));
+    }
+
+    @PostMapping("/{id}/enable")
+    @PreAuthorize("hasAuthority('user.disable')")
+    public UserView enable(@PathVariable Long id) {
+        return UserView.of(service.setStatus(id, UserStatus.ACTIVE));
+    }
+
+    @PostMapping("/{id}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('user.update')")
+    public void resetPassword(@PathVariable Long id, @Valid @RequestBody PasswordInput body) {
+        service.resetPassword(id, body.password());
+    }
+}
