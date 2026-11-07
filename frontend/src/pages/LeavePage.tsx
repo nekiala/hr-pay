@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, api, days, fileToBase64, type LeaveBalance, type LeaveDocument, type LeaveRequest, type LeaveType } from '../api'
+import { ApiError, api, days, fileToBase64, longDay, type AnnualLeave, type LeaveBalance, type LeaveDocument, type LeaveRequest, type LeaveType } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
@@ -64,6 +64,9 @@ export default function LeavePage() {
   const canDecide = isHr || can('leave.approve.team')
   const [types, setTypes] = useState<LeaveType[]>([])
   const [balances, setBalances] = useState<LeaveBalance[]>([])
+  const [annual, setAnnual] = useState<AnnualLeave | null>(null)
+  const [leavePayDue, setLeavePayDue] = useState(0)
+  const leavePay = can('payroll.run') || can('payroll.approve')
   const [mine, setMine] = useState<LeaveRequest[]>([])
   const [pending, setPending] = useState<LeaveRequest[]>([])
   const [form, setForm] = useState({ leaveTypeId: '', startDate: '', endDate: '', halfDay: '', reason: '' })
@@ -76,8 +79,9 @@ export default function LeavePage() {
 
   const load = () => {
     api<LeaveType[]>('/api/leave/types').then((tItem) => setTypes(tItem.filter((x) => x.active))).catch(() => undefined)
-    if (canRequest) api<{ balances: LeaveBalance[]; requests: LeaveRequest[] }>('/api/leave/mine')
-      .then((m) => { setBalances(m.balances); setMine(m.requests) }).catch((e: Error) => setError(e.message))
+    if (canRequest) api<{ balances: LeaveBalance[]; requests: LeaveRequest[]; annual: AnnualLeave }>('/api/leave/mine')
+      .then((m) => { setBalances(m.balances); setMine(m.requests); setAnnual(m.annual) }).catch((e: Error) => setError(e.message))
+    if (leavePay) api<{ due: unknown[] }>('/api/leave-pay').then((o) => setLeavePayDue(o.due.length)).catch(() => undefined)
     if (canDecide) api<LeaveRequest[]>('/api/leave/requests/to-decide').then(setPending).catch((e: Error) => setError(e.message))
   }
   useEffect(load, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -140,8 +144,14 @@ export default function LeavePage() {
           <h2>{t('Leave')}</h2>
           {canRequest && <Button onClick={() => setRequesting(true)}>{t('Request leave')}</Button>}
         </div>
-        {isHr && <Link className="button secondary" to="/leave/settings">{t('Leave settings')}</Link>}
+        <div className="row">
+          {leavePay && <Link className="button secondary" to="/payroll/leave-pay">{t('Leave pay')}{leavePayDue > 0 ? ` (${leavePayDue})` : ''}</Link>}
+          {isHr && <Link className="button secondary" to="/leave/settings">{t('Leave settings')}</Link>}
+        </div>
       </div>
+      {leavePay && leavePayDue > 0 && (
+        <p className="notice">{t('{a} approved annual leave(s) wait for their leave pay.', { a: leavePayDue })}{' '}<Link to="/payroll/leave-pay">{t('Work it out')}</Link></p>
+      )}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
@@ -154,6 +164,28 @@ export default function LeavePage() {
               <small>{days(b.granted)}{' '}{t('granted ·')}{' '}{days(b.taken)}{' '}{t('taken')}{b.pending ? t(" · {a} waiting", { a: days(b.pending) }) : ''}</small>
             </div>
           ))}
+        </div>
+      )}
+
+      {canRequest && annual && (annual.grantedThisYear > 0 || annual.available !== 0) && (
+        <div className="card">
+          <h3>{t('My annual leave')}</h3>
+          <div className="tiles">
+            <div className="tile"><span>{t('Earned so far this year')}</span><strong>{days(annual.earnedToDate)}</strong>
+              <small>{t('of {a} for the year', { a: days(annual.grantedThisYear) })}</small></div>
+            <div className="tile"><span>{t('Carried from earlier years')}</span><strong>{days(annual.carriedOver)}</strong></div>
+            <div className="tile"><span>{t('Taken this year')}</span><strong>{days(annual.takenThisYear)}</strong></div>
+            <div className="tile"><span>{t('Left to take')}</span><strong>{days(annual.available)}</strong>
+              {annual.pending > 0 && <small>{t('{a} waiting for approval', { a: days(annual.pending) })}</small>}</div>
+          </div>
+          {annual.rightOpensOn && <p className="hint">{t('Your right to annual leave opens after a year of service, on {a}.', { a: longDay(annual.rightOpensOn) })}</p>}
+          {annual.years.filter((y) => y.lapsing > 0).map((y) => (
+            <p key={y.year} className="hint">{t('{a} of your {b} leave must be taken by {c}, or they lapse.', { a: days(y.lapsing), b: y.year, c: longDay(y.lapsesOn) })}</p>
+          ))}
+          <p className="muted">{annual.paid
+            ? t('Annual leave is paid: your leave allowance is paid before you leave, and your payslip settles it.')
+            : t('Annual leave is not paid in this company.')}{' '}
+            {t('Up to {a}% of a year\'s leave can be kept for {b} more year(s).', { a: annual.carryPercent, b: annual.carryYears })}</p>
         </div>
       )}
 
@@ -207,7 +239,7 @@ export default function LeavePage() {
                 <small className="muted">{t('You can also add it later. HR checks it before the leave counts.')}</small>
               </label>
             )}
-            {selected && selected.payPercent === 0 && <p className="hint">{t('This leave is unpaid.')}</p>}
+            {selected && (selected.payPercent === 0 || (selected.code === 'ANNUAL' && annual && !annual.paid)) && <p className="hint">{t('This leave is unpaid.')}</p>}
             {selected && selected.payPercent > 0 && selected.payPercent < 100 && (
               <p className="hint">{t('This leave is paid at')}{' '}{Number(selected.payPercent).toLocaleString(locale())}{t('% of the usual pay.')}</p>
             )}

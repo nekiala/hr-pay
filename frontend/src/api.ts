@@ -587,6 +587,24 @@ export type PendingOvertime = {
 
 export type LeaveType = { id: number; code: string; name: string; paid: boolean; usesBalance: boolean; requiresDocument: boolean; maxDays: number | null; active: boolean; payPercent: number }
 export type GradeCategory = { id: number; code: string; name: string; annualLeaveDays: number; active: boolean }
+export type LeaveYearLeft = { year: number; granted: number; left: number; lapsing: number; lapsesOn: string }
+export type AnnualLeave = {
+  paid: boolean; grantedThisYear: number; earnedToDate: number; carriedOver: number; takenThisYear: number
+  available: number; pending: number; years: LeaveYearLeft[]; rightOpensOn: string | null; carryPercent: number; carryYears: number
+}
+export type LeaveLapse = { userId: number; employeeName: string; registrationNo: string; leaveYear: number; left: number; lapsing: number; kept: number }
+export type LeavePayDue = {
+  leaveRequestId: number; userId: number; employeeName: string; registrationNo: string; startDate: string; endDate: string
+  workingDays: number; payBy: string
+}
+export type LeaveAllowance = {
+  id: number; leaveRequestId: number; userId: number; employeeName: string; registrationNo: string; startDate: string; endDate: string
+  currency: string; days: number; monthlySalary: number; daysPerMonth: number; dailyRate: number; salaryPart: number
+  variable12m: number; monthsCounted: number; variablePart: number; gross: number; netShare: number; advance: number; payBy: string
+  status: 'CALCULATED' | 'APPROVED' | 'PAID' | 'CANCELLED'; explanation: string[]; calculatedBy: string; calculatedAt: string
+  approvedBy: string | null; approvedAt: string | null; paidBy: string | null; paidOn: string | null; paymentReference: string | null
+  cancelNote: string | null; months: { month: string; days: number; variableAmount: number; advanceAmount: number }[]
+}
 export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
 export type LeaveRequest = {
   id: number; userId: number; employeeName: string; registrationNo: string; leaveTypeId: number; leaveType: string

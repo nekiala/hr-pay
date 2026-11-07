@@ -26,7 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Leave requests, approvals and balances. A balance is the sum of its ledger rows: yearly grants from the
- * employee's grade category, approved leave taken, HR adjustments and payouts. Unused days carry over.
+ * employee's grade category, approved leave taken, HR adjustments and payouts. Unused annual leave carries over
+ * within the company's limits (a share of each year, for some years) and lapses when HR closes a leave year.
  */
 @Service
 public class LeaveService {
@@ -250,20 +251,225 @@ public class LeaveService {
         return jdbc.sql("select value from payroll_setting where key = ?").param(key).query(String.class).optional().orElse(fallback);
     }
 
+    public static final String ANNUAL_PAID = "LEAVE_ANNUAL_PAID";
+    public static final String CARRY_PERCENT = "LEAVE_CARRY_PERCENT";
+    public static final String CARRY_YEARS = "LEAVE_CARRY_YEARS";
+
+    private boolean congo() {
+        return "CG".equals(jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
+                .optional().orElse("CD"));
+    }
+
+    /** Whether the company pays annual leave (the leave days, the allowance before departure, the payout at the end). */
+    public boolean annualPaid() {
+        return Boolean.parseBoolean(setting(ANNUAL_PAID, "true"));
+    }
+
+    /** The share of a year's annual leave that may still be taken after the year (DRC 50%, Congo 100%). */
+    public BigDecimal carryPercent() {
+        return new BigDecimal(setting(CARRY_PERCENT, congo() ? "100" : "50"));
+    }
+
+    /** The years after the leave year in which the carried days may still be taken (DRC 1, Congo 3). */
+    public int carryYears() {
+        return Integer.parseInt(setting(CARRY_YEARS, congo() ? "3" : "1"));
+    }
+
     public Map<String, String> settings() {
         return Map.of("LEAVE_SENIORITY_YEARS", setting("LEAVE_SENIORITY_YEARS", "0"),
-                "LEAVE_SENIORITY_DAYS", setting("LEAVE_SENIORITY_DAYS", "0"));
+                "LEAVE_SENIORITY_DAYS", setting("LEAVE_SENIORITY_DAYS", "0"),
+                ANNUAL_PAID, String.valueOf(annualPaid()),
+                CARRY_PERCENT, carryPercent().stripTrailingZeros().toPlainString(),
+                CARRY_YEARS, String.valueOf(carryYears()));
     }
 
     @Transactional
     public Map<String, String> saveSettings(int seniorityYears, BigDecimal seniorityDays) {
-        jdbc.sql("""
-                insert into payroll_setting (key, value) values ('LEAVE_SENIORITY_YEARS', ?), ('LEAVE_SENIORITY_DAYS', ?)
-                on conflict (company_id, key) do update set value = excluded.value""")
-                .params(String.valueOf(seniorityYears), seniorityDays.stripTrailingZeros().toPlainString()).update();
-        audit.record("leave.settings_changed", "payroll_setting", null, Map.of("seniorityYears", seniorityYears,
-                "seniorityDays", seniorityDays));
+        return saveSettings(seniorityYears, seniorityDays, null, null, null);
+    }
+
+    @Transactional
+    public Map<String, String> saveSettings(int seniorityYears, BigDecimal seniorityDays, Boolean annualPaid,
+                                            BigDecimal carryPercent, Integer carryYears) {
+        Map<String, String> values = new java.util.LinkedHashMap<>();
+        values.put("LEAVE_SENIORITY_YEARS", String.valueOf(seniorityYears));
+        values.put("LEAVE_SENIORITY_DAYS", seniorityDays.stripTrailingZeros().toPlainString());
+        if (annualPaid != null) {
+            values.put(ANNUAL_PAID, String.valueOf(annualPaid));
+        }
+        if (carryPercent != null) {
+            values.put(CARRY_PERCENT, carryPercent.stripTrailingZeros().toPlainString());
+        }
+        if (carryYears != null) {
+            values.put(CARRY_YEARS, String.valueOf(carryYears));
+        }
+        values.forEach((key, value) -> jdbc.sql("""
+                insert into payroll_setting (key, value) values (?, ?)
+                on conflict (company_id, key) do update set value = excluded.value""").params(key, value).update());
+        audit.record("leave.settings_changed", "payroll_setting", null, Map.copyOf(values));
         return settings();
+    }
+
+    // ---- Annual leave earned, carried over and lapsing ------------------------------------------------------------
+
+    /** Days of one leave year still to take, and when they lapse if not taken. */
+    public record YearLeft(int year, BigDecimal granted, BigDecimal left, BigDecimal lapsing, LocalDate lapsesOn) {}
+
+    /**
+     * What an employee has earned and kept of annual leave: this year's grant and the part earned so far (one twelfth
+     * a month), the days carried from earlier years, what is left by leave year and what lapses if not taken.
+     */
+    public record AnnualSummary(boolean paid, BigDecimal grantedThisYear, BigDecimal earnedToDate, BigDecimal carriedOver,
+                                BigDecimal takenThisYear, BigDecimal available, BigDecimal pending, List<YearLeft> years,
+                                LocalDate rightOpensOn, BigDecimal carryPercent, int carryYears) {}
+
+    private long annualTypeId() {
+        return jdbc.sql("select id from leave_type where code = 'ANNUAL'").query(Long.class).single();
+    }
+
+    private record LedgerRow(LocalDate entryDate, BigDecimal days, String kind, Integer year) {}
+
+    /** Leave years oldest first: what each granted, and what is left once the days used are taken from the oldest. */
+    private java.util.TreeMap<Integer, BigDecimal[]> buckets(long userId, long typeId, LocalDate asOf) {
+        List<LedgerRow> rows = jdbc.sql("select entry_date, days, kind, year from leave_ledger where user_id = ? and leave_type_id = ?")
+                .params(userId, typeId).query(LedgerRow.class).list();
+        java.util.TreeMap<Integer, BigDecimal[]> years = new java.util.TreeMap<>();
+        BigDecimal used = BigDecimal.ZERO;
+        for (LedgerRow r : rows) {
+            boolean grant = r.kind().equals("GRANT") || (r.kind().equals("ADJUSTMENT") && r.days().signum() > 0);
+            if (grant) {
+                int y = r.year() != null ? r.year() : r.entryDate().getYear();
+                BigDecimal[] b = years.computeIfAbsent(y, k -> new BigDecimal[] {BigDecimal.ZERO, BigDecimal.ZERO});
+                b[0] = b[0].add(r.days());
+                b[1] = b[1].add(r.days());
+            }
+        }
+        for (LedgerRow r : rows) {
+            if (r.kind().equals("EXPIRED") && r.year() != null && years.containsKey(r.year())) {
+                BigDecimal[] b = years.get(r.year());
+                b[1] = b[1].add(r.days());
+            } else if (!r.kind().equals("GRANT") && !(r.kind().equals("ADJUSTMENT") && r.days().signum() > 0)
+                    && (asOf == null || !r.entryDate().isAfter(asOf))) {
+                used = used.subtract(r.days());
+            }
+        }
+        for (BigDecimal[] b : years.values()) {
+            if (used.signum() <= 0) {
+                break;
+            }
+            BigDecimal take = used.min(b[1].max(BigDecimal.ZERO));
+            b[1] = b[1].subtract(take);
+            used = used.subtract(take);
+        }
+        return years;
+    }
+
+    public AnnualSummary annualSummary(long userId) {
+        long typeId = annualTypeId();
+        LocalDate today = today();
+        int year = today.getYear();
+        BigDecimal percent = carryPercent();
+        int carry = carryYears();
+        var buckets = buckets(userId, typeId, null);
+        List<YearLeft> years = new java.util.ArrayList<>();
+        BigDecimal carried = BigDecimal.ZERO;
+        for (var e : buckets.entrySet()) {
+            int y = e.getKey();
+            BigDecimal granted = e.getValue()[0];
+            BigDecimal left = e.getValue()[1].max(BigDecimal.ZERO);
+            if (left.signum() == 0) {
+                continue;
+            }
+            BigDecimal lapsing;
+            LocalDate lapsesOn;
+            if (y >= year) {
+                // At the end of the year, what is above the share that may be carried lapses.
+                BigDecimal keep = granted.multiply(percent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                lapsing = left.subtract(keep).max(BigDecimal.ZERO);
+                lapsesOn = LocalDate.of(y, 12, 31);
+                if (lapsing.signum() == 0) {
+                    lapsing = left;
+                    lapsesOn = LocalDate.of(y + carry, 12, 31);
+                }
+            } else {
+                carried = carried.add(left);
+                lapsing = left;
+                lapsesOn = LocalDate.of(y + carry, 12, 31);
+            }
+            years.add(new YearLeft(y, granted, left, lapsing, lapsesOn));
+        }
+        BigDecimal grantedThisYear = buckets.containsKey(year) ? buckets.get(year)[0] : BigDecimal.ZERO;
+        AppUser user = users.find(userId);
+        LocalDate hired = user.getHireDate();
+        LocalDate from = hired != null && hired.getYear() == year ? hired.withDayOfMonth(1) : LocalDate.of(year, 1, 1);
+        long periodMonths = ChronoUnit.MONTHS.between(from, LocalDate.of(year + 1, 1, 1));
+        long months = Math.max(0, ChronoUnit.MONTHS.between(from, today.plusDays(1)));
+        BigDecimal earned = periodMonths <= 0 ? BigDecimal.ZERO : grantedThisYear.multiply(BigDecimal.valueOf(Math.min(months, periodMonths)))
+                .divide(BigDecimal.valueOf(periodMonths), 2, RoundingMode.HALF_UP);
+        BigDecimal taken = jdbc.sql("""
+                select coalesce(-sum(days), 0) from leave_ledger where user_id = ? and leave_type_id = ?
+                and kind in ('TAKEN', 'RETURNED') and extract(year from entry_date) = ?""")
+                .params(userId, typeId, year).query(BigDecimal.class).single();
+        LocalDate opens = hired != null && hired.plusYears(1).isAfter(today) ? hired.plusYears(1) : null;
+        return new AnnualSummary(annualPaid(), grantedThisYear, earned, carried, taken, available(userId, typeId),
+                pending(userId, typeId), years, opens, percent, carry);
+    }
+
+    /** One leave year of one person that lapses, wholly or in part, when a year is closed. */
+    public record Lapse(long userId, String employeeName, String registrationNo, int leaveYear, BigDecimal left,
+                        BigDecimal lapsing, BigDecimal kept) {}
+
+    /**
+     * Closes a leave year: of that year's leave, what is above the share that may be carried lapses, and what is left
+     * of years older than the carry-over period lapses. {@code apply} false only shows it. Running it again changes
+     * nothing more.
+     */
+    @Transactional
+    public List<Lapse> closeYear(int year, boolean apply) {
+        if (year > today().getYear()) {
+            throw new BusinessRuleException("A leave year can be closed once it has started, usually after 31 December.");
+        }
+        long typeId = annualTypeId();
+        BigDecimal percent = carryPercent();
+        int carry = carryYears();
+        LocalDate end = LocalDate.of(year, 12, 31);
+        List<Lapse> lapses = new java.util.ArrayList<>();
+        List<Long> people = jdbc.sql("select distinct user_id from leave_ledger where leave_type_id = ? order by user_id")
+                .param(typeId).query(Long.class).list();
+        for (long userId : people) {
+            AppUser u = users.find(userId);
+            for (var e : buckets(userId, typeId, end).entrySet()) {
+                int y = e.getKey();
+                BigDecimal left = e.getValue()[1].max(BigDecimal.ZERO);
+                if (left.signum() == 0 || y > year) {
+                    continue;
+                }
+                BigDecimal lapsing = BigDecimal.ZERO;
+                if (y <= year - carry) {
+                    lapsing = left;
+                } else if (y == year) {
+                    BigDecimal keep = e.getValue()[0].multiply(percent).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    lapsing = left.subtract(keep).max(BigDecimal.ZERO);
+                }
+                if (lapsing.signum() == 0) {
+                    continue;
+                }
+                lapses.add(new Lapse(userId, u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), y, left,
+                        lapsing, left.subtract(lapsing)));
+                if (apply) {
+                    jdbc.sql("""
+                            insert into leave_ledger (user_id, leave_type_id, entry_date, days, kind, year, note, created_by)
+                            values (?, ?, ?, ?, 'EXPIRED', ?, ?, ?)""")
+                            .params(userId, typeId, end, lapsing.negate(), y,
+                                    cd.hrpay.i18n.Texts.t("Not taken by the end of %s", year), CurrentUser.email()).update();
+                }
+            }
+        }
+        if (apply) {
+            audit.record("leave.year_closed", "leave_type", typeId, Map.of("year", year, "people", lapses.size(),
+                    "days", lapses.stream().map(Lapse::lapsing).reduce(BigDecimal.ZERO, BigDecimal::add)));
+        }
+        return lapses;
     }
 
     // ---- Requests -------------------------------------------------------------------------------------------
@@ -536,9 +742,10 @@ public class LeaveService {
     public Map<LocalDate, LeaveDay> approvedDays(long userId, LocalDate from, LocalDate to) {
         Map<LocalDate, LeaveDay> days = new HashMap<>();
         jdbc.sql("""
-                select r.start_date, r.end_date, t.name, t.pay_percent, r.half_day from leave_request r join leave_type t on t.id = r.leave_type_id
+                select r.start_date, r.end_date, t.name, case when t.code = 'ANNUAL' and not ? then 0 else t.pay_percent end,
+                       r.half_day from leave_request r join leave_type t on t.id = r.leave_type_id
                 where r.user_id = ? and r.status = 'APPROVED' and r.start_date <= ? and r.end_date >= ?""")
-                .params(userId, to, from)
+                .params(annualPaid(), userId, to, from)
                 .query((rs, n) -> {
                     LocalDate s = rs.getObject(1, LocalDate.class);
                     LocalDate e = rs.getObject(2, LocalDate.class);

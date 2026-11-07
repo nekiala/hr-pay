@@ -154,6 +154,12 @@ public class Departures {
             leaveDays = leaveLeft(userId, on, why);
         }
         BigDecimal leaveAmount = money(daily.multiply(leaveDays));
+        boolean leavePaid = Boolean.parseBoolean(jdbc.sql("select value from payroll_setting where key = 'LEAVE_ANNUAL_PAID'")
+                .query(String.class).optional().orElse("true"));
+        if (!leavePaid && leaveDays.signum() > 0) {
+            leaveAmount = BigDecimal.ZERO.setScale(2);
+            why.add(Texts.t("Annual leave is not paid in this company (Leave settings): the days left are not paid out."));
+        }
 
         BigDecimal severance = in.severanceAmount();
         if (severance == null) {

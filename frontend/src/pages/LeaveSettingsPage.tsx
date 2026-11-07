@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api, type GradeCategory, type LeaveType } from '../api'
+import { ApiError, api, days, type GradeCategory, type LeaveLapse, type LeaveType } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
+import { useAsk } from '../components/Dialogs'
 import { t } from '../i18n'
 
 export default function LeaveSettingsPage() {
@@ -12,15 +13,20 @@ export default function LeaveSettingsPage() {
   const [added, setAdded] = useState({ code: '', name: '', annualLeaveDays: 20, active: true })
   const [year, setYear] = useState(new Date().getFullYear())
   const [seniority, setSeniority] = useState({ seniorityYears: 5, seniorityDays: 1 })
+  const [pay, setPay] = useState({ annualPaid: true, carryPercent: 50, carryYears: 1 })
+  const [closing, setClosing] = useState(new Date().getFullYear() - 1)
+  const [lapses, setLapses] = useState<LeaveLapse[] | null>(null)
+  const ask = useAsk()
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = () => {
     api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch((e: Error) => setError(e.message))
     api<LeaveType[]>('/api/leave/types').then(setTypes).catch((e: Error) => setError(e.message))
-    api<Record<string, string>>('/api/leave/settings').then((s) => setSeniority({
-      seniorityYears: Number(s.LEAVE_SENIORITY_YEARS ?? 0), seniorityDays: Number(s.LEAVE_SENIORITY_DAYS ?? 0),
-    })).catch(() => undefined)
+    api<Record<string, string>>('/api/leave/settings').then((s) => {
+      setSeniority({ seniorityYears: Number(s.LEAVE_SENIORITY_YEARS ?? 0), seniorityDays: Number(s.LEAVE_SENIORITY_DAYS ?? 0) })
+      setPay({ annualPaid: s.LEAVE_ANNUAL_PAID !== 'false', carryPercent: Number(s.LEAVE_CARRY_PERCENT ?? 50), carryYears: Number(s.LEAVE_CARRY_YEARS ?? 1) })
+    }).catch(() => undefined)
   }
   useEffect(load, [])
 
@@ -89,7 +95,7 @@ export default function LeaveSettingsPage() {
               return t('Annual leave {a}: granted to {b}, already granted to {c}, {d} without a grade category.', { a: year, b: x.granted, c: x.alreadyGranted, d: x.withoutCategory })
             })}>{t('Grant annual leave for')}{' '}{year}</Button>
         </div>
-        <p className="hint">{t('Gives each active employee the days of their category, plus the seniority days below, prorated for people hired during the year. Running it again skips those already granted. Unused days carry over.')}</p>
+        <p className="hint">{t('Gives each active employee the days of their category, plus the seniority days below, prorated for people hired during the year. Running it again skips those already granted. Unused days carry over within the limits below.')}</p>
       </div>
 
       <div className="card">
@@ -100,9 +106,55 @@ export default function LeaveSettingsPage() {
           <label>{t('for every')}<input type="number" min={0} max={40} className="narrow-input" value={seniority.seniorityYears}
             onChange={(e) => setSeniority({ ...seniority, seniorityYears: Number(e.target.value) })} /></label>
           <span>{t('full years of service on 1 January')}</span>
-          <Button className="secondary" onClick={() => run(() => api('/api/leave/settings', { method: 'PUT', body: seniority }), t('Seniority rule saved. It applies to the next grant.'))}>{t('Save')}</Button>
+          <Button className="secondary" onClick={() => run(() => api('/api/leave/settings', { method: 'PUT', body: { ...seniority, ...pay } }), t('Seniority rule saved. It applies to the next grant.'))}>{t('Save')}</Button>
         </div>
         <p className="hint">{t('Counted from the hire date. Set the years to 0 to give no seniority days. Sample rule to check against the Labour Code and your collective agreement.')}</p>
+      </div>
+
+      <div className="card">
+        <h3>{t('Annual leave pay and carry-over')}</h3>
+        <label className="check"><input type="checkbox" checked={pay.annualPaid} onChange={(e) => setPay({ ...pay, annualPaid: e.target.checked })} />
+          {t('The company pays annual leave')}</label>
+        {pay.annualPaid
+          ? <p className="hint">{t('Leave days are paid on the payslip, the leave allowance is worked out on the Leave pay page and paid before the leave, and unused days are paid out at departure.')}</p>
+          : <p className="notice">{t('The DRC Labour Code (art. 142) and the Congo Labour Code (art. 122) both require paid annual leave. Turn this off only if your situation allows it, after advice. Annual leave days are then unpaid and not paid out at departure.')}</p>}
+        <div className="row grant">
+          <label>{t('Share of a year\'s leave that can be carried (%)')}<input type="number" min={0} max={100} className="narrow-input" value={pay.carryPercent}
+            onChange={(e) => setPay({ ...pay, carryPercent: Number(e.target.value) })} /></label>
+          <label>{t('Years it can still be taken')}<input type="number" min={0} max={10} className="narrow-input" value={pay.carryYears}
+            onChange={(e) => setPay({ ...pay, carryYears: Number(e.target.value) })} /></label>
+          <Button className="secondary" onClick={() => run(() => api('/api/leave/settings', { method: 'PUT', body: { ...seniority, ...pay } }), t('Annual leave settings saved.'))}>{t('Save')}</Button>
+        </div>
+        <p className="hint">{t('DRC (art. 140): only half of the leave can be carried, over two years: 50% for 1 year. Republic of the Congo (art. 120): the right lapses after 3 years: 100% for 3 years. To confirm with your payroll expert.')}</p>
+        <div className="row grant">
+          <label>{t('Leave year')}<input type="number" className="narrow-input" value={closing} onChange={(e) => { setClosing(Number(e.target.value)); setLapses(null) }} /></label>
+          <Button className="secondary" onClick={() => run(async () => setLapses(await api<LeaveLapse[]>(`/api/leave/close-year?year=${closing}`)), t('Here is what would lapse.'))}>{t('Show what lapses')}</Button>
+          {lapses && lapses.length > 0 && (
+            <Button onClick={() => ask({
+              title: t('Close the leave year {a}?', { a: closing }), confirmLabel: t('Close the year'), danger: true,
+              message: t('{a} days lapse for {b} people. The employee cannot give up their leave (DRC art. 140): plan their leave before closing if you can.', {
+                a: lapses.reduce((n, l) => n + Number(l.lapsing), 0), b: new Set(lapses.map((l) => l.userId)).size,
+              }),
+              onConfirm: () => run(async () => { await api(`/api/leave/close-year?year=${closing}`, { method: 'POST' }); setLapses(null) }, t('Leave year closed.')),
+            })}>{t('Close the leave year')}</Button>
+          )}
+        </div>
+        {lapses && lapses.length === 0 && <p className="muted">{t('Nothing lapses.')}</p>}
+        {lapses && lapses.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('Employee')}</th><th>{t('Leave year')}</th><th>{t('Left')}</th><th>{t('Lapses')}</th><th>{t('Kept')}</th></tr></thead>
+              <tbody>
+                {lapses.map((l) => (
+                  <tr key={`${l.userId}-${l.leaveYear}`}>
+                    <td>{l.employeeName} <span className="muted">{l.registrationNo}</span></td>
+                    <td>{l.leaveYear}</td><td>{days(l.left)}</td><td>{days(l.lapsing)}</td><td>{days(l.kept)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="card">
