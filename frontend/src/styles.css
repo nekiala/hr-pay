@@ -549,3 +549,6 @@ button.link:hover:not(:disabled) { background: none; filter: brightness(1.15); }
 textarea.template { min-height: 320px; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
 
 .cards2 + .cards2 { margin-top: 16px; }
+
+/* A button or a row of buttons right under a text box, a table or a file field keeps its distance. */
+:is(textarea, .table-wrap, input[type=file], fieldset) + :is(button, .button, .row, form) { margin-top: 12px; }

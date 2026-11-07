@@ -85,7 +85,7 @@ export default function OrgSettingsPage() {
 
   const source = members.filter((m) => String(m.unitId) === bulk.fromUnit)
   return (
-    <section className="narrow">
+    <section>
       <p className="small muted"><Link to="/org">{t('Org chart')}</Link></p>
       <h2>{t('Organizational structure')}</h2>
 
