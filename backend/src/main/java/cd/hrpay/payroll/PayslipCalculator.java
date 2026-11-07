@@ -29,6 +29,7 @@ public final class PayslipCalculator {
 
     public record Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
                         int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
+                        BigDecimal thirteenthMonth, String thirteenthMonthNote,
                         int childrenInCharge, int dependantsInCharge, boolean expatriate,
                         List<PayElements.Element> elements, List<PayElements.Assignment> standing,
                         List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates) {}
@@ -70,6 +71,13 @@ public final class PayslipCalculator {
             PayElements.Element ot = byCode.get("OVERTIME");
             lines.add(new Line("OVERTIME", ot.name(), "EARNING", hours(in.overtimeMinutes()), null,
                     money(in.overtimeAmount()), ot.displayOrder(), null));
+        }
+
+        // 2b. The 13th month, worked out from the year's evaluations by the caller.
+        if (in.thirteenthMonth() != null && in.thirteenthMonth().signum() > 0) {
+            PayElements.Element t = byCode.get("THIRTEENTH_MONTH");
+            lines.add(new Line("THIRTEENTH_MONTH", t.name() + (in.thirteenthMonthNote() == null ? "" : " (" + in.thirteenthMonthNote() + ")"),
+                    "EARNING", null, null, money(in.thirteenthMonth()), t.displayOrder(), null));
         }
 
         // 3. Standing allowances and deductions from the catalogue.

@@ -65,13 +65,15 @@ public class PayrollRuns {
     private final StatutoryRates statutory;
     private final ExchangeRates exchange;
     private final Loans loans;
+    private final cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth;
     private final AuditService audit;
     private final Clock clock;
     private final JsonMapper json = JsonMapper.builder().build();
 
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
-                       AuditService audit, Clock clock) {
+                       cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth, AuditService audit, Clock clock) {
+        this.thirteenthMonth = thirteenthMonth;
         this.jdbc = jdbc;
         this.users = users;
         this.attendance = attendance;
@@ -168,6 +170,8 @@ public class PayrollRuns {
         }
 
         List<PayElements.Element> elements = pay.elements();
+        var t13 = thirteenthMonth.settings();
+        boolean payThirteenth = t13.enabled() && month.getMonthValue() == t13.payMonth();
         List<String> skipped = new ArrayList<>();
         int count = 0;
         List<Long> employees = jdbc.sql("""
@@ -200,10 +204,13 @@ public class PayrollRuns {
             List<EmployeeFile.Dependant> dependants = files.dependants(userId);
             int children = (int) dependants.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
             int inCharge = (int) dependants.stream().filter(EmployeeFile.Dependant::inCharge).count();
+            var thirteenth = payThirteenth ? thirteenthMonth.forEmployee(userId, name, month.getYear()).orElse(null) : null;
 
             PayslipCalculator.Result r = PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(),
                     salary.grossMonthly(), summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
-                    summary.overtimeApprovedMinutes(), children, inCharge, contract.expatriate(), elements,
+                    summary.overtimeApprovedMinutes(), thirteenth == null ? null
+                            : ExchangeRates.convert(thirteenth.amount(), thirteenth.currency(), salary.currency(), usd.cdfPerUnit()),
+                    thirteenth == null ? null : thirteenthNote(thirteenth), children, inCharge, contract.expatriate(), elements,
                     pay.standingFor(userId, month), pay.entriesFor(userId, month), loans.dueFor(userId, month), rates));
             List<String> warnings = new ArrayList<>(r.warnings());
             if (summary.overtimePendingMinutes() > 0) {
@@ -257,6 +264,12 @@ public class PayrollRuns {
         audit.record("payroll.calculated", "payroll_run", runId, Map.of("month", month.toString(), "payslips", count,
                 "usdCdf", usd.cdfPerUnit().toPlainString(), "projected", projected));
         return view(month, skipped);
+    }
+
+    private static String thirteenthNote(cd.hrpay.evaluation.ThirteenthMonth.Row r) {
+        String score = r.scorePercent().stripTrailingZeros().toPlainString() + "%";
+        return (r.scoreSource().equals("EVALUATIONS") ? "evaluations " + score : "no evaluation, " + score)
+                + (r.monthsWorked() < 12 ? ", " + r.monthsWorked() + "/12 months" : "");
     }
 
     // ---- approve, send back, close ---------------------------------------------------------------------------------
