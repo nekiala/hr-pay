@@ -81,10 +81,10 @@ type Theme = 'dark' | 'light' | 'system'
 const THEME_KEY = 'hrpay.theme'
 
 function readTheme(): Theme {
-  try { return (localStorage.getItem(THEME_KEY) as Theme | null) ?? 'dark' } catch { return 'dark' }
+  try { return (localStorage.getItem(THEME_KEY) as Theme | null) ?? 'system' } catch { return 'system' }
 }
 
-/** Dark by default, as in the design; light, or the device's own setting, on request. */
+/** Follows the device's light or dark setting until the person picks one. */
 export function applyTheme(theme: Theme = readTheme()) {
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
@@ -120,6 +120,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [theme])
 
   if (!me) return null
+  const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   const initials = `${me.firstName[0] ?? ''}${me.lastName[0] ?? ''}`.toUpperCase()
   const current = groups.flatMap((g) => g.items).find((i) => (i.end ? location.pathname === i.to : location.pathname.startsWith(i.to)) && i.to !== '/')
 
@@ -153,6 +154,10 @@ export function Shell({ children }: { children: ReactNode }) {
           <button type="button" className="icon-button menu-button" aria-label="Open the menu" onClick={() => setNavOpen(true)}><Menu size={22} /></button>
           <span className="topbar-title">{current?.label ?? (location.pathname === '/' ? 'Home' : '')}</span>
           <div className="topbar-right">
+            <button type="button" className="icon-button theme-toggle" aria-label={dark ? 'Use the light theme' : 'Use the dark theme'}
+              title={dark ? 'Light theme' : 'Dark theme'} onClick={() => setTheme(dark ? 'light' : 'dark')}>
+              {dark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
+            </button>
             <div className="user-menu" ref={menuRef}>
               <button type="button" className="user-chip" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                 <span className="avatar">{initials}</span>
