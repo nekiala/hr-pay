@@ -618,7 +618,7 @@ export type Profile = {
   birthDate: string | null; gender: 'FEMALE' | 'MALE' | null; nationality: string | null
   maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED'; cnssNumber: string | null; taxNumber: string | null
   paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
-  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null
+  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; postnom: string | null; commune: string | null
 }
 export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
 export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }

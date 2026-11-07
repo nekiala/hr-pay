@@ -185,6 +185,10 @@ export default function EmployeeFilePage() {
               <label>{t('CNSS number')}<input value={p.cnssNumber ?? ''} onChange={(e) => setP({ cnssNumber: e.target.value })} /></label>
               <label>{t('Tax number (NIF)')}<input value={p.taxNumber ?? ''} onChange={(e) => setP({ taxNumber: e.target.value })} /></label>
             </div>
+            <div className="grid2">
+              <label>{t('Postnom')}<input value={p.postnom ?? ''} onChange={(e) => setP({ postnom: e.target.value })} maxLength={100} /></label>
+              <label>{t('Commune or territory')}<input value={p.commune ?? ''} onChange={(e) => setP({ commune: e.target.value })} maxLength={100} placeholder={t('For the tax declaration')} /></label>
+            </div>
             <label>{t('Paid by')}<select value={p.paymentMethod} onChange={(e) => setP({ paymentMethod: e.target.value as Profile['paymentMethod'] })}>
                 <option value="BANK">{t('Bank transfer')}</option><option value="MOBILE_MONEY">{t('Mobile money')}</option><option value="CASH">{t('Cash')}</option>
               </select>

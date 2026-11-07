@@ -220,7 +220,8 @@ class BillingIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mode").value("SAAS"))
                 .andExpect(jsonPath("$.settings.taxRate").value(16.0))
-                .andExpect(jsonPath("$.prices.length()").value(4));
+                // The installation's plans; another test may add a plan of its own (TenancyIT's TEST_ONE).
+                .andExpect(jsonPath("$.prices[?(@.code != 'TEST_ONE')]", Matchers.hasSize(4)));
         mvc.perform(json(put("/api/platform/billing").session(provider), """
                         {"trialDays":30,"paymentDays":15,"suspendAfterDays":15,"taxLabel":"TVA","taxRate":120,
                          "invoicePrefix":"HP"}"""))

@@ -1462,6 +1462,38 @@
      "upper_bound": null,
      "rate_percent": 40.0,
      "created_by": "system"
+    },
+    {
+     "id": 11,
+     "effective_from": "2026-01-01",
+     "lower_bound": 0.0,
+     "upper_bound": 1944000.0,
+     "rate_percent": 3.0,
+     "created_by": "system"
+    },
+    {
+     "id": 12,
+     "effective_from": "2026-01-01",
+     "lower_bound": 1944000.0,
+     "upper_bound": 21600000.0,
+     "rate_percent": 15.0,
+     "created_by": "system"
+    },
+    {
+     "id": 13,
+     "effective_from": "2026-01-01",
+     "lower_bound": 21600000.0,
+     "upper_bound": 43200000.0,
+     "rate_percent": 30.0,
+     "created_by": "system"
+    },
+    {
+     "id": 14,
+     "effective_from": "2026-01-01",
+     "lower_bound": 43200000.0,
+     "upper_bound": null,
+     "rate_percent": 40.0,
+     "created_by": "system"
     }
    ]
   },

@@ -2244,6 +2244,9 @@ const fr: Record<string, string> = {
   "Working days": "Jours ouvrables",
   "days": "jours",
   "months": "mois",
+  "Postnom": "Postnom",
+  "Commune or territory": "Commune ou territoire",
+  "For the tax declaration": "Pour la déclaration fiscale",
 }
 
 export default fr

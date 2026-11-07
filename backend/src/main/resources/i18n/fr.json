@@ -910,5 +910,9 @@
  "the legal minimum (no grade category)": "le minimum légal (pas de catégorie de grade)",
  "working days": "jours ouvrables",
  "Notice is given on or before the last day.": "Le préavis est notifié au plus tard le dernier jour.",
- "Give the months as a whole number.": "Donnez les mois en nombre entier."
+ "Give the months as a whole number.": "Donnez les mois en nombre entier.",
+ "Postnom": "Postnom",
+ "The middle name, as on the identity card.": "Le postnom, comme sur la carte d'identité.",
+ "Commune or territory": "Commune ou territoire",
+ "Where the person lives, as the tax declaration asks.": "Lieu de résidence, comme le demande la déclaration fiscale."
 }

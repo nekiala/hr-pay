@@ -30,7 +30,8 @@ public class EmployeeFile {
 
     public record Profile(LocalDate birthDate, String gender, String nationality, String maritalStatus,
                           String cnssNumber, String taxNumber, String paymentMethod, String bankName,
-                          String bankAccount, String mobileMoneyOperator, String mobileMoneyNumber) {}
+                          String bankAccount, String mobileMoneyOperator, String mobileMoneyNumber, String postnom,
+                          String commune) {}
 
     public record Dependant(long id, String fullName, String relationship, LocalDate birthDate, boolean inCharge,
                             String note) {}
@@ -121,12 +122,13 @@ public class EmployeeFile {
     public Profile profile(long userId) {
         return jdbc.sql("""
                 select birth_date, gender, nationality, marital_status, cnss_number, tax_number, payment_method,
-                       bank_name, bank_account, mobile_money_operator, mobile_money_number
+                       bank_name, bank_account, mobile_money_operator, mobile_money_number, postnom, commune
                 from employee_profile where user_id = ?""").param(userId).query(Profile.class).optional()
                 .map(p -> new Profile(p.birthDate(), p.gender(), p.nationality(), p.maritalStatus(),
                         crypto.decrypt(p.cnssNumber()), crypto.decrypt(p.taxNumber()), p.paymentMethod(), p.bankName(),
-                        crypto.decrypt(p.bankAccount()), p.mobileMoneyOperator(), crypto.decrypt(p.mobileMoneyNumber())))
-                .orElse(new Profile(null, null, null, "SINGLE", null, null, "BANK", null, null, null, null));
+                        crypto.decrypt(p.bankAccount()), p.mobileMoneyOperator(), crypto.decrypt(p.mobileMoneyNumber()), p.postnom(),
+                        p.commune()))
+                .orElse(new Profile(null, null, null, "SINGLE", null, null, "BANK", null, null, null, null, null, null));
     }
 
     @Transactional
@@ -141,19 +143,20 @@ public class EmployeeFile {
         jdbc.sql("""
                 insert into employee_profile (user_id, birth_date, gender, nationality, marital_status, cnss_number,
                     tax_number, payment_method, bank_name, bank_account, mobile_money_operator, mobile_money_number,
-                    updated_by, updated_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+                    postnom, commune, updated_by, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
                 on conflict (user_id) do update set birth_date = excluded.birth_date, gender = excluded.gender,
                     nationality = excluded.nationality, marital_status = excluded.marital_status,
                     cnss_number = excluded.cnss_number, tax_number = excluded.tax_number,
                     payment_method = excluded.payment_method, bank_name = excluded.bank_name,
                     bank_account = excluded.bank_account, mobile_money_operator = excluded.mobile_money_operator,
-                    mobile_money_number = excluded.mobile_money_number, updated_by = excluded.updated_by,
+                    mobile_money_number = excluded.mobile_money_number, postnom = excluded.postnom,
+                    commune = excluded.commune, updated_by = excluded.updated_by,
                     updated_at = now()""")
                 .params(userId, p.birthDate(), p.gender(), trim(p.nationality()), p.maritalStatus(),
                         crypto.encrypt(trim(p.cnssNumber())), crypto.encrypt(trim(p.taxNumber())), p.paymentMethod(),
                         trim(p.bankName()), crypto.encrypt(trim(p.bankAccount())), trim(p.mobileMoneyOperator()),
-                        crypto.encrypt(trim(p.mobileMoneyNumber())), CurrentUser.email())
+                        crypto.encrypt(trim(p.mobileMoneyNumber())), trim(p.postnom()), trim(p.commune()), CurrentUser.email())
                 .update();
         audit.record("profile.saved", "user", userId, Map.of("maritalStatus", p.maritalStatus(),
                 "paymentMethod", p.paymentMethod()));
