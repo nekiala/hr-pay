@@ -11,6 +11,7 @@ export default function MyPayslipsPage() {
   return (
     <section className="narrow">
       <h2>My payslips</h2>
+      <p><Link to="/my/year">Annual pay statement</Link></p>
       <ErrorText error={error} />
       {slips?.length === 0 && <p className="muted">No payslips yet. They appear here once HR closes the month.</p>}
       {slips && slips.length > 0 && (

@@ -143,3 +143,11 @@ table.lines tr.net td { font-weight: 700; font-size: 1.1em; border-top: 2px soli
   section.narrow { max-width: none; }
   details { display: block; }
 }
+
+/* Phase 4: payments and declarations */
+tr.selected td { background: var(--surface-2, rgba(0, 0, 0, 0.04)); }
+td.signature, th.signature { width: 30%; }
+td.signature { height: 34px; }
+dl.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px 16px; margin: 0 0 12px; }
+dl.facts dt { font-size: 12px; color: var(--muted); }
+dl.facts dd { margin: 0; }
