@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The leave allowance (allocation de congé, the "pécule") of approved annual leave, when the company pays annual
+ * The leave allowance (allocation de congé) of approved annual leave, when the company pays annual
  * leave. HR works it out on request (a leave pay run), Finance approves it, and it is paid before the person leaves.
  *
  * <p>DRC, art. 142 and 145 of the Labour Code: the allowance is the pay the person has when the leave starts, plus the
