@@ -53,6 +53,7 @@ services:
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
       BACKUPS_EXPECTED: "true"
+      LICENSING_MODE: ${LICENSING_MODE:-on-premise}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError}
     logging: *logging
 

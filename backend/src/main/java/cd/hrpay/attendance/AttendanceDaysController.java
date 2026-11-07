@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@cd.hrpay.platform.RequiresModule("ATTENDANCE")
 @RequestMapping("/api/attendance")
 public class AttendanceDaysController {
 

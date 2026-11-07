@@ -196,7 +196,7 @@ public class AnniversaryRaises {
 
     @Scheduled(cron = "${app.raises.cron:0 30 6 * * *}", zone = "Africa/Kinshasa")
     public void daily() {
-        locks.run("anniversary-raises", java.time.Duration.ofMinutes(30), () -> {
+        locks.runForEachCompany("anniversary-raises", java.time.Duration.ofMinutes(30), () -> {
             LocalDate today = LocalDate.now(clock.withZone(ZONE));
             Outcome o = applyDue(today, null);
             if (!o.applied().isEmpty() || !o.skipped().isEmpty()) {

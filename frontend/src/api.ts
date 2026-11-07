@@ -69,6 +69,48 @@ export type Me = {
   permissions: string[]
   mustChangePassword: boolean
   privacyAccepted: boolean
+  /** The company the user works in: its plan, modules and any warning about its plan or licence. */
+  company: {
+    id: number
+    name: string
+    mode: 'SAAS' | 'ON_PREMISE'
+    plan: string
+    modules: Module[]
+    maxEmployees: number | null
+    employees: number
+    locked: boolean
+    notices: { level: 'warn' | 'danger'; text: string }[]
+  } | null
+}
+
+export type Module = 'ATTENDANCE' | 'PAYROLL' | 'EVALUATIONS'
+export const MODULE_NAMES: Record<Module, string> = { ATTENDANCE: 'Attendance', PAYROLL: 'Payroll', EVALUATIONS: 'Evaluations' }
+
+export type Plan = { code: string; name: string; maxEmployees: number | null }
+
+export type CompanySummary = {
+  id: number
+  name: string
+  countryCode: string
+  planCode: string
+  planName: string
+  maxEmployees: number | null
+  modules: Module[]
+  status: 'ACTIVE' | 'SUSPENDED'
+  employees: number
+  createdAt: string
+  provider: boolean
+}
+
+export type LicenceStatus = {
+  mode: 'SAAS' | 'ON_PREMISE'
+  state: 'VALID' | 'EXPIRING' | 'GRACE' | 'EVALUATION' | 'LOCKED'
+  licence: { id: string; licensee: string; issued: string; expires: string; maxEmployees: number | null; maxCompanies: number | null; modules: Module[]; graceDays: number | null } | null
+  evaluationEnds: string | null
+  locksOn: string | null
+  daysLeft: number
+  message: string | null
+  companies: number
 }
 
 export type User = {

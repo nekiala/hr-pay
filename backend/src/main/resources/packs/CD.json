@@ -1,0 +1,1712 @@
+{
+ "country": "CD",
+ "name": "DR Congo (sample rates, to verify)",
+ "tables": [
+  {
+   "table": "grade_category",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "CAT1",
+     "name": "Category 1: execution staff (sample)",
+     "annual_leave_days": 20.0,
+     "active": true,
+     "anniversary_raise_percent": 2.0,
+     "raise_timing": "NEXT_MONTH"
+    },
+    {
+     "id": 2,
+     "code": "CAT2",
+     "name": "Category 2: supervisors (sample)",
+     "annual_leave_days": 24.0,
+     "active": true,
+     "anniversary_raise_percent": 2.5,
+     "raise_timing": "NEXT_MONTH"
+    },
+    {
+     "id": 3,
+     "code": "CAT3",
+     "name": "Category 3: managers (sample)",
+     "annual_leave_days": 26.0,
+     "active": true,
+     "anniversary_raise_percent": 3.0,
+     "raise_timing": "NEXT_MONTH"
+    }
+   ]
+  },
+  {
+   "table": "grade",
+   "refs": {
+    "category_id": "grade_category"
+   },
+   "rows": [
+    {
+     "id": 1,
+     "category_id": 1,
+     "code": "G1B",
+     "name": "Grade 1B (sample)",
+     "base_salary": 420.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 2,
+     "category_id": 1,
+     "code": "G1A",
+     "name": "Grade 1A (sample)",
+     "base_salary": 350.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 3,
+     "category_id": 2,
+     "code": "G2B",
+     "name": "Grade 2B (sample)",
+     "base_salary": 850.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 4,
+     "category_id": 2,
+     "code": "G2A",
+     "name": "Grade 2A (sample)",
+     "base_salary": 700.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 5,
+     "category_id": 3,
+     "code": "G3B",
+     "name": "Grade 3B (sample)",
+     "base_salary": 2000.0,
+     "currency": "USD",
+     "active": true
+    },
+    {
+     "id": 6,
+     "category_id": 3,
+     "code": "G3A",
+     "name": "Grade 3A (sample)",
+     "base_salary": 1500.0,
+     "currency": "USD",
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "occupation",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "ACCOUNTANT",
+     "name": "Accountant",
+     "active": true
+    },
+    {
+     "id": 2,
+     "code": "HR_OFFICER",
+     "name": "HR officer",
+     "active": true
+    },
+    {
+     "id": 3,
+     "code": "DRIVER",
+     "name": "Driver",
+     "active": true
+    },
+    {
+     "id": 4,
+     "code": "ENGINEER",
+     "name": "Engineer",
+     "active": true
+    },
+    {
+     "id": 5,
+     "code": "RECEPTIONIST",
+     "name": "Receptionist",
+     "active": true
+    },
+    {
+     "id": 6,
+     "code": "MANAGER",
+     "name": "Manager",
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "leave_type",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "ANNUAL",
+     "name": "Annual leave",
+     "paid": true,
+     "uses_balance": true,
+     "requires_document": false,
+     "max_days": null,
+     "active": true,
+     "pay_percent": 100.0
+    },
+    {
+     "id": 3,
+     "code": "MATERNITY",
+     "name": "Maternity leave",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 98,
+     "active": true,
+     "pay_percent": 100.0
+    },
+    {
+     "id": 4,
+     "code": "CIRCUMSTANCE",
+     "name": "Family event (marriage, birth, death)",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 5,
+     "active": true,
+     "pay_percent": 100.0
+    },
+    {
+     "id": 5,
+     "code": "UNPAID",
+     "name": "Unpaid leave",
+     "paid": false,
+     "uses_balance": false,
+     "requires_document": false,
+     "max_days": null,
+     "active": true,
+     "pay_percent": 0.0
+    },
+    {
+     "id": 2,
+     "code": "SICK",
+     "name": "Sick leave",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": null,
+     "active": true,
+     "pay_percent": 66.67
+    }
+   ]
+  },
+  {
+   "table": "org_level",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "DG",
+     "name": "Direction générale",
+     "rank": 1,
+     "head_title": "Directeur général",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 2,
+     "code": "DIRECTION",
+     "name": "Direction",
+     "rank": 2,
+     "head_title": "Directeur",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 3,
+     "code": "DEPARTEMENT",
+     "name": "Département",
+     "rank": 3,
+     "head_title": "Chef de département",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 4,
+     "code": "SERVICE",
+     "name": "Service",
+     "rank": 4,
+     "head_title": "Chef de service",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 5,
+     "code": "SECTION",
+     "name": "Section",
+     "rank": 5,
+     "head_title": "Chef de section",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 6,
+     "code": "EQUIPE",
+     "name": "Équipe",
+     "rank": 6,
+     "head_title": "Chef d'équipe",
+     "staff": false,
+     "active": true
+    },
+    {
+     "id": 7,
+     "code": "CELLULE",
+     "name": "Cellule",
+     "rank": 2,
+     "head_title": "Responsable",
+     "staff": true,
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "org_unit",
+   "refs": {
+    "level_id": "org_level",
+    "parent_id": "org_unit"
+   },
+   "rows": [
+    {
+     "id": 1,
+     "code": "DG",
+     "name": "Direction générale",
+     "level_id": 1,
+     "parent_id": null,
+     "cost_centre": null,
+     "valid_from": "2000-01-01",
+     "valid_to": null,
+     "created_by": "migration"
+    }
+   ]
+  },
+  {
+   "table": "work_schedule",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "STANDARD",
+     "name": "Mon-Fri 08:00-17:00",
+     "grace_minutes": 10,
+     "deduct_late_arrival": true,
+     "deduct_early_departure": true,
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "schedule_day",
+   "refs": {
+    "schedule_id": "work_schedule"
+   },
+   "rows": [
+    {
+     "schedule_id": 1,
+     "weekday": 1,
+     "workday": true,
+     "start_time": "08:00:00",
+     "end_time": "17:00:00",
+     "lunch_enabled": true,
+     "lunch_start": "12:00:00",
+     "lunch_minutes": 60,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 2,
+     "workday": true,
+     "start_time": "08:00:00",
+     "end_time": "17:00:00",
+     "lunch_enabled": true,
+     "lunch_start": "12:00:00",
+     "lunch_minutes": 60,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 3,
+     "workday": true,
+     "start_time": "08:00:00",
+     "end_time": "17:00:00",
+     "lunch_enabled": true,
+     "lunch_start": "12:00:00",
+     "lunch_minutes": 60,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 4,
+     "workday": true,
+     "start_time": "08:00:00",
+     "end_time": "17:00:00",
+     "lunch_enabled": true,
+     "lunch_start": "12:00:00",
+     "lunch_minutes": 60,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 5,
+     "workday": true,
+     "start_time": "08:00:00",
+     "end_time": "17:00:00",
+     "lunch_enabled": true,
+     "lunch_start": "12:00:00",
+     "lunch_minutes": 60,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 6,
+     "workday": false,
+     "start_time": null,
+     "end_time": null,
+     "lunch_enabled": false,
+     "lunch_start": null,
+     "lunch_minutes": null,
+     "lunch_paid": false
+    },
+    {
+     "schedule_id": 1,
+     "weekday": 7,
+     "workday": false,
+     "start_time": null,
+     "end_time": null,
+     "lunch_enabled": false,
+     "lunch_start": null,
+     "lunch_minutes": null,
+     "lunch_paid": false
+    }
+   ]
+  },
+  {
+   "table": "overtime_policy",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "country_code": "CD",
+     "effective_from": "2020-01-01",
+     "allowed": true,
+     "requires_approval": true,
+     "rounding_minutes": 15,
+     "max_weekly_overtime_minutes": null
+    }
+   ]
+  },
+  {
+   "table": "overtime_rate_tier",
+   "refs": {
+    "policy_id": "overtime_policy"
+   },
+   "rows": [
+    {
+     "id": 1,
+     "policy_id": 1,
+     "kind": "WEEKDAY",
+     "from_hour": 0,
+     "to_hour": 6,
+     "multiplier": 1.3
+    },
+    {
+     "id": 2,
+     "policy_id": 1,
+     "kind": "WEEKDAY",
+     "from_hour": 6,
+     "to_hour": null,
+     "multiplier": 1.6
+    },
+    {
+     "id": 3,
+     "policy_id": 1,
+     "kind": "REST_DAY",
+     "from_hour": 0,
+     "to_hour": null,
+     "multiplier": 2.0
+    },
+    {
+     "id": 4,
+     "policy_id": 1,
+     "kind": "HOLIDAY",
+     "from_hour": 0,
+     "to_hour": null,
+     "multiplier": 2.0
+    }
+   ]
+  },
+  {
+   "table": "holiday_definition",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "country_code": "CD",
+     "name": "New Year's Day",
+     "usual_month": 1,
+     "usual_day": 1,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 2,
+     "country_code": "CD",
+     "name": "Martyrs of Independence Day",
+     "usual_month": 1,
+     "usual_day": 4,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 3,
+     "country_code": "CD",
+     "name": "Laurent-Désiré Kabila Day",
+     "usual_month": 1,
+     "usual_day": 16,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 4,
+     "country_code": "CD",
+     "name": "Patrice Lumumba Day",
+     "usual_month": 1,
+     "usual_day": 17,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 5,
+     "country_code": "CD",
+     "name": "Simon Kimbangu Day",
+     "usual_month": 4,
+     "usual_day": 6,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 6,
+     "country_code": "CD",
+     "name": "Labour Day",
+     "usual_month": 5,
+     "usual_day": 1,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 7,
+     "country_code": "CD",
+     "name": "Liberation Day",
+     "usual_month": 5,
+     "usual_day": 17,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 8,
+     "country_code": "CD",
+     "name": "Independence Day",
+     "usual_month": 6,
+     "usual_day": 30,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 9,
+     "country_code": "CD",
+     "name": "Parents' Day",
+     "usual_month": 8,
+     "usual_day": 1,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 10,
+     "country_code": "CD",
+     "name": "Congolese Genocide Remembrance Day",
+     "usual_month": 8,
+     "usual_day": 2,
+     "paid": true,
+     "active": true
+    },
+    {
+     "id": 11,
+     "country_code": "CD",
+     "name": "Christmas Day",
+     "usual_month": 12,
+     "usual_day": 25,
+     "paid": true,
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "pay_element",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "BASIC",
+     "name": "Basic salary",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": true,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 10,
+     "active": true
+    },
+    {
+     "id": 2,
+     "code": "OVERTIME",
+     "name": "Overtime",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 20,
+     "active": true
+    },
+    {
+     "id": 3,
+     "code": "HOUSING",
+     "name": "Housing allowance (sample)",
+     "kind": "EARNING",
+     "method": "PERCENT_OF_BASIC",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": 30.0,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": true,
+     "default_for_all": true,
+     "system": false,
+     "display_order": 30,
+     "active": true
+    },
+    {
+     "id": 4,
+     "code": "TRANSPORT",
+     "name": "Transport allowance (sample)",
+     "kind": "EARNING",
+     "method": "PER_DAY_WORKED",
+     "default_amount": 2.0,
+     "default_currency": "USD",
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": true,
+     "system": false,
+     "display_order": 40,
+     "active": true
+    },
+    {
+     "id": 5,
+     "code": "FAMILY_ALLOWANCE",
+     "name": "Family allowances (sample)",
+     "kind": "EARNING",
+     "method": "PER_CHILD",
+     "default_amount": 10.0,
+     "default_currency": "USD",
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": true,
+     "system": false,
+     "display_order": 50,
+     "active": true
+    },
+    {
+     "id": 6,
+     "code": "PERF_BONUS",
+     "name": "Performance bonus",
+     "kind": "EARNING",
+     "method": "MANUAL",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": false,
+     "display_order": 60,
+     "active": true
+    },
+    {
+     "id": 7,
+     "code": "OTHER_BONUS",
+     "name": "Other bonus",
+     "kind": "EARNING",
+     "method": "MANUAL",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": false,
+     "display_order": 70,
+     "active": true
+    },
+    {
+     "id": 8,
+     "code": "LEAVE_PAYOUT",
+     "name": "Unused leave paid out",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 80,
+     "active": true
+    },
+    {
+     "id": 9,
+     "code": "CNSS_EMPLOYEE",
+     "name": "CNSS (employee share)",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 110,
+     "active": true
+    },
+    {
+     "id": 10,
+     "code": "IPR",
+     "name": "IPR (income tax)",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 120,
+     "active": true
+    },
+    {
+     "id": 11,
+     "code": "LOAN",
+     "name": "Loan repayment",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 130,
+     "active": true
+    },
+    {
+     "id": 12,
+     "code": "ADVANCE",
+     "name": "Salary advance",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 140,
+     "active": true
+    },
+    {
+     "id": 13,
+     "code": "OTHER_DEDUCTION",
+     "name": "Other deduction",
+     "kind": "DEDUCTION",
+     "method": "MANUAL",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": false,
+     "display_order": 150,
+     "active": true
+    },
+    {
+     "id": 14,
+     "code": "CNSS_EMPLOYER",
+     "name": "CNSS (employer share)",
+     "kind": "EMPLOYER_CHARGE",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 210,
+     "active": true
+    },
+    {
+     "id": 15,
+     "code": "INPP",
+     "name": "INPP (training)",
+     "kind": "EMPLOYER_CHARGE",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 220,
+     "active": true
+    },
+    {
+     "id": 16,
+     "code": "ONEM",
+     "name": "ONEM (employment office)",
+     "kind": "EMPLOYER_CHARGE",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 230,
+     "active": true
+    },
+    {
+     "id": 17,
+     "code": "IERE",
+     "name": "IERE (expatriate pay tax)",
+     "kind": "EMPLOYER_CHARGE",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 240,
+     "active": true
+    },
+    {
+     "id": 18,
+     "code": "THIRTEENTH_MONTH",
+     "name": "13th month",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 75,
+     "active": true
+    },
+    {
+     "id": 19,
+     "code": "HOLIDAY_ADJ",
+     "name": "Holiday change, earlier month",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 15,
+     "active": true
+    },
+    {
+     "id": 20,
+     "code": "HOLIDAY_ADJ_LESS",
+     "name": "Holiday change, earlier month (less)",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 16,
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "statutory_rate_type",
+   "refs": {},
+   "rows": [
+    {
+     "code": "CNSS_EMPLOYEE",
+     "name": "CNSS, employee share",
+     "unit": "PERCENT",
+     "description": "Withheld from elements subject to CNSS.",
+     "display_order": 10
+    },
+    {
+     "code": "CNSS_EMPLOYER",
+     "name": "CNSS, employer share",
+     "unit": "PERCENT",
+     "description": "Pensions, family benefits and work accidents, on elements subject to CNSS.",
+     "display_order": 20
+    },
+    {
+     "code": "IPR_CAP",
+     "name": "IPR cap",
+     "unit": "PERCENT",
+     "description": "IPR may not exceed this share of the taxable income.",
+     "display_order": 30
+    },
+    {
+     "code": "IPR_DEPENDANT_REDUCTION",
+     "name": "IPR reduction per dependant",
+     "unit": "PERCENT",
+     "description": "Reduction of the IPR for each dependant in charge.",
+     "display_order": 40
+    },
+    {
+     "code": "IPR_MAX_DEPENDANTS",
+     "name": "IPR dependants counted, at most",
+     "unit": "COUNT",
+     "description": "Dependants beyond this number give no further reduction.",
+     "display_order": 50
+    },
+    {
+     "code": "INPP_SMALL",
+     "name": "INPP, up to 50 staff",
+     "unit": "PERCENT",
+     "description": "Employer training levy for 1 to 50 employees.",
+     "display_order": 60
+    },
+    {
+     "code": "INPP_MEDIUM",
+     "name": "INPP, 51 to 300 staff",
+     "unit": "PERCENT",
+     "description": "Employer training levy for 51 to 300 employees.",
+     "display_order": 70
+    },
+    {
+     "code": "INPP_LARGE",
+     "name": "INPP, above 300 staff",
+     "unit": "PERCENT",
+     "description": "Employer training levy above 300 employees.",
+     "display_order": 80
+    },
+    {
+     "code": "ONEM",
+     "name": "ONEM",
+     "unit": "PERCENT",
+     "description": "Employer contribution to the employment office.",
+     "display_order": 90
+    },
+    {
+     "code": "IERE",
+     "name": "IERE",
+     "unit": "PERCENT",
+     "description": "Employer tax on the pay of expatriate employees.",
+     "display_order": 100
+    },
+    {
+     "code": "SMIG_DAILY",
+     "name": "Minimum wage (SMIG), per day",
+     "unit": "CDF",
+     "description": "Basic pay may not fall below this daily amount; checked, not paid.",
+     "display_order": 110
+    },
+    {
+     "code": "DEBT_MAX_SHARE",
+     "name": "Loan deductions, at most",
+     "unit": "PERCENT",
+     "description": "Loan and advance installments together may take at most this share of the net pay; the rest waits.",
+     "display_order": 120
+    }
+   ]
+  },
+  {
+   "table": "statutory_rate",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "CNSS_EMPLOYEE",
+     "effective_from": "2020-01-01",
+     "value": 5.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 2,
+     "code": "CNSS_EMPLOYER",
+     "effective_from": "2020-01-01",
+     "value": 13.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 3,
+     "code": "IPR_CAP",
+     "effective_from": "2020-01-01",
+     "value": 30.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 4,
+     "code": "IPR_DEPENDANT_REDUCTION",
+     "effective_from": "2020-01-01",
+     "value": 2.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 5,
+     "code": "IPR_MAX_DEPENDANTS",
+     "effective_from": "2020-01-01",
+     "value": 9.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 6,
+     "code": "INPP_SMALL",
+     "effective_from": "2020-01-01",
+     "value": 3.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 7,
+     "code": "INPP_MEDIUM",
+     "effective_from": "2020-01-01",
+     "value": 2.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 8,
+     "code": "INPP_LARGE",
+     "effective_from": "2020-01-01",
+     "value": 1.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 9,
+     "code": "ONEM",
+     "effective_from": "2020-01-01",
+     "value": 0.2,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 10,
+     "code": "IERE",
+     "effective_from": "2020-01-01",
+     "value": 25.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 11,
+     "code": "SMIG_DAILY",
+     "effective_from": "2020-01-01",
+     "value": 14500.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    },
+    {
+     "id": 12,
+     "code": "DEBT_MAX_SHARE",
+     "effective_from": "2020-01-01",
+     "value": 30.0,
+     "note": "Sample, to verify",
+     "created_by": "system"
+    }
+   ]
+  },
+  {
+   "table": "ipr_bracket",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "effective_from": "2020-01-01",
+     "lower_bound": 0.0,
+     "upper_bound": 524160.0,
+     "rate_percent": 0.0,
+     "created_by": "system"
+    },
+    {
+     "id": 2,
+     "effective_from": "2020-01-01",
+     "lower_bound": 524160.0,
+     "upper_bound": 1428000.0,
+     "rate_percent": 15.0,
+     "created_by": "system"
+    },
+    {
+     "id": 3,
+     "effective_from": "2020-01-01",
+     "lower_bound": 1428000.0,
+     "upper_bound": 2700000.0,
+     "rate_percent": 20.0,
+     "created_by": "system"
+    },
+    {
+     "id": 4,
+     "effective_from": "2020-01-01",
+     "lower_bound": 2700000.0,
+     "upper_bound": 4620000.0,
+     "rate_percent": 22.5,
+     "created_by": "system"
+    },
+    {
+     "id": 5,
+     "effective_from": "2020-01-01",
+     "lower_bound": 4620000.0,
+     "upper_bound": 7260000.0,
+     "rate_percent": 25.0,
+     "created_by": "system"
+    },
+    {
+     "id": 6,
+     "effective_from": "2020-01-01",
+     "lower_bound": 7260000.0,
+     "upper_bound": 10260000.0,
+     "rate_percent": 30.0,
+     "created_by": "system"
+    },
+    {
+     "id": 7,
+     "effective_from": "2020-01-01",
+     "lower_bound": 10260000.0,
+     "upper_bound": 13908000.0,
+     "rate_percent": 32.5,
+     "created_by": "system"
+    },
+    {
+     "id": 8,
+     "effective_from": "2020-01-01",
+     "lower_bound": 13908000.0,
+     "upper_bound": 16824000.0,
+     "rate_percent": 35.0,
+     "created_by": "system"
+    },
+    {
+     "id": 9,
+     "effective_from": "2020-01-01",
+     "lower_bound": 16824000.0,
+     "upper_bound": 22000000.0,
+     "rate_percent": 37.5,
+     "created_by": "system"
+    },
+    {
+     "id": 10,
+     "effective_from": "2020-01-01",
+     "lower_bound": 22000000.0,
+     "upper_bound": null,
+     "rate_percent": 40.0,
+     "created_by": "system"
+    }
+   ]
+  },
+  {
+   "table": "payroll_setting",
+   "refs": {},
+   "rows": [
+    {
+     "key": "INPP_BAND",
+     "value": "LARGE"
+    },
+    {
+     "key": "RATE_DAY",
+     "value": "LAST_OF_MONTH"
+    },
+    {
+     "key": "RAISES_FROM",
+     "value": "2026-11-01"
+    },
+    {
+     "key": "THIRTEENTH_ENABLED",
+     "value": "true"
+    },
+    {
+     "key": "THIRTEENTH_BASE",
+     "value": "AVERAGE_BASIC"
+    },
+    {
+     "key": "THIRTEENTH_FALLBACK_PERCENT",
+     "value": "50"
+    },
+    {
+     "key": "THIRTEENTH_PAY_MONTH",
+     "value": "12"
+    },
+    {
+     "key": "THIRTEENTH_PRORATE",
+     "value": "true"
+    },
+    {
+     "key": "LEAVE_SENIORITY_YEARS",
+     "value": "5"
+    },
+    {
+     "key": "LEAVE_SENIORITY_DAYS",
+     "value": "1"
+    },
+    {
+     "key": "GPS_RETENTION_DAYS",
+     "value": "90"
+    }
+   ]
+  },
+  {
+   "table": "evaluation_criterion",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "PRODUCTIVITY",
+     "name": "Productivity",
+     "description": "Volume of work done against what was expected.",
+     "source": "MANAGER",
+     "active": true
+    },
+    {
+     "id": 2,
+     "code": "QUALITY",
+     "name": "Quality of work",
+     "description": "Accuracy, care and few corrections needed.",
+     "source": "MANAGER",
+     "active": true
+    },
+    {
+     "id": 3,
+     "code": "TEAMWORK",
+     "name": "Teamwork",
+     "description": "Helps colleagues, shares information, respects others.",
+     "source": "MANAGER",
+     "active": true
+    },
+    {
+     "id": 4,
+     "code": "PUNCTUALITY",
+     "name": "Punctuality",
+     "description": "From attendance: 100 less 5 points per late day and 10 per absent day.",
+     "source": "ATTENDANCE",
+     "active": true
+    }
+   ]
+  },
+  {
+   "table": "evaluation_template",
+   "refs": {
+    "grade_category_id": "grade_category",
+    "org_unit_id": "org_unit"
+   },
+   "rows": [
+    {
+     "id": 1,
+     "name": "Quarterly review (sample)",
+     "frequency": "QUARTERLY",
+     "grade_category_id": null,
+     "active": true,
+     "org_unit_id": null
+    }
+   ]
+  },
+  {
+   "table": "evaluation_template_criterion",
+   "refs": {
+    "criterion_id": "evaluation_criterion",
+    "template_id": "evaluation_template"
+   },
+   "rows": [
+    {
+     "template_id": 1,
+     "criterion_id": 1,
+     "weight": 35.0
+    },
+    {
+     "template_id": 1,
+     "criterion_id": 2,
+     "weight": 35.0
+    },
+    {
+     "template_id": 1,
+     "criterion_id": 3,
+     "weight": 15.0
+    },
+    {
+     "template_id": 1,
+     "criterion_id": 4,
+     "weight": 15.0
+    }
+   ]
+  },
+  {
+   "table": "role",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "ADMIN",
+     "name": "Administrator",
+     "description": "Platform configuration, users and roles",
+     "system_role": true
+    },
+    {
+     "id": 2,
+     "code": "HR",
+     "name": "Human resources",
+     "description": "Employees, schedules, payroll",
+     "system_role": true
+    },
+    {
+     "id": 3,
+     "code": "FINANCE",
+     "name": "Finance",
+     "description": "Payroll approval and finance reports",
+     "system_role": true
+    },
+    {
+     "id": 4,
+     "code": "MANAGER",
+     "name": "Manager",
+     "description": "Team attendance, approvals and evaluations",
+     "system_role": true
+    },
+    {
+     "id": 5,
+     "code": "EMPLOYEE",
+     "name": "Employee",
+     "description": "Own attendance, leave and payslips",
+     "system_role": true
+    }
+   ]
+  },
+  {
+   "table": "role_permission",
+   "refs": {
+    "role_id": "role"
+   },
+   "rows": [
+    {
+     "role_id": 3,
+     "permission_code": "user.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "user.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "user.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "user.create"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "user.create"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "user.update"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "user.update"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "user.disable"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "user.disable"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "role.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "role.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "role.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "role.assign"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "site.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "site.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "site.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "audit.read"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "audit.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "schedule.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "schedule.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "holiday.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "holiday.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "overtime_policy.manage"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "attendance.read.all"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "attendance.read.all"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "attendance.read.all"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "attendance.read.team"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "attendance.read.own"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "attendance.correct"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "attendance.correct.propose"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "overtime.approve.all"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "overtime.approve.team"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "mission.approve.team"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "leave.approve.team"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "leave.manage"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "report.attendance.export"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "report.attendance.export"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "report.attendance.export"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "report.finance.export"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "report.finance.export"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "salary.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "salary.read"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "salary.write"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "salary.read.own"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "masterdata.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payroll.run"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "payroll.approve"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payroll.close"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "loan.manage"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "payslip.read.all"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payslip.read.all"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "payslip.read.own"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "evaluation.manage"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "evaluation.score.team"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "evaluation.approve"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "mission.approve.all"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "salary.read.own"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "attendance.read.own"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "mission.request"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "salary.read.own"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "attendance.read.own"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "mission.request"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "salary.read.own"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "attendance.read.own"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "mission.request"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "mission.request"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "leave.request"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "leave.request"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "leave.request"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "leave.request"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payslip.read.own"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "payslip.read.own"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "payslip.read.own"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "payroll.pay"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "declaration.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "declaration.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "company.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "org.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "attendance.correct.request"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "attendance.correct.request"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "attendance.correct.request"
+    },
+    {
+     "role_id": 5,
+     "permission_code": "attendance.correct.request"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "system.monitor"
+    }
+   ]
+  }
+ ]
+}

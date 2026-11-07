@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * old version for past periods.
  */
 @RestController
+@cd.hrpay.platform.RequiresModule("ATTENDANCE")
 @RequestMapping("/api/overtime-policies")
 public class OvertimePolicyController {
 

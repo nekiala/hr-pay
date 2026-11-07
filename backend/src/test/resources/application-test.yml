@@ -7,6 +7,9 @@ spring:
   flyway:
     clean-disabled: false
 app:
+  tenancy:
+    # The tests' own database calls (outside a request) reach the demo company.
+    default-company: 1
   sample-data:
     enabled: true
     password: Demo@2026!

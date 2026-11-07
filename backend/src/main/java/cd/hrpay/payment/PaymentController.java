@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@cd.hrpay.platform.RequiresModule("PAYROLL")
 @RequestMapping("/api")
 public class PaymentController {
 

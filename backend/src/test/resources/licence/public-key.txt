@@ -1,0 +1,2 @@
+# Test key only: the tests sign their licences with test-private.key. Never used by a real build.
+MCowBQYDK2VwAyEAdTKkhIaPTG1Ol1sthvTdkFbkBPX7Dv4kVaEOKvVRqi0=

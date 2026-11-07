@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@cd.hrpay.platform.RequiresModule("ATTENDANCE")
 @RequestMapping("/api")
 public class KioskController {
 
@@ -43,9 +44,14 @@ public class KioskController {
     private final TrustedDevices devices;
     private final AppProperties properties;
     private final AuditService audit;
+    private final cd.hrpay.tenancy.Tenants tenants;
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     public KioskController(SiteRepository sites, QrTokens qr, TrustedDevices devices, AppProperties properties,
-                           AuditService audit) {
+                           AuditService audit, cd.hrpay.tenancy.Tenants tenants,
+                           org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        this.tenants = tenants;
+        this.jdbc = jdbc;
         this.sites = sites;
         this.qr = qr;
         this.devices = devices;
@@ -55,15 +61,19 @@ public class KioskController {
 
     /** Public: the kiosk screen polls this with the site's secret key and draws the URL as a QR code. */
     @GetMapping("/kiosk")
-    @Transactional(readOnly = true)
     public KioskToken token(@RequestParam String site, @RequestParam String key) {
-        Site s = sites.findByCodeIgnoreCase(site)
-                .filter(x -> MessageDigest.isEqual(x.getKioskKey().getBytes(StandardCharsets.UTF_8),
+        // No one is signed in on a kiosk: the site code and its secret key find the site, whatever its company.
+        record KioskSite(String name, String code, String kioskKey) {}
+        KioskSite s = tenants.callAsPlatform(() -> jdbc.sql(
+                        "select name, code, kiosk_key from site where lower(code) = lower(?) and kiosk_key is not null")
+                .param(site).query(KioskSite.class).list()).stream()
+                .filter(x -> MessageDigest.isEqual(x.kioskKey().getBytes(StandardCharsets.UTF_8),
                         key.getBytes(StandardCharsets.UTF_8)))
+                .findFirst()
                 .orElseThrow(() -> new NotFoundException("Unknown kiosk."));
-        String url = properties.publicUrl() + "/check-in?qr=" + URLEncoder.encode(qr.issue(s.getCode(), s.getKioskKey()),
+        String url = properties.publicUrl() + "/check-in?qr=" + URLEncoder.encode(qr.issue(s.code(), s.kioskKey()),
                 StandardCharsets.UTF_8);
-        return new KioskToken(s.getName(), url, qr.secondsLeft());
+        return new KioskToken(s.name(), url, qr.secondsLeft());
     }
 
     @GetMapping("/sites/{id}/kiosk-link")

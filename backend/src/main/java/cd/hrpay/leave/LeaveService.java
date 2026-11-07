@@ -255,7 +255,7 @@ public class LeaveService {
     public Map<String, String> saveSettings(int seniorityYears, BigDecimal seniorityDays) {
         jdbc.sql("""
                 insert into payroll_setting (key, value) values ('LEAVE_SENIORITY_YEARS', ?), ('LEAVE_SENIORITY_DAYS', ?)
-                on conflict (key) do update set value = excluded.value""")
+                on conflict (company_id, key) do update set value = excluded.value""")
                 .params(String.valueOf(seniorityYears), seniorityDays.stripTrailingZeros().toPlainString()).update();
         audit.record("leave.settings_changed", "payroll_setting", null, Map.of("seniorityYears", seniorityYears,
                 "seniorityDays", seniorityDays));

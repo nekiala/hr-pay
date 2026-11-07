@@ -17,9 +17,12 @@ public class AuditService {
     private final JdbcClient jdbc;
     private final JsonMapper json;
 
-    public AuditService(JdbcClient jdbc, JsonMapper json) {
+    private final cd.hrpay.tenancy.Tenants tenants;
+
+    public AuditService(JdbcClient jdbc, JsonMapper json, cd.hrpay.tenancy.Tenants tenants) {
         this.jdbc = jdbc;
         this.json = json;
+        this.tenants = tenants;
     }
 
     public void record(String action, String entityType, Object entityId, Map<String, ?> details) {
@@ -34,6 +37,18 @@ public class AuditService {
     }
 
     public void recordAs(String actor, String action, String entityType, Object entityId, Map<String, ?> details) {
+        if (cd.hrpay.tenancy.TenantContext.companyId() == null && !cd.hrpay.tenancy.TenantContext.bypass()) {
+            // An event of the installation itself (a scheduled exchange rate fetch): recorded for no company.
+            tenants.callAsPlatform(() -> {
+                insert(actor, action, entityType, entityId, details);
+                return null;
+            });
+            return;
+        }
+        insert(actor, action, entityType, entityId, details);
+    }
+
+    private void insert(String actor, String action, String entityType, Object entityId, Map<String, ?> details) {
         jdbc.sql("""
                 insert into audit_log (actor, action, entity_type, entity_id, details, ip)
                 values (:actor, :action, :entityType, :entityId, cast(:details as jsonb), :ip)

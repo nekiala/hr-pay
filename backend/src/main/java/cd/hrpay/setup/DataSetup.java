@@ -90,9 +90,19 @@ public class DataSetup implements ApplicationRunner {
         this.audit = audit;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.tenancy.Tenants tenants;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.transaction.support.TransactionTemplate tx;
+
+    /** The first administrator and the demo data belong to the first company. */
     @Override
-    @Transactional
     public void run(ApplicationArguments args) {
+        tenants.runAs(1L, () -> tx.executeWithoutResult(s -> setUp()));
+    }
+
+    private void setUp() {
         if (properties.sampleData() != null && properties.sampleData().enabled()) {
             loadSampleData(properties.sampleData().password());
         }

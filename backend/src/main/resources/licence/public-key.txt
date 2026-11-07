@@ -1,0 +1,2 @@
+# The provider's public licence key (Ed25519, base64 X.509). On-premise builds check licence files against it.
+# Make it once with: ./gradlew -q licence --args="keys ~/.hrpay-licence", then put the printed line below.

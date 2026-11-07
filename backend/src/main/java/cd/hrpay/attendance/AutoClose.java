@@ -57,7 +57,7 @@ public class AutoClose {
 
     @Scheduled(initialDelayString = "PT1M", fixedDelayString = "${app.auto-close-every:PT15M}")
     public void scheduled() {
-        locks.run("auto-close", java.time.Duration.ofMinutes(10), () -> {
+        locks.runForEachCompany("auto-close", java.time.Duration.ofMinutes(10), () -> {
             Integer closed = tx.execute(s -> run());
             if (closed != null && closed > 0) {
                 log.info("Auto-closed {} open day(s)", closed);

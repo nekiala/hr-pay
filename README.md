@@ -139,6 +139,35 @@ cd backend && ./gradlew test
 - **Monitoring**: the System page (`system.monitor`) shows the version, database size, backups, scheduled jobs and alerts. Unhandled errors, failed jobs and failed or missing backups email the people holding `system.monitor`, at most once an hour per problem. Health probes at `/actuator/health/liveness` and `/readiness`; `LOG_FORMAT=ecs` writes JSON logs.
 - **Load test**: `./gradlew loadTest` adds 5,000 people to the test database, calculates their payroll and checks in 1,000 of them (sign-in, code by email, confirm), 25 at a time. Smaller: `-Pload.employees=1000 -Pload.checkIns=200`.
 
+## Companies and licences
+
+One installation holds many companies. Every row of company data carries its company, and PostgreSQL itself (row-level
+security) only shows the app the rows of the signed-in user's company, so a query that forgets a filter still cannot
+reach another company. The app's connections run as the `hrpay_app` role, created by the migrations; migrations use a
+connection of their own as the database owner. If the database user cannot create roles, sign the app in as a
+non-superuser owner of the tables: the policies apply to it as well.
+
+The provider's administrators create a company on **Companies**: name, country, plan by size (up to 50, 51 to 300, 301
+to 1,000, over 1,000 employees), modules (Attendance, Payroll, Evaluations) and the first administrator, who gets the
+Administrator and HR roles and a temporary password. The company starts with the country's sample grades, rates,
+holidays, pay elements, schedule, structure levels and roles (`backend/src/main/resources/packs/CD.json`). A module
+outside the plan is hidden and its changes are refused; its data can still be read. Going over the plan's size only
+shows a warning; payroll is never blocked.
+
+On premise, the provider signs a licence file on their own computer and the customer installs it on **Licence**:
+
+```bash
+cd backend
+./gradlew -q licence --args="keys ~/.hrpay-licence"     # once: the provider's key pair; keep private.key secret
+# put the printed public key in src/main/resources/licence/public-key.txt, then build the release
+./gradlew -q licence --args="issue --key $HOME/.hrpay-licence/private.key --id L-2026-001 --licensee 'Acme SARL' \
+    --expires 2027-12-31 --employees 300 --companies 1 --modules ATTENDANCE,PAYROLL,EVALUATIONS --out acme.licence"
+```
+
+The licence is checked offline. In the last 30 days the administrators are warned; after the end date a grace period
+(30 days by default) keeps everything working; after it, changes in the modules stop until the renewal is installed,
+while sign-in, reading and exports keep working.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -146,6 +175,8 @@ cd backend && ./gradlew test
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | local `hrpay` | Database |
 | `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` | empty | Creates the first administrator when there are no users. They must change the password at first sign-in. |
 | `SAMPLE_DATA` | `false` | Loads the demo site and users. Never in production. |
+| `LICENSING_MODE` | `saas` | `saas`: the provider sets each company's plan and modules on the Companies page. `on-premise`: a signed licence file sets the modules and limits; without one the installation is a 30-day evaluation copy. |
+| `PROVIDER_COMPANY` | `1` | The provider's own company: its administrators manage the other companies, install the licence and get the system alerts. |
 | `EXCHANGE_RATES_URL` | BCC rate API | Source of the daily USD/CDF rate |
 | `EXCHANGE_RATES_FETCH` | `true` | Set to `false` to enter rates by hand only |
 | `COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |

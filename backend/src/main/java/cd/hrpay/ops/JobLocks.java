@@ -24,10 +24,17 @@ public class JobLocks {
 
     private final JdbcClient jdbc;
     private final SystemAlerts alerts;
+    private final cd.hrpay.tenancy.Tenants tenants;
 
-    public JobLocks(JdbcClient jdbc, SystemAlerts alerts) {
+    public JobLocks(JdbcClient jdbc, SystemAlerts alerts, cd.hrpay.tenancy.Tenants tenants) {
         this.jdbc = jdbc;
         this.alerts = alerts;
+        this.tenants = tenants;
+    }
+
+    /** Like {@link #run}, the job running once for each active company, within that company. */
+    public boolean runForEachCompany(String name, Duration hold, Runnable job) {
+        return run(name, hold, () -> tenants.forEachCompany(name, id -> job.run()));
     }
 
     /**

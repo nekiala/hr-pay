@@ -64,7 +64,9 @@ public class RoleController {
     @GetMapping("/permissions")
     @PreAuthorize("hasAuthority('role.read')")
     public List<PermissionView> permissions() {
+        boolean provider = cd.hrpay.tenancy.TenantContext.isProvider(cd.hrpay.tenancy.TenantContext.companyId());
         return permissions.findAllByOrderByCategoryAscCodeAsc().stream()
+                .filter(p -> provider || !cd.hrpay.tenancy.TenantContext.PLATFORM_PERMISSIONS.contains(p.getCode()))
                 .map(p -> new PermissionView(p.getCode(), p.getCategory(), p.getDescription()))
                 .toList();
     }
@@ -126,7 +128,10 @@ public class RoleController {
     }
 
     private Set<String> checkedPermissions(Set<String> requested) {
-        Set<String> known = permissions.findAll().stream().map(Permission::getCode).collect(Collectors.toSet());
+        boolean provider = cd.hrpay.tenancy.TenantContext.isProvider(cd.hrpay.tenancy.TenantContext.companyId());
+        Set<String> known = permissions.findAll().stream().map(Permission::getCode)
+                .filter(code -> provider || !cd.hrpay.tenancy.TenantContext.PLATFORM_PERMISSIONS.contains(code))
+                .collect(Collectors.toSet());
         Set<String> unknown = difference(requested, known);
         if (!unknown.isEmpty()) {
             throw new BusinessRuleException("Unknown permissions: " + String.join(", ", unknown));

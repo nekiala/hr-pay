@@ -14,6 +14,11 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    # Migrations use a connection of their own, as the database owner, that sees every company. The app's own
+    # connections run as the hrpay_app role and see one company at a time (row-level security).
+    user: ${DB_USER:hrpay}
+    password: ${DB_PASSWORD:hrpay}
+    init-sqls: set app.bypass = 'on'
   # Sessions live in PostgreSQL (tables made by Flyway), shared by every API server and kept across restarts.
   session:
     jdbc:
@@ -56,6 +61,12 @@ logging:
       console: ${LOG_FORMAT:}
 
 app:
+  # SaaS (many companies, plans set by the provider) or on-premise (a signed licence file sets the limits).
+  licensing:
+    mode: ${LICENSING_MODE:saas}
+  tenancy:
+    # The provider's own company: its administrators get the system alerts and manage the other companies.
+    provider-company: ${PROVIDER_COMPANY:1}
   # Creates the first administrator when the user table is empty.
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}

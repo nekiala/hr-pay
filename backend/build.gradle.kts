@@ -77,3 +77,12 @@ tasks.register<Test>("loadTest") {
         showStandardStreams = true
     }
 }
+
+// The provider's licence tool (keys, issue), run on the provider's computer:
+// ./gradlew -q licence --args="keys ~/.hrpay-licence"
+tasks.register<JavaExec>("licence") {
+    description = "Makes the provider's licence keys or signs a licence file"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("cd.hrpay.platform.LicenceTool")
+    standardInput = System.`in`
+}

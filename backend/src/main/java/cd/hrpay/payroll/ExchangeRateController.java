@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@cd.hrpay.platform.RequiresModule("PAYROLL")
 @RequestMapping("/api/exchange-rates")
 @PreAuthorize("hasAuthority('salary.read') or hasAuthority('masterdata.manage')")
 public class ExchangeRateController {

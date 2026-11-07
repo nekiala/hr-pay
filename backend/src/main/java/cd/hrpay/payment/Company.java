@@ -34,7 +34,7 @@ public class Company {
     public Details get() {
         return jdbc.sql("""
                 select name, address, cnss_number, tax_number, national_id, rccm, inpp_number, onem_number,
-                       bank_name, bank_account from company where id = 1""").query(Details.class).single();
+                       bank_name, bank_account from company where id = current_company_id()""").query(Details.class).single();
     }
 
     @Transactional
@@ -42,34 +42,34 @@ public class Company {
         jdbc.sql("""
                 update company set name = ?, address = ?, cnss_number = ?, tax_number = ?, national_id = ?, rccm = ?,
                        inpp_number = ?, onem_number = ?, bank_name = ?, bank_account = ?, updated_by = ?, updated_at = now()
-                where id = 1""")
+                where id = current_company_id()""")
                 .params(d.name().trim(), blank(d.address()), blank(d.cnssNumber()), blank(d.taxNumber()),
                         blank(d.nationalId()), blank(d.rccm()), blank(d.inppNumber()), blank(d.onemNumber()),
                         blank(d.bankName()), blank(d.bankAccount()), CurrentUser.email())
                 .update();
-        audit.record("company.updated", "company", 1, Map.of("name", d.name().trim()));
+        audit.record("company.updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("name", d.name().trim()));
         return get();
     }
 
     public PayslipSettings payslipSettings() {
         return jdbc.sql("""
                 select phone, email, website, legal_form, payslip_footer as footer, payslip_template as template,
-                       logo is not null as has_logo from company where id = 1""").query(PayslipSettings.class).single();
+                       logo is not null as has_logo from company where id = current_company_id()""").query(PayslipSettings.class).single();
     }
 
     @Transactional
     public PayslipSettings savePayslipSettings(PayslipSettings s) {
         jdbc.sql("""
                 update company set phone = ?, email = ?, website = ?, legal_form = ?, payslip_footer = ?, payslip_template = ?,
-                       updated_by = ?, updated_at = now() where id = 1""")
+                       updated_by = ?, updated_at = now() where id = current_company_id()""")
                 .params(blank(s.phone()), blank(s.email()), blank(s.website()), blank(s.legalForm()), blank(s.footer()),
                         s.template(), CurrentUser.email()).update();
-        audit.record("company.payslip_settings_updated", "company", 1, Map.of("template", s.template()));
+        audit.record("company.payslip_settings_updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("template", s.template()));
         return payslipSettings();
     }
 
     public java.util.Optional<Logo> logo() {
-        return jdbc.sql("select logo_content_type, logo from company where id = 1 and logo is not null")
+        return jdbc.sql("select logo_content_type, logo from company where id = current_company_id() and logo is not null")
                 .query((rs, i) -> new Logo(rs.getString(1), rs.getBytes(2))).optional();
     }
 
@@ -89,16 +89,16 @@ public class Company {
         } catch (java.io.IOException e) {
             throw new cd.hrpay.common.BusinessRuleException("The logo could not be read as an image.");
         }
-        jdbc.sql("update company set logo = ?, logo_content_type = ?, updated_by = ?, updated_at = now() where id = 1")
+        jdbc.sql("update company set logo = ?, logo_content_type = ?, updated_by = ?, updated_at = now() where id = current_company_id()")
                 .params(data, contentType, CurrentUser.email()).update();
-        audit.record("company.logo_changed", "company", 1, Map.of("bytes", data.length));
+        audit.record("company.logo_changed", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("bytes", data.length));
     }
 
     @Transactional
     public void removeLogo() {
-        jdbc.sql("update company set logo = null, logo_content_type = null, updated_by = ?, updated_at = now() where id = 1")
+        jdbc.sql("update company set logo = null, logo_content_type = null, updated_by = ?, updated_at = now() where id = current_company_id()")
                 .param(CurrentUser.email()).update();
-        audit.record("company.logo_removed", "company", 1, Map.of());
+        audit.record("company.logo_removed", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of());
     }
 
     private static String blank(String s) {

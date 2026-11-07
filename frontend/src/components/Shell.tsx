@@ -1,37 +1,42 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
-  Activity, Banknote, Briefcase, Building2, Calculator, CalendarClock, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../auth'
+import type { Module } from '../api'
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 type Item = { to: string; label: string; icon: Icon; end?: boolean; show: boolean }
 
 /** The sidebar's links, grouped by what people come to do; each shows only to those allowed to open it. */
 function useNav(): { title: string; items: Item[] }[] {
-  const { can } = useAuth()
+  const { can, me } = useAuth()
   const any = (...p: string[]) => p.some(can)
+  // A module outside the company's plan is left out of the menu.
+  const has = (m: Module) => !me?.company || me.company.modules.includes(m)
+  const att = has('ATTENDANCE')
+  const pay = has('PAYROLL')
   return [
     {
       title: 'My work',
       items: [
         { to: '/', label: 'Home', icon: House, end: true, show: true },
-        { to: '/check-in', label: 'Check in', icon: Clock, show: true },
+        { to: '/check-in', label: 'Check in', icon: Clock, show: att },
         { to: '/leave', label: 'Leave', icon: CalendarDays, end: true, show: any('leave.request', 'leave.manage', 'leave.approve.team') },
-        { to: '/missions', label: 'Missions', icon: Briefcase, show: any('mission.request', 'mission.approve.all', 'mission.approve.team') },
-        { to: '/corrections', label: 'Corrections', icon: PencilLine, show: any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
-        { to: '/my/payslips', label: 'My payslips', icon: ReceiptText, show: can('payslip.read.own') },
+        { to: '/missions', label: 'Missions', icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
+        { to: '/corrections', label: 'Corrections', icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
+        { to: '/my/payslips', label: 'My payslips', icon: ReceiptText, show: pay && can('payslip.read.own') },
       ],
     },
     {
       title: 'Team',
       items: [
-        { to: '/presence', label: 'Presence', icon: UserCheck, show: any('attendance.read.all', 'attendance.read.team') },
-        { to: '/overtime/approvals', label: 'Approve overtime', icon: Timer, show: any('overtime.approve.all', 'overtime.approve.team') },
-        { to: '/evaluations', label: 'Evaluations', icon: Star, end: true, show: true },
+        { to: '/presence', label: 'Presence', icon: UserCheck, show: att && any('attendance.read.all', 'attendance.read.team') },
+        { to: '/overtime/approvals', label: 'Approve overtime', icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
+        { to: '/evaluations', label: 'Evaluations', icon: Star, end: true, show: has('EVALUATIONS') },
         { to: '/org', label: 'Org chart', icon: Network, show: true },
       ],
     },
@@ -41,17 +46,17 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/users', label: 'Users', icon: Users, show: can('user.read') },
         { to: '/schedules', label: 'Schedules', icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: 'Holidays', icon: Flag, show: true },
-        { to: '/sites', label: 'Sites', icon: MapPin, show: any('site.read', 'site.manage') },
+        { to: '/sites', label: 'Sites', icon: MapPin, show: att && any('site.read', 'site.manage') },
       ],
     },
     {
       title: 'Payroll',
       items: [
-        { to: '/payroll', label: 'Payroll', icon: Calculator, end: true, show: any('payroll.run', 'payroll.approve', 'payslip.read.all') },
-        { to: '/payroll/payments', label: 'Payments', icon: Banknote, show: any('payroll.pay', 'payslip.read.all') },
-        { to: '/payroll/declarations', label: 'Declarations', icon: Landmark, show: can('declaration.manage') },
-        { to: '/payroll/year', label: 'Year summary', icon: ChartColumn, end: true, show: can('payslip.read.all') },
-        { to: '/payroll/loans', label: 'Loans', icon: HandCoins, show: any('loan.manage', 'payslip.read.all') },
+        { to: '/payroll', label: 'Payroll', icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
+        { to: '/payroll/payments', label: 'Payments', icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
+        { to: '/payroll/declarations', label: 'Declarations', icon: Landmark, show: pay && can('declaration.manage') },
+        { to: '/payroll/year', label: 'Year summary', icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
+        { to: '/payroll/loans', label: 'Loans', icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
         { to: '/reports', label: 'Reports', icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
       ],
     },
@@ -60,15 +65,17 @@ function useNav(): { title: string; items: Item[] }[] {
       items: [
         { to: '/company', label: 'Company', icon: Building2, show: can('company.manage') },
         { to: '/payroll/settings', label: 'Grades', icon: Layers, show: can('masterdata.manage') },
-        { to: '/payroll/elements', label: 'Pay elements', icon: SlidersHorizontal, show: any('salary.read', 'masterdata.manage') },
-        { to: '/payroll/rates', label: 'Rates', icon: Percent, show: any('salary.read', 'masterdata.manage') },
-        { to: '/overtime', label: 'Overtime rules', icon: Timer, end: true, show: can('overtime_policy.manage') },
+        { to: '/payroll/elements', label: 'Pay elements', icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
+        { to: '/payroll/rates', label: 'Rates', icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
+        { to: '/overtime', label: 'Overtime rules', icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/roles', label: 'Roles', icon: KeyRound, show: can('role.read') },
       ],
     },
     {
       title: 'System',
       items: [
+        { to: '/platform/companies', label: 'Companies', icon: Building, show: can('platform.manage') },
+        { to: '/platform/licence', label: 'Licence', icon: BadgeCheck, show: can('platform.manage') && me?.company?.mode === 'ON_PREMISE' },
         { to: '/system', label: 'System', icon: Activity, show: can('system.monitor') },
         { to: '/audit', label: 'Audit log', icon: ScrollText, show: can('audit.read') },
         { to: '/outbox', label: 'Messages', icon: Mail, show: can('audit.read') },
@@ -121,6 +128,9 @@ export function Shell({ children }: { children: ReactNode }) {
 
   if (!me) return null
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  // Plan and licence warnings are for the people who run the company's set-up.
+  const notices = me.company && ['user.create', 'company.manage', 'role.manage', 'platform.manage'].some((p) => me.permissions.includes(p))
+    ? me.company.notices : []
   const initials = `${me.firstName[0] ?? ''}${me.lastName[0] ?? ''}`.toUpperCase()
   const current = groups.flatMap((g) => g.items).find((i) => (i.end ? location.pathname === i.to : location.pathname.startsWith(i.to)) && i.to !== '/')
 
@@ -129,7 +139,7 @@ export function Shell({ children }: { children: ReactNode }) {
       <aside className={`sidebar no-print${navOpen ? ' open' : ''}`} aria-label="Main menu">
         <div className="sidebar-brand">
           <span className="brand-mark"><Wallet /></span>
-          <span className="brand-name">HR Pay</span>
+          <span className="brand-text"><span className="brand-name">HR Pay</span>{me.company && <small className="brand-company">{me.company.name}</small>}</span>
           <button type="button" className="icon-button sidebar-close" aria-label="Close the menu" onClick={() => setNavOpen(false)}><X size={20} /></button>
         </div>
         <nav className="sidebar-nav">
@@ -178,7 +188,14 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main>{children}</main>
+        <main>
+          {notices.length > 0 && (
+            <div className="plan-notices no-print">
+              {notices.map((n) => <p key={n.text} className={n.level === 'danger' ? 'error' : 'notice'}>{n.text}</p>)}
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   )
