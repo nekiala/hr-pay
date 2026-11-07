@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api, money } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
+import { t } from '../i18n'
 
 type Row = { userId: number; name: string; registrationNo: string; currency: string; months: number; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; iprCdf: number }
 type Month = { month: string; payslipId: number; number: string; currency: string; gross: number; cnss: number; ipr: number; otherDeductions: number; net: number; taxableCdf: number; iprCdf: number; paidOn: string | null }
@@ -12,7 +13,7 @@ type Statement = { userId: number; name: string | null; registrationNo: string |
 const lastYearWithPay = () => new Date().getFullYear()
 
 function YearPicker({ year, onChange }: { year: number; onChange: (y: number) => void }) {
-  return <label className="month-pick no-print">Year <input type="number" className="narrow-input" min={2000} max={2100} value={year} onChange={(e) => e.target.value.length === 4 && onChange(Number(e.target.value))} /></label>
+  return <label className="month-pick no-print">{t('Year')}{' '}<input type="number" className="narrow-input" min={2000} max={2100} value={year} onChange={(e) => e.target.value.length === 4 && onChange(Number(e.target.value))} /></label>
 }
 
 /** HR: everyone's totals for a year. */
@@ -25,28 +26,28 @@ export function YearSummariesPage() {
 
   return (
     <section>
-      <h2>Year summary</h2>
+      <h2>{t('Year summary')}</h2>
       <YearPicker year={year} onChange={(y) => setParams({ year: String(y) })} />
       <ErrorText error={error} />
-      <p className="hint">Closed months only. Open an employee for their annual pay statement, which they can also see under My payslips.</p>
-      {rows && (rows.length === 0 ? <p className="muted">No closed payroll in {year}.</p> : (
+      <p className="hint">{t('Closed months only. Open an employee for their annual pay statement, which they can also see under My payslips.')}</p>
+      {rows && (rows.length === 0 ? <p className="muted">{t('No closed payroll in')}{' '}{year}.</p> : (
         <div className="card">
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Employee</th><th>Months</th><th>Gross</th><th>CNSS</th><th>IPR</th><th>Other deductions</th><th>Net</th><th></th></tr></thead>
+              <thead><tr><th>{t('Employee')}</th><th>{t('Months')}</th><th>{t('Gross')}</th><th>{t('CNSS')}</th><th>{t('IPR')}</th><th>{t('Other deductions')}</th><th>{t('Net')}</th><th></th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={`${r.userId}-${r.currency}`}>
                     <td>{r.name} <span className="muted">{r.registrationNo}</span></td><td>{r.months}</td>
                     <td>{money(r.gross, r.currency)}</td><td>{money(r.cnss, r.currency)}</td><td>{money(r.ipr, r.currency)}</td>
                     <td>{money(r.otherDeductions, r.currency)}</td><td><strong>{money(r.net, r.currency)}</strong></td>
-                    <td><Link to={`/payroll/year/${r.userId}?year=${year}`}>Statement</Link></td>
+                    <td><Link to={`/payroll/year/${r.userId}?year=${year}`}>{t('Statement')}</Link></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <a className="button secondary" href={`/api/year-summaries.csv?year=${year}`}>Download CSV</a>
+          <a className="button secondary" href={`/api/year-summaries.csv?year=${year}`}>{t('Download CSV')}</a>
         </div>
       ))}
     </section>
@@ -70,22 +71,22 @@ export function AnnualStatementPage() {
   return (
     <section className="narrow">
       <p className="no-print">
-        {userId ? <Link to={`/payroll/year?year=${year}`}>← Year summary</Link> : <Link to="/my/payslips">← My payslips</Link>}
-        {' · '}<Button className="link" onClick={() => window.print()}>Print or save as PDF</Button>
+        {userId ? <Link to={`/payroll/year?year=${year}`}>{t('← Year summary')}</Link> : <Link to="/my/payslips">{t('← My payslips')}</Link>}
+        {' · '}<Button className="link" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
       </p>
       <YearPicker year={year} onChange={(y) => setParams({ year: String(y) })} />
       <ErrorText error={error} />
       {s && (
         <div className="card payslip">
-          <h2>Annual pay statement {s.year}</h2>
-          {employer && <p>{employer.name}{employer.address && ` · ${employer.address}`}{employer.taxNumber && ` · NIF ${employer.taxNumber}`}</p>}
+          <h2>{t('Annual pay statement')}{' '}{s.year}</h2>
+          {employer && <p>{employer.name}{employer.address && ` · ${employer.address}`}{employer.taxNumber && t(' · NIF {a}', { a: employer.taxNumber })}</p>}
           <p><strong>{s.name}</strong> {s.registrationNo && <span className="muted">{s.registrationNo}</span>}
-            {s.details.cnssNumber && <> · CNSS {s.details.cnssNumber}</>}{s.details.taxNumber && <> · NIF {s.details.taxNumber}</>}</p>
-          {s.months.length === 0 ? <p className="muted">No closed payslip in {s.year}.</p> : (
+            {s.details.cnssNumber && <>{' '}{t('· CNSS')}{' '}{s.details.cnssNumber}</>}{s.details.taxNumber && <>{' '}{t('· NIF')}{' '}{s.details.taxNumber}</>}</p>
+          {s.months.length === 0 ? <p className="muted">{t('No closed payslip in')}{' '}{s.year}.</p> : (
             <>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Month</th><th>Gross</th><th>CNSS</th><th>IPR</th><th>Other</th><th>Net</th><th>Paid</th></tr></thead>
+                  <thead><tr><th>{t('Month')}</th><th>{t('Gross')}</th><th>{t('CNSS')}</th><th>{t('IPR')}</th><th>{t('Other')}</th><th>{t('Net')}</th><th>{t('Paid')}</th></tr></thead>
                   <tbody>
                     {s.months.map((m) => (
                       <tr key={m.payslipId}>
@@ -97,17 +98,17 @@ export function AnnualStatementPage() {
                     ))}
                   </tbody>
                   <tfoot>
-                    {s.totals.map((t) => (
-                      <tr key={t.currency}>
-                        <td><strong>Total{s.totals.length > 1 && ` ${t.currency}`}</strong></td>
-                        <td>{money(t.gross, t.currency)}</td><td>{money(t.cnss, t.currency)}</td><td>{money(t.ipr, t.currency)}</td>
-                        <td>{money(t.otherDeductions, t.currency)}</td><td><strong>{money(t.net, t.currency)}</strong></td><td></td>
+                    {s.totals.map((tItem) => (
+                      <tr key={tItem.currency}>
+                        <td><strong>{t('Total')}{s.totals.length > 1 && ` ${tItem.currency}`}</strong></td>
+                        <td>{money(tItem.gross, tItem.currency)}</td><td>{money(tItem.cnss, tItem.currency)}</td><td>{money(tItem.ipr, tItem.currency)}</td>
+                        <td>{money(tItem.otherDeductions, tItem.currency)}</td><td><strong>{money(tItem.net, tItem.currency)}</strong></td><td></td>
                       </tr>
                     ))}
                   </tfoot>
                 </table>
               </div>
-              <p className="small">Taxable income for IPR over the year: {money(s.taxableCdf, 'CDF')}. IPR withheld: {money(s.iprCdf, 'CDF')}.</p>
+              <p className="small">{t('Taxable income for IPR over the year:')}{' '}{money(s.taxableCdf, 'CDF')}{t('. IPR withheld:')}{' '}{money(s.iprCdf, 'CDF')}.</p>
             </>
           )}
         </div>

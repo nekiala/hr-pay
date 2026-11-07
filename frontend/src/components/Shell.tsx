@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
+import { t } from '../i18n'
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 type Item = { to: string; label: string; icon: Icon; end?: boolean; show: boolean }
@@ -21,67 +22,67 @@ function useNav(): { title: string; items: Item[] }[] {
   const pay = has('PAYROLL')
   return [
     {
-      title: 'My work',
+      title: t('My work'),
       items: [
-        { to: '/', label: 'Home', icon: House, end: true, show: true },
-        { to: '/check-in', label: 'Check in', icon: Clock, show: att },
-        { to: '/leave', label: 'Leave', icon: CalendarDays, end: true, show: any('leave.request', 'leave.manage', 'leave.approve.team') },
-        { to: '/missions', label: 'Missions', icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
-        { to: '/corrections', label: 'Corrections', icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
-        { to: '/my/payslips', label: 'My payslips', icon: ReceiptText, show: pay && can('payslip.read.own') },
+        { to: '/', label: t('Home'), icon: House, end: true, show: true },
+        { to: '/check-in', label: t('Check in'), icon: Clock, show: att },
+        { to: '/leave', label: t('Leave'), icon: CalendarDays, end: true, show: any('leave.request', 'leave.manage', 'leave.approve.team') },
+        { to: '/missions', label: t('Missions'), icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
+        { to: '/corrections', label: t('Corrections'), icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
+        { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
       ],
     },
     {
-      title: 'Team',
+      title: t('Team'),
       items: [
-        { to: '/presence', label: 'Presence', icon: UserCheck, show: att && any('attendance.read.all', 'attendance.read.team') },
-        { to: '/overtime/approvals', label: 'Approve overtime', icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
-        { to: '/evaluations', label: 'Evaluations', icon: Star, end: true, show: has('EVALUATIONS') },
-        { to: '/org', label: 'Org chart', icon: Network, show: true },
+        { to: '/presence', label: t('Presence'), icon: UserCheck, show: att && any('attendance.read.all', 'attendance.read.team') },
+        { to: '/overtime/approvals', label: t('Approve overtime'), icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
+        { to: '/evaluations', label: t('Evaluations'), icon: Star, end: true, show: has('EVALUATIONS') },
+        { to: '/org', label: t('Org chart'), icon: Network, show: true },
       ],
     },
     {
-      title: 'People',
+      title: t('People'),
       items: [
-        { to: '/users', label: 'Users', icon: Users, show: can('user.read') },
-        { to: '/schedules', label: 'Schedules', icon: CalendarClock, show: any('schedule.manage', 'user.read') },
-        { to: '/holidays', label: 'Holidays', icon: Flag, show: true },
-        { to: '/sites', label: 'Sites', icon: MapPin, show: att && any('site.read', 'site.manage') },
+        { to: '/users', label: t('Users'), icon: Users, show: can('user.read') },
+        { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
+        { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
+        { to: '/sites', label: t('Sites'), icon: MapPin, show: att && any('site.read', 'site.manage') },
       ],
     },
     {
-      title: 'Payroll',
+      title: t('Payroll'),
       items: [
-        { to: '/payroll', label: 'Payroll', icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
-        { to: '/payroll/payments', label: 'Payments', icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
-        { to: '/payroll/declarations', label: 'Declarations', icon: Landmark, show: pay && can('declaration.manage') },
-        { to: '/payroll/year', label: 'Year summary', icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
-        { to: '/payroll/loans', label: 'Loans', icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
-        { to: '/reports', label: 'Reports', icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
+        { to: '/payroll', label: t('Payroll'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
+        { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
+        { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
+        { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
+        { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
+        { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
       ],
     },
     {
-      title: 'Settings',
+      title: t('Settings'),
       items: [
-        { to: '/company', label: 'Company', icon: Building2, show: can('company.manage') },
-        { to: '/billing', label: 'Billing', icon: CreditCard, show: can('subscription.manage') && !can('platform.manage') },
-        { to: '/payroll/settings', label: 'Grades', icon: Layers, show: can('masterdata.manage') },
-        { to: '/payroll/elements', label: 'Pay elements', icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
-        { to: '/payroll/rates', label: 'Rates', icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
-        { to: '/overtime', label: 'Overtime rules', icon: Timer, end: true, show: att && can('overtime_policy.manage') },
-        { to: '/roles', label: 'Roles', icon: KeyRound, show: can('role.read') },
-        { to: '/privacy/requests', label: 'Personal data', icon: ShieldCheck, show: can('privacy.manage') },
+        { to: '/company', label: t('Company'), icon: Building2, show: can('company.manage') },
+        { to: '/billing', label: t('Billing'), icon: CreditCard, show: can('subscription.manage') && !can('platform.manage') },
+        { to: '/payroll/settings', label: t('Grades'), icon: Layers, show: can('masterdata.manage') },
+        { to: '/payroll/elements', label: t('Pay elements'), icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
+        { to: '/payroll/rates', label: t('Rates'), icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
+        { to: '/overtime', label: t('Overtime rules'), icon: Timer, end: true, show: att && can('overtime_policy.manage') },
+        { to: '/roles', label: t('Roles'), icon: KeyRound, show: can('role.read') },
+        { to: '/privacy/requests', label: t('Personal data'), icon: ShieldCheck, show: can('privacy.manage') },
       ],
     },
     {
-      title: 'System',
+      title: t('System'),
       items: [
-        { to: '/platform/companies', label: 'Companies', icon: Building, show: can('platform.manage') },
-        { to: '/platform/billing', label: 'Invoices', icon: CreditCard, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
-        { to: '/platform/licence', label: 'Licence', icon: BadgeCheck, show: can('platform.manage') && me?.company?.mode === 'ON_PREMISE' },
-        { to: '/system', label: 'System', icon: Activity, show: can('system.monitor') },
-        { to: '/audit', label: 'Audit log', icon: ScrollText, show: can('audit.read') },
-        { to: '/outbox', label: 'Messages', icon: Mail, show: can('audit.read') },
+        { to: '/platform/companies', label: t('Companies'), icon: Building, show: can('platform.manage') },
+        { to: '/platform/billing', label: t('Invoices'), icon: CreditCard, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
+        { to: '/platform/licence', label: t('Licence'), icon: BadgeCheck, show: can('platform.manage') && me?.company?.mode === 'ON_PREMISE' },
+        { to: '/system', label: t('System'), icon: Activity, show: can('system.monitor') },
+        { to: '/audit', label: t('Audit log'), icon: ScrollText, show: can('audit.read') },
+        { to: '/outbox', label: t('Messages'), icon: Mail, show: can('audit.read') },
       ],
     },
   ].map((g) => ({ ...g, items: g.items.filter((i) => i.show) })).filter((g) => g.items.length > 0)
@@ -146,11 +147,11 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="shell">
-      <aside className={`sidebar no-print${navOpen ? ' open' : ''}`} aria-label="Main menu">
+      <aside className={`sidebar no-print${navOpen ? ' open' : ''}`} aria-label={t('Main menu')}>
         <div className="sidebar-brand">
           <span className="brand-mark"><Wallet /></span>
-          <span className="brand-text"><span className="brand-name">HR Pay</span>{me.company && <small className="brand-company">{me.company.name}</small>}</span>
-          <button type="button" className="icon-button sidebar-close" aria-label="Close the menu" onClick={() => setNavOpen(false)}><X size={20} /></button>
+          <span className="brand-text"><span className="brand-name">{t('HR Pay')}</span>{me.company && <small className="brand-company">{me.company.name}</small>}</span>
+          <button type="button" className="icon-button sidebar-close" aria-label={t('Close the menu')} onClick={() => setNavOpen(false)}><X size={20} /></button>
         </div>
         <nav className="sidebar-nav">
           {groups.map((g) => (
@@ -165,17 +166,17 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           ))}
         </nav>
-        <NavLink to="/privacy" className="sidebar-foot"><ShieldCheck size={16} aria-hidden /> How your data is used</NavLink>
+        <NavLink to="/privacy" className="sidebar-foot"><ShieldCheck size={16} aria-hidden />{' '}{t('How your data is used')}</NavLink>
       </aside>
       {navOpen && <div className="sidebar-scrim no-print" onClick={() => setNavOpen(false)} />}
 
       <div className="shell-main">
         <header className="topbar no-print">
-          <button type="button" className="icon-button menu-button" aria-label="Open the menu" onClick={() => setNavOpen(true)}><Menu size={22} /></button>
-          <span className="topbar-title">{current?.label ?? (location.pathname === '/' ? 'Home' : '')}</span>
+          <button type="button" className="icon-button menu-button" aria-label={t('Open the menu')} onClick={() => setNavOpen(true)}><Menu size={22} /></button>
+          <span className="topbar-title">{current?.label ?? (location.pathname === '/' ? t('Home') : '')}</span>
           <div className="topbar-right">
-            <button type="button" className="icon-button theme-toggle" aria-label={dark ? 'Use the light theme' : 'Use the dark theme'}
-              title={dark ? 'Light theme' : 'Dark theme'} onClick={() => setTheme(dark ? 'light' : 'dark')}>
+            <button type="button" className="icon-button theme-toggle" aria-label={dark ? t('Use the light theme') : t('Use the dark theme')}
+              title={dark ? t('Light theme') : t('Dark theme')} onClick={() => setTheme(dark ? 'light' : 'dark')}>
               {dark ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
             </button>
             <div className="user-menu" ref={menuRef}>
@@ -186,13 +187,13 @@ export function Shell({ children }: { children: ReactNode }) {
               </button>
               {menuOpen && (
                 <div className="menu" role="menu">
-                  <NavLink to="/account" role="menuitem"><UserRound size={16} aria-hidden /> My account</NavLink>
-                  <div className="menu-theme" role="group" aria-label="Appearance">
-                    <button type="button" className={theme === 'dark' ? 'on' : ''} onClick={() => setTheme('dark')}><Moon size={15} aria-hidden /> Dark</button>
-                    <button type="button" className={theme === 'light' ? 'on' : ''} onClick={() => setTheme('light')}><Sun size={15} aria-hidden /> Light</button>
-                    <button type="button" className={theme === 'system' ? 'on' : ''} onClick={() => setTheme('system')}><Monitor size={15} aria-hidden /> Device</button>
+                  <NavLink to="/account" role="menuitem"><UserRound size={16} aria-hidden />{' '}{t('My account')}</NavLink>
+                  <div className="menu-theme" role="group" aria-label={t('Appearance')}>
+                    <button type="button" className={theme === 'dark' ? 'on' : ''} onClick={() => setTheme('dark')}><Moon size={15} aria-hidden />{' '}{t('Dark')}</button>
+                    <button type="button" className={theme === 'light' ? 'on' : ''} onClick={() => setTheme('light')}><Sun size={15} aria-hidden />{' '}{t('Light')}</button>
+                    <button type="button" className={theme === 'system' ? 'on' : ''} onClick={() => setTheme('system')}><Monitor size={15} aria-hidden />{' '}{t('Device')}</button>
                   </div>
-                  <button type="button" role="menuitem" onClick={() => void signOut()}><LogOut size={16} aria-hidden /> Sign out</button>
+                  <button type="button" role="menuitem" onClick={() => void signOut()}><LogOut size={16} aria-hidden />{' '}{t('Sign out')}</button>
                 </div>
               )}
             </div>
@@ -201,8 +202,8 @@ export function Shell({ children }: { children: ReactNode }) {
         <main>
           {me.support && (
             <div className="support-bar no-print" role="status">
-              <span><LifeBuoy size={16} aria-hidden /> <strong>Support visit: {me.support.companyName}.</strong> You see what its users see, read-only, until {longDay(me.support.expiresAt)}. Every page you open is shown to the company.</span>
-              <button type="button" className="secondary" onClick={() => void endSupport()}>End the visit</button>
+              <span><LifeBuoy size={16} aria-hidden /> <strong>{t('Support visit:')}{' '}{me.support.companyName}.</strong>{' '}{t('You see what its users see, read-only, until')}{' '}{longDay(me.support.expiresAt)}{t('. Every page you open is shown to the company.')}</span>
+              <button type="button" className="secondary" onClick={() => void endSupport()}>{t('End the visit')}</button>
             </div>
           )}
           {me.company?.readOnly && !me.support && <p className="error no-print">{me.company.readOnly}</p>}

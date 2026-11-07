@@ -50,6 +50,7 @@ public class AppUser {
     private java.time.LocalDate hireDate;
     private OffsetDateTime lastLoginAt;
     private OffsetDateTime privacyAcceptedAt;
+    private String language;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
@@ -107,6 +108,9 @@ public class AppUser {
     public void setSite(Site site) { this.site = site; }
     public boolean isMustChangePassword() { return mustChangePassword; }
     public OffsetDateTime getPrivacyAcceptedAt() { return privacyAcceptedAt; }
+    /** The language the person chose, or null to follow the company's. */
+    public String getLanguage() { return language; }
+    public void setLanguage(String language) { this.language = language; }
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
     public OffsetDateTime getLastLoginAt() { return lastLoginAt; }
     public void setLastLoginAt(OffsetDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }

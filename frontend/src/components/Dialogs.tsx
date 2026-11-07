@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useState, type ReactNode } from
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
 type Field = { label: string; placeholder?: string; required?: boolean; pattern?: string; defaultValue?: string; hint?: string; type?: string; multiline?: boolean }
 
@@ -49,7 +50,7 @@ function AskDialog({ options, onClose }: { options: AskOptions; onClose: () => v
       await options.onConfirm(values)
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
+      setError(e instanceof Error ? e.message : t('Something went wrong.'))
     }
   }
 
@@ -70,7 +71,7 @@ function AskDialog({ options, onClose }: { options: AskOptions; onClose: () => v
         ))}
         <ErrorText error={error} />
         <div className="modal-foot">
-          <Button className="secondary" onClick={onClose}>Back</Button>
+          <Button className="secondary" onClick={onClose}>{t('Back')}</Button>
           <Button type="submit" className={options.danger ? 'danger' : undefined} pendingText={options.pendingText}>{options.confirmLabel}</Button>
         </div>
       </Form>

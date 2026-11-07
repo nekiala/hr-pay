@@ -5,39 +5,42 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
+import { LanguageCard } from '../components/Language'
 import { RecoveryCodes, TwoStepSetupFlow } from '../components/TwoStep'
 import ChangePasswordPage from './ChangePasswordPage'
+import { locale, plural, t } from '../i18n'
 
-const when = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+const when = (iso: string) => new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
 
 /** A browser's name from its user agent, enough to recognise it. */
 function browser(agent: string | null) {
-  if (!agent) return 'Unknown browser'
-  const name = /Edg\//.test(agent) ? 'Edge' : /OPR\//.test(agent) ? 'Opera' : /Firefox\//.test(agent) ? 'Firefox'
-    : /Chrome\//.test(agent) ? 'Chrome' : /Safari\//.test(agent) ? 'Safari' : 'Browser'
-  const os = /Windows/.test(agent) ? 'Windows' : /Android/.test(agent) ? 'Android' : /iPhone|iPad/.test(agent) ? 'iPhone or iPad'
-    : /Mac OS X/.test(agent) ? 'Mac' : /Linux/.test(agent) ? 'Linux' : ''
-  return os ? `${name} on ${os}` : name
+  if (!agent) return t('Unknown browser')
+  const name = /Edg\//.test(agent) ? t('Edge') : /OPR\//.test(agent) ? t('Opera') : /Firefox\//.test(agent) ? t('Firefox')
+    : /Chrome\//.test(agent) ? t('Chrome') : /Safari\//.test(agent) ? t('Safari') : t('Browser')
+  const os = /Windows/.test(agent) ? t('Windows') : /Android/.test(agent) ? t('Android') : /iPhone|iPad/.test(agent) ? t('iPhone or iPad')
+    : /Mac OS X/.test(agent) ? t('Mac') : /Linux/.test(agent) ? t('Linux') : ''
+  return os ? t('{a} on {b}', { a: name, b: os }) : name
 }
 
 const METHODS: Record<string, string> = { password: 'Password', google: 'Google', microsoft: 'Microsoft' }
-const method = (m: string) => m.split('+').map((p) => METHODS[p] ?? (p === 'totp' ? 'authenticator app' : p === 'code' ? 'emailed code' : p)).join(' + ')
+const method = (m: string) => m.split('+').map((p) => METHODS[p] ?? (p === 'totp' ? t('authenticator app') : p === 'code' ? t('emailed code') : p)).join(' + ')
 
 export default function AccountPage() {
   const { me } = useAuth()
   if (!me) return null
   return (
     <section>
-      <h2>My account</h2>
+      <h2>{t('My account')}</h2>
       <p className="muted">{me.firstName} {me.lastName} · {me.email} · {me.roles.join(', ')}</p>
       {me.support
-        ? <p className="notice">You are on a support visit: your own account settings are in your own company.</p>
+        ? <p className="notice">{t('You are on a support visit: your own account settings are in your own company.')}</p>
         : (
           <>
             <div className="cards2">
               <ChangePasswordPage />
               <TwoStepCard />
             </div>
+            <LanguageCard me={me} />
             <SessionsCard />
             <MyDataCard />
           </>
@@ -57,9 +60,9 @@ function TwoStepCard() {
   useEffect(() => { void load() }, [])
 
   const renew = () => ask({
-    title: 'New recovery codes', confirmLabel: 'Make new codes',
-    message: 'The codes you have now stop working.',
-    fields: [{ label: 'Your password', type: 'password', required: true }],
+    title: t('New recovery codes'), confirmLabel: t('Make new codes'),
+    message: t('The codes you have now stop working.'),
+    fields: [{ label: t('Your password'), type: 'password', required: true }],
     onConfirm: async ([password]) => {
       const r = await api<{ recoveryCodes: string[] }>('/api/account/two-step/recovery-codes', { method: 'POST', body: { password } })
       setCodes(r.recoveryCodes)
@@ -68,54 +71,52 @@ function TwoStepCard() {
   })
 
   const turnOff = () => ask({
-    title: 'Turn off the second step?', confirmLabel: 'Turn off', danger: true,
-    message: 'Your password alone will then open your account.',
-    fields: [{ label: 'Your password', type: 'password', required: true }],
+    title: t('Turn off the second step?'), confirmLabel: t('Turn off'), danger: true,
+    message: t('Your password alone will then open your account.'),
+    fields: [{ label: t('Your password'), type: 'password', required: true }],
     onConfirm: async ([password]) => {
       await api('/api/account/two-step/off', { method: 'POST', body: { password } })
       await load()
     },
   })
 
-  if (!status) return <div className="card"><h3>Second step</h3><ErrorText error={error} /></div>
-  const label = status.method === 'TOTP' ? 'Authenticator app' : 'Code by email'
+  if (!status) return <div className="card"><h3>{t('Second step')}</h3><ErrorText error={error} /></div>
+  const label = status.method === 'TOTP' ? t('Authenticator app') : t('Code by email')
 
   return (
     <div className="card">
       <div className="row between">
-        <h3>Second step at sign-in</h3>
-        {status.enabled ? <span className="badge ok">On</span> : <span className={`badge ${status.required ? 'warn' : ''}`}>Off</span>}
+        <h3>{t('Second step at sign-in')}</h3>
+        {status.enabled ? <span className="badge ok">{t('On')}</span> : <span className={`badge ${status.required ? 'warn' : ''}`}>{t('Off')}</span>}
       </div>
       {status.enabled ? (
         <>
-          <p>{label}, since {longDay(status.confirmedAt!.slice(0, 10))}.</p>
+          <p>{label}{t(', since')}{' '}{longDay(status.confirmedAt!.slice(0, 10))}.</p>
           <p className={status.recoveryCodesLeft <= 2 ? 'notice' : 'muted'}>
-            {status.recoveryCodesLeft} recovery code{status.recoveryCodesLeft === 1 ? '' : 's'} left.
-          </p>
-          {status.required && <p className="hint">Your role requires it: you can change the method but not turn it off.</p>}
+            {plural('{n} recovery code left.', '{n} recovery codes left.', status.recoveryCodesLeft)}</p>
+          {status.required && <p className="hint">{t('Your role requires it: you can change the method but not turn it off.')}</p>}
           <div className="row">
-            <Button className="secondary" onClick={() => setSetting(true)}>Change method or phone</Button>
-            <Button className="secondary" onClick={renew}>New recovery codes</Button>
-            {!status.required && <Button className="danger" onClick={turnOff}>Turn off</Button>}
+            <Button className="secondary" onClick={() => setSetting(true)}>{t('Change method or phone')}</Button>
+            <Button className="secondary" onClick={renew}>{t('New recovery codes')}</Button>
+            {!status.required && <Button className="danger" onClick={turnOff}>{t('Turn off')}</Button>}
           </div>
         </>
       ) : (
         <>
-          <p className="muted">After your password, ask for a six-digit code from your phone. Someone who learns your password
-            still cannot sign in.</p>
-          <Button onClick={() => setSetting(true)}>Turn on</Button>
+          <p className="muted">{t('After your password, ask for a six-digit code from your phone. Someone who learns your password still cannot sign in.')}</p>
+          <Button onClick={() => setSetting(true)}>{t('Turn on')}</Button>
         </>
       )}
       <ErrorText error={error} />
       {setting && (
-        <Modal title="Second step" size="sm" onClose={() => setSetting(false)}>
+        <Modal title={t('Second step')} size="sm" onClose={() => setSetting(false)}>
           <TwoStepSetupFlow codesAvailable={status.codesAvailable}
             onDone={(c) => { setSetting(false); setCodes(c); void load() }} onCancel={() => setSetting(false)} />
         </Modal>
       )}
       {codes && (
-        <Modal title="Recovery codes" size="sm" onClose={() => setCodes(null)}>
-          <RecoveryCodes codes={codes} onContinue={() => setCodes(null)} continueLabel="Done" />
+        <Modal title={t('Recovery codes')} size="sm" onClose={() => setCodes(null)}>
+          <RecoveryCodes codes={codes} onContinue={() => setCodes(null)} continueLabel={t('Done')} />
         </Modal>
       )}
     </div>
@@ -133,35 +134,35 @@ function SessionsCard() {
   return (
     <div className="card">
       <div className="row between">
-        <h3>Where you are signed in</h3>
+        <h3>{t('Where you are signed in')}</h3>
         {others.length > 0 && (
           <Button className="secondary" onClick={() => ask({
-            title: 'Sign out everywhere else?', confirmLabel: 'Sign out the others',
-            message: `${others.length} other browser${others.length === 1 ? '' : 's'} will have to sign in again.`,
+            title: t('Sign out everywhere else?'), confirmLabel: t('Sign out the others'),
+            message: plural('{n} other browser will have to sign in again.', '{n} other browsers will have to sign in again.', others.length),
             onConfirm: async () => { await api('/api/account/sessions/end-others', { method: 'POST' }); await load() },
-          })}>Sign out everywhere else</Button>
+          })}>{t('Sign out everywhere else')}</Button>
         )}
       </div>
       <ul className="session-list">
         {sessions.map((s) => (
           <li key={s.id}>
             <div>
-              <strong>{browser(s.userAgent)}</strong>{s.current && <span className="badge ok" style={{ marginLeft: 8 }}>This browser</span>}
+              <strong>{browser(s.userAgent)}</strong>{s.current && <span className="badge ok" style={{ marginLeft: 8 }}>{t('This browser')}</span>}
               <div className="muted small">
-                {method(s.method)} · signed in {when(s.signedInAt)} · last active {when(s.lastSeenAt)}{s.ip ? ` · ${s.ip}` : ''}
+                {method(s.method)}{' '}{t('· signed in')}{' '}{when(s.signedInAt)}{' '}{t('· last active')}{' '}{when(s.lastSeenAt)}{s.ip ? ` · ${s.ip}` : ''}
               </div>
             </div>
             {!s.current && (
               <Button className="secondary" onClick={async () => {
                 setError(null)
                 try { await api(`/api/account/sessions/${s.id}`, { method: 'DELETE' }); await load() } catch (e) { setError((e as Error).message) }
-              }}>Sign out</Button>
+              }}>{t('Sign out')}</Button>
             )}
           </li>
         ))}
       </ul>
-      {sessions.length === 0 && <p className="muted">Only this browser.</p>}
-      <p className="hint">Not you? Sign the browser out, then change your password.</p>
+      {sessions.length === 0 && <p className="muted">{t('Only this browser.')}</p>}
+      <p className="hint">{t('Not you? Sign the browser out, then change your password.')}</p>
       <ErrorText error={error} />
     </div>
   )
@@ -194,20 +195,19 @@ function MyDataCard() {
   return (
     <div className="card">
       <div className="row between">
-        <h3>Your data</h3>
+        <h3>{t('Your data')}</h3>
         <div className="row">
           <Button className="secondary" onClick={async () => {
             setError(null)
             try { await download('/api/account/data-export', 'my-data.json') } catch (e) { setError((e as Error).message) }
-          }} pendingText="Preparing…">Download my data</Button>
-          <Button className="secondary" onClick={() => setAsking(true)}>Ask for a correction</Button>
+          }} pendingText={t('Preparing…')}>{t('Download my data')}</Button>
+          <Button className="secondary" onClick={() => setAsking(true)}>{t('Ask for a correction')}</Button>
         </div>
       </div>
-      <p className="muted">The download holds everything HR Pay keeps about you: your file, contracts, salaries, attendance, leave,
-        payslips, evaluations and the audit entries about you. Ask HR to correct anything wrong. For a check-in, use Corrections.</p>
+      <p className="muted">{t('The download holds everything HR Pay keeps about you: your file, contracts, salaries, attendance, leave, payslips, evaluations and the audit entries about you. Ask HR to correct anything wrong. For a check-in, use Corrections.')}</p>
       {requests.length > 0 && (
         <table>
-          <thead><tr><th>Asked</th><th>What</th><th>Correct value</th><th>Status</th><th>Answer</th></tr></thead>
+          <thead><tr><th>{t('Asked')}</th><th>{t('What')}</th><th>{t('Correct value')}</th><th>{t('Status')}</th><th>{t('Answer')}</th></tr></thead>
           <tbody>
             {requests.map((r) => (
               <tr key={r.id}>
@@ -215,7 +215,7 @@ function MyDataCard() {
                 <td>{CORRECTION_FIELDS[r.field] ?? r.field}</td>
                 <td>{r.requested}</td>
                 <td><span className={`badge ${r.status === 'DONE' ? 'ok' : r.status === 'REFUSED' ? 'off' : 'warn'}`}>
-                  {r.status === 'OPEN' ? 'Waiting for HR' : r.status === 'DONE' ? 'Corrected' : 'Refused'}</span></td>
+                  {r.status === 'OPEN' ? t('Waiting for HR') : r.status === 'DONE' ? t('Corrected') : t('Refused')}</span></td>
                 <td>{r.answer ?? ''}</td>
               </tr>
             ))}
@@ -224,21 +224,20 @@ function MyDataCard() {
       )}
       <ErrorText error={error} />
       {asking && (
-        <Modal title="Ask HR for a correction" size="sm" onClose={() => setAsking(false)}>
+        <Modal title={t('Ask HR for a correction')} size="sm" onClose={() => setAsking(false)}>
           <Form onSubmit={submit}>
-            <label>What is wrong
-              <select value={field} onChange={(e) => setField(e.target.value)}>
+            <label>{t('What is wrong')}<select value={field} onChange={(e) => setField(e.target.value)}>
                 {Object.entries(CORRECTION_FIELDS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </label>
-            <label>What HR Pay shows now<input value={current} onChange={(e) => setCurrent(e.target.value)} maxLength={500} /></label>
-            <label>The correct value<input value={requested} onChange={(e) => setRequested(e.target.value)} required maxLength={500} /></label>
-            <label>Why (optional)<textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} /></label>
-            <p className="hint">HR may ask for a document (ID card, marriage or birth certificate).</p>
+            <label>{t('What HR Pay shows now')}<input value={current} onChange={(e) => setCurrent(e.target.value)} maxLength={500} /></label>
+            <label>{t('The correct value')}<input value={requested} onChange={(e) => setRequested(e.target.value)} required maxLength={500} /></label>
+            <label>{t('Why (optional)')}<textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={1000} /></label>
+            <p className="hint">{t('HR may ask for a document (ID card, marriage or birth certificate).')}</p>
             <ErrorText error={askError} />
             <div className="modal-foot">
-              <Button className="secondary" onClick={() => setAsking(false)}>Cancel</Button>
-              <Button type="submit">Send to HR</Button>
+              <Button className="secondary" onClick={() => setAsking(false)}>{t('Cancel')}</Button>
+              <Button type="submit">{t('Send to HR')}</Button>
             </div>
           </Form>
         </Modal>

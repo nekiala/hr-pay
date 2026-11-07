@@ -1,9 +1,12 @@
 package cd.hrpay.notify;
 
 import cd.hrpay.common.AppProperties;
+import cd.hrpay.i18n.Texts;
 import cd.hrpay.user.AppUser;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -39,14 +42,40 @@ public class NotificationService {
         this.whatsapp = RestClient.builder().baseUrl("https://graph.facebook.com/v21.0").build();
     }
 
+    /** What a code is for, as the person reads it. */
+    private static String purpose(String purpose) {
+        return switch (purpose) {
+            case "CHECK_IN" -> Texts.t("check-in");
+            case "SIGN_IN" -> Texts.t("sign-in");
+            case "TWO_STEP_SETUP" -> Texts.t("second step set-up");
+            default -> purpose.toLowerCase(Locale.ROOT).replace('_', '-');
+        };
+    }
+
     /** Sends the code by WhatsApp when configured, and always by email (the fallback the design asks for). */
     public List<Delivery> sendCode(AppUser user, String code, String purpose) {
-        String text = "Your HR Pay " + purpose + " code is " + code + ". It expires in 5 minutes.";
-        Delivery email = sendEmail(user, "HR Pay code: " + code, text);
+        String language = languageOf(user);
+        String text = Texts.in(language, () -> Texts.t("Your HR Pay %s code is %s. It expires in 5 minutes.", purpose(purpose), code));
+        Delivery email = sendEmail(user, Texts.in(language, () -> Texts.t("HR Pay code: %s", code)), text);
         if (settings != null && settings.whatsappEnabled()) {
-            return List.of(sendWhatsapp(user, code, text), email);
+            return List.of(sendWhatsapp(user, code, text, language), email);
         }
         return List.of(email);
+    }
+
+    /** The language a person reads: their own choice, else their company's. */
+    public String languageOf(AppUser user) {
+        if (user.getLanguage() != null) {
+            return user.getLanguage();
+        }
+        return jdbc.sql("select language from company where id = ?").param(user.getCompanyId())
+                .query(String.class).optional().orElse(Texts.FR);
+    }
+
+    /** An email written in the person's language: the subject and body are made with it in effect. */
+    public Delivery email(AppUser user, Supplier<String> subject, Supplier<String> body) {
+        String language = languageOf(user);
+        return sendEmail(user, Texts.in(language, subject), Texts.in(language, body));
     }
 
     public Delivery sendEmail(AppUser user, String subject, String body) {
@@ -72,7 +101,7 @@ public class NotificationService {
         }
     }
 
-    private Delivery sendWhatsapp(AppUser user, String code, String text) {
+    private Delivery sendWhatsapp(AppUser user, String code, String text, String language) {
         String to = user.getPhone().replace("+", "");
         Map<String, Object> payload = Map.of(
                 "messaging_product", "whatsapp",
@@ -80,7 +109,8 @@ public class NotificationService {
                 "type", "template",
                 "template", Map.of(
                         "name", settings.whatsappTemplate(),
-                        "language", Map.of("code", settings.whatsappLanguage()),
+                        // The template is approved by Meta in each language; French when the person reads French.
+                        "language", Map.of("code", Texts.FR.equals(language) ? "fr" : settings.whatsappLanguage()),
                         "components", List.of(
                                 Map.of("type", "body", "parameters", List.of(Map.of("type", "text", "text", code))),
                                 Map.of("type", "button", "sub_type", "url", "index", "0",

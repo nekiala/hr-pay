@@ -1,5 +1,7 @@
 package cd.hrpay.platform;
 
+import cd.hrpay.i18n.Texts;
+
 import cd.hrpay.tenancy.TenantContext;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -22,7 +24,7 @@ public class Entitlements {
 
     public record Current(long companyId, String companyName, Mode mode, String planCode, String planName,
                           Set<String> modules, Integer maxEmployees, int employees, boolean locked,
-                          String readOnly, List<Notice> notices) {
+                          String readOnly, List<Notice> notices, String country, String language, String localCurrency) {
         public boolean has(String module) {
             return modules.contains(module);
         }
@@ -59,10 +61,10 @@ public class Entitlements {
             return null;
         }
         record Row(String name, String planCode, String planName, Integer maxEmployees, String modules, String status,
-                   String suspendedReason) {}
+                   String suspendedReason, String countryCode, String language, String localCurrency) {}
         Row c = jdbc.sql("""
                 select c.name, c.plan_code, p.name as plan_name, p.max_employees, array_to_string(c.modules, ',') as modules,
-                       c.status, c.suspended_reason
+                       c.status, c.suspended_reason, c.country_code, c.language, c.local_currency
                 from company c join plan p on p.code = c.plan_code where c.id = current_company_id()""")
                 .query(Row.class).optional().orElse(null);
         if (c == null) {
@@ -88,24 +90,22 @@ public class Entitlements {
             }
             locked = status.locked();
             if (status.message() != null) {
-                notices.add(new Notice(locked ? "danger" : "warn", status.message()));
+                notices.add(new Notice(locked ? "danger" : "warn", Texts.translate(status.message())));
             }
         }
         String readOnly = !"SUSPENDED".equals(c.status()) ? null : "UNPAID".equals(c.suspendedReason())
-                ? "HR Pay is read-only: an invoice is unpaid past its grace period. Everything can still be read and exported; changes come back as soon as the payment is recorded."
-                : "HR Pay is read-only: the provider has suspended this company. Everything can still be read and exported.";
+                ? Texts.t("HR Pay is read-only: an invoice is unpaid past its grace period. Everything can still be read and exported; changes come back as soon as the payment is recorded.")
+                : Texts.t("HR Pay is read-only: the provider has suspended this company. Everything can still be read and exported.");
         if (mode == Mode.SAAS && !TenantContext.isProvider(companyId)) {
             billingNotices(companyId, readOnly != null, notices);
         }
         if (max != null && employees > max) {
             notices.add(new Notice("warn", mode == Mode.SAAS
-                    ? "%d active employees: your plan (%s) covers up to %d. Move to the next plan; nothing is blocked meanwhile."
-                            .formatted(employees, c.planName(), max)
-                    : "%d active employees: the licence covers up to %d. Ask your provider for a larger licence; nothing is blocked meanwhile."
-                            .formatted(employees, max)));
+                    ? Texts.t("%d active employees: your plan (%s) covers up to %d. Move to the next plan; nothing is blocked meanwhile.", employees, c.planName(), max)
+                    : Texts.t("%d active employees: the licence covers up to %d. Ask your provider for a larger licence; nothing is blocked meanwhile.", employees, max)));
         }
         return new Current(companyId, c.name(), mode, c.planCode(), c.planName(), modules, max, employees, locked,
-                readOnly, notices);
+                readOnly, notices, c.countryCode(), c.language(), c.localCurrency());
     }
 
     private void billingNotices(long companyId, boolean readOnly, List<Notice> notices) {
@@ -116,20 +116,18 @@ public class Entitlements {
         }
         var sub = s.subscription();
         if ("TRIAL".equals(sub.status()) && sub.trialEnds() != null && !sub.trialEnds().isAfter(today.plusDays(7))) {
-            notices.add(new Notice("warn", "The free trial ends on %s. The first invoice follows; see Billing."
-                    .formatted(cd.hrpay.billing.Billing.day(sub.trialEnds()))));
+            notices.add(new Notice("warn", Texts.t("The free trial ends on %s. The first invoice follows; see Billing.", cd.hrpay.billing.Billing.day(sub.trialEnds()))));
         }
         if (readOnly) {
             return;
         }
         for (var i : s.open()) {
             if (i.dueOn().isBefore(today)) {
-                String until = s.readOnlyFrom() == null ? "" : " HR Pay becomes read-only on %s if it is still unpaid."
-                        .formatted(cd.hrpay.billing.Billing.day(s.readOnlyFrom()));
-                notices.add(new Notice("danger", "Invoice %s (%s %s) was due on %s.%s".formatted(i.number(),
+                String until = s.readOnlyFrom() == null ? "" : Texts.t(" HR Pay becomes read-only on %s if it is still unpaid.", cd.hrpay.billing.Billing.day(s.readOnlyFrom()));
+                notices.add(new Notice("danger", Texts.t("Invoice %s (%s %s) was due on %s.%s", i.number(),
                         cd.hrpay.billing.Billing.amount(i.balance()), i.currency(), cd.hrpay.billing.Billing.day(i.dueOn()), until)));
             } else if (!i.dueOn().isAfter(today.plusDays(7))) {
-                notices.add(new Notice("warn", "Invoice %s (%s %s) is due on %s.".formatted(i.number(),
+                notices.add(new Notice("warn", Texts.t("Invoice %s (%s %s) is due on %s.", i.number(),
                         cd.hrpay.billing.Billing.amount(i.balance()), i.currency(), cd.hrpay.billing.Billing.day(i.dueOn()))));
             }
         }

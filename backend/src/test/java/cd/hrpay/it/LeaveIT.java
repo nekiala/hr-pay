@@ -50,7 +50,7 @@ class LeaveIT extends IntegrationTest {
                 .andExpect(jsonPath("$.balances[0].available").value(15.0));
         mvc.perform(get("/api/attendance/month").param("month", "2026-12").session(me))
                 .andExpect(jsonPath("$.days[6].status").value("LEAVE"))
-                .andExpect(jsonPath("$.days[6].leaveType").value("Annual leave"))
+                .andExpect(jsonPath("$.days[6].leaveType").value("Congé annuel"))
                 .andExpect(jsonPath("$.days[6].payableMinutes").value(480));
 
         MockHttpSession hr = login(HR);

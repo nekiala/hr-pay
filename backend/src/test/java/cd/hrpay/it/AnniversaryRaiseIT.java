@@ -60,7 +60,7 @@ class AnniversaryRaiseIT extends IntegrationTest {
 
         int listed = raises.sendSummary();
         assertThat(listed).isGreaterThanOrEqualTo(1);
-        assertThat(jdbc.sql("select count(*) from outbox_message where recipient = 'hr@demo.hrpay.cd' and subject like '%anniversary raise%'")
+        assertThat(jdbc.sql("select count(*) from outbox_message where recipient = 'hr@demo.hrpay.cd' and subject like '%augmentation(s) d''ancienneté%'")
                 .query(Integer.class).single()).isPositive();
         assertThat(raises.sendSummary()).isZero();
         jdbc.sql("update payroll_setting set value = '2026-11-01' where key = 'RAISES_FROM'").update();

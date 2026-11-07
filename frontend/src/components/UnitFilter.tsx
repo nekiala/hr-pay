@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import type { OrgUnit } from '../org'
 import { UnitSelect } from './OrgCard'
+import { t } from '../i18n'
 
 export type MyPerson = { userId: number; name: string; registrationNo: string; unitId: number }
 
@@ -54,7 +55,7 @@ export function useUnitFilter() {
   const unitName = (userId: number) => units.find((u) => u.id === unitOf[String(userId)])?.name ?? ''
 
   const select = offered.length > 1
-    ? <UnitSelect units={offered} value={unit} onChange={setUnit} placeholder="All units" />
+    ? <UnitSelect units={offered} value={unit} onChange={setUnit} placeholder={t('All units')} />
     : null
   return { select, keep, unitName, unit, people }
 }

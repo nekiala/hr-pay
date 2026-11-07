@@ -37,7 +37,7 @@ class OpsIT extends IntegrationTest {
     }
 
     int alertEmails() {
-        return jdbc.sql("select count(*) from outbox_message where subject like 'HR Pay alert:%'").query(Integer.class).single();
+        return jdbc.sql("select count(*) from outbox_message where subject like 'Alerte HR Pay :%'").query(Integer.class).single();
     }
 
     @Test

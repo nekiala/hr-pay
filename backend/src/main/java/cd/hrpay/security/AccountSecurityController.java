@@ -28,6 +28,9 @@ public class AccountSecurityController {
 
     public record Ended(int count) {}
 
+    /** null: follow the company's language. */
+    public record LanguageInput(@jakarta.validation.constraints.Pattern(regexp = "fr|en") String language) {}
+
     /** How people of the company may sign in besides a password. */
     public record SignInSettings(String microsoftTenant, boolean microsoftAvailable, boolean googleAvailable) {}
 
@@ -69,6 +72,33 @@ public class AccountSecurityController {
         if (user.getPasswordHash() != null && !encoder.matches(password, user.getPasswordHash())) {
             throw new BusinessRuleException("The password is not correct.");
         }
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/api/account/language")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void language(@Valid @RequestBody LanguageInput body) {
+        AppUser user = me();
+        user.setLanguage(body.language());
+    }
+
+    @GetMapping("/api/company/language")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public LanguageInput companyLanguage() {
+        return new LanguageInput(jdbc.sql("select language from company where id = current_company_id()").query(String.class).single());
+    }
+
+    /** The company's language: the default for its people, and the language of its payslips, declarations and letters. */
+    @org.springframework.web.bind.annotation.PutMapping("/api/company/language")
+    @PreAuthorize("hasAuthority('company.manage')")
+    @Transactional
+    public LanguageInput setCompanyLanguage(@Valid @RequestBody LanguageInput body) {
+        if (body.language() == null) {
+            throw new BusinessRuleException("Choose French or English.");
+        }
+        jdbc.sql("update company set language = ? where id = current_company_id()").param(body.language()).update();
+        audit.record("company.language_set", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("language", body.language()));
+        return companyLanguage();
     }
 
     @GetMapping("/api/account/two-step")

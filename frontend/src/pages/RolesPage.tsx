@@ -6,6 +6,7 @@ import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { SignInCard } from '../components/SignInCard'
+import { t } from '../i18n'
 
 export default function RolesPage() {
   const ask = useAsk()
@@ -69,16 +70,16 @@ export default function RolesPage() {
       })
       await load(role.id)
       await refresh()
-      setMessage('Saved. The change applies to signed-in users on their next action.')
+      setMessage(t('Saved. The change applies to signed-in users on their next action.'))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save.')
+      setError(e instanceof Error ? e.message : t('Could not save.'))
     }
   }
 
   const remove = () => {
     if (!role) return
     ask({
-      title: `Delete the role ${role.name}?`, message: 'People who have it lose its permissions.', confirmLabel: 'Delete role', danger: true,
+      title: t('Delete the role {a}?', { a: role.name }), message: t('People who have it lose its permissions.'), confirmLabel: t('Delete role'), danger: true,
       onConfirm: async () => { await api(`/api/roles/${role.id}`, { method: 'DELETE' }); await load() },
     })
   }
@@ -96,21 +97,21 @@ export default function RolesPage() {
       setCreating(false)
       await load(created.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create the role.')
+      setError(err instanceof Error ? err.message : t('Could not create the role.'))
     }
   }
 
   return (
     <section>
-      <h2>Roles and permissions</h2>
+      <h2>{t('Roles and permissions')}</h2>
       {creating && (
-        <Modal title="New role" size="sm" onClose={() => setCreating(false)}>
+        <Modal title={t('New role')} size="sm" onClose={() => setCreating(false)}>
           <Form onSubmit={create}>
-            <label>Code<input placeholder="e.g. SITE_MANAGER" value={newCode} onChange={(e) => setNewCode(e.target.value)} required /></label>
-            <label>Name<input value={newName} onChange={(e) => setNewName(e.target.value)} required /></label>
-            <p className="hint">The role starts with no permissions; tick them after creating it.</p>
+            <label>{t('Code')}<input placeholder={t('e.g. SITE_MANAGER')} value={newCode} onChange={(e) => setNewCode(e.target.value)} required /></label>
+            <label>{t('Name')}<input value={newName} onChange={(e) => setNewName(e.target.value)} required /></label>
+            <p className="hint">{t('The role starts with no permissions; tick them after creating it.')}</p>
             <ErrorText error={error} />
-            <div className="modal-foot"><Button className="secondary" onClick={() => setCreating(false)}>Cancel</Button><Button type="submit">Create role</Button></div>
+            <div className="modal-foot"><Button className="secondary" onClick={() => setCreating(false)}>{t('Cancel')}</Button><Button type="submit">{t('Create role')}</Button></div>
           </Form>
         </Modal>
       )}
@@ -119,10 +120,10 @@ export default function RolesPage() {
           {roles.map((r) => (
             <Button key={r.id} className={`list-item ${r.id === selected ? 'active' : ''}`} onClick={() => choose(r)}>
               {r.name}
-              <span className="muted small">{r.permissions.length} permissions{r.systemRole ? ' · built-in' : ''}{r.twoStepRequired ? ' · second step' : ''}</span>
+              <span className="muted small">{r.permissions.length}{' '}{t('permissions')}{r.systemRole ? t(' · built-in') : ''}{r.twoStepRequired ? t(' · second step') : ''}</span>
             </Button>
           ))}
-          {editable && <Button className="secondary" onClick={() => { setError(null); setCreating(true) }}>New role</Button>}
+          {editable && <Button className="secondary" onClick={() => { setError(null); setCreating(true) }}>{t('New role')}</Button>}
         </aside>
         {role && (
           <div className="card grow">
@@ -133,9 +134,8 @@ export default function RolesPage() {
             {role.description && <p className="muted">{role.description}</p>}
             <label className="check">
               <input type="checkbox" checked={twoStep} disabled={!editable} onChange={(e) => setTwoStep(e.target.checked)} />
-              <span><strong>Second step required at sign-in</strong>
-                <span className="hint"> Members must use an authenticator app or an emailed code after their password. Recommended for
-                  anyone who sees pay or personal data.</span></span>
+              <span><strong>{t('Second step required at sign-in')}</strong>
+                <span className="hint">{' '}{t('Members must use an authenticator app or an emailed code after their password. Recommended for anyone who sees pay or personal data.')}</span></span>
             </label>
             {byCategory.map(([category, perms]) => (
               <fieldset key={category}>
@@ -152,8 +152,8 @@ export default function RolesPage() {
             {message && <p className="success">{message}</p>}
             {editable && (
               <div className="row">
-                <Button onClick={() => save()}>Save role</Button>
-                {!role.systemRole && <Button className="danger" onClick={() => remove()}>Delete role</Button>}
+                <Button onClick={() => save()}>{t('Save role')}</Button>
+                {!role.systemRole && <Button className="danger" onClick={() => remove()}>{t('Delete role')}</Button>}
               </div>
             )}
           </div>

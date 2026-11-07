@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { api, type Me, type TwoStepNeeded } from './api'
+import { language, setLanguage, t } from './i18n'
 
 type AuthState = {
   me: Me | null
@@ -13,6 +14,15 @@ type AuthState = {
   signOut: () => Promise<void>
 }
 
+/** Shows the app in the person's language: a change reloads the page, so every text is read again. */
+function follow(m: Me | null): Me | null {
+  if (m && m.language !== language()) {
+    setLanguage(m.language)
+    window.location.reload()
+  }
+  return m
+}
+
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -21,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      setMe(await api<Me>('/api/auth/me'))
+      setMe(follow(await api<Me>('/api/auth/me')))
     } catch {
       setMe(null)
     } finally {
@@ -39,11 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const result = await api<Me | TwoStepNeeded>('/api/auth/login', { method: 'POST', body: { email, password } })
     if ('setup' in result) return result
-    setMe(result)
+    setMe(follow(result))
     return null
   }
 
-  const signedIn = (m: Me) => setMe(m)
+  const signedIn = (m: Me) => setMe(follow(m))
 
   const signOut = async () => {
     await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
@@ -59,6 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth outside AuthProvider')
+  if (!ctx) throw new Error(t('useAuth outside AuthProvider'))
   return ctx
 }

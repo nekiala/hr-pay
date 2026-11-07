@@ -3,6 +3,7 @@ import { ApiError, api, hours, WEEKDAYS, type Schedule, type ScheduleDay } from 
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
+import { t } from '../i18n'
 
 type Draft = Omit<Schedule, 'id' | 'weeklyMinutes'> & { id?: number }
 
@@ -14,7 +15,7 @@ const blank = (): Draft => ({
   })),
 })
 
-const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
+const hhmm = (tItem: string | null) => (tItem ? tItem.slice(0, 5) : '')
 
 export default function SchedulesPage() {
   const { can } = useAuth()
@@ -40,30 +41,30 @@ export default function SchedulesPage() {
       const saved = await api<Schedule>(draft.id ? `/api/schedules/${draft.id}` : '/api/schedules',
         { method: draft.id ? 'PUT' : 'POST', body })
       setDraft(saved)
-      setMessage(`Saved. ${hours(saved.weeklyMinutes)} per week.`)
+      setMessage(t('Saved. {a} per week.', { a: hours(saved.weeklyMinutes) }))
       await load()
     } catch (e) {
-      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Could not save.')
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Could not save.'))
     }
   }
 
   return (
     <section>
       <div className="row between">
-        <h2>Work schedules</h2>
-        {editable && <Button onClick={() => { setDraft(blank()); setMessage(null) }}>New schedule</Button>}
+        <h2>{t('Work schedules')}</h2>
+        {editable && <Button onClick={() => { setDraft(blank()); setMessage(null) }}>{t('New schedule')}</Button>}
       </div>
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Name</th><th>Code</th><th>Hours per week</th><th>Grace</th><th>Status</th></tr></thead>
+          <thead><tr><th>{t('Name')}</th><th>{t('Code')}</th><th>{t('Hours per week')}</th><th>{t('Grace')}</th><th>{t('Status')}</th></tr></thead>
           <tbody>
             {schedules.map((s) => (
               <tr key={s.id}>
                 <td><Button className="link" onClick={() => { setDraft(s); setMessage(null) }}>{s.name}</Button></td>
                 <td>{s.code}</td>
                 <td>{hours(s.weeklyMinutes)}</td>
-                <td>{s.graceMinutes} min</td>
-                <td><span className={`badge ${s.active ? 'ok' : 'off'}`}>{s.active ? 'Active' : 'Inactive'}</span></td>
+                <td>{s.graceMinutes}{' '}{t('min')}</td>
+                <td><span className={`badge ${s.active ? 'ok' : 'off'}`}>{s.active ? t('Active') : t('Inactive')}</span></td>
               </tr>
             ))}
           </tbody>
@@ -74,20 +75,20 @@ export default function SchedulesPage() {
         <div className="card" style={{ marginTop: 16 }}>
           <fieldset disabled={!editable}>
             <div className="grid3">
-              <label>Code<input value={draft.code} disabled={!!draft.id} onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} /></label>
-              <label>Name<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-              <label>Grace period (min)<input type="number" min={0} max={120} value={draft.graceMinutes}
+              <label>{t('Code')}<input value={draft.code} disabled={!!draft.id} onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase() })} /></label>
+              <label>{t('Name')}<input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+              <label>{t('Grace period (min)')}<input type="number" min={0} max={120} value={draft.graceMinutes}
                 onChange={(e) => setDraft({ ...draft, graceMinutes: Number(e.target.value) })} /></label>
             </div>
             <label className="check"><input type="checkbox" checked={draft.deductLateArrival}
-              onChange={(e) => setDraft({ ...draft, deductLateArrival: e.target.checked })} />Deduct late arrival beyond the grace period</label>
+              onChange={(e) => setDraft({ ...draft, deductLateArrival: e.target.checked })} />{t('Deduct late arrival beyond the grace period')}</label>
             <label className="check"><input type="checkbox" checked={draft.deductEarlyDeparture}
-              onChange={(e) => setDraft({ ...draft, deductEarlyDeparture: e.target.checked })} />Deduct early departure</label>
+              onChange={(e) => setDraft({ ...draft, deductEarlyDeparture: e.target.checked })} />{t('Deduct early departure')}</label>
             <label className="check"><input type="checkbox" checked={draft.active}
-              onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />Active</label>
+              onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('Active')}</label>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Day</th><th>Workday</th><th>Start</th><th>End</th><th>Lunch</th><th>Lunch start</th><th>Minutes</th><th>Paid lunch</th></tr></thead>
+                <thead><tr><th>{t('Day')}</th><th>{t('Workday')}</th><th>{t('Start')}</th><th>{t('End')}</th><th>{t('Lunch')}</th><th>{t('Lunch start')}</th><th>{t('Minutes')}</th><th>{t('Paid lunch')}</th></tr></thead>
                 <tbody>
                   {draft.days.map((d, i) => (
                     <tr key={d.weekday}>
@@ -110,8 +111,8 @@ export default function SchedulesPage() {
           </fieldset>
           <ErrorText error={error} />
           {message && <p className="success">{message}</p>}
-          {editable && <div className="row" style={{ marginTop: 12 }}><Button onClick={() => save()}>Save schedule</Button>
-            <Button className="secondary" onClick={() => setDraft(null)}>Close</Button></div>}
+          {editable && <div className="row" style={{ marginTop: 12 }}><Button onClick={() => save()}>{t('Save schedule')}</Button>
+            <Button className="secondary" onClick={() => setDraft(null)}>{t('Close')}</Button></div>}
         </div>
       )}
     </section>

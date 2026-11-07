@@ -2,6 +2,7 @@ import {
   createContext, isValidElement, useContext, useRef, useState,
   type ButtonHTMLAttributes, type FormEvent, type FormHTMLAttributes, type MouseEvent, type ReactNode,
 } from 'react'
+import { t } from '../i18n'
 
 /** Says what is happening while a button waits, from its label: "Save" becomes "Saving…". */
 const VERBS: Record<string, string> = {
@@ -10,9 +11,9 @@ const VERBS: Record<string, string> = {
   deactivate: 'Deactivating', delete: 'Deleting', disable: 'Disabling', enable: 'Enabling', end: 'Ending', enter: 'Saving',
   generate: 'Generating', grant: 'Granting', import: 'Importing', install: 'Installing', move: 'Moving', propose: 'Sending', record: 'Recording',
   refresh: 'Refreshing', refuse: 'Refusing', register: 'Registering', reject: 'Rejecting', remove: 'Removing',
-  reopen: 'Reopening', save: 'Saving', send: 'Sending', set: 'Saving', sign: 'Signing in', skip: 'Saving',
-  start: 'Starting', submit: 'Sending', void: 'Voiding', work: 'Working it out', accept: 'Accepting', acknowledge: 'Sending',
-  contest: 'Sending', mark: 'Saving', recalculate: 'Calculating', return: 'Sending back', send_back: 'Sending back',
+  reopen: 'Reopening', save: 'Saving', send: 'Sending', set: 'Saving', sign: t('Signing in'), skip: 'Saving',
+  start: 'Starting', submit: 'Sending', void: 'Voiding', work: t('Working it out'), accept: 'Accepting', acknowledge: 'Sending',
+  contest: 'Sending', mark: 'Saving', recalculate: 'Calculating', return: t('Sending back'), send_back: t('Sending back'),
 }
 
 function text(node: ReactNode): string {
@@ -26,7 +27,7 @@ function text(node: ReactNode): string {
 export function pendingLabel(label: ReactNode): string {
   const first = text(label).trim().split(/\s+/)[0]?.toLowerCase() ?? ''
   const verb = VERBS[first]
-  return verb ? `${verb}…` : 'Please wait…'
+  return verb ? `${verb}…` : t('Please wait…')
 }
 
 export function Spinner({ className = '' }: { className?: string }) {

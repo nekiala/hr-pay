@@ -5,6 +5,7 @@ import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { InvoiceTable } from '../components/Invoices'
 import { Button, Form } from '../components/Button'
+import { t, locale } from '../i18n'
 
 type View = {
   billed: boolean
@@ -20,7 +21,7 @@ type View = {
   supportRequests: SupportRequest[]
 }
 
-const STATUS = { TRIAL: ['Free trial', 'warn'], ACTIVE: ['Active', 'ok'], CANCELLED: ['Cancelled', 'off'] } as const
+const STATUS = { TRIAL: [t('Free trial'), 'warn'], ACTIVE: [t('Active'), 'ok'], CANCELLED: [t('Cancelled'), 'off'] } as const
 
 /** The company's subscription, invoices and payments, and the provider's support access it controls. */
 export default function BillingPage() {
@@ -38,7 +39,7 @@ export default function BillingPage() {
       setView(v)
       if (v.subscription) { setCycle(v.subscription.cycle); setCurrency(v.subscription.currency) }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not load the billing.')
+      setError(e instanceof Error ? e.message : t('Could not load the billing.'))
     }
   }
   useEffect(() => { void load() }, [])
@@ -48,10 +49,10 @@ export default function BillingPage() {
     setError(null); setMessage(null)
     try {
       await api('/api/billing/subscription', { method: 'PUT', body: { cycle, currency } })
-      setMessage('Saved: the next invoice follows this choice.')
+      setMessage(t('Saved: the next invoice follows this choice.'))
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save.')
+      setError(err instanceof Error ? err.message : t('Could not save.'))
     }
   }
 
@@ -62,14 +63,14 @@ export default function BillingPage() {
   const price = view?.price
   return (
     <section>
-      <h2>Billing</h2>
+      <h2>{t('Billing')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {me?.company?.readOnly && <p className="error">{me.company.readOnly}</p>}
       {view && !view.billed && (
         <p className="muted">{view.mode === 'ON_PREMISE'
-          ? 'This installation runs under a licence from your provider: there are no invoices here.'
-          : 'Your company is not billed on this installation.'}</p>
+          ? t('This installation runs under a licence from your provider: there are no invoices here.')
+          : t('Your company is not billed on this installation.')}</p>
       )}
       {view && s && (
         <div className="cards2">
@@ -79,50 +80,48 @@ export default function BillingPage() {
               <span className={`badge ${STATUS[status ?? s.status][1]}`}>{STATUS[status ?? s.status][0]}</span>
             </div>
             <dl className="facts">
-              {status === 'TRIAL' && <><dt>Free trial until</dt><dd>{longDay(s.trialEnds)}</dd></>}
-              <dt>Next invoice</dt><dd>{s.nextInvoiceOn ? longDay(s.nextInvoiceOn) : 'None'}</dd>
-              {price && <><dt>Price</dt><dd>USD {amount(price.monthlyPrice)} a month, or USD {amount(price.yearlyPrice)} a year, before {view.howToPay.taxLabel} ({view.howToPay.taxRate}%)</dd></>}
+              {status === 'TRIAL' && <><dt>{t('Free trial until')}</dt><dd>{longDay(s.trialEnds)}</dd></>}
+              <dt>{t('Next invoice')}</dt><dd>{s.nextInvoiceOn ? longDay(s.nextInvoiceOn) : t('None')}</dd>
+              {price && <><dt>{t('Price')}</dt><dd>{t('USD')}{' '}{amount(price.monthlyPrice)}{' '}{t('a month, or USD')}{' '}{amount(price.yearlyPrice)}{' '}{t('a year, before')}{' '}{view.howToPay.taxLabel} ({view.howToPay.taxRate}%)</dd></>}
             </dl>
             {s.status !== 'CANCELLED' && (
               <Form onSubmit={choose}>
                 <div className="row">
-                  <label>Invoiced
-                    <select value={cycle} onChange={(e) => setCycle(e.target.value as 'MONTHLY' | 'YEARLY')}>
-                      <option value="MONTHLY">Every month</option>
-                      <option value="YEARLY">Every year</option>
+                  <label>{t('Invoiced')}<select value={cycle} onChange={(e) => setCycle(e.target.value as 'MONTHLY' | 'YEARLY')}>
+                      <option value="MONTHLY">{t('Every month')}</option>
+                      <option value="YEARLY">{t('Every year')}</option>
                     </select>
                   </label>
-                  <label>In
-                    <select value={currency} onChange={(e) => setCurrency(e.target.value as 'USD' | 'CDF')}>
-                      <option value="USD">US dollars</option>
-                      <option value="CDF">Congolese francs (BCC rate of the day)</option>
+                  <label>{t('In')}<select value={currency} onChange={(e) => setCurrency(e.target.value as 'USD' | 'CDF')}>
+                      <option value="USD">{t('US dollars')}</option>
+                      <option value="CDF">{t('Congolese francs (BCC rate of the day)')}</option>
                     </select>
                   </label>
-                  <Button type="submit" className="secondary" disabled={cycle === s.cycle && currency === s.currency}>Save</Button>
+                  <Button type="submit" className="secondary" disabled={cycle === s.cycle && currency === s.currency}>{t('Save')}</Button>
                 </div>
-                <p className="hint">Applies from the next invoice. The price in US dollars stays the same; in francs it is converted at the BCC rate of the invoice's day.</p>
+                <p className="hint">{t('Applies from the next invoice. The price in US dollars stays the same; in francs it is converted at the BCC rate of the invoice\'s day.')}</p>
               </Form>
             )}
           </div>
           <div className="card">
-            <h3>How to pay</h3>
-            <p className="hint">Give the invoice number as the reference. Each invoice is due {view.howToPay.paymentDays} days after it is issued. {view.howToPay.suspendAfterDays} days after that, an unpaid invoice makes HR Pay read-only until it is paid: nothing is lost, and everyone can still read and export.</p>
-            {view.howToPay.bankDetails && <><h4>Bank transfer</h4><p className="pre">{view.howToPay.bankDetails}</p></>}
-            {view.howToPay.mobileMoney && <><h4>Mobile money</h4><p className="pre">{view.howToPay.mobileMoney}</p></>}
-            {!view.howToPay.bankDetails && !view.howToPay.mobileMoney && <p className="muted">Your provider has not given payment details yet.</p>}
+            <h3>{t('How to pay')}</h3>
+            <p className="hint">{t('Give the invoice number as the reference. Each invoice is due')}{' '}{view.howToPay.paymentDays}{' '}{t('days after it is issued.')}{' '}{view.howToPay.suspendAfterDays}{' '}{t('days after that, an unpaid invoice makes HR Pay read-only until it is paid: nothing is lost, and everyone can still read and export.')}</p>
+            {view.howToPay.bankDetails && <><h4>{t('Bank transfer')}</h4><p className="pre">{view.howToPay.bankDetails}</p></>}
+            {view.howToPay.mobileMoney && <><h4>{t('Mobile money')}</h4><p className="pre">{view.howToPay.mobileMoney}</p></>}
+            {!view.howToPay.bankDetails && !view.howToPay.mobileMoney && <p className="muted">{t('Your provider has not given payment details yet.')}</p>}
           </div>
         </div>
       )}
       {view?.billed && (
         <div className="card">
-          <h3>Invoices</h3>
+          <h3>{t('Invoices')}</h3>
           <InvoiceTable invoices={view.invoices} pdf={(i) => `/api/billing/invoices/${i.id}.pdf`} />
           {view.payments.length > 0 && (
             <>
-              <h4>Payments received</h4>
+              <h4>{t('Payments received')}</h4>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Date</th><th>Invoice</th><th>Paid by</th><th>Reference</th><th className="num">Amount</th></tr></thead>
+                  <thead><tr><th>{t('Date')}</th><th>{t('Invoice')}</th><th>{t('Paid by')}</th><th>{t('Reference')}</th><th className="num">{t('Amount')}</th></tr></thead>
                   <tbody>
                     {view.payments.map((p) => (
                       <tr key={p.id}><td>{longDay(p.paidOn)}</td><td className="mono">{p.invoiceNumber}</td><td>{PAYMENT_METHODS[p.method]}</td>
@@ -138,32 +137,32 @@ export default function BillingPage() {
       {view && (
         <div className="card">
           <div className="row between">
-            <h3>Support access</h3>
-            {active ? <span className="badge warn">Open until {longDay(active.expiresAt)}</span> : <span className="badge">Closed</span>}
+            <h3>{t('Support access')}</h3>
+            {active ? <span className="badge warn">{t('Open until')}{' '}{longDay(active.expiresAt)}</span> : <span className="badge">{t('Closed')}</span>}
           </div>
-          <p className="hint">When you need help, let your provider's support team look at your company's data, read-only, for a few days. They cannot change anything. Every page they open is listed here, and you can close the access at any time.</p>
+          <p className="hint">{t('When you need help, let your provider\'s support team look at your company\'s data, read-only, for a few days. They cannot change anything. Every page they open is listed here, and you can close the access at any time.')}</p>
           {active ? (
             <Button className="secondary" onClick={() => ask({
-              title: 'Close support access?', message: 'The provider is signed out of your company at once.', confirmLabel: 'Close access', danger: true,
+              title: t('Close support access?'), message: t('The provider is signed out of your company at once.'), confirmLabel: t('Close access'), danger: true,
               onConfirm: async () => { await api(`/api/billing/support/${active.id}`, { method: 'DELETE' }); await load() },
-            })}>Close access</Button>
+            })}>{t('Close access')}</Button>
           ) : (
             <Button onClick={() => ask({
-              title: 'Open support access', confirmLabel: 'Grant access',
-              message: 'The provider can look at everything in your company, read-only, until the access ends or you close it.',
-              fields: [{ label: 'Days (1 to 14)', type: 'number', defaultValue: '3', required: true }, { label: 'What it is about', placeholder: 'Optional' }],
+              title: t('Open support access'), confirmLabel: t('Grant access'),
+              message: t('The provider can look at everything in your company, read-only, until the access ends or you close it.'),
+              fields: [{ label: t('Days (1 to 14)'), type: 'number', defaultValue: '3', required: true }, { label: t('What it is about'), placeholder: t('Optional') }],
               onConfirm: async ([days, reason]) => { await api('/api/billing/support', { method: 'POST', body: { days: Number(days), reason } }); await load(); await refresh() },
-            })}>Open support access</Button>
+            })}>{t('Open support access')}</Button>
           )}
           {view.supportRequests.length > 0 && (
             <>
-              <h4>What support opened</h4>
+              <h4>{t('What support opened')}</h4>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>When</th><th>Who</th><th>Page or action</th></tr></thead>
+                  <thead><tr><th>{t('When')}</th><th>{t('Who')}</th><th>{t('Page or action')}</th></tr></thead>
                   <tbody>
                     {view.supportRequests.map((r, n) => (
-                      <tr key={n}><td>{new Date(r.at).toLocaleString()}</td><td>{r.visitor}</td><td className="mono small">{r.method} {r.path}</td></tr>
+                      <tr key={n}><td>{new Date(r.at).toLocaleString(locale())}</td><td>{r.visitor}</td><td className="mono small">{r.method} {r.path}</td></tr>
                     ))}
                   </tbody>
                 </table>

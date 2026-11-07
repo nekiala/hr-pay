@@ -31,6 +31,20 @@ public class Company {
         this.audit = audit;
     }
 
+    /** The language the company's documents are written in (fr or en). */
+    public String language() {
+        return jdbc.sql("select language from company where id = current_company_id()").query(String.class).optional().orElse("fr");
+    }
+
+    /** The company's country (CD, CG) and its local currency (CDF, XAF). */
+    public String country() {
+        return jdbc.sql("select country_code from company where id = current_company_id()").query(String.class).optional().orElse("CD");
+    }
+
+    public String localCurrency() {
+        return jdbc.sql("select local_currency from company where id = current_company_id()").query(String.class).optional().orElse("CDF");
+    }
+
     public Details get() {
         return jdbc.sql("""
                 select name, address, cnss_number, tax_number, national_id, rccm, inpp_number, onem_number,

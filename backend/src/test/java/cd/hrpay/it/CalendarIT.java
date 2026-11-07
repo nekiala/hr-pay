@@ -66,7 +66,7 @@ class CalendarIT extends IntegrationTest {
         MockHttpSession hr = login(HR);
         String year = mvc.perform(get("/api/holidays").param("year", "2024").session(hr))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        Number id = JsonPath.<List<Number>>read(year, "$[?(@.name=='Independence Day')].id").getFirst();
+        Number id = JsonPath.<List<Number>>read(year, "$[?(@.name==\"Fête de l'indépendance\")].id").getFirst();
         // 30 June 2024 was a Sunday; suppose the government moved it to Monday 1 July.
         mvc.perform(json(put("/api/holidays/occurrences/" + id).session(hr),
                         "{\"observedDate\":\"2024-07-01\",\"announcementRef\":\"Communiqué 2024/06\"}"))

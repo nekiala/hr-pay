@@ -54,11 +54,12 @@ import LicencePage from './pages/LicencePage'
 import { useLocation } from 'react-router-dom'
 import { Shell } from './components/Shell'
 import type { ReactNode } from 'react'
+import { t } from './i18n'
 
 function Guard({ permission, children }: { permission?: string; children: ReactNode }) {
   const { can } = useAuth()
   if (permission && !can(permission)) {
-    return <p className="notice">You do not have permission to open this page.</p>
+    return <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return <>{children}</>
 }
@@ -67,24 +68,24 @@ function PayElementsRoute({ page }: { page?: 'rates' }) {
   const { can } = useAuth()
   return can('salary.read') || can('masterdata.manage')
     ? (page === 'rates' ? <StatutoryRatesPage /> : <PayElementsPage />)
-    : <p className="notice">You do not have permission to open this page.</p>
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
 function PayrollRoute({ page }: { page?: 'loans' }) {
   const { can } = useAuth()
   if (page === 'loans') {
-    return can('loan.manage') || can('payslip.read.all') ? <LoansPage /> : <p className="notice">You do not have permission to open this page.</p>
+    return can('loan.manage') || can('payslip.read.all') ? <LoansPage /> : <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return can('payroll.run') || can('payroll.approve') || can('payslip.read.all')
     ? <PayrollRunsPage />
-    : <p className="notice">You do not have permission to open this page.</p>
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
 function PaymentsRoute({ file }: { file?: boolean }) {
   const { can } = useAuth()
   return can('payroll.pay') || can('payslip.read.all')
     ? (file ? <PaymentFilePage /> : <PaymentsPage />)
-    : <p className="notice">You do not have permission to open this page.</p>
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
 /** After signing in, go back to where the user was heading (for example the check-in link from the QR code). */
@@ -99,7 +100,7 @@ export default function App() {
 
   // The kiosk screen needs no sign-in.
   if (location.pathname === '/kiosk') return <Routes><Route path="/kiosk" element={<KioskPage />} /></Routes>
-  if (loading) return <p className="center">Loading…</p>
+  if (loading) return <p className="center">{t('Loading…')}</p>
   if (!me) {
     return (
       <Routes>
@@ -166,7 +167,7 @@ export default function App() {
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<AfterLogin />} />
-          <Route path="*" element={<p className="notice">Page not found.</p>} />
+          <Route path="*" element={<p className="notice">{t('Page not found.')}</p>} />
         </Routes>
       <PrivacyGate />
     </Shell>

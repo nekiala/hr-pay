@@ -45,14 +45,16 @@ public class AuthController {
 
     public record CompanyInfo(long id, String name, String mode, String plan, Set<String> modules, Integer maxEmployees,
                               int employees, boolean locked, String readOnly,
-                              java.util.List<cd.hrpay.platform.Entitlements.Notice> notices) {}
+                              java.util.List<cd.hrpay.platform.Entitlements.Notice> notices, String country,
+                              String language, String localCurrency) {}
 
     /** A provider administrator looking at a company on a support visit. */
     public record SupportInfo(long companyId, String companyName, java.time.OffsetDateTime expiresAt) {}
 
+    /** language: the one the person sees the app in (theirs, else the company's); ownLanguage: theirs, or null. */
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
                      Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company,
-                     SupportInfo support) {
+                     SupportInfo support, String language, String ownLanguage) {
         static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c) {
             Set<String> permissions = new java.util.TreeSet<>();
             Authorities.of(u).forEach(a -> permissions.add(a.getAuthority()));
@@ -61,9 +63,12 @@ public class AuthController {
 
         static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c, Set<String> permissions, SupportInfo support) {
             CompanyInfo company = c == null ? null : new CompanyInfo(c.companyId(), c.companyName(), c.mode().name(),
-                    c.planName(), c.modules(), c.maxEmployees(), c.employees(), c.locked(), c.readOnly(), c.notices());
+                    c.planName(), c.modules(), c.maxEmployees(), c.employees(), c.locked(), c.readOnly(), c.notices(),
+                    c.country(), c.language(), c.localCurrency());
+            String language = u.getLanguage() != null ? u.getLanguage() : c == null ? "fr" : c.language();
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
-                    permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company, support);
+                    permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company, support, language,
+                    u.getLanguage());
         }
     }
 

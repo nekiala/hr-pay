@@ -6,11 +6,12 @@ import { ErrorText } from '../components/ErrorText'
 import { ThirteenthMonthCard } from '../components/ThirteenthMonthCard'
 import { useAsk } from '../components/Dialogs'
 import { Button } from '../components/Button'
+import { t, locale } from '../i18n'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
-const STATUS = { CALCULATED: 'Calculated, waiting for approval', APPROVED: 'Approved, ready to close', CLOSED: 'Closed' }
+const STATUS = { CALCULATED: t('Calculated, waiting for approval'), APPROVED: t('Approved, ready to close'), CLOSED: t('Closed') }
 type Raise = { id: number; userId: number; userName: string; anniversaryDate: string; years: number; effectiveFrom: string; gradeCode: string; percent: number; raiseAmount: number; oldBasic: number; newBasic: number; currency: string; notifiedAt: string | null }
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '')
+const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' }) : '')
 
 type HolidayAdjustment = { id: number; userId: number; userName: string; payslipId: number; closedMonth: string; amount: number; currency: string; targetMonth: string; note: string; createdBy: string }
 
@@ -45,7 +46,7 @@ export default function PayrollRunsPage() {
       await loadRuns()
       return true
     } catch (e) {
-      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.'))
       return false
     } finally {
       setBusy(false)
@@ -57,11 +58,11 @@ export default function PayrollRunsPage() {
   const byDirection = new Map<string, { name: string; currency: string; payslips: number; gross: number; deductions: number; net: number; employer: number }>()
   for (const p of view?.payslips ?? []) {
     const key = `${p.directionId ?? 0}|${p.currency}`
-    const t = byDirection.get(key) ?? { name: p.directionName ?? 'No unit', currency: p.currency, payslips: 0, gross: 0, deductions: 0, net: 0, employer: 0 }
-    t.payslips++; t.gross += p.gross; t.deductions += p.employeeDeductions; t.net += p.net; t.employer += p.employerCharges
-    byDirection.set(key, t)
+    const tItem = byDirection.get(key) ?? { name: p.directionName ?? t('No unit'), currency: p.currency, payslips: 0, gross: 0, deductions: 0, net: 0, employer: 0 }
+    tItem.payslips++; tItem.gross += p.gross; tItem.deductions += p.employeeDeductions; tItem.net += p.net; tItem.employer += p.employerCharges
+    byDirection.set(key, tItem)
   }
-  const directions = [...new Map((view?.payslips ?? []).map((p) => [String(p.directionId ?? 0), p.directionName ?? 'No unit'])).entries()]
+  const directions = [...new Map((view?.payslips ?? []).map((p) => [String(p.directionId ?? 0), p.directionName ?? t('No unit')])).entries()]
     .sort((a, b) => a[1].localeCompare(b[1]))
   const shown = (view?.payslips ?? []).filter((p) => !direction || String(p.directionId ?? 0) === direction)
   const warnings = view?.payslips.reduce((n, p) => n + p.warningCount, 0) ?? 0
@@ -69,16 +70,16 @@ export default function PayrollRunsPage() {
   const pending = adjustments.filter((a) => a.targetMonth.slice(0, 7) >= month)
   return (
     <section>
-      <h2>Payroll</h2>
+      <h2>{t('Payroll')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {pending.length > 0 && (
         <details className="card">
-          <summary>Holiday changes carried into a later payroll ({pending.length})</summary>
-          <p className="hint">A holiday moved inside a closed month changes that month's basic pay. The difference is added to the payroll shown; calculate it again to include it.</p>
+          <summary>{t('Holiday changes carried into a later payroll (')}{pending.length})</summary>
+          <p className="hint">{t('A holiday moved inside a closed month changes that month\'s basic pay. The difference is added to the payroll shown; calculate it again to include it.')}</p>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Employee</th><th>Closed month</th><th>Amount</th><th>Into</th><th>Why</th></tr></thead>
+              <thead><tr><th>{t('Employee')}</th><th>{t('Closed month')}</th><th>{t('Amount')}</th><th>{t('Into')}</th><th>{t('Why')}</th></tr></thead>
               <tbody>
                 {pending.map((a) => (
                   <tr key={a.id}><td>{a.userName}</td><td>{a.closedMonth}</td><td>{money(a.amount, a.currency)}</td>
@@ -92,49 +93,48 @@ export default function PayrollRunsPage() {
 
       <div className="card">
         <div className="row">
-          <label className="month-pick">Month <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} /></label>
+          <label className="month-pick">{t('Month')}{' '}<input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} /></label>
           {runs.length > 0 && (
-            <span className="muted">Recent: {runs.slice(0, 6).map((r) => (
+            <span className="muted">{t('Recent:')}{' '}{runs.slice(0, 6).map((r) => (
               <Button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({r.status.toLowerCase()})</Button>
             ))}</span>
           )}
         </div>
 
-        {!run && <p className="muted">No payroll for {month} yet.</p>}
+        {!run && <p className="muted">{t('No payroll for')}{' '}{month}{' '}{t('yet.')}</p>}
         {run && (
           <>
-            <p><strong>{STATUS[run.status]}</strong> · {run.employeeCount} payslips · $1 = {run.usdCdf} CDF (BCC, {run.rateDate})</p>
-            <p className="hint">
-              Calculated by {run.calculatedBy}, {when(run.calculatedAt)}
-              {run.approvedBy && ` · approved by ${run.approvedBy}, ${when(run.approvedAt)}`}
-              {run.closedBy && ` · closed by ${run.closedBy}, ${when(run.closedAt)}`}
+            <p><strong>{STATUS[run.status]}</strong> · {run.employeeCount}{' '}{t('payslips · $1 =')}{' '}{run.usdCdf}{' '}{t('CDF (BCC,')}{' '}{run.rateDate})</p>
+            <p className="hint">{t('Calculated by')}{' '}{run.calculatedBy}, {when(run.calculatedAt)}
+              {run.approvedBy && t(' · approved by {a}, {b}', { a: run.approvedBy, b: when(run.approvedAt) })}
+              {run.closedBy && t(' · closed by {a}, {b}', { a: run.closedBy, b: when(run.closedAt) })}
             </p>
-            {run.projected && <p className="notice">Calculated before the end of the month: the remaining working days are counted as worked. Calculate again once the month is over; it cannot be approved before.</p>}
+            {run.projected && <p className="notice">{t('Calculated before the end of the month: the remaining working days are counted as worked. Calculate again once the month is over; it cannot be approved before.')}</p>}
           </>
         )}
 
         <div className="row">
           {can('payroll.run') && (!run || run.status === 'CALCULATED') && (
-            <Button disabled={busy} onClick={() => act('calculate', 'Payroll calculated.')}>{run ? 'Calculate again' : `Calculate ${month}`}</Button>
+            <Button disabled={busy} onClick={() => act('calculate', t('Payroll calculated.'))}>{run ? t('Calculate again') : t('Calculate {a}', { a: month })}</Button>
           )}
           {can('payroll.approve') && run?.status === 'CALCULATED' && (
-            <Button disabled={busy} onClick={() => ask({ title: `Approve the ${month} payroll?`, message: 'HR can then close the month.', confirmLabel: 'Approve', onConfirm: () => act('approve', 'Payroll approved.') })}>Approve</Button>
+            <Button disabled={busy} onClick={() => ask({ title: t('Approve the {a} payroll?', { a: month }), message: t('HR can then close the month.'), confirmLabel: t('Approve'), onConfirm: () => act('approve', t('Payroll approved.')) })}>{t('Approve')}</Button>
           )}
           {(can('payroll.approve') || can('payroll.run')) && run?.status === 'APPROVED' && (
             <Button className="secondary" disabled={busy} onClick={() => ask({
-              title: `Send the ${month} payroll back`, confirmLabel: 'Send back', fields: [{ label: 'What needs changing?', required: true, multiline: true }],
-              onConfirm: ([reason]) => act('send-back', 'Sent back for changes.', { reason }),
-            })}>Send back</Button>
+              title: t('Send the {a} payroll back', { a: month }), confirmLabel: t('Send back'), fields: [{ label: t('What needs changing?'), required: true, multiline: true }],
+              onConfirm: ([reason]) => act('send-back', t('Sent back for changes.'), { reason }),
+            })}>{t('Send back')}</Button>
           )}
           {can('payroll.close') && run?.status === 'APPROVED' && (
-            <Button disabled={busy} onClick={() => ask({ title: `Close ${month}?`, message: 'Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.', confirmLabel: 'Close the month', danger: true, onConfirm: () => act('close', 'Month closed. Employees can now see their payslips.') })}>Close the month</Button>
+            <Button disabled={busy} onClick={() => ask({ title: t('Close {a}?', { a: month }), message: t('Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.'), confirmLabel: t('Close the month'), danger: true, onConfirm: () => act('close', t('Month closed. Employees can now see their payslips.')) })}>{t('Close the month')}</Button>
           )}
         </div>
       </div>
 
       {view && view.skipped.length > 0 && (
         <div className="card">
-          <h3>Not included</h3>
+          <h3>{t('Not included')}</h3>
           <ul>{view.skipped.map((s) => <li key={s}>{s}</li>)}</ul>
         </div>
       )}
@@ -142,13 +142,13 @@ export default function PayrollRunsPage() {
       {view && (
         <>
           <div className="card">
-            <h3>Totals</h3>
+            <h3>{t('Totals')}</h3>
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Currency</th><th>Payslips</th><th>Gross</th><th>Employee deductions</th><th>Net to pay</th><th>Employer charges</th></tr></thead>
+                <thead><tr><th>{t('Currency')}</th><th>{t('Payslips')}</th><th>{t('Gross')}</th><th>{t('Employee deductions')}</th><th>{t('Net to pay')}</th><th>{t('Employer charges')}</th></tr></thead>
                 <tbody>
-                  {view.totals.map((t) => (
-                    <tr key={t.currency}><td>{t.currency}</td><td>{t.payslips}</td><td>{money(t.gross, t.currency)}</td><td>{money(t.employeeDeductions, t.currency)}</td><td><strong>{money(t.net, t.currency)}</strong></td><td>{money(t.employerCharges, t.currency)}</td></tr>
+                  {view.totals.map((tItem) => (
+                    <tr key={tItem.currency}><td>{tItem.currency}</td><td>{tItem.payslips}</td><td>{money(tItem.gross, tItem.currency)}</td><td>{money(tItem.employeeDeductions, tItem.currency)}</td><td><strong>{money(tItem.net, tItem.currency)}</strong></td><td>{money(tItem.employerCharges, tItem.currency)}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -157,35 +157,34 @@ export default function PayrollRunsPage() {
 
           {byDirection.size > 0 && (
             <div className="card">
-              <h3>By Direction</h3>
+              <h3>{t('By Direction')}</h3>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Direction</th><th>Payslips</th><th>Gross</th><th>Employee deductions</th><th>Net to pay</th><th>Employer charges</th></tr></thead>
+                  <thead><tr><th>{t('Direction')}</th><th>{t('Payslips')}</th><th>{t('Gross')}</th><th>{t('Employee deductions')}</th><th>{t('Net to pay')}</th><th>{t('Employer charges')}</th></tr></thead>
                   <tbody>
-                    {[...byDirection.values()].sort((a, b) => a.name.localeCompare(b.name) || a.currency.localeCompare(b.currency)).map((t) => (
-                      <tr key={t.name + t.currency}><td>{t.name}</td><td>{t.payslips}</td><td>{money(t.gross, t.currency)}</td><td>{money(t.deductions, t.currency)}</td><td>{money(t.net, t.currency)}</td><td>{money(t.employer, t.currency)}</td></tr>
+                    {[...byDirection.values()].sort((a, b) => a.name.localeCompare(b.name) || a.currency.localeCompare(b.currency)).map((tItem) => (
+                      <tr key={tItem.name + tItem.currency}><td>{tItem.name}</td><td>{tItem.payslips}</td><td>{money(tItem.gross, tItem.currency)}</td><td>{money(tItem.deductions, tItem.currency)}</td><td>{money(tItem.net, tItem.currency)}</td><td>{money(tItem.employer, tItem.currency)}</td></tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <p className="hint">Each payslip counts in the Direction of the unit the employee was in at the end of the month.</p>
+              <p className="hint">{t('Each payslip counts in the Direction of the unit the employee was in at the end of the month.')}</p>
             </div>
           )}
 
           <div className="card">
-            <h3>Payslips</h3>
+            <h3>{t('Payslips')}</h3>
             {directions.length > 1 && (
-              <label className="inline-filter">Direction
-                <select value={direction} onChange={(e) => setDirection(e.target.value)}>
-                  <option value="">All</option>
+              <label className="inline-filter">{t('Direction')}<select value={direction} onChange={(e) => setDirection(e.target.value)}>
+                  <option value="">{t('All')}</option>
                   {directions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
                 </select>
               </label>
             )}
-            {warnings > 0 && <p className="notice">{warnings} warning(s) to check before approval: open the payslips marked ⚠.</p>}
+            {warnings > 0 && <p className="notice">{warnings}{' '}{t('warning(s) to check before approval: open the payslips marked ⚠.')}</p>}
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Employee</th><th>Unit</th><th>No.</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Employer</th><th></th></tr></thead>
+                <thead><tr><th>{t('Employee')}</th><th>{t('Unit')}</th><th>{t('No.')}</th><th>{t('Gross')}</th><th>{t('Deductions')}</th><th>{t('Net')}</th><th>{t('Employer')}</th><th></th></tr></thead>
                 <tbody>
                   {shown.map((p) => (
                     <tr key={p.id}>
@@ -196,7 +195,7 @@ export default function PayrollRunsPage() {
                       <td>{money(p.employeeDeductions, p.currency)}</td>
                       <td><strong>{money(p.net, p.currency)}</strong></td>
                       <td>{money(p.employerCharges, p.currency)}</td>
-                      <td><Link to={`/payslips/${p.id}`}>{p.warningCount > 0 ? '⚠ Open' : 'Open'}</Link></td>
+                      <td><Link to={`/payslips/${p.id}`}>{p.warningCount > 0 ? t('⚠ Open') : t('Open')}</Link></td>
                     </tr>
                   ))}
                 </tbody>
@@ -208,21 +207,21 @@ export default function PayrollRunsPage() {
 
       {can('salary.read') && (
         <div className="card">
-          <h3>Anniversary raises</h3>
-          <p className="hint">Applied automatically each morning for permanent staff; the rate and start month are set per grade category under Grades. HR gets one email on the 1st of each month.</p>
-          {raises.length === 0 ? <p className="muted">No raises applied yet.</p> : (
+          <h3>{t('Anniversary raises')}</h3>
+          <p className="hint">{t('Applied automatically each morning for permanent staff; the rate and start month are set per grade category under Grades. HR gets one email on the 1st of each month.')}</p>
+          {raises.length === 0 ? <p className="muted">{t('No raises applied yet.')}</p> : (
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Employee</th><th>Anniversary</th><th>Raise</th><th>Basic</th><th>From</th><th>HR told</th></tr></thead>
+                <thead><tr><th>{t('Employee')}</th><th>{t('Anniversary')}</th><th>{t('Raise')}</th><th>{t('Basic')}</th><th>{t('From')}</th><th>{t('HR told')}</th></tr></thead>
                 <tbody>
                   {raises.map((r) => (
                     <tr key={r.id}>
                       <td>{r.userName}</td>
-                      <td>{r.anniversaryDate} ({r.years} yr)</td>
-                      <td>{money(r.raiseAmount, r.currency)} <span className="muted">({r.percent}% of {r.gradeCode})</span></td>
+                      <td>{r.anniversaryDate} ({r.years}{' '}{t('yr)')}</td>
+                      <td>{money(r.raiseAmount, r.currency)} <span className="muted">({r.percent}{t('% of')}{' '}{r.gradeCode})</span></td>
                       <td>{money(r.oldBasic, r.currency)} → <strong>{money(r.newBasic, r.currency)}</strong></td>
                       <td>{r.effectiveFrom}</td>
-                      <td>{r.notifiedAt ? 'Yes' : 'Not yet'}</td>
+                      <td>{r.notifiedAt ? t('Yes') : t('Not yet')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -235,18 +234,18 @@ export default function PayrollRunsPage() {
                 setError(null); setMessage(null)
                 try {
                   const o = await api<{ applied: Raise[]; skipped: string[] }>('/api/raises/apply', { method: 'POST' })
-                  setMessage(`${o.applied.length} raise(s) applied.${o.skipped.length ? ' To do by hand: ' + o.skipped.join(' ') : ''}`)
+                  setMessage(t('{a} raise(s) applied.{b}', { a: o.applied.length, b: o.skipped.length ? ' To do by hand: ' + o.skipped.join(' ') : '' }))
                   await loadRaises()
                 } catch (e) { setError((e as Error).message) }
-              }}>Check today's anniversaries now</Button>
+              }}>{t('Check today\'s anniversaries now')}</Button>
               <Button className="secondary" disabled={busy} onClick={async () => {
                 setError(null); setMessage(null)
                 try {
                   const r = await api<{ listed: number }>('/api/raises/notify', { method: 'POST' })
-                  setMessage(r.listed ? `Email sent to HR listing ${r.listed} raise(s).` : 'No new raise to report.')
+                  setMessage(r.listed ? t('Email sent to HR listing {a} raise(s).', { a: r.listed }) : t('No new raise to report.'))
                   await loadRaises()
                 } catch (e) { setError((e as Error).message) }
-              }}>Email HR the list now</Button>
+              }}>{t('Email HR the list now')}</Button>
             </div>
           )}
         </div>

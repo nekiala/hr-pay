@@ -56,7 +56,7 @@ public class OtpService {
                 .param("id", id).param("user", user.getId()).param("purpose", purpose)
                 .param("hash", encoder.encode(code)).param("expires", expires).param("context", contextJson)
                 .update();
-        List<NotificationService.Delivery> deliveries = notifications.sendCode(user, code, purpose.toLowerCase().replace('_', '-'));
+        List<NotificationService.Delivery> deliveries = notifications.sendCode(user, code, purpose);
         return new Challenge(id, deliveries, expires);
     }
 

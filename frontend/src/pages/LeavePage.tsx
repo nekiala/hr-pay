@@ -6,15 +6,16 @@ import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { t, locale } from '../i18n'
 
 const STATUS: Record<LeaveRequest['status'], string> = {
-  PENDING: 'Waiting for approval', AWAITING_HR: 'Approved, HR to check the document', APPROVED: 'Approved',
-  REJECTED: 'Rejected', CANCELLED: 'Cancelled',
+  PENDING: t('Waiting for approval'), AWAITING_HR: t('Approved, HR to check the document'), APPROVED: t('Approved'),
+  REJECTED: t('Rejected'), CANCELLED: t('Cancelled'),
 }
 const HALF = { AM: 'morning', PM: 'afternoon' }
 
 const dates = (r: LeaveRequest) =>
-  r.halfDay ? `${r.startDate} (${HALF[r.halfDay]})` : r.startDate === r.endDate ? r.startDate : `${r.startDate} to ${r.endDate}`
+  r.halfDay ? `${r.startDate} (${HALF[r.halfDay]})` : r.startDate === r.endDate ? r.startDate : t('{a} to {b}', { a: r.startDate, b: r.endDate })
 
 /** The supporting documents of one request: links to open them, and a file picker when more can be added. */
 function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAdd: boolean; onChange: () => void }) {
@@ -26,7 +27,7 @@ function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAd
   const upload = async (file: File | undefined) => {
     if (!file) return
     setError(null)
-    if (file.size > 5 * 1024 * 1024) { setError('The file must be at most 5 MB.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError(t('The file must be at most 5 MB.')); return }
     try {
       await api(`/api/leave/requests/${request.id}/documents`, {
         method: 'POST', body: { fileName: file.name, contentType: file.type || 'application/octet-stream', base64: await fileToBase64(file) },
@@ -34,7 +35,7 @@ function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAd
       await load()
       onChange()
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not send the file.')
+      setError(e instanceof ApiError ? e.message : t('Could not send the file.'))
     }
   }
 
@@ -43,10 +44,10 @@ function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAd
       {docs?.map((d) => (
         <a key={d.id} href={`/api/leave/requests/${request.id}/documents/${d.id}`} target="_blank" rel="noreferrer">{d.fileName}</a>
       ))}
-      {request.documents === 0 && request.requiresDocument && <span className="muted">No document yet.</span>}
+      {request.documents === 0 && request.requiresDocument && <span className="muted">{t('No document yet.')}</span>}
       {canAdd && (
         <label className="file-button">
-          {request.documents === 0 ? 'Add the document' : 'Add another'}
+          {request.documents === 0 ? t('Add the document') : t('Add another')}
           <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = '' }} />
         </label>
       )}
@@ -74,7 +75,7 @@ export default function LeavePage() {
   const units = useUnitFilter()
 
   const load = () => {
-    api<LeaveType[]>('/api/leave/types').then((t) => setTypes(t.filter((x) => x.active))).catch(() => undefined)
+    api<LeaveType[]>('/api/leave/types').then((tItem) => setTypes(tItem.filter((x) => x.active))).catch(() => undefined)
     if (canRequest) api<{ balances: LeaveBalance[]; requests: LeaveRequest[] }>('/api/leave/mine')
       .then((m) => { setBalances(m.balances); setMine(m.requests) }).catch((e: Error) => setError(e.message))
     if (canDecide) api<LeaveRequest[]>('/api/leave/requests/to-decide').then(setPending).catch((e: Error) => setError(e.message))
@@ -97,12 +98,12 @@ export default function LeavePage() {
       load()
       return true
     } catch (e) {
-      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.'))
       return false
     }
   }
 
-  const selected = types.find((t) => t.id === Number(form.leaveTypeId))
+  const selected = types.find((tItem) => tItem.id === Number(form.leaveTypeId))
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -119,14 +120,14 @@ export default function LeavePage() {
       setForm({ leaveTypeId: form.leaveTypeId, startDate: '', endDate: '', halfDay: '', reason: '' })
       setFile(null)
     }, selected?.requiresDocument && !file
-      ? 'Leave requested. Add the supporting document below so HR can check it.'
-      : 'Leave requested. Your manager will be asked to approve it.')
+      ? t('Leave requested. Add the supporting document below so HR can check it.')
+      : t('Leave requested. Your manager will be asked to approve it.'))
   }
 
   const decide = (r: LeaveRequest, approve: boolean) => {
     const path = r.status === 'AWAITING_HR' ? 'document-check' : 'decision'
     return run(() => api(`/api/leave/requests/${r.id}/${path}`, { method: 'POST', body: { approve, note: notes[r.id] } }),
-      approve ? (r.status === 'AWAITING_HR' ? 'Document accepted; the leave counts as approved.' : 'Leave approved.') : 'Leave rejected.')
+      approve ? (r.status === 'AWAITING_HR' ? t('Document accepted; the leave counts as approved.') : t('Leave approved.')) : t('Leave rejected.'))
   }
 
   const shown = pending.filter((r) => units.keep(r.userId))
@@ -136,10 +137,10 @@ export default function LeavePage() {
     <section>
       <div className="row space">
         <div className="row between">
-          <h2>Leave</h2>
-          {canRequest && <Button onClick={() => setRequesting(true)}>Request leave</Button>}
+          <h2>{t('Leave')}</h2>
+          {canRequest && <Button onClick={() => setRequesting(true)}>{t('Request leave')}</Button>}
         </div>
-        {isHr && <Link className="button secondary" to="/leave/settings">Leave settings</Link>}
+        {isHr && <Link className="button secondary" to="/leave/settings">{t('Leave settings')}</Link>}
       </div>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
@@ -150,7 +151,7 @@ export default function LeavePage() {
             <div key={b.leaveTypeId} className="tile">
               <span>{b.leaveType}</span>
               <strong>{days(b.available)}</strong>
-              <small>{days(b.granted)} granted · {days(b.taken)} taken{b.pending ? ` · ${days(b.pending)} waiting` : ''}</small>
+              <small>{days(b.granted)}{' '}{t('granted ·')}{' '}{days(b.taken)}{' '}{t('taken')}{b.pending ? t(" · {a} waiting", { a: days(b.pending) }) : ''}</small>
             </div>
           ))}
         </div>
@@ -158,20 +159,20 @@ export default function LeavePage() {
 
       {canDecide && (
         <div className="card">
-          <div className="row space"><h3>To approve</h3>{units.select}</div>
-          {shown.length === 0 && <p className="muted">Nothing waiting.</p>}
+          <div className="row space"><h3>{t('To approve')}</h3>{units.select}</div>
+          {shown.length === 0 && <p className="muted">{t('Nothing waiting.')}</p>}
           {shown.map((r) => (
             <div key={r.id} className="mission">
               <p><strong>{r.employeeName}</strong> <span className="muted">{r.registrationNo} · {units.unitName(r.userId)}</span></p>
               <p>{r.leaveType}: {dates(r)} ({days(r.workingDays)})</p>
               {r.reason && <p className="muted">{r.reason}</p>}
-              {r.status === 'AWAITING_HR' && <p className="hint">Approved by {r.decidedBy}. Check the document before the leave counts.</p>}
+              {r.status === 'AWAITING_HR' && <p className="hint">{t('Approved by')}{' '}{r.decidedBy}{t('. Check the document before the leave counts.')}</p>}
               {(r.requiresDocument || r.documents > 0) && <Documents request={r} canAdd={isHr} onChange={load} />}
               <div className="row">
-                <input placeholder="Note (required to reject)" value={notes[r.id] ?? ''}
+                <input placeholder={t('Note (required to reject)')} value={notes[r.id] ?? ''}
                   onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} />
-                <Button onClick={() => decide(r, true)}>{r.status === 'AWAITING_HR' ? 'Accept document' : 'Approve'}</Button>
-                <Button className="secondary" onClick={() => decide(r, false)}>{r.status === 'AWAITING_HR' ? 'Refuse document' : 'Reject'}</Button>
+                <Button onClick={() => decide(r, true)}>{r.status === 'AWAITING_HR' ? t('Accept document') : t('Approve')}</Button>
+                <Button className="secondary" onClick={() => decide(r, false)}>{r.status === 'AWAITING_HR' ? t('Refuse document') : t('Reject')}</Button>
               </div>
             </div>
           ))}
@@ -179,42 +180,39 @@ export default function LeavePage() {
       )}
 
       {canRequest && requesting && (
-        <Modal title="Request leave" size="md" onClose={() => setRequesting(false)}>
+        <Modal title={t('Request leave')} size="md" onClose={() => setRequesting(false)}>
           <Form onSubmit={async (e) => { if (await submit(e)) setRequesting(false) }}>
             <div className="grid3">
-              <label>Kind
-                <select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
-                  <option value="">Choose</option>
-                  {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <label>{t('Kind')}<select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
+                  <option value="">{t('Choose')}</option>
+                  {types.map((tItem) => <option key={tItem.id} value={tItem.id}>{tItem.name}</option>)}
                 </select>
               </label>
-              <label>First day<input type="date" value={form.startDate}
+              <label>{t('First day')}<input type="date" value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate && form.endDate >= e.target.value ? form.endDate : e.target.value })} required /></label>
-              <label>Last day<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
+              <label>{t('Last day')}<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
             </div>
             {oneDay && (
-              <label>Part of the day
-                <select value={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.value })}>
-                  <option value="">The whole day</option>
-                  <option value="AM">The morning only</option>
-                  <option value="PM">The afternoon only</option>
+              <label>{t('Part of the day')}<select value={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.value })}>
+                  <option value="">{t('The whole day')}</option>
+                  <option value="AM">{t('The morning only')}</option>
+                  <option value="PM">{t('The afternoon only')}</option>
                 </select>
               </label>
             )}
-            <label>Reason (optional)<input value={form.reason} maxLength={500} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-            {halfPreview !== null && <p className="hint">{days(halfPreview)} of work. Rest days and public holidays are not counted.</p>}
+            <label>{t('Reason (optional)')}<input value={form.reason} maxLength={500} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+            {halfPreview !== null && <p className="hint">{days(halfPreview)}{' '}{t('of work. Rest days and public holidays are not counted.')}</p>}
             {selected?.requiresDocument && (
-              <label>Supporting document (for example a medical certificate; PDF, JPEG or PNG, at most 5 MB)
-                <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-                <small className="muted">You can also add it later. HR checks it before the leave counts.</small>
+              <label>{t('Supporting document (for example a medical certificate; PDF, JPEG or PNG, at most 5 MB)')}<input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <small className="muted">{t('You can also add it later. HR checks it before the leave counts.')}</small>
               </label>
             )}
-            {selected && selected.payPercent === 0 && <p className="hint">This leave is unpaid.</p>}
+            {selected && selected.payPercent === 0 && <p className="hint">{t('This leave is unpaid.')}</p>}
             {selected && selected.payPercent > 0 && selected.payPercent < 100 && (
-              <p className="hint">This leave is paid at {Number(selected.payPercent).toLocaleString()}% of the usual pay.</p>
+              <p className="hint">{t('This leave is paid at')}{' '}{Number(selected.payPercent).toLocaleString(locale())}{t('% of the usual pay.')}</p>
             )}
             <ErrorText error={error} />
-          <div className="modal-foot"><Button className="secondary" onClick={() => setRequesting(false)}>Cancel</Button><Button type="submit">Send request</Button></div>
+          <div className="modal-foot"><Button className="secondary" onClick={() => setRequesting(false)}>{t('Cancel')}</Button><Button type="submit">{t('Send request')}</Button></div>
           </Form>
         </Modal>
       )}
@@ -222,19 +220,19 @@ export default function LeavePage() {
       {canRequest && mine.length > 0 && (
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Kind</th><th>Dates</th><th>Days</th><th>Status</th><th>Documents</th><th></th></tr></thead>
+            <thead><tr><th>{t('Kind')}</th><th>{t('Dates')}</th><th>{t('Days')}</th><th>{t('Status')}</th><th>{t('Documents')}</th><th></th></tr></thead>
             <tbody>
               {mine.map((r) => (
                 <tr key={r.id}>
                   <td>{r.leaveType}</td>
                   <td>{dates(r)}</td>
                   <td>{days(r.workingDays)}</td>
-                  <td>{STATUS[r.status]}{r.decidedBy ? <><br /><span className="muted">by {r.decidedBy}{r.decisionNote ? `: ${r.decisionNote}` : ''}</span></> : null}</td>
+                  <td>{STATUS[r.status]}{r.decidedBy ? <><br /><span className="muted">{t('by')}{' '}{r.decidedBy}{r.decisionNote ? `: ${r.decisionNote}` : ''}</span></> : null}</td>
                   <td>{(r.requiresDocument || r.documents > 0) && (
                     <Documents request={r} canAdd={['PENDING', 'AWAITING_HR', 'APPROVED'].includes(r.status)} onChange={load} />
                   )}</td>
                   <td>{(r.status === 'PENDING' || r.status === 'AWAITING_HR') && (
-                    <Button className="secondary" onClick={() => run(() => api(`/api/leave/requests/${r.id}/cancel`, { method: 'POST', body: {} }), 'Request cancelled.')}>Cancel</Button>
+                    <Button className="secondary" onClick={() => run(() => api(`/api/leave/requests/${r.id}/cancel`, { method: 'POST', body: {} }), t('Request cancelled.'))}>{t('Cancel')}</Button>
                   )}</td>
                 </tr>
               ))}
