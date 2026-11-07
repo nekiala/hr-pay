@@ -153,7 +153,7 @@ public class PayElements {
     /** The standing items in force for a month (their periods overlap it). */
     public List<Assignment> standingFor(long userId, YearMonth month) {
         LocalDate first = month.atDay(1);
-        return jdbc.sql(ASSIGNMENT_SELECT + """
+        return jdbc.sql(ASSIGNMENT_SELECT + "\n" + """
                  where a.user_id = ? and a.start_month <= ? and (a.end_month is null or a.end_month >= ?)
                  order by e.display_order, a.start_month desc""").params(userId, first, first)
                 .query(Assignment.class).list();
@@ -247,6 +247,7 @@ public class PayElements {
         if (!e.active()) {
             throw new BusinessRuleException(e.name() + " is no longer in use.");
         }
+        PayrollRuns.requireOpen(jdbc, month);
         if (jdbc.sql("select count(*) from pay_entry where user_id = ? and element_id = ? and month = ?")
                 .params(userId, elementId, month.atDay(1)).query(Integer.class).single() > 0) {
             throw new ConflictException("This employee already has " + e.name() + " for " + month
@@ -266,6 +267,7 @@ public class PayElements {
     public Entry updateEntry(long id, BigDecimal amount, String currency, String note) {
         Entry before = entry(id);
         notSelf(before.userId());
+        PayrollRuns.requireOpen(jdbc, YearMonth.from(before.month()));
         jdbc.sql("update pay_entry set amount = ?, currency = ?, note = ? where id = ?")
                 .params(amount, currency, note, id).update();
         audit.record("pay_entry.changed", "user", before.userId(), Map.of("element", before.elementCode(),
@@ -278,6 +280,7 @@ public class PayElements {
     public void removeEntry(long id) {
         Entry before = entry(id);
         notSelf(before.userId());
+        PayrollRuns.requireOpen(jdbc, YearMonth.from(before.month()));
         jdbc.sql("delete from pay_entry where id = ?").param(id).update();
         audit.record("pay_entry.removed", "user", before.userId(), Map.of("element", before.elementCode(),
                 "month", before.month().toString(), "amount", before.amount().toPlainString()));

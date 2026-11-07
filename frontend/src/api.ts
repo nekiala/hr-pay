@@ -415,3 +415,29 @@ export type PayEntry = {
   kind: PayElementKind; month: string; amount: number; currency: 'USD' | 'CDF'; note: string | null
   createdBy: string; createdAt: string
 }
+
+export type PayrollRun = {
+  id: number; month: string; status: 'CALCULATED' | 'APPROVED' | 'CLOSED'; usdCdf: number; rateDate: string; rateSource: string
+  employeeCount: number; projected: boolean; calculatedBy: string; calculatedAt: string
+  approvedBy: string | null; approvedAt: string | null; closedBy: string | null; closedAt: string | null
+}
+export type PayslipSummary = {
+  id: number; userId: number; userName: string; registrationNo: string; number: string | null; currency: string
+  gross: number; employeeDeductions: number; net: number; employerCharges: number; warningCount: number
+}
+export type RunView = {
+  run: PayrollRun; payslips: PayslipSummary[]; skipped: string[]
+  totals: { currency: string; payslips: number; gross: number; employeeDeductions: number; net: number; employerCharges: number }[]
+}
+export type PayslipLine = { elementCode: string; label: string; kind: 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'; base: number | null; rate: number | null; amount: number; displayOrder: number; loanId: number | null }
+export type Payslip = {
+  id: number; runId: number; month: string; runStatus: PayrollRun['status']; userId: number; number: string | null; currency: string
+  gross: number; cnssBase: number; taxableBase: number; taxableBaseCdf: number; employeeDeductions: number; net: number
+  employerCharges: number; scheduledMinutes: number; paidMinutes: number; daysWorked: number; usdCdf: number; rateDate: string
+  projected: boolean; snapshot: Record<string, string | number | boolean | null>; warnings: string[]; lines: PayslipLine[]
+}
+export type Loan = {
+  id: number; userId: number; userName: string; kind: 'LOAN' | 'ADVANCE'; principal: number; currency: 'USD' | 'CDF'
+  installment: number; startMonth: string; grantedOn: string; status: 'ACTIVE' | 'REPAID' | 'CANCELLED'
+  repaid: number; balance: number; note: string | null; createdBy: string; createdAt: string
+}

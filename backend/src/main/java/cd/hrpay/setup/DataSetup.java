@@ -49,6 +49,13 @@ public class DataSetup implements ApplicationRunner {
             new SampleUser("employee3@demo.hrpay.cd", "EMP-0003", "+243810000007", "David", "Lukusa", "EMPLOYEE"));
 
     private final AppProperties properties;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.schedule.WorkCalendar calendar;
+
+    /** Sample check-ins for last month, so a payroll can be tried at once. Off in tests. */
+    @org.springframework.beans.factory.annotation.Value("${app.sample-data.attendance:true}")
+    private boolean sampleAttendance;
     private final UserRepository users;
     private final RoleRepository roles;
     private final SiteRepository sites;
@@ -111,6 +118,51 @@ public class DataSetup implements ApplicationRunner {
         assignSampleEmployment();
         addSampleContracts();
         allowLocalIpv6();
+        if (sampleAttendance) {
+            addSampleAttendance();
+        }
+    }
+
+    /**
+     * Last month's attendance for the sample staff, if they have none: on time every working day, except one late
+     * arrival for employee2 and one absence for employee3. Lets HR try a payroll right after start-up.
+     */
+    private void addSampleAttendance() {
+        java.time.ZoneId zone = java.time.ZoneId.of("Africa/Kinshasa");
+        java.time.YearMonth month = java.time.YearMonth.now(zone).minusMonths(1);
+        LocalDate from = month.atDay(1);
+        LocalDate to = month.atEndOfMonth();
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            AppUser user = users.findByEmailIgnoreCase(s.email()).orElse(null);
+            if (user == null || jdbc.sql("select count(*) from clock_event where user_id = ? and work_date between ? and ?")
+                    .params(user.getId(), from, to).query(Integer.class).single() > 0) {
+                continue;
+            }
+            int workday = 0;
+            for (var day : calendar.plan(user, from, to)) {
+                if (!day.expectedAtWork() || day.start() == null || day.end() == null) {
+                    continue;
+                }
+                workday++;
+                if (s.email().startsWith("employee3") && workday == 5) {
+                    continue;   // one absence
+                }
+                int late = s.email().startsWith("employee2") && workday == 3 ? 25 : -3;
+                var in = day.date().atTime(day.start()).plusMinutes(late).atZone(zone).toOffsetDateTime();
+                var out = day.date().atTime(day.end()).plusMinutes(4).atZone(zone).toOffsetDateTime();
+                for (var e : List.of(Map.entry("IN", in), Map.entry("OUT", out))) {
+                    jdbc.sql("""
+                            insert into clock_event (user_id, type, occurred_at, work_date, site_id, source, note, created_by)
+                            values (?, ?, ?, ?, ?, 'SELF', 'Sample data', 'sample-data')""")
+                            .params(user.getId(), e.getKey(), e.getValue(), day.date(),
+                                    user.getSite() == null ? null : user.getSite().getId())
+                            .update();
+                }
+            }
+        }
     }
 
     /** Browsers on the same machine may reach the API over ::1; the sample site allows it too. */
