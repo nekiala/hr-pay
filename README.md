@@ -86,6 +86,13 @@ cd backend && ./gradlew test
 - **Flow:** the manager (or HR) starts the evaluation for a period, scores it and submits it. The employee acknowledges it, or disagrees with a comment, which sends it back. The manager can revise and resubmit; HR approves, and must write a decision when the employee contested. Nobody evaluates or approves their own evaluation.
 - **13th month** (settings under Payroll, `THIRTEENTH_*`): base (average or last basic of the year) x the year's score, prorated by months under contract if set. The year's score is the average of the approved evaluations ending in that year, weighted by the months each covers; with none, HR's fallback % is used. It is added as the `THIRTEENTH_MONTH` line (subject to CNSS and IPR by default, editable under Pay elements) in the payroll of the pay month.
 
+## Payments and declarations (phase 4)
+
+- **Payments** (Finance, `payroll.pay`): once HR closes a month, the net pays are grouped by how each person is paid (one bank, one mobile money operator, or cash) and currency. Each group becomes a payment file (CSV): bank transfers with the account and the debit account, mobile money with the number as 243XXXXXXXXX, cash as a list to sign. The payment details are taken from the employee file when the file is made and copied into it. Finance then records the date and the bank or operator reference. A file not yet paid can be cancelled, which lets its people go into a new file. People with incomplete details are listed and left out until their file is fixed.
+- **Declarations** (`declaration.manage`, Finance and HR): CNSS (employee and employer shares, CNSS numbers), IPR withheld (NIF, taxable base), INPP, ONEM and IERE, computed from the closed payslips and stated in CDF at the payroll's rate. Each one can be printed or downloaded as CSV, then recorded as filed with its receipt reference. The employer's own numbers (CNSS, NIF, Id. Nat., RCCM, INPP, ONEM, bank) are kept under Declarations.
+- **Year summary**: totals for everyone for a year (HR), and an annual pay statement per employee, month by month with the date each pay was made. Employees open their own statement from My payslips.
+- The CSV layouts are generic. If a bank, operator or the CNSS/DGI portal wants a fixed format, it can be added as another export.
+
 ## Configuration
 
 | Variable | Default | Purpose |

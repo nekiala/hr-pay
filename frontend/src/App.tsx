@@ -32,6 +32,10 @@ import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import EvaluationsPage from './pages/EvaluationsPage'
 import EvaluationPage from './pages/EvaluationPage'
 import EvaluationSettingsPage from './pages/EvaluationSettingsPage'
+import PaymentsPage from './pages/PaymentsPage'
+import PaymentFilePage from './pages/PaymentFilePage'
+import DeclarationsPage from './pages/DeclarationsPage'
+import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -57,6 +61,13 @@ function PayrollRoute({ page }: { page?: 'loans' }) {
   }
   return can('payroll.run') || can('payroll.approve') || can('payslip.read.all')
     ? <PayrollRunsPage />
+    : <p className="notice">You do not have permission to open this page.</p>
+}
+
+function PaymentsRoute({ file }: { file?: boolean }) {
+  const { can } = useAuth()
+  return can('payroll.pay') || can('payslip.read.all')
+    ? (file ? <PaymentFilePage /> : <PaymentsPage />)
     : <p className="notice">You do not have permission to open this page.</p>
 }
 
@@ -101,6 +112,9 @@ export default function App() {
           {(can('overtime.approve.all') || can('overtime.approve.team')) && <NavLink to="/overtime/approvals">Approve overtime</NavLink>}
           {can('overtime_policy.manage') && <NavLink to="/overtime" end>Overtime rules</NavLink>}
           {(can('payroll.run') || can('payroll.approve') || can('payslip.read.all')) && <NavLink to="/payroll" end>Payroll</NavLink>}
+          {(can('payroll.pay') || can('payslip.read.all')) && <NavLink to="/payroll/payments">Payments</NavLink>}
+          {can('declaration.manage') && <NavLink to="/payroll/declarations">Declarations</NavLink>}
+          {can('payslip.read.all') && <NavLink to="/payroll/year" end>Year summary</NavLink>}
           {(can('loan.manage') || can('payslip.read.all')) && <NavLink to="/payroll/loans">Loans</NavLink>}
           {can('masterdata.manage') && <NavLink to="/payroll/settings">Grades</NavLink>}
           {(can('salary.read') || can('masterdata.manage')) && <NavLink to="/payroll/elements">Pay elements</NavLink>}
@@ -136,6 +150,12 @@ export default function App() {
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payroll" element={<PayrollRoute />} />
+          <Route path="/payroll/payments" element={<PaymentsRoute />} />
+          <Route path="/payroll/payments/files/:id" element={<PaymentsRoute file />} />
+          <Route path="/payroll/declarations" element={<Guard permission="declaration.manage"><DeclarationsPage /></Guard>} />
+          <Route path="/payroll/year" element={<Guard permission="payslip.read.all"><YearSummariesPage /></Guard>} />
+          <Route path="/payroll/year/:userId" element={<Guard permission="payslip.read.all"><AnnualStatementPage /></Guard>} />
+          <Route path="/my/year" element={<Guard permission="payslip.read.own"><AnnualStatementPage /></Guard>} />
           <Route path="/payroll/loans" element={<PayrollRoute page="loans" />} />
           <Route path="/payslips/:id" element={<PayslipPage />} />
           <Route path="/my/payslips" element={<Guard permission="payslip.read.own"><MyPayslipsPage /></Guard>} />
