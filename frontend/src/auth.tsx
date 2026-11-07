@@ -1,12 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, type Me } from './api'
+import { api, type Me, type TwoStepNeeded } from './api'
 
 type AuthState = {
   me: Me | null
   loading: boolean
   can: (permission: string) => boolean
   refresh: () => Promise<void>
-  signIn: (email: string, password: string) => Promise<void>
+  /** Signs in, or returns the second step still needed. */
+  signIn: (email: string, password: string) => Promise<TwoStepNeeded | null>
+  /** The person is in, after the second step. */
+  signedIn: (me: Me) => void
   signOut: () => Promise<void>
 }
 
@@ -34,8 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const signIn = async (email: string, password: string) => {
-    setMe(await api<Me>('/api/auth/login', { method: 'POST', body: { email, password } }))
+    const result = await api<Me | TwoStepNeeded>('/api/auth/login', { method: 'POST', body: { email, password } })
+    if ('setup' in result) return result
+    setMe(result)
+    return null
   }
+
+  const signedIn = (m: Me) => setMe(m)
 
   const signOut = async () => {
     await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
@@ -45,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const can = useCallback((permission: string) => !!me?.permissions.includes(permission), [me])
 
   return (
-    <AuthContext.Provider value={{ me, loading, can, refresh, signIn, signOut }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ me, loading, can, refresh, signIn, signedIn, signOut }}>{children}</AuthContext.Provider>
   )
 }
 

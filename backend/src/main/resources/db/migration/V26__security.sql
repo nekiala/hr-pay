@@ -66,20 +66,33 @@ alter table app_user add column erased_at timestamptz;
 -- Sign-in with Microsoft 365 is accepted only from the company's own Microsoft tenant (directory id).
 alter table company add column microsoft_tenant varchar(64);
 
--- The audit chain: each row's hash covers its content and the hash of the row before it.
-alter table audit_log add column prev_hash char(64), add column hash char(64);
+-- The audit chain: each row's hash covers its content and the hash of the row before it. Rows join the chain in the
+-- order they are committed (chain_seq), which can differ from their ids when two are written at once.
+alter table audit_log add column chain_seq bigint, add column prev_hash char(64), add column hash char(64);
 
 create or replace function audit_log_content(a audit_log) returns text language sql stable as $$
     select concat_ws('|', a.id, to_char(a.occurred_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'), a.actor,
                      a.action, a.entity_type, a.entity_id, a.details::text, a.ip, a.company_id)
 $$;
 
+-- The head of the chain, shared by every company (the chain runs across the installation). Its row lock makes
+-- writers join the chain one at a time.
+create table audit_chain_head (
+    id   int primary key check (id = 1),
+    seq  bigint not null,
+    hash char(64)
+);
+create or replace function hrpay_shared_tables() returns text[] language sql immutable as $$
+    select array['company', 'plan', 'installation', 'permission', 'exchange_rate', 'spring_session',
+                 'spring_session_attributes', 'job_lock', 'backup_run', 'system_alert', 'login_failure',
+                 'flyway_schema_history', 'billing_setting', 'invoice_counter', 'audit_chain_head']
+$$;
+
 create or replace function audit_log_chain() returns trigger language plpgsql as $$
 begin
-    -- One row at a time, so that two writers never chain to the same row.
-    perform pg_advisory_xact_lock(hashtext('audit_log_chain'));
-    select hash into new.prev_hash from audit_log where hash is not null order by id desc limit 1;
+    update audit_chain_head set seq = seq + 1 where id = 1 returning seq, hash into new.chain_seq, new.prev_hash;
     new.hash := encode(sha256(convert_to(coalesce(new.prev_hash, '') || '|' || audit_log_content(new), 'UTF8')), 'hex');
+    update audit_chain_head set hash = new.hash where id = 1;
     return new;
 end;
 $$;
@@ -90,14 +103,18 @@ do $$
 declare
     r audit_log;
     prev char(64);
+    n bigint := 0;
 begin
     for r in select * from audit_log order by id loop
-        update audit_log set prev_hash = prev,
+        n := n + 1;
+        update audit_log set chain_seq = n, prev_hash = prev,
                hash = encode(sha256(convert_to(coalesce(prev, '') || '|' || audit_log_content(r), 'UTF8')), 'hex')
         where id = r.id returning hash into prev;
     end loop;
+    insert into audit_chain_head (id, seq, hash) values (1, n, prev);
 end $$;
 alter table audit_log enable trigger audit_log_no_update;
+create unique index audit_log_chain_ix on audit_log (chain_seq);
 
 create trigger audit_log_chain before insert on audit_log for each row execute function audit_log_chain();
 

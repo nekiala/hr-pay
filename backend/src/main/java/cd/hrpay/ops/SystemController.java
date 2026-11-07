@@ -19,16 +19,21 @@ public class SystemController {
 
     public record Status(String version, Instant builtAt, String javaVersion, Instant startedAt, long uptimeSeconds,
                          long databaseBytes, long activeSessions, long employees, boolean backupsExpected,
-                         List<BackupWatch.Run> backups, List<JobLocks.Job> jobs, List<SystemAlerts.Alert> alerts) {}
+                         List<BackupWatch.Run> backups, List<JobLocks.Job> jobs, List<SystemAlerts.Alert> alerts,
+                         boolean dataKey, AuditChain.Check auditChain) {}
 
     private final JdbcClient jdbc;
     private final BackupWatch backups;
     private final JobLocks jobs;
     private final SystemAlerts alerts;
     private final ObjectProvider<BuildProperties> build;
+    private final cd.hrpay.security.DataCrypto crypto;
+    private final AuditChain chain;
 
     public SystemController(JdbcClient jdbc, BackupWatch backups, JobLocks jobs, SystemAlerts alerts,
-                            ObjectProvider<BuildProperties> build) {
+                            ObjectProvider<BuildProperties> build, cd.hrpay.security.DataCrypto crypto, AuditChain chain) {
+        this.crypto = crypto;
+        this.chain = chain;
         this.jdbc = jdbc;
         this.backups = backups;
         this.jobs = jobs;
@@ -47,6 +52,6 @@ public class SystemController {
                 started, Duration.between(started, Instant.now()).toSeconds(),
                 jdbc.sql("select pg_database_size(current_database())").query(Long.class).single(), sessions,
                 jdbc.sql("select count(*) from app_user where status = 'ACTIVE'").query(Long.class).single(),
-                backups.expected(), backups.recent(10), jobs.jobs(), alerts.recent(20));
+                backups.expected(), backups.recent(10), jobs.jobs(), alerts.recent(20), crypto.enabled(), chain.check());
     }
 }

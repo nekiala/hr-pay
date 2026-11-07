@@ -9,13 +9,18 @@ type Status = {
   version: string; builtAt: string | null; javaVersion: string; startedAt: string; uptimeSeconds: number
   databaseBytes: number; activeSessions: number; employees: number; backupsExpected: boolean
   backups: Backup[]; jobs: Job[]; alerts: Alert[]
+  dataKey: boolean
+  auditChain: { intact: boolean; rows: number; brokenAt: number | null; brokenRowAt: string | null; lastHash: string | null; checkedAt: string }
 }
 
 const JOBS: Record<string, string> = {
   'auto-close': 'Close days left open', 'anniversary-raises': 'Anniversary raises', 'exchange-rates': 'BCC exchange rates',
-  'gps-erase': 'Erase old GPS positions', 'backup-watch': 'Check the backups',
+  'gps-erase': 'Erase old GPS positions', 'backup-watch': 'Check the backups', 'audit-chain': 'Check the audit log',
 }
-const KINDS: Record<string, string> = { ERROR: 'Error', JOB_FAILED: 'Job failed', BACKUP_FAILED: 'Backup failed', BACKUP_MISSING: 'No recent backup' }
+const KINDS: Record<string, string> = {
+  ERROR: 'Error', JOB_FAILED: 'Job failed', BACKUP_FAILED: 'Backup failed', BACKUP_MISSING: 'No recent backup',
+  AUDIT_CHAIN_BROKEN: 'Audit log changed',
+}
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : '—')
 const size = (b: number | null) => (b === null ? '—' : b > 1e9 ? `${(b / 1e9).toFixed(1)} GB` : b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.round(b / 1e3)} KB`)
 const duration = (s: number) => (s >= 86400 ? `${Math.floor(s / 86400)} d ${Math.floor((s % 86400) / 3600)} h` : `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`)
@@ -44,6 +49,22 @@ export default function SystemPage() {
           <span>Last backup</span>
           <strong>{lastOk ? when(lastOk.finishedAt) : 'None yet'}</strong>
           <small>{!s.backupsExpected ? 'No backup job on this server (development)' : lastOk ? `${size(lastOk.sizeBytes)}${lastOk.offsite ? ' · copied off-site' : ' · on this server only'}` : 'The backup job has not run yet'}</small>
+        </div>
+      </div>
+
+      <div className="cards2">
+        <div className="card">
+          <div className="row between"><h3>Data encryption</h3><span className={`badge ${s.dataKey ? 'ok' : 'off'}`}>{s.dataKey ? 'On' : 'Off'}</span></div>
+          {s.dataKey
+            ? <p className="muted">Bank and mobile money accounts, CNSS and tax numbers and authenticator secrets are stored encrypted. Keep a copy of the key (HRPAY_DATA_KEY) away from this server: backups cannot be read without it.</p>
+            : <p className="notice">No data key is set: bank accounts and ID numbers are stored readable in the database and in its backups. Set HRPAY_DATA_KEY (openssl rand -base64 32) and restart; existing values are encrypted at start-up.</p>}
+        </div>
+        <div className="card">
+          <div className="row between"><h3>Audit log</h3><span className={`badge ${s.auditChain.intact ? 'ok' : 'off'}`}>{s.auditChain.intact ? 'Intact' : 'Changed'}</span></div>
+          {s.auditChain.intact
+            ? <p className="muted">{s.auditChain.rows.toLocaleString()} entries, each chained to the one before: none was changed or removed in the database.</p>
+            : <p className="notice">Entry {s.auditChain.brokenAt} ({when(s.auditChain.brokenRowAt)}) no longer matches its hash: it, or an entry before it, was changed directly in the database. Keep a copy of the database as it is and find out who had access.</p>}
+          {s.auditChain.lastHash && <p className="small">Latest hash, to write down from time to time: <code className="secret">{s.auditChain.lastHash}</code></p>}
         </div>
       </div>
 

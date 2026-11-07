@@ -15,6 +15,7 @@ export default function RolesPage() {
   const [selected, setSelected] = useState<number | null>(null)
   const [draft, setDraft] = useState<Set<string>>(new Set())
   const [name, setName] = useState('')
+  const [twoStep, setTwoStep] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [newCode, setNewCode] = useState('')
@@ -37,6 +38,7 @@ export default function RolesPage() {
     setSelected(role.id)
     setDraft(new Set(role.permissions))
     setName(role.name)
+    setTwoStep(role.twoStepRequired)
     setMessage(null)
     setError(null)
   }
@@ -62,7 +64,7 @@ export default function RolesPage() {
     try {
       await api(`/api/roles/${role.id}`, {
         method: 'PUT',
-        body: { name, description: role.description, permissions: [...draft] },
+        body: { name, description: role.description, permissions: [...draft], twoStepRequired: twoStep },
       })
       await load(role.id)
       await refresh()
@@ -116,7 +118,7 @@ export default function RolesPage() {
           {roles.map((r) => (
             <Button key={r.id} className={`list-item ${r.id === selected ? 'active' : ''}`} onClick={() => choose(r)}>
               {r.name}
-              <span className="muted small">{r.permissions.length} permissions{r.systemRole ? ' · built-in' : ''}</span>
+              <span className="muted small">{r.permissions.length} permissions{r.systemRole ? ' · built-in' : ''}{r.twoStepRequired ? ' · second step' : ''}</span>
             </Button>
           ))}
           {editable && <Button className="secondary" onClick={() => { setError(null); setCreating(true) }}>New role</Button>}
@@ -128,6 +130,12 @@ export default function RolesPage() {
               <code>{role.code}</code>
             </div>
             {role.description && <p className="muted">{role.description}</p>}
+            <label className="check">
+              <input type="checkbox" checked={twoStep} disabled={!editable} onChange={(e) => setTwoStep(e.target.checked)} />
+              <span><strong>Second step required at sign-in</strong>
+                <span className="hint"> Members must use an authenticator app or an emailed code after their password. Recommended for
+                  anyone who sees pay or personal data.</span></span>
+            </label>
             {byCategory.map(([category, perms]) => (
               <fieldset key={category}>
                 <legend>{category}</legend>

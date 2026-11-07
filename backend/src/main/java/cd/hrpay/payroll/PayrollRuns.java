@@ -65,6 +65,7 @@ public class PayrollRuns {
                    calculated_at, approved_by, approved_at, closed_by, closed_at from payroll_run""";
 
     private final JdbcClient jdbc;
+    private final cd.hrpay.security.DataCrypto crypto;
     private final UserRepository users;
     private final AttendanceDays attendance;
     private final SalaryService salaries;
@@ -89,9 +90,10 @@ public class PayrollRuns {
 
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
-                       cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth, AuditService audit, Clock clock) {
+                       cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
         this.thirteenthMonth = thirteenthMonth;
         this.jdbc = jdbc;
+        this.crypto = crypto;
         this.users = users;
         this.attendance = attendance;
         this.salaries = salaries;
@@ -259,13 +261,13 @@ public class PayrollRuns {
             LocalDate hired = user.getHireDate() != null ? user.getHireDate() : contract.startDate();
             snapshot.put("hireDate", hired == null ? null : hired.toString());
             snapshot.put("dependantsInCharge", inCharge);
-            snapshot.put("cnssNumber", profile.cnssNumber());
-            snapshot.put("taxNumber", profile.taxNumber());
+            snapshot.put("cnssNumber", crypto.encrypt(profile.cnssNumber()));
+            snapshot.put("taxNumber", crypto.encrypt(profile.taxNumber()));
             snapshot.put("paymentMethod", profile.paymentMethod());
             snapshot.put("bankName", profile.bankName());
-            snapshot.put("bankAccount", profile.bankAccount());
+            snapshot.put("bankAccount", crypto.encrypt(profile.bankAccount()));
             snapshot.put("mobileMoneyOperator", profile.mobileMoneyOperator());
-            snapshot.put("mobileMoneyNumber", profile.mobileMoneyNumber());
+            snapshot.put("mobileMoneyNumber", crypto.encrypt(profile.mobileMoneyNumber()));
             var place = placements.getOrDefault(userId, nowPlaced.get(userId));
             if (place != null) {
                 snapshot.put("unit", place.unitName());
@@ -377,6 +379,18 @@ public class PayrollRuns {
         return view(month, List.of());
     }
 
+    /** The identifiers a payslip keeps are stored encrypted: read back as they were entered. */
+    static final List<String> ENCRYPTED_KEYS = List.of("cnssNumber", "taxNumber", "bankAccount", "mobileMoneyNumber");
+
+    private Map<String, Object> readable(Map<String, Object> snapshot) {
+        for (String key : ENCRYPTED_KEYS) {
+            if (snapshot.get(key) instanceof String v) {
+                snapshot.put(key, crypto.decrypt(v));
+            }
+        }
+        return snapshot;
+    }
+
     // ---- payslips ----------------------------------------------------------------------------------------------
 
     @SuppressWarnings("unchecked")
@@ -395,7 +409,7 @@ public class PayrollRuns {
                         rs.getBigDecimal("net"), rs.getBigDecimal("employer_charges"), rs.getInt("scheduled_minutes"),
                         rs.getInt("paid_minutes"), rs.getInt("days_worked"), rs.getBigDecimal("usd_cdf"),
                         rs.getObject("rate_date", LocalDate.class), rs.getBoolean("projected"),
-                        json.readValue(rs.getString("snapshot"), Map.class),
+                        readable(json.readValue(rs.getString("snapshot"), Map.class)),
                         json.readValue(rs.getString("warnings"), List.class), List.of()))
                 .optional().orElseThrow(() -> new NotFoundException("Payslip not found."));
         List<Line> lines = jdbc.sql("""

@@ -56,6 +56,7 @@ public class Payments {
                    paid_on, reference, paid_by, cancel_reason from payment_batch""";
 
     private final JdbcClient jdbc;
+    private final cd.hrpay.security.DataCrypto crypto;
     private final AuditService audit;
     private final Clock clock;
     private cd.hrpay.org.OrgStructure org;
@@ -65,8 +66,9 @@ public class Payments {
         this.org = org;
     }
 
-    public Payments(JdbcClient jdbc, AuditService audit, Clock clock) {
+    public Payments(JdbcClient jdbc, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
         this.jdbc = jdbc;
+        this.crypto = crypto;
         this.audit = audit;
         this.clock = clock;
     }
@@ -118,7 +120,7 @@ public class Payments {
                     switch (method) {
                         case "MOBILE_MONEY" -> {
                             provider = norm(rs.getString("mobile_money_operator"));
-                            account = msisdn(rs.getString("mobile_money_number"));
+                            account = msisdn(crypto.decrypt(rs.getString("mobile_money_number")));
                             if (provider == null) {
                                 problem = "No mobile money operator in the employee file.";
                             } else if (account == null) {
@@ -131,7 +133,7 @@ public class Payments {
                         }
                         default -> {
                             provider = norm(rs.getString("bank_name"));
-                            account = rs.getString("bank_account") == null ? null : rs.getString("bank_account").trim();
+                            account = rs.getString("bank_account") == null ? null : crypto.decrypt(rs.getString("bank_account")).trim();
                             if (provider == null || account == null || account.isEmpty()) {
                                 problem = "No bank or account number in the employee file.";
                             }

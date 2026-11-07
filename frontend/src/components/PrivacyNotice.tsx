@@ -26,10 +26,12 @@ export function PrivacyText() {
         {days === null ? 'GPS positions are erased after the period HR sets.'
           : days === 0 ? 'GPS positions are kept for now; HR can set a period after which they are erased.'
             : `GPS positions are erased after ${days} days; the check-in itself (time and site) stays.`}
-        {' '}Attendance and pay records are kept as long as the law requires.
+        {' '}Attendance and pay records are kept as long as the law requires. After you leave, your personal details are
+        erased once the period your employer keeps them for has passed; the payroll amounts stay.
       </p>
       <h3>Your rights</h3>
-      <p>Ask HR to see your data or to correct anything wrong. For attendance, use Corrections.</p>
+      <p>Download a copy of all your data, and ask HR to correct anything wrong, from My account. For attendance, use
+        Corrections. Bank accounts and ID numbers are stored encrypted.</p>
     </div>
   )
 }

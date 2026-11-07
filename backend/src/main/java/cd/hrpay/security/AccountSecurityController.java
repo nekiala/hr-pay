@@ -28,12 +28,28 @@ public class AccountSecurityController {
 
     public record Ended(int count) {}
 
+    /** How people of the company may sign in besides a password. */
+    public record SignInSettings(String microsoftTenant, boolean microsoftAvailable, boolean googleAvailable) {}
+
+    public record SignInInput(@jakarta.validation.constraints.Pattern(
+            regexp = "^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+            message = "Paste the tenant ID (directory ID) from the Microsoft Entra admin centre") String microsoftTenant) {}
+
     private final TwoStep twoStep;
     private final UserSessions sessions;
     private final UserService users;
     private final PasswordEncoder encoder;
 
-    public AccountSecurityController(TwoStep twoStep, UserSessions sessions, UserService users, PasswordEncoder encoder) {
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
+    private final AuthController auth;
+    private final cd.hrpay.audit.AuditService audit;
+
+    public AccountSecurityController(TwoStep twoStep, UserSessions sessions, UserService users, PasswordEncoder encoder,
+                                     org.springframework.jdbc.core.simple.JdbcClient jdbc, AuthController auth,
+                                     cd.hrpay.audit.AuditService audit) {
+        this.jdbc = jdbc;
+        this.auth = auth;
+        this.audit = audit;
         this.twoStep = twoStep;
         this.sessions = sessions;
         this.users = users;
@@ -126,5 +142,25 @@ public class AccountSecurityController {
     @Transactional
     public Ended endAllOf(@PathVariable Long id) {
         return new Ended(sessions.endAll(users.find(id).getId(), null, CurrentUser.email()));
+    }
+
+    @GetMapping("/api/company/sign-in")
+    @PreAuthorize("hasAuthority('role.manage')")
+    public SignInSettings signIn() {
+        AuthController.Providers p = auth.providers();
+        String tenant = jdbc.sql("select microsoft_tenant from company where id = current_company_id()").query(String.class)
+                .optional().orElse(null);
+        return new SignInSettings(tenant, p.microsoft(), p.google());
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/api/company/sign-in")
+    @PreAuthorize("hasAuthority('role.manage')")
+    @Transactional
+    public SignInSettings saveSignIn(@Valid @RequestBody SignInInput body) {
+        String tenant = body.microsoftTenant() == null || body.microsoftTenant().isBlank() ? null : body.microsoftTenant().toLowerCase();
+        jdbc.sql("update company set microsoft_tenant = ? where id = current_company_id()").param(tenant).update();
+        audit.record("company.microsoft_tenant_set", "company", cd.hrpay.tenancy.TenantContext.companyId(),
+                Map.of("tenant", tenant == null ? "" : tenant));
+        return signIn();
     }
 }

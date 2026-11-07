@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, days, money, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
+import { ApiError, api, download, days, money, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
 import { Button, Form } from '../components/Button'
+import { useAsk } from '../components/Dialogs'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
 const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', lastName: '', siteId: '' }
@@ -15,6 +16,7 @@ export default function UserFormPage() {
   const isNew = !id
   const navigate = useNavigate()
   const { can, me } = useAuth()
+  const ask = useAsk()
   const [form, setForm] = useState<Form>(empty)
   const [user, setUser] = useState<User | null>(null)
   const [roles, setRoles] = useState<Role[]>([])
@@ -99,6 +101,20 @@ export default function UserFormPage() {
     await api(`/api/users/${id}/password`, { method: 'POST', body: { password: resetPassword } })
     setResetPassword('')
     setMessage('Temporary password set. The user must change it at next sign-in.')
+  })
+
+  const resetTwoStep = () => ask({
+    title: `Reset the second step of ${user?.firstName} ${user?.lastName}?`, confirmLabel: 'Reset', danger: true,
+    message: 'Their authenticator and recovery codes stop working, they are signed out everywhere, and they set the second step up again at their next sign-in.',
+    onConfirm: () => handle(async () => {
+      await api(`/api/users/${id}/two-step/reset`, { method: 'POST' })
+      setMessage('Second step reset. The person sets it up again at their next sign-in.')
+    }),
+  })
+
+  const signOutEverywhere = () => handle(async () => {
+    const r = await api<{ count: number }>(`/api/users/${id}/sessions/end`, { method: 'POST' })
+    setMessage(r.count === 0 ? 'The person was not signed in anywhere.' : `Signed out of ${r.count} browser${r.count === 1 ? '' : 's'}.`)
   })
 
   const assignSchedule = () => handle(async () => {
@@ -234,11 +250,26 @@ export default function UserFormPage() {
               <Button className="secondary" disabled={!resetPassword} onClick={() => doReset()}>Set password</Button>
             </div>
           )}
-          {can('user.disable') && (
-            <Button className={user.status === 'ACTIVE' ? 'danger' : ''} onClick={() => toggleStatus()}>
-              {user.status === 'ACTIVE' ? 'Disable account' : 'Enable account'}
-            </Button>
-          )}
+          <div className="row">
+            {can('user.disable') && (
+              <Button className={user.status === 'ACTIVE' ? 'danger' : ''} onClick={() => toggleStatus()}>
+                {user.status === 'ACTIVE' ? 'Disable account' : 'Enable account'}
+              </Button>
+            )}
+            {can('user.disable') && <Button className="secondary" onClick={() => signOutEverywhere()}>Sign out everywhere</Button>}
+            {can('role.assign') && <Button className="secondary" onClick={() => resetTwoStep()}>Reset second step</Button>}
+          </div>
+          {can('role.assign') && <p className="hint">Reset the second step only for someone who lost their phone and their recovery codes,
+            after checking who is asking.</p>}
+        </div>
+      )}
+      {!isNew && user && can('privacy.manage') && (
+        <div className="card">
+          <h3>Personal data</h3>
+          <p className="muted">Everything HR Pay keeps about this person, for a request under data protection law.</p>
+          <Button className="secondary" onClick={() => handle(() => download(`/api/users/${id}/data-export`, `data-${id}.json`))}>
+            Download their data
+          </Button>
         </div>
       )}
     </section>

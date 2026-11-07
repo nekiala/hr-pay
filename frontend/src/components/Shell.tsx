@@ -70,6 +70,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/rates', label: 'Rates', icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/overtime', label: 'Overtime rules', icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/roles', label: 'Roles', icon: KeyRound, show: can('role.read') },
+        { to: '/privacy/requests', label: 'Personal data', icon: ShieldCheck, show: can('privacy.manage') },
       ],
     },
     {

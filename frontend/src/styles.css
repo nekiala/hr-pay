@@ -494,3 +494,18 @@ a.todo-item:hover .todo-text strong { color: var(--link); }
 .segmented button { padding: 5px 11px; font: inherit; font-size: 13px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
 .segmented button.on { border-color: var(--border-strong); background: var(--surface, #fff); color: var(--text); }
 input.num-input { width: 110px; margin: 0 0 0 auto; text-align: right; padding: 6px 8px; }
+
+/* ---------- Two-step sign-in and My account ---------- */
+.login .card form, .login .card .stack { display: flex; flex-direction: column; gap: 12px; }
+.login .card h2 { margin: 0; font-size: 18px; }
+button.link { background: none; border: 0; padding: 0; min-height: 0; box-shadow: none; color: var(--link); font-weight: 500;
+  cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+button.link:hover:not(:disabled) { background: none; filter: brightness(1.15); }
+.code-input { font-family: var(--mono); font-size: 20px; letter-spacing: .2em; text-align: center; }
+.qr { display: block; margin: 4px auto; padding: 8px; background: #fff; border-radius: 8px; border: 1px solid var(--border); }
+.secret { font-family: var(--mono); word-break: break-all; user-select: all; }
+.recovery-codes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 4px 0; padding-left: 22px; font-family: var(--mono); }
+.recovery-codes code { font-size: 14px; }
+.session-list { list-style: none; margin: 0; padding: 0; }
+.session-list li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); }
+.session-list li:first-child { border-top: 0; }
