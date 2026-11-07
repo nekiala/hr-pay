@@ -7,6 +7,8 @@ spring:
   flyway:
     clean-disabled: false
 app:
+  # A test-only key.
+  data-key: NlryzUGH4GFRF6LVmdQUOx63PIJOAGKVQPEBQD2koF4=
   tenancy:
     # The tests' own database calls (outside a request) reach the demo company.
     default-company: 1
@@ -16,3 +18,6 @@ app:
     attendance: false
   exchange-rates:
     fetch-enabled: false
+  security:
+    # TwoStepIT turns the roles' requirement on for its own tests.
+    two-step-enforced: false

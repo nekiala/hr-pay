@@ -38,7 +38,8 @@ public class SecurityConfig {
     SecurityFilterChain api(HttpSecurity http, UserRepository users, AuditService audit, Tenants tenants,
                             ObjectProvider<ClientRegistrationRepository> googleClients,
                             SecurityContextRepository contextRepository, cd.hrpay.platform.SupportAccess support,
-                            org.springframework.jdbc.core.simple.JdbcClient jdbc) throws Exception {
+                            org.springframework.jdbc.core.simple.JdbcClient jdbc, SignInSteps steps,
+                            org.springframework.transaction.support.TransactionTemplate tx, UserSessions sessions) throws Exception {
         http
                 .securityContext(c -> c.securityContextRepository(contextRepository))
                 .csrf(csrf -> csrf
@@ -46,7 +47,7 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers", "/api/kiosk").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers", "/api/auth/two-step", "/api/auth/two-step/**", "/api/kiosk").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").authenticated()
                         .requestMatchers("/api/**").authenticated()
@@ -56,13 +57,16 @@ public class SecurityConfig {
                 .httpBasic(b -> b.disable())
                 .logout(l -> l.logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((req, res, a) -> res.setStatus(HttpStatus.NO_CONTENT.value())))
-                .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc), AuthorizationFilter.class);
+                .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc, sessions), AuthorizationFilter.class);
 
         if (googleClients.getIfAvailable() != null) {
+            OidcSignIn oidc = new OidcSignIn(users, audit, tenants, jdbc, steps, tx);
             http.oauth2Login(o -> o
-                    .userInfoEndpoint(u -> u.oidcUserService(new GoogleOidcUserService(users, audit, tenants)))
-                    .defaultSuccessUrl("/", true)
-                    .failureHandler((req, res, ex) -> res.sendRedirect("/login?error=google")));
+                    .userInfoEndpoint(u -> u.oidcUserService(oidc))
+                    .successHandler(oidc)
+                    .failureHandler((req, res, ex) -> res.sendRedirect("/login?error=" + (
+                            ex instanceof org.springframework.security.oauth2.core.OAuth2AuthenticationException o2
+                                    ? o2.getError().getErrorCode() : "provider"))));
         }
         return http.build();
     }

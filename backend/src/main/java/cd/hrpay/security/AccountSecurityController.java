@@ -1,0 +1,130 @@
+package cd.hrpay.security;
+
+import cd.hrpay.common.BusinessRuleException;
+import cd.hrpay.user.AppUser;
+import cd.hrpay.user.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/** A person's own sign-in security (second step, signed-in browsers), and an administrator's resets of them. */
+@RestController
+public class AccountSecurityController {
+
+    public record PasswordInput(@NotBlank String password) {}
+
+    public record Ended(int count) {}
+
+    private final TwoStep twoStep;
+    private final UserSessions sessions;
+    private final UserService users;
+    private final PasswordEncoder encoder;
+
+    public AccountSecurityController(TwoStep twoStep, UserSessions sessions, UserService users, PasswordEncoder encoder) {
+        this.twoStep = twoStep;
+        this.sessions = sessions;
+        this.users = users;
+        this.encoder = encoder;
+    }
+
+    private AppUser me() {
+        Long id = CurrentUser.id();
+        if (id == null || cd.hrpay.platform.SupportAccess.current() != null) {
+            throw new BusinessRuleException("Not available on a support visit.");
+        }
+        return users.find(id);
+    }
+
+    /** Asking for the password again before a change that weakens or replaces the second step. */
+    private void checkPassword(AppUser user, String password) {
+        if (user.getPasswordHash() != null && !encoder.matches(password, user.getPasswordHash())) {
+            throw new BusinessRuleException("The password is not correct.");
+        }
+    }
+
+    @GetMapping("/api/account/two-step")
+    @Transactional(readOnly = true)
+    public TwoStep.Status status() {
+        return twoStep.status(me());
+    }
+
+    @PostMapping("/api/account/two-step/off")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void turnOff(@Valid @RequestBody PasswordInput body) {
+        AppUser user = me();
+        checkPassword(user, body.password());
+        if (twoStep.required(user)) {
+            throw new BusinessRuleException("Your role requires a second step: you can change it, not turn it off.");
+        }
+        twoStep.remove(user, "self");
+    }
+
+    @PostMapping("/api/account/two-step/recovery-codes")
+    @Transactional
+    public Map<String, List<String>> renewCodes(@Valid @RequestBody PasswordInput body) {
+        AppUser user = me();
+        checkPassword(user, body.password());
+        return Map.of("recoveryCodes", twoStep.newRecoveryCodes(user));
+    }
+
+    @GetMapping("/api/account/sessions")
+    public List<UserSessions.View> mySessions(HttpServletRequest request) {
+        return sessions.list(me().getId(), request.getSession().getId());
+    }
+
+    @DeleteMapping("/api/account/sessions/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void endMine(@PathVariable String id) {
+        sessions.end(me().getId(), id, CurrentUser.email());
+    }
+
+    @PostMapping("/api/account/sessions/end-others")
+    @Transactional
+    public Ended endOthers(HttpServletRequest request) {
+        return new Ended(sessions.endAll(me().getId(), request.getSession().getId(), CurrentUser.email()));
+    }
+
+    // ---- an administrator, for someone else ----
+
+    /** For a lost phone without recovery codes: the person sets the second step up again at their next sign-in. */
+    @PostMapping("/api/users/{id}/two-step/reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAuthority('role.assign')")
+    @Transactional
+    public void reset(@PathVariable Long id) {
+        AppUser user = users.find(id);
+        if (user.getId().equals(CurrentUser.id())) {
+            throw new BusinessRuleException("Another administrator must reset your own second step.");
+        }
+        twoStep.remove(user, CurrentUser.email());
+        sessions.endAll(user.getId(), null, CurrentUser.email());
+    }
+
+    @GetMapping("/api/users/{id}/sessions")
+    @PreAuthorize("hasAuthority('user.disable')")
+    public List<UserSessions.View> sessionsOf(@PathVariable Long id) {
+        return sessions.list(users.find(id).getId(), null);
+    }
+
+    @PostMapping("/api/users/{id}/sessions/end")
+    @PreAuthorize("hasAuthority('user.disable')")
+    @Transactional
+    public Ended endAllOf(@PathVariable Long id) {
+        return new Ended(sessions.endAll(users.find(id).getId(), null, CurrentUser.email()));
+    }
+}
