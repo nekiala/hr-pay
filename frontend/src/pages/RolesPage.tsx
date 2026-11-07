@@ -5,6 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { SignInCard } from '../components/SignInCard'
 
 export default function RolesPage() {
   const ask = useAsk()
@@ -158,6 +159,7 @@ export default function RolesPage() {
           </div>
         )}
       </div>
+      <SignInCard />
     </section>
   )
 }

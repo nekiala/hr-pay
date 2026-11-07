@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, fileToBase64, type Employer, type PayslipSettings } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
-import { useAuth } from '../auth'
 
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', 'Name'], ['address', 'Address'], ['rccm', 'RCCM'], ['nationalId', 'Id. Nat.'], ['taxNumber', 'NIF'],
@@ -128,52 +127,6 @@ export default function CompanyPage() {
         <p className="hint">Samples use made-up figures with your header, so they show no one's pay. Save first to see your latest changes.</p>
         <Button type="submit">Save</Button>
       </Form>
-      <SignInCard />
     </section>
-  )
-}
-
-type SignIn = { microsoftTenant: string | null; microsoftAvailable: boolean; googleAvailable: boolean }
-
-/** Which Microsoft 365 directory the company's people may sign in from. */
-function SignInCard() {
-  const { can } = useAuth()
-  const [s, setS] = useState<SignIn | null>(null)
-  const [tenant, setTenant] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-  const allowed = can('role.manage')
-  useEffect(() => {
-    if (allowed) api<SignIn>('/api/company/sign-in').then((r) => { setS(r); setTenant(r.microsoftTenant ?? '') }).catch((e: Error) => setError(e.message))
-  }, [allowed])
-  if (!allowed || !s) return null
-  const save = async () => {
-    setError(null)
-    setSaved(false)
-    try {
-      const r = await api<SignIn>('/api/company/sign-in', { method: 'PUT', body: { microsoftTenant: tenant.trim() } })
-      setS(r)
-      setTenant(r.microsoftTenant ?? '')
-      setSaved(true)
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not save.')
-    }
-  }
-  return (
-    <Form className="card" onSubmit={save}>
-      <h3>Sign in with Microsoft 365</h3>
-      {!s.microsoftAvailable && <p className="notice">Microsoft sign-in is not turned on for this installation (MICROSOFT_CLIENT_ID). You can
-        still set the tenant now.</p>}
-      <p className="muted">People sign in with their work account only from your organization's own Microsoft directory. Find its tenant ID
-        in the Microsoft Entra admin centre, under Overview. Their email in HR Pay must be their Microsoft sign-in name.</p>
-      <label>Tenant ID
-        <input value={tenant} onChange={(e) => setTenant(e.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
-          pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}" />
-      </label>
-      <p className="hint">Leave empty to refuse Microsoft sign-in for your company.</p>
-      <ErrorText error={error} />
-      {saved && <p className="success">Saved.</p>}
-      <Button type="submit">Save</Button>
-    </Form>
   )
 }

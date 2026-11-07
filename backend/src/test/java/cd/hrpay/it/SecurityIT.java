@@ -139,4 +139,18 @@ class SecurityIT extends IntegrationTest {
                 .andExpect(jsonPath("$.dataKey").value(true))
                 .andExpect(jsonPath("$.auditChain.intact").value(true));
     }
+
+    @Test
+    void theCompanySetsItsMicrosoftTenant() throws Exception {
+        MockHttpSession admin = login(ADMIN);
+        mvc.perform(get("/api/company/sign-in").session(admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.microsoftAvailable").value(false));
+        mvc.perform(json(put("/api/company/sign-in").session(admin), "{\"microsoftTenant\":\"not-a-tenant\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(json(put("/api/company/sign-in").session(admin), "{\"microsoftTenant\":\"72F988BF-86F1-41AF-91AB-2D7CD011DB47\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.microsoftTenant").value("72f988bf-86f1-41af-91ab-2d7cd011db47"));
+        mvc.perform(json(put("/api/company/sign-in").session(admin), "{\"microsoftTenant\":\"\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.microsoftTenant").doesNotExist());
+        mvc.perform(get("/api/company/sign-in").session(login(HR))).andExpect(status().isForbidden());
+    }
 }
