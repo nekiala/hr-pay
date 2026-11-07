@@ -28,7 +28,8 @@ public class Declarations {
     public static final List<String> KINDS = List.of("CNSS", "IPR", "INPP", "ONEM", "IERE");
 
     public record Row(long userId, String registrationNo, String name, String idNumber, String currency, BigDecimal base,
-                      BigDecimal baseCdf, BigDecimal employeeCdf, BigDecimal employerCdf, BigDecimal totalCdf) {}
+                      BigDecimal baseCdf, BigDecimal employeeCdf, BigDecimal employerCdf, BigDecimal totalCdf,
+                      String directionName, String unitName) {}
 
     public record Filed(LocalDate filedOn, String reference, String note, String filedBy, OffsetDateTime filedAt) {}
 
@@ -43,6 +44,12 @@ public class Declarations {
     private final JdbcClient jdbc;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.org.OrgStructure org;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOrg(cd.hrpay.org.OrgStructure org) {
+        this.org = org;
+    }
 
     public Declarations(JdbcClient jdbc, AuditService audit, Clock clock) {
         this.jdbc = jdbc;
@@ -88,6 +95,7 @@ public class Declarations {
             default -> null;
         };
         List<Row> rows = new ArrayList<>();
+        var units = org.placementsOfUnits();
         List<String> warnings = new ArrayList<>();
         jdbc.sql("""
                 select p.user_id, u.registration_no, u.first_name || ' ' || u.last_name as name, trim(p.currency) as currency,
@@ -95,7 +103,7 @@ public class Declarations {
                        (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employee_amount,
                        (select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employer_amount,
                        (select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code = ?) as employer_base
-                from payslip p join app_user u on u.id = p.user_id
+                , p.unit_id from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? order by u.last_name, u.first_name""")
                 .params(idKey == null ? "-" : idKey, employeeCode == null ? "-" : employeeCode,
                         employerCode == null ? "-" : employerCode, employerCode == null ? "-" : employerCode, run.id())
@@ -115,8 +123,10 @@ public class Declarations {
                             : cdf(base, currency, run.usdCdf());
                     BigDecimal e = cdf(employee, currency, run.usdCdf());
                     BigDecimal r = cdf(employer, currency, run.usdCdf());
+                    var place = units.get(rs.getObject("unit_id", Long.class));
                     return new Row(rs.getLong("user_id"), rs.getString("registration_no"), rs.getString("name"),
-                            rs.getString("id_number"), currency, base, baseCdf, e, r, e.add(r));
+                            rs.getString("id_number"), currency, base, baseCdf, e, r, e.add(r),
+                            place == null ? null : place.directionName(), place == null ? null : place.unitName());
                 }).list().stream().filter(java.util.Objects::nonNull).forEach(rows::add);
         if (idKey != null) {
             rows.stream().filter(r -> r.idNumber() == null || r.idNumber().isBlank())

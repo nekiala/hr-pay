@@ -41,7 +41,8 @@ public class OrgStructure {
     public record Boss(long userId, String userName, boolean manual) {}
 
     public record Member(long userId, String name, String registrationNo, long unitId, String unitName,
-                         LocalDate since, Long reportsToId, String reportsToName, List<Long> heads) {}
+                         LocalDate since, Long reportsToId, String reportsToName, List<Long> heads, Long siteId,
+                         String siteName) {}
 
     public record Assignment(long id, long unitId, String unitCode, String unitName, LocalDate validFrom,
                              LocalDate validTo, String reason, String note, String createdBy) {}
@@ -468,8 +469,9 @@ public class OrgStructure {
         heads.values().forEach(h -> headsBy.computeIfAbsent(h.userId(), k -> new ArrayList<>()).add(h.unitId()));
         return jdbc.sql("""
                 select a.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, a.unit_id, a.valid_from,
-                       m.id as manual_id, m.first_name || ' ' || m.last_name as manual_name
+                       m.id as manual_id, m.first_name || ' ' || m.last_name as manual_name, u.site_id, s.name as site_name
                 from org_assignment a join app_user u on u.id = a.user_id left join app_user m on m.id = u.manager_id
+                     left join site s on s.id = u.site_id
                 where a.valid_to is null and u.status = 'ACTIVE' order by u.last_name, u.first_name""")
                 .query((rs, i) -> {
                     long userId = rs.getLong("user_id");
@@ -481,7 +483,8 @@ public class OrgStructure {
                     return new Member(userId, rs.getString("name"), rs.getString("registration_no"), unitId,
                             unit == null ? null : unit.name(), rs.getObject("valid_from", LocalDate.class),
                             boss == null ? null : boss.userId(), boss == null ? null : boss.userName(),
-                            headsBy.getOrDefault(userId, List.of()));
+                            headsBy.getOrDefault(userId, List.of()), rs.getObject("site_id", Long.class),
+                            rs.getString("site_name"));
                 }).list();
     }
 
@@ -603,6 +606,18 @@ public class OrgStructure {
                 out.put(user, p);
             }
         });
+        return out;
+    }
+
+    /** The unit and the units above it, nearest first. */
+    public List<Long> ancestors(long unitId) {
+        Map<Long, UnitRow> all = allUnits();
+        List<Long> out = new ArrayList<>();
+        UnitRow u = all.get(unitId);
+        while (u != null && !out.contains(u.id())) {
+            out.add(u.id());
+            u = u.parentId() == null ? null : all.get(u.parentId());
+        }
         return out;
     }
 

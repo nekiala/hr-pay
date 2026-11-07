@@ -42,11 +42,30 @@ public final class DayCalculator {
                             List<Session> sessions, boolean autoClosed, boolean corrected, boolean mission,
                             List<Entry> entries, String leaveType) {
 
-        /** This day as approved leave: paid leave pays the scheduled minutes. */
-        public DayResult onLeave(String type, boolean paid) {
-            return new DayResult(date, Status.LEAVE, scheduledMinutes, workedMinutes, paid ? scheduledMinutes : 0, 0, 0,
+        /** This day as approved leave: it pays the leave type's share of the scheduled minutes. */
+        public DayResult onLeave(String type, java.math.BigDecimal payPercent) {
+            return new DayResult(date, Status.LEAVE, scheduledMinutes, workedMinutes, share(scheduledMinutes, payPercent), 0, 0,
                     0, 0, overtimeMinutes, overtimeKind, false, firstIn, lastOut, sessions, autoClosed, corrected,
                     mission, entries, type);
+        }
+
+        /**
+         * Half a day of approved leave: the leave pays its share of half the scheduled minutes, the time worked in the
+         * other half is paid as usual, and lateness or early departure that day is not deducted.
+         */
+        public DayResult onHalfLeave(String type, java.math.BigDecimal payPercent) {
+            int fromWork = payableMinutes + lateDeductedMinutes + earlyDeductedMinutes;
+            int paid = Math.min(scheduledMinutes, fromWork + share(scheduledMinutes / 2, payPercent));
+            Status s = workedMinutes == 0 && (status == Status.ABSENT || status == Status.FUTURE || status == Status.NOT_STARTED)
+                    ? Status.LEAVE : status;
+            return new DayResult(date, s, scheduledMinutes, workedMinutes, paid, 0, 0, 0, 0, overtimeMinutes,
+                    overtimeKind, missingCheckOut, firstIn, lastOut, sessions, autoClosed, corrected, mission, entries,
+                    type + " (half day)");
+        }
+
+        private static int share(int minutes, java.math.BigDecimal percent) {
+            return percent.multiply(java.math.BigDecimal.valueOf(minutes))
+                    .divide(java.math.BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP).intValue();
         }
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { ApiError, api, type Mission } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useUnitFilter } from '../components/UnitFilter'
 
 const STATUS: Record<Mission['status'], string> = {
   PENDING: 'Waiting for approval', APPROVED: 'Approved', REJECTED: 'Rejected', CANCELLED: 'Cancelled',
@@ -16,6 +17,7 @@ export default function MissionsPage() {
   const canDecide = can('mission.approve.all') || can('mission.approve.team')
   const [mine, setMine] = useState<Mission[]>([])
   const [pending, setPending] = useState<Mission[]>([])
+  const units = useUnitFilter()
   const [form, setForm] = useState({ workDate: today(), startTime: '14:00', endTime: '17:00', location: '', purpose: '' })
   const [notes, setNotes] = useState<Record<number, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -56,11 +58,11 @@ export default function MissionsPage() {
 
       {canDecide && (
         <div className="card">
-          <h3>To approve</h3>
-          {pending.length === 0 && <p className="muted">Nothing waiting.</p>}
-          {pending.map((m) => (
+          <div className="row space"><h3>To approve</h3>{units.select}</div>
+          {pending.filter((m) => units.keep(m.userId)).length === 0 && <p className="muted">Nothing waiting.</p>}
+          {pending.filter((m) => units.keep(m.userId)).map((m) => (
             <div key={m.id} className="mission">
-              <p><strong>{m.employeeName}</strong> <span className="muted">{m.registrationNo}</span></p>
+              <p><strong>{m.employeeName}</strong> <span className="muted">{m.registrationNo} · {units.unitName(m.userId)}</span></p>
               <p>{m.workDate}, {hm(m.startTime)}–{hm(m.endTime)} · {m.location}</p>
               <p className="muted">{m.purpose}</p>
               <div className="row">

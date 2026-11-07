@@ -8,7 +8,7 @@ type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
 type Summary = { kind: Kind; employees: number; totalCdf: number; filed: Filed | null }
 type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
-type Row = { userId: number; registrationNo: string; name: string; idNumber: string | null; currency: string; base: number; baseCdf: number; employeeCdf: number; employerCdf: number; totalCdf: number }
+type Row = { userId: number; registrationNo: string; name: string; idNumber: string | null; currency: string; base: number; baseCdf: number; employeeCdf: number; employerCdf: number; totalCdf: number; directionName: string | null; unitName: string | null }
 type Declaration = {
   month: string; kind: Kind; runStatus: string; usdCdf: number; rateDate: string; rows: Row[]
   baseCdf: number; employeeCdf: number; employerCdf: number; totalCdf: number; warnings: string[]; filed: Filed | null
@@ -27,6 +27,30 @@ const EMPLOYER_FIELDS: [keyof Employer, string][] = [
 ]
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const cdf = (n: number) => money(n, 'CDF')
+
+/** Subtotals by Direction, for the cost owners; the file sent stays company-wide. */
+function ByDirection({ rows }: { rows: Row[] }) {
+  const groups = new Map<string, { people: number; base: number; employee: number; employer: number; total: number }>()
+  rows.forEach((r) => {
+    const k = r.directionName ?? 'No unit'
+    const g = groups.get(k) ?? { people: 0, base: 0, employee: 0, employer: 0, total: 0 }
+    groups.set(k, { people: g.people + 1, base: g.base + r.baseCdf, employee: g.employee + r.employeeCdf, employer: g.employer + r.employerCdf, total: g.total + r.totalCdf })
+  })
+  if (groups.size < 2) return null
+  return (
+    <div className="table-wrap no-print">
+      <h4>By Direction</h4>
+      <table>
+        <thead><tr><th>Direction</th><th>People</th><th>Base</th><th>Employee</th><th>Employer</th><th>Total</th></tr></thead>
+        <tbody>
+          {[...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, g]) => (
+            <tr key={k}><td>{k}</td><td>{g.people}</td><td>{cdf(g.base)}</td><td>{cdf(g.employee)}</td><td>{cdf(g.employer)}</td><td>{cdf(g.total)}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 export default function DeclarationsPage() {
   const { can } = useAuth()
@@ -105,7 +129,7 @@ export default function DeclarationsPage() {
                 <tbody>
                   {decl.rows.map((r, i) => (
                     <tr key={r.userId}>
-                      <td>{i + 1}</td><td>{r.name} <span className="muted">{r.registrationNo}</span></td>
+                      <td>{i + 1}</td><td>{r.name} <span className="muted">{r.registrationNo}</span>{r.unitName && <div className="hint no-print">{r.unitName}</div>}</td>
                       {(decl.kind === 'CNSS' || decl.kind === 'IPR') && <td>{r.idNumber ?? <span className="error">missing</span>}</td>}
                       <td>{cdf(r.baseCdf)}{r.currency !== 'CDF' && <div className="hint">{money(r.base, r.currency)}</div>}</td>
                       {employeeCol && <td>{cdf(r.employeeCdf)}</td>}{employerCol && <td>{cdf(r.employerCdf)}</td>}<td>{cdf(r.totalCdf)}</td>
@@ -117,6 +141,7 @@ export default function DeclarationsPage() {
               </table>
             </div>
           )}
+          <ByDirection rows={decl.rows} />
           {decl.filed && <p>Filed on {decl.filed.filedOn}{decl.filed.reference && `, reference ${decl.filed.reference}`}{decl.filed.note && ` (${decl.filed.note})`}. Recorded by {decl.filed.filedBy}.</p>}
           <div className="row no-print">
             <a className="button secondary" href={`/api/declarations/${month}/${kind}/file.csv`}>Download CSV</a>

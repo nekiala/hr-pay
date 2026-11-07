@@ -110,6 +110,14 @@ cd backend && ./gradlew test
 - **Payslips** keep the unit, Direction and cost centre (the unit's own or the nearest one above) of the employee at the end of the month. The payroll page has subtotals and a filter by Direction.
 - **Reports**: the attendance and finance spreadsheets have Direction and unit columns and can be limited to a unit. Reports › Headcount and payroll cost by Direction gives people, payslips, gross, employer charges and total cost per Direction or per unit, in USD and in CDF at the payroll rate, also as CSV.
 
+## Approvals and leave rules (phase 7)
+
+- **Attendance corrections** (`/corrections`): an employee asks for a forgotten check-in or check-out to be added, or a wrong one removed, up to 62 days back. A head of their branch proposes it (or rejects it with a reason), and HR applies it through the usual correction, with "Request #n: reason" as its note. A head can propose one directly for someone in their branch; HR can also apply a request no head has looked at yet. Days older than two months go to HR directly.
+- **Unit filters**: the approval lists for overtime, leave, missions and corrections can be narrowed to a unit and the units below it. Payment files and declarations show subtotals by Direction; the files sent to the bank, provider, CNSS or DGI stay company-wide.
+- **Org chart by site**: when people work at more than one site, the chart can show one site, with the headcounts of that site.
+- **Evaluation templates per unit**: a template can apply to a unit and every unit below it. The most specific wins: the person's unit (or the nearest unit above with a template) for their grade category, then for anyone in it, then the grade category's template, then the one for everyone.
+- **Leave**: each kind keeps a share of the day's pay (sick leave is a sample 66.67%, to confirm with a payroll specialist). A one-day request can cover the morning or the afternoon only (0.5 day). Annual leave gains seniority days (sample: 1 more day per 5 full years of service on 1 January, set in Leave settings). Kinds that need a document (sick, maternity, family events) take a PDF, JPEG or PNG of up to 5 MB; the manager approves, then HR checks the document before the leave counts. HR approving directly needs the document first.
+
 ## Configuration
 
 | Variable | Default | Purpose |

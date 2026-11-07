@@ -9,12 +9,16 @@ export default function LeaveSettingsPage() {
   const [types, setTypes] = useState<LeaveType[]>([])
   const [added, setAdded] = useState({ code: '', name: '', annualLeaveDays: 20, active: true })
   const [year, setYear] = useState(new Date().getFullYear())
+  const [seniority, setSeniority] = useState({ seniorityYears: 5, seniorityDays: 1 })
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = () => {
     api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch((e: Error) => setError(e.message))
     api<LeaveType[]>('/api/leave/types').then(setTypes).catch((e: Error) => setError(e.message))
+    api<Record<string, string>>('/api/leave/settings').then((s) => setSeniority({
+      seniorityYears: Number(s.LEAVE_SENIORITY_YEARS ?? 0), seniorityDays: Number(s.LEAVE_SENIORITY_DAYS ?? 0),
+    })).catch(() => undefined)
   }
   useEffect(load, [])
 
@@ -81,30 +85,45 @@ export default function LeaveSettingsPage() {
               return `Annual leave ${year}: granted to ${x.granted}, already granted to ${x.alreadyGranted}, ${x.withoutCategory} without a grade category.`
             })}>Grant annual leave for {year}</button>
         </div>
-        <p className="hint">Gives each active employee the days of their category, prorated for people hired during the year. Running it again skips those already granted. Unused days carry over.</p>
+        <p className="hint">Gives each active employee the days of their category, plus the seniority days below, prorated for people hired during the year. Running it again skips those already granted. Unused days carry over.</p>
+      </div>
+
+      <div className="card">
+        <h3>Seniority</h3>
+        <div className="row grant">
+          <label>Extra days<input type="number" min={0} step={0.5} className="narrow-input" value={seniority.seniorityDays}
+            onChange={(e) => setSeniority({ ...seniority, seniorityDays: Number(e.target.value) })} /></label>
+          <label>for every<input type="number" min={0} max={40} className="narrow-input" value={seniority.seniorityYears}
+            onChange={(e) => setSeniority({ ...seniority, seniorityYears: Number(e.target.value) })} /></label>
+          <span>full years of service on 1 January</span>
+          <button className="secondary" onClick={() => void run(() => api('/api/leave/settings', { method: 'PUT', body: seniority }), 'Seniority rule saved. It applies to the next grant.')}>Save</button>
+        </div>
+        <p className="hint">Counted from the hire date. Set the years to 0 to give no seniority days. Sample rule to check against the Labour Code and your collective agreement.</p>
       </div>
 
       <div className="card">
         <h3>Kinds of leave</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Paid</th><th>Uses balance</th><th>Needs document</th><th>Max days</th><th>Active</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Share of pay (%)</th><th>Uses balance</th><th>Needs document</th><th>Max days</th><th>Active</th><th></th></tr></thead>
             <tbody>
               {types.map((t) => (
                 <tr key={t.id}>
                   <td><input value={t.name} onChange={(e) => setType(t.id, { name: e.target.value })} /></td>
-                  <td><input type="checkbox" checked={t.paid} onChange={(e) => setType(t.id, { paid: e.target.checked })} /></td>
+                  <td><input type="number" min={0} max={100} step={0.01} className="narrow-input" value={t.payPercent}
+                    onChange={(e) => setType(t.id, { payPercent: Number(e.target.value) })} /></td>
                   <td><input type="checkbox" checked={t.usesBalance} onChange={(e) => setType(t.id, { usesBalance: e.target.checked })} /></td>
                   <td><input type="checkbox" checked={t.requiresDocument} onChange={(e) => setType(t.id, { requiresDocument: e.target.checked })} /></td>
                   <td><input type="number" min={1} className="narrow-input" value={t.maxDays ?? ''} placeholder="none"
                     onChange={(e) => setType(t.id, { maxDays: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                   <td><input type="checkbox" checked={t.active} onChange={(e) => setType(t.id, { active: e.target.checked })} /></td>
-                  <td><button className="secondary" onClick={() => void run(() => api(`/api/leave/types/${t.id}`, { method: 'PUT', body: t }), `${t.name} saved.`)}>Save</button></td>
+                  <td><button className="secondary" onClick={() => void run(() => api(`/api/leave/types/${t.id}`, { method: 'PUT', body: { ...t, paid: undefined } }), `${t.name} saved.`)}>Save</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="hint">100% keeps the full day's pay, 0% makes the leave unpaid. A kind that needs a document is approved by the manager, then counts only once HR has checked the document.</p>
       </div>
     </section>
   )

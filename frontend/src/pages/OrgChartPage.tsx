@@ -15,6 +15,7 @@ export default function OrgChartPage() {
   const [view, setView] = useState<'units' | 'people'>('units')
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const [root, setRoot] = useState<string>('')
+  const [site, setSite] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -23,8 +24,33 @@ export default function OrgChartPage() {
     if (people) api<OrgMember[]>('/api/org/people').then(setMembers).catch(() => undefined)
   }, [people])
 
+  const sites = useMemo(() => {
+    const m = new Map<number, string>()
+    members.forEach((x) => { if (x.siteId !== null) m.set(x.siteId, x.siteName ?? `#${x.siteId}`) })
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [members])
+  const atSite = useMemo(() => (site ? members.filter((m) => String(m.siteId) === site) : members), [members, site])
+
+  // With a site chosen, each unit counts only that site's people, and units with nobody there are left out.
+  const shown = useMemo(() => {
+    if (!site) return units
+    const here = new Map<number, number>()
+    atSite.forEach((m) => here.set(m.unitId, (here.get(m.unitId) ?? 0) + 1))
+    const total = new Map<number, number>()
+    const byParent = new Map<number | null, OrgUnit[]>()
+    units.forEach((u) => byParent.set(u.parentId, [...(byParent.get(u.parentId) ?? []), u]))
+    const count = (u: OrgUnit): number => {
+      const t = (here.get(u.id) ?? 0) + (byParent.get(u.id) ?? []).reduce((s, c) => s + count(c), 0)
+      total.set(u.id, t)
+      return t
+    }
+    (byParent.get(null) ?? []).forEach(count)
+    return units.filter((u) => (total.get(u.id) ?? 0) > 0)
+      .map((u) => ({ ...u, members: here.get(u.id) ?? 0, totalMembers: total.get(u.id) ?? 0 }))
+  }, [units, atSite, site])
+
   const tree = useMemo(() => {
-    const all = unitTree(units)
+    const all = unitTree(shown)
     if (!root) return all
     const find = (nodes: TreeNode<OrgUnit>[]): TreeNode<OrgUnit> | undefined => {
       for (const n of nodes) {
@@ -36,7 +62,7 @@ export default function OrgChartPage() {
     }
     const n = find(all)
     return n ? [n] : all
-  }, [units, root])
+  }, [shown, root])
 
   const toggle = (id: number) => {
     const next = new Set(collapsed)
@@ -71,9 +97,9 @@ export default function OrgChartPage() {
 
   // People: everyone under the person they report to; the people at the top have nobody above them.
   const peopleTree = useMemo(() => {
-    const ids = new Set(members.map((m) => m.userId))
+    const ids = new Set(atSite.map((m) => m.userId))
     const byBoss = new Map<number | null, OrgMember[]>()
-    for (const m of members) {
+    for (const m of atSite) {
       const boss = m.reportsToId !== null && ids.has(m.reportsToId) ? m.reportsToId : null
       byBoss.set(boss, [...(byBoss.get(boss) ?? []), m])
     }
@@ -81,7 +107,7 @@ export default function OrgChartPage() {
       (byBoss.get(boss) ?? []).filter((m) => !seen.has(m.userId)).sort((a, b) => b.heads.length - a.heads.length || a.name.localeCompare(b.name))
         .map((m) => ({ item: m, children: build(m.userId, new Set([...seen, m.userId])) }))
     return build(null, new Set())
-  }, [members])
+  }, [atSite])
 
   const renderPeople = (nodes: TreeNode<OrgMember>[]) => (
     <ul>{nodes.map((n) => (
@@ -118,12 +144,19 @@ export default function OrgChartPage() {
             {units.filter((u) => units.some((c) => c.parentId === u.id)).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
         )}
+        {sites.length > 1 && (
+          <select value={site} onChange={(e) => setSite(e.target.value)}>
+            <option value="">All sites</option>
+            {sites.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        )}
         <button className="secondary" onClick={() => setCollapsed(new Set())}>Expand all</button>
         <button className="secondary" onClick={() => window.print()}>Print or save as PDF</button>
         {can('org.manage') && <Link className="button secondary" to="/org/manage">Levels, import and moves</Link>}
       </div>
-      <h2 className="print-only">Org chart · {new Date().toISOString().slice(0, 10)}</h2>
+      <h2 className="print-only">Org chart{site && ` · ${sites.find(([id]) => String(id) === site)?.[1]}`} · {new Date().toISOString().slice(0, 10)}</h2>
       <p className="muted no-print">
+        {site && `${atSite.length} people at this site, in ${shown.length} units. `}
         {units.length} units{vacant > 0 && `, ${vacant} without a head`}. A vacant unit's people report to the nearest head above it.
         Cellules (staff units) are shown with a dashed border.
       </p>

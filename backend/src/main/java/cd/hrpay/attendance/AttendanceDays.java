@@ -72,9 +72,12 @@ public class AttendanceDays {
                     DayResult r = DayCalculator.compute(p, byDay.getOrDefault(p.date(), List.of()), zone,
                             clock.instant(), rounding);
                     var l = onLeave.get(p.date());
+                    if (l != null && l.halfDay() != null && p.expectedAtWork()) {
+                        return r.onHalfLeave(l.type(), l.payPercent());
+                    }
                     boolean replace = l != null && p.expectedAtWork() && (r.status() == DayCalculator.Status.ABSENT
                             || r.status() == DayCalculator.Status.FUTURE || r.status() == DayCalculator.Status.NOT_STARTED);
-                    return replace ? r.onLeave(l.type(), l.paid()) : r;
+                    return replace ? r.onLeave(l.type(), l.payPercent()) : r;
                 })
                 .toList();
     }

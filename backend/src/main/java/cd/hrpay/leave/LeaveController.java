@@ -3,6 +3,7 @@ package cd.hrpay.leave;
 import cd.hrpay.security.CurrentUser;
 import cd.hrpay.user.UserService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -33,7 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class LeaveController {
 
     public record RequestInput(@NotNull Long leaveTypeId, @NotNull LocalDate startDate, @NotNull LocalDate endDate,
-                               @Size(max = 500) String reason) {}
+                               @Pattern(regexp = "AM|PM") String halfDay, @Size(max = 500) String reason) {}
+
+    public record DocumentInput(@NotBlank @Size(max = 200) String fileName, @NotBlank String contentType,
+                                @NotBlank @Size(max = 7_000_000) String base64) {}
+
+    public record SettingsInput(@Min(0) @Max(40) int seniorityYears,
+                                @NotNull @DecimalMin("0") @Digits(integer = 2, fraction = 2) BigDecimal seniorityDays) {}
 
     public record DecisionInput(boolean approve, @Size(max = 300) String note) {}
 
@@ -45,7 +52,9 @@ public class LeaveController {
             @NotNull @DecimalMin("0") @Digits(integer = 3, fraction = 2) BigDecimal annualLeaveDays,
             boolean active) {}
 
-    public record TypeInput(@NotBlank @Size(max = 150) String name, boolean paid, boolean usesBalance,
+    public record TypeInput(@NotBlank @Size(max = 150) String name, Boolean paid,
+                            @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal payPercent,
+                            boolean usesBalance,
                             boolean requiresDocument, @Min(1) @Max(366) Integer maxDays, boolean active) {}
 
     public record AdjustInput(@NotNull Long leaveTypeId,
@@ -70,7 +79,8 @@ public class LeaveController {
     @PutMapping("/types/{id}")
     @PreAuthorize("hasAuthority('leave.manage')")
     public LeaveService.LeaveType updateType(@PathVariable long id, @Valid @RequestBody TypeInput b) {
-        return leave.updateType(id, b.name().trim(), b.paid(), b.usesBalance(), b.requiresDocument(), b.maxDays(), b.active());
+        BigDecimal pay = b.payPercent() != null ? b.payPercent() : Boolean.FALSE.equals(b.paid()) ? BigDecimal.ZERO : BigDecimal.valueOf(100);
+        return leave.updateType(id, b.name().trim(), pay, b.usesBalance(), b.requiresDocument(), b.maxDays(), b.active());
     }
 
     @GetMapping("/categories")
@@ -115,7 +125,7 @@ public class LeaveController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('leave.request')")
     public LeaveService.LeaveRequest request(@Valid @RequestBody RequestInput b) {
-        return leave.request(users.find(CurrentUser.id()), b.leaveTypeId(), b.startDate(), b.endDate(), b.reason());
+        return leave.request(users.find(CurrentUser.id()), b.leaveTypeId(), b.startDate(), b.endDate(), b.halfDay(), b.reason());
     }
 
     @GetMapping("/requests/to-decide")
@@ -134,6 +144,55 @@ public class LeaveController {
     @PreAuthorize("hasAnyAuthority('leave.request', 'leave.manage')")
     public LeaveService.LeaveRequest cancel(@PathVariable long id, @Valid @RequestBody(required = false) NoteInput b) {
         return leave.cancel(id, b == null ? null : b.note());
+    }
+
+    @PostMapping("/requests/{id}/document-check")
+    @PreAuthorize("hasAuthority('leave.manage')")
+    public LeaveService.LeaveRequest checkDocument(@PathVariable long id, @Valid @RequestBody DecisionInput b) {
+        return leave.checkDocument(id, b.approve(), b.note());
+    }
+
+    @GetMapping("/requests/{id}/documents")
+    @PreAuthorize("isAuthenticated()")
+    public List<LeaveService.Document> documents(@PathVariable long id) {
+        return leave.documents(id);
+    }
+
+    @PostMapping("/requests/{id}/documents")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    public LeaveService.Document addDocument(@PathVariable long id, @Valid @RequestBody DocumentInput b) {
+        byte[] data;
+        try {
+            data = java.util.Base64.getDecoder().decode(b.base64().replaceFirst("^data:[^,]*,", ""));
+        } catch (IllegalArgumentException e) {
+            throw new cd.hrpay.common.BusinessRuleException("The file could not be read.");
+        }
+        return leave.addDocument(id, b.fileName(), b.contentType(), data);
+    }
+
+    @GetMapping("/requests/{id}/documents/{documentId}")
+    @PreAuthorize("isAuthenticated()")
+    public org.springframework.http.ResponseEntity<byte[]> document(@PathVariable long id, @PathVariable long documentId) {
+        LeaveService.DocumentFile f = leave.document(id, documentId);
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", f.contentType())
+                .header("Content-Disposition", org.springframework.http.ContentDisposition.inline()
+                        .filename(f.fileName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(f.data());
+    }
+
+    @GetMapping("/settings")
+    @PreAuthorize("hasAuthority('leave.manage')")
+    public java.util.Map<String, String> settings() {
+        return leave.settings();
+    }
+
+    @PutMapping("/settings")
+    @PreAuthorize("hasAuthority('leave.manage')")
+    public java.util.Map<String, String> saveSettings(@Valid @RequestBody SettingsInput b) {
+        return leave.saveSettings(b.seniorityYears(), b.seniorityDays());
     }
 
     @GetMapping("/users/{userId}")
