@@ -17,6 +17,7 @@ import KioskPage from './pages/KioskPage'
 import OutboxPage from './pages/OutboxPage'
 import UserAttendancePage from './pages/UserAttendancePage'
 import MissionsPage from './pages/MissionsPage'
+import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -64,7 +65,8 @@ export default function App() {
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
           {(can('schedule.manage') || can('user.read')) && <NavLink to="/schedules">Schedules</NavLink>}
           <NavLink to="/holidays">Holidays</NavLink>
-          {can('overtime_policy.manage') && <NavLink to="/overtime">Overtime</NavLink>}
+          {(can('overtime.approve.all') || can('overtime.approve.team')) && <NavLink to="/overtime/approvals">Approve overtime</NavLink>}
+          {can('overtime_policy.manage') && <NavLink to="/overtime" end>Overtime rules</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
           {can('audit.read') && <NavLink to="/outbox">Messages</NavLink>}
         </nav>
@@ -90,6 +92,7 @@ export default function App() {
           <Route path="/overtime" element={<Guard permission="overtime_policy.manage"><OvertimePage /></Guard>} />
           <Route path="/check-in" element={<CheckInPage />} />
           <Route path="/missions" element={<MissionsPage />} />
+          <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<AfterLogin />} />

@@ -318,7 +318,10 @@ export type MonthSummary = {
   lateDays: number
   absentDays: number
   missingCheckOutDays: number
-  earnings: { grossMonthly: number; currency: string; earnedToDate: number; minuteRate: number } | null
+  earnings: { grossMonthly: number; currency: string; earnedToDate: number; minuteRate: number; overtimeEarned: number } | null
+  overtimeApprovedMinutes: number
+  overtimePendingMinutes: number
+  overtime: OvertimeDay[]
   days: DayResult[]
 }
 
@@ -335,3 +338,24 @@ export type Salary = {
 
 export const money = (amount: number, currency: string) =>
   new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount)
+
+export type OvertimeDay = {
+  date: string
+  minutes: number
+  kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'AUTOMATIC'
+  approvedMinutes: number
+  decidedBy: string | null
+  note: string | null
+}
+
+export type PendingOvertime = {
+  userId: number
+  employeeName: string
+  registrationNo: string
+  date: string
+  minutes: number
+  kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'
+  firstIn: string | null
+  lastOut: string | null
+}

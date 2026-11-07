@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, hours, money, time, type DayResult, type DayStatus, type MonthSummary } from '../api'
+import { api, hours, money, time, type DayResult, type DayStatus, type MonthSummary, type OvertimeDay } from '../api'
 import { ErrorText } from './ErrorText'
 
 const STATUS: Record<DayStatus, string> = {
@@ -24,7 +24,11 @@ function shiftMonth(month: string, delta: number) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function notes(d: DayResult) {
+const OT_STATUS: Record<OvertimeDay['status'], string> = {
+  PENDING: 'awaiting approval', APPROVED: 'approved', REJECTED: 'rejected', AUTOMATIC: 'paid',
+}
+
+function notes(d: DayResult, ot?: OvertimeDay) {
   const list: string[] = []
   if (d.lateMinutes > 0) list.push(`Late ${hours(d.lateMinutes)}${d.lateDeductedMinutes ? ' (deducted)' : ' (within grace)'}`)
   if (d.earlyMinutes > 0) list.push(`Left early ${hours(d.earlyMinutes)}${d.earlyDeductedMinutes ? ' (deducted)' : ' (within grace)'}`)
@@ -32,7 +36,11 @@ function notes(d: DayResult) {
   if (d.autoClosed) list.push('Closed automatically, to confirm')
   if (d.mission) list.push('Mission')
   if (d.corrected) list.push('Corrected by HR')
-  if (d.overtimeMinutes > 0) list.push(`Overtime ${hours(d.overtimeMinutes)}, awaiting approval`)
+  if (d.overtimeMinutes > 0) {
+    const status = ot ? OT_STATUS[ot.status] : 'awaiting approval'
+    const partial = ot && ot.status === 'APPROVED' && ot.approvedMinutes < ot.minutes ? ` (${hours(ot.approvedMinutes)} approved)` : ''
+    list.push(`Overtime ${hours(d.overtimeMinutes)}, ${status}${partial}`)
+  }
   return list.join(' · ')
 }
 
@@ -84,9 +92,12 @@ export default function MonthView({ source, onVoid, version = 0 }: {
               <small>of {hours(data.scheduledMinutesToDate)} expected to date, {hours(data.scheduledMinutesMonth)} this month</small>
             </div>
             <div className="tile">
-              <span>Overtime</span>
-              <strong>{hours(data.overtimeMinutesToDate)}</strong>
-              <small>paid only after approval</small>
+              <span>Overtime approved</span>
+              <strong>{hours(data.overtimeApprovedMinutes)}</strong>
+              <small>
+                {data.earnings ? `${money(data.earnings.overtimeEarned, data.earnings.currency)} · ` : ''}
+                {data.overtimePendingMinutes ? `${hours(data.overtimePendingMinutes)} awaiting approval` : 'nothing waiting'}
+              </small>
             </div>
             <div className="tile">
               <span>Late days</span>
@@ -97,7 +108,7 @@ export default function MonthView({ source, onVoid, version = 0 }: {
           {data.earnings && (
             <p className="hint">
               Gross earned = monthly gross ÷ {hours(data.scheduledMinutesMonth)} scheduled this month × paid time. Before
-              taxes and deductions; overtime is added once approved.
+              taxes and deductions. Approved overtime is paid at the overtime rates on top.
             </p>
           )}
           <div className="table-wrap">
@@ -116,7 +127,7 @@ export default function MonthView({ source, onVoid, version = 0 }: {
                     <td>{d.workedMinutes ? hours(d.workedMinutes) : ''}</td>
                     <td>{d.scheduledMinutes ? hours(d.payableMinutes) : ''}</td>
                     <td className="muted">
-                      {notes(d)}
+                      {notes(d, data.overtime.find((o) => o.date === d.date))}
                       {onVoid && d.entries.length > 0 && (
                         <ul className="entries">
                           {d.entries.map((e) => (

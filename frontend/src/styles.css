@@ -121,3 +121,6 @@ tr.absent td:nth-child(2) { color: var(--danger); }
 .entries li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .entries .void { padding: 2px 8px; font-size: 12px; }
 .flag { color: var(--danger); }
+.narrow-input { width: 90px; }
+td.actions { white-space: nowrap; }
+td.actions button + button { margin-left: 6px; }

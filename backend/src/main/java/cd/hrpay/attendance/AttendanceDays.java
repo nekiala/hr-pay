@@ -24,11 +24,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class AttendanceDays {
 
     public record Earnings(BigDecimal grossMonthly, String currency, BigDecimal earnedToDate,
-                           BigDecimal minuteRate) {}
+                           BigDecimal minuteRate, BigDecimal overtimeEarned) {}
+
+    public enum OvertimeStatus { PENDING, APPROVED, REJECTED, AUTOMATIC }
+
+    public record OvertimeDay(LocalDate date, int minutes, cd.hrpay.overtime.OvertimeRateTier.Kind kind,
+                              OvertimeStatus status, int approvedMinutes, String decidedBy, String note) {}
 
     public record MonthSummary(YearMonth month, String timeZone, LocalDate asOf, int scheduledMinutesMonth, int scheduledMinutesToDate,
                                int payableMinutesToDate, int workedMinutesToDate, int overtimeMinutesToDate,
                                int lateDays, int absentDays, int missingCheckOutDays, Earnings earnings,
+                               int overtimeApprovedMinutes, int overtimePendingMinutes, List<OvertimeDay> overtime,
                                List<DayResult> days) {}
 
     private final WorkCalendar calendar;
@@ -36,9 +42,11 @@ public class AttendanceDays {
     private final OvertimePolicyRepository policies;
     private final SalaryService salaries;
     private final Clock clock;
+    private final cd.hrpay.overtime.OvertimeDecisions decisions;
 
     public AttendanceDays(WorkCalendar calendar, ClockEventRepository events, OvertimePolicyRepository policies,
-                          SalaryService salaries, Clock clock) {
+                          SalaryService salaries, Clock clock, cd.hrpay.overtime.OvertimeDecisions decisions) {
+        this.decisions = decisions;
         this.calendar = calendar;
         this.events = events;
         this.policies = policies;
@@ -69,7 +77,9 @@ public class AttendanceDays {
         LocalDate from = month.atDay(1);
         LocalDate to = month.atEndOfMonth();
         LocalDate asOf = today.isBefore(from) ? from.minusDays(1) : today.isAfter(to) ? to : today;
-        List<DayResult> days = days(user, from, to);
+        LocalDate weekStart = from.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        List<DayResult> withLeadIn = days(user, weekStart, to);
+        List<DayResult> days = withLeadIn.stream().filter(d -> !d.date().isBefore(from)).toList();
         List<DayResult> toDate = days.stream().filter(d -> !d.date().isAfter(asOf)).toList();
 
         int scheduledMonth = days.stream().mapToInt(DayResult::scheduledMinutes).sum();
@@ -81,15 +91,51 @@ public class AttendanceDays {
         int absent = (int) toDate.stream().filter(d -> d.status() == DayCalculator.Status.ABSENT).count();
         int missing = (int) toDate.stream().filter(DayResult::missingCheckOut).count();
 
+        // Overtime: each day's status, then priced with weekly tiers (counting the week's days before the month).
+        String country = user.getSite() == null ? "CD" : user.getSite().getCountryCode();
+        OvertimePolicy policy = policies.findFirstByCountryCodeAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                country, to).orElse(null);
+        boolean needsApproval = policy == null || policy.isRequiresApproval();
+        Map<LocalDate, cd.hrpay.overtime.OvertimeDecisions.Decision> decided = decisions
+                .forPeriod(user.getId(), weekStart, to).stream()
+                .collect(Collectors.toMap(cd.hrpay.overtime.OvertimeDecisions.Decision::workDate, d -> d));
+        List<OvertimeDay> overtimeDays = withLeadIn.stream()
+                .filter(d -> d.overtimeMinutes() > 0 && !d.date().isAfter(asOf))
+                .map(d -> {
+                    var decision = decided.get(d.date());
+                    if (decision != null) {
+                        int approved = Math.min(decision.approvedMinutes(), d.overtimeMinutes());
+                        return new OvertimeDay(d.date(), d.overtimeMinutes(), d.overtimeKind(),
+                                OvertimeStatus.valueOf(decision.status()), approved, decision.decidedBy(), decision.note());
+                    }
+                    return needsApproval
+                            ? new OvertimeDay(d.date(), d.overtimeMinutes(), d.overtimeKind(), OvertimeStatus.PENDING, 0, null, null)
+                            : new OvertimeDay(d.date(), d.overtimeMinutes(), d.overtimeKind(), OvertimeStatus.AUTOMATIC,
+                                    d.overtimeMinutes(), null, null);
+                }).toList();
+        List<cd.hrpay.overtime.OvertimeValuation.Priced> priced = cd.hrpay.overtime.OvertimeValuation.price(
+                overtimeDays.stream().filter(o -> o.approvedMinutes() > 0)
+                        .map(o -> new cd.hrpay.overtime.OvertimeValuation.Approved(o.date(), o.kind(), o.approvedMinutes()))
+                        .toList(),
+                policy == null ? List.of() : policy.getTiers());
+        BigDecimal weightedInMonth = priced.stream().filter(p -> !p.date().isBefore(from))
+                .map(cd.hrpay.overtime.OvertimeValuation.Priced::weightedMinutes).reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<OvertimeDay> monthOvertime = overtimeDays.stream().filter(o -> !o.date().isBefore(from)).toList();
+        int approvedMinutes = monthOvertime.stream().mapToInt(OvertimeDay::approvedMinutes).sum();
+        int pendingMinutes = monthOvertime.stream().filter(o -> o.status() == OvertimeStatus.PENDING)
+                .mapToInt(OvertimeDay::minutes).sum();
+
         Earnings earnings = null;
         if (withEarnings && scheduledMonth > 0) {
             earnings = salaries.on(user.getId(), asOf.isBefore(from) ? from : asOf).map(s -> {
                 BigDecimal rate = s.grossMonthly().divide(BigDecimal.valueOf(scheduledMonth), 10, RoundingMode.HALF_UP);
                 BigDecimal earned = rate.multiply(BigDecimal.valueOf(payable)).setScale(2, RoundingMode.HALF_UP);
-                return new Earnings(s.grossMonthly(), s.currency(), earned, rate.setScale(6, RoundingMode.HALF_UP));
+                BigDecimal overtimeEarned = rate.multiply(weightedInMonth).setScale(2, RoundingMode.HALF_UP);
+                return new Earnings(s.grossMonthly(), s.currency(), earned, rate.setScale(6, RoundingMode.HALF_UP),
+                        overtimeEarned);
             }).orElse(null);
         }
         return new MonthSummary(month, zone.getId(), asOf, scheduledMonth, scheduledToDate, payable, worked, overtime, lateDays,
-                absent, missing, earnings, days);
+                absent, missing, earnings, approvedMinutes, pendingMinutes, monthOvertime, days);
     }
 }
