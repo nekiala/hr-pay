@@ -270,50 +270,79 @@ export default function UserFormPage() {
   )
 }
 
+type NetPlan = {
+  gradeCode: string; currency: string; gradeBasic: number; complement: number; gross: number | null
+  cnss: number | null; tax: number | null; net: number | null; targetNet: number; usdLocal: number | null; rateDate: string | null
+}
+
 function SalaryCard({ userId }: { userId: number }) {
   const { can } = useAuth()
   const [history, setHistory] = useState<Salary[]>([])
-  const [form, setForm] = useState({ effectiveFrom: new Date().toISOString().slice(0, 8) + '01', grossMonthly: '', currency: 'USD', note: '' })
+  const [form, setForm] = useState({ effectiveFrom: new Date().toISOString().slice(0, 8) + '01', net: '', note: '' })
+  const [plan, setPlan] = useState<NetPlan | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = () => api<Salary[]>(`/api/users/${userId}/salaries`).then(setHistory).catch((e: Error) => setError(e.message))
   useEffect(() => { load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const add = async (e: FormEvent) => {
+  const fail = (err: unknown) => setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
+  const body = () => ({ effectiveFrom: form.effectiveFrom, net: Number(form.net), note: form.note || null })
+
+  const preview = async (e: FormEvent) => {
     e.preventDefault()
     setError(null)
     setMessage(null)
     try {
-      await api(`/api/users/${userId}/salaries`, { method: 'POST', body: { ...form, grossMonthly: Number(form.grossMonthly) } })
-      setForm({ ...form, grossMonthly: '', note: '' })
+      setPlan(await api<NetPlan>(`/api/users/${userId}/salaries/net/preview`, { method: 'POST', body: body() }))
+    } catch (err) {
+      setPlan(null)
+      fail(err)
+    }
+  }
+
+  const save = async () => {
+    setError(null)
+    try {
+      await api(`/api/users/${userId}/salaries/net`, { method: 'POST', body: body() })
+      setForm({ ...form, net: '', note: '' })
+      setPlan(null)
       setMessage(t('Salary saved.'))
       await load()
     } catch (err) {
-      setError(err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Could not save.'))
+      fail(err)
     }
   }
 
   return (
     <div className="card">
-      <h3>{t('Gross monthly salary')}</h3>
+      <h3>{t('Monthly salary')}</h3>
       {history.length === 0 && <p className="muted">{t('No salary yet.')}</p>}
       {history.map((s) => (
         <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">{t('from')}{' '}{s.effectiveFrom}{s.note ? ` · ${s.note}` : ''}{' '}{t('· set by')}{' '}{s.createdBy}</span></p>
       ))}
       {can('salary.write') && (
-        <Form className="row" onSubmit={add}>
-          <input type="date" value={form.effectiveFrom} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value })} required />
-          <input type="number" min="0.01" step="0.01" placeholder={t('Gross per month')} value={form.grossMonthly}
-            onChange={(e) => setForm({ ...form, grossMonthly: e.target.value })} required />
-          <select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}>
-            <option>{t('USD')}</option><option>{t('CDF')}</option>
-          </select>
+        <Form className="row" onSubmit={preview}>
+          <input type="date" value={form.effectiveFrom} onChange={(e) => { setForm({ ...form, effectiveFrom: e.target.value }); setPlan(null) }} required />
+          <input type="number" min="0.01" step="0.01" placeholder={t('Agreed net per month')} value={form.net}
+            onChange={(e) => { setForm({ ...form, net: e.target.value }); setPlan(null) }} required />
           <input placeholder={t('Reason (optional)')} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
-          <Button type="submit">{t('Add')}</Button>
+          <Button type="submit" className="secondary">{t('Work out the gross')}</Button>
         </Form>
       )}
-      <p className="hint">{t('A new amount applies from its date; earlier amounts stay in the history.')}</p>
+      {plan && (
+        <div className="stack">
+          <p>{t('Grade {g} basic', { g: plan.gradeCode })}: <strong>{money(plan.gradeBasic, plan.currency)}</strong>
+            {' · '}{t('Salary complement')}: <strong>{money(plan.complement, plan.currency)}</strong></p>
+          {plan.gross != null && (
+            <p className="muted">{t('Gross for a normal month')}: {money(plan.gross, plan.currency)}
+              {' · '}{t('CNSS')}: {money(plan.cnss ?? 0, plan.currency)}{' · '}{t('IPR')}: {money(plan.tax ?? 0, plan.currency)}
+              {' · '}{t('Net')}: {money(plan.net ?? 0, plan.currency)}</p>
+          )}
+          <Button onClick={save}>{t('Save this salary')}</Button>
+        </div>
+      )}
+      <p className="hint">{t('Enter the net agreed with the person. The basic is the grade\'s; HR Pay works out the complement so that a normal month (housing, transport, CNSS and IPR included) pays that net.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>

@@ -201,7 +201,7 @@ public class Certificates {
     private byte[] salary(AppUser u, String number) {
         LocalDate today = LocalDate.now(clock);
         Company.Details employer = company.get();
-        var current = salaries.on(u.getId(), today)
+        var current = salaries.agreed(u.getId(), today)
                 .orElseThrow(() -> new BusinessRuleException("This person has no salary on file."));
         StringBuilder body = new StringBuilder(Texts.t("We, %s, certify that %s, registration number %s, employed by our company since %s, receives a gross monthly salary of %s %s.",
                 employer.name(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(),

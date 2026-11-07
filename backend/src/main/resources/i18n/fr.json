@@ -914,5 +914,18 @@
  "Postnom": "Postnom",
  "The middle name, as on the identity card.": "Le postnom, comme sur la carte d'identité.",
  "Commune or territory": "Commune ou territoire",
- "Where the person lives, as the tax declaration asks.": "Lieu de résidence, comme le demande la déclaration fiscale."
+ "Where the person lives, as the tax declaration asks.": "Lieu de résidence, comme le demande la déclaration fiscale.",
+ "Daily rate: monthly salary %s %s ÷ %s days = %s.": "Taux journalier : salaire mensuel %s %s ÷ %s jours = %s.",
+ "There is no contract on %s: start one first, its grade gives the basic salary.": "Aucun contrat au %s : commencez-en un, son grade donne le salaire de base.",
+ "The agreed salary (%s) cannot be below the basic salary of grade %s (%s).": "Le salaire convenu (%s) ne peut pas être inférieur au salaire de base du grade %s (%s).",
+ "At the basic salary of grade %s (%s) the net is already %s, above %s. Choose a lower grade.": "Au salaire de base du grade %s (%s), le net est déjà de %s, au-dessus de %s. Choisissez un grade inférieur.",
+ "Net agreed: %s %s": "Net convenu : %s %s",
+ "Agreed salary: %s %s": "Salaire convenu : %s %s",
+ "Grade %s basic": "Salaire de base du grade %s",
+ "Grade %s is paid in %s: give the agreed salary in %s.": "Le grade %s est payé en %s : donnez le salaire convenu en %s.",
+ "Give the agreed salary or the agreed net, not both.": "Donnez le salaire convenu ou le net convenu, pas les deux.",
+ "Agreed salary": "Salaire convenu",
+ "At least the grade's basic; the rest is the salary complement. Empty: the grade's basic salary.": "Au moins le salaire de base du grade ; le reste est le complément de salaire. Vide : le salaire de base du grade.",
+ "Agreed net salary": "Salaire net convenu",
+ "Instead of the agreed salary: HR Pay works out the complement that gives this net.": "À la place du salaire convenu : HR Pay calcule le complément qui donne ce net."
 }

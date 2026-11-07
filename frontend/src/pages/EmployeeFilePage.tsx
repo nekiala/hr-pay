@@ -28,7 +28,7 @@ export default function EmployeeFilePage() {
   const [grades, setGrades] = useState<Grade[]>([])
   const [occupations, setOccupations] = useState<Occupation[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, negotiatedBasic: '', note: '' })
+  const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, agreedNet: '', note: '' })
   const [dependant, setDependant] = useState({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
   const [elements, setElements] = useState<PayElement[]>([])
   const [items, setItems] = useState<PayAssignment[]>([])
@@ -70,7 +70,7 @@ export default function EmployeeFilePage() {
       method: 'POST',
       body: {
         ...contract, gradeId: Number(contract.gradeId), occupationId: contract.occupationId ? Number(contract.occupationId) : null,
-        endDate: contract.endDate || null, negotiatedBasic: contract.negotiatedBasic ? Number(contract.negotiatedBasic) : null,
+        endDate: contract.endDate || null, agreedNet: contract.agreedNet ? Number(contract.agreedNet) : null,
       },
     }), t('Contract saved.'))
   }
@@ -151,13 +151,13 @@ export default function EmployeeFilePage() {
                 </label>
               </div>
               <div className="grid2">
-                <label>{t('Negotiated basic (optional)')}<input type="number" min="0.01" step="0.01" value={contract.negotiatedBasic} placeholder={grade ? t('Grade basic: {a}', { a: money(grade.baseSalary, grade.currency) }) : ''}
-                    onChange={(e) => setContract({ ...contract, negotiatedBasic: e.target.value })} />
+                <label>{t('Agreed net salary (optional)')}<input type="number" min="0.01" step="0.01" value={contract.agreedNet} placeholder={grade ? t('Grade basic: {a}', { a: money(grade.baseSalary, grade.currency) }) : ''}
+                    onChange={(e) => setContract({ ...contract, agreedNet: e.target.value })} />
                 </label>
                 <label>{t('Note')}<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
               </div>
               <label className="check"><input type="checkbox" checked={contract.expatriate} onChange={(e) => setContract({ ...contract, expatriate: e.target.checked })} />{t('Expatriate (employer pays IERE)')}</label>
-              <p className="hint">{t('The previous contract ends the day before. The basic salary from that date is the negotiated amount, or the grade\'s.')}</p>
+              <p className="hint">{t('The previous contract ends the day before. The basic salary is the grade\'s. With an agreed net, HR Pay works out the gross and pays the difference above the basic as a salary complement.')}</p>
               <ErrorText error={error} />
             <div className="modal-foot"><Button className="secondary" onClick={() => setContracting(false)}>{t('Cancel')}</Button><Button type="submit">{t('Save contract')}</Button></div>
             </Form>

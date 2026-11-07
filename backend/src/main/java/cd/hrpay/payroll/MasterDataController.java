@@ -51,7 +51,8 @@ public class MasterDataController {
                                 @NotNull LocalDate startDate, LocalDate endDate, @NotNull Long gradeId, Long occupationId,
                                 boolean expatriate,
                                 @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal negotiatedBasic,
-                                @Size(max = 300) String note) {}
+                                @Size(max = 300) String note,
+                                @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal agreedNet) {}
 
     public record ProfileInput(LocalDate birthDate, @Pattern(regexp = "FEMALE|MALE") String gender,
                                @Size(max = 60) String nationality,
@@ -74,6 +75,12 @@ public class MasterDataController {
 
     private final MasterData masterData;
     private final EmployeeFile files;
+    private NegotiatedPay negotiated;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNegotiated(NegotiatedPay negotiated) {
+        this.negotiated = negotiated;
+    }
 
     public MasterDataController(MasterData masterData, EmployeeFile files) {
         this.masterData = masterData;
@@ -142,8 +149,9 @@ public class MasterDataController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('salary.write')")
     public EmployeeFile.Contract startContract(@PathVariable long userId, @Valid @RequestBody ContractInput b) {
-        return files.startContract(userId, b.contractType(), b.startDate(), b.endDate(), b.gradeId(), b.occupationId(),
-                b.expatriate(), b.negotiatedBasic(), b.note());
+        // The agreed salary (negotiatedBasic) or net: the basic stays the grade's, the rest is the complement.
+        return negotiated.startContract(userId, b.contractType(), b.startDate(), b.endDate(), b.gradeId(), b.occupationId(),
+                b.expatriate(), b.negotiatedBasic(), b.agreedNet(), b.note());
     }
 
     @PutMapping("/users/{userId}/profile")

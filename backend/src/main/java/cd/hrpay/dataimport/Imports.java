@@ -90,7 +90,8 @@ public class Imports {
                 col("grade", "Grade code", true, "Code of the grade on the Grades page."),
                 col("occupation", "Occupation code", false, null),
                 col("expatriate", "Expatriate", false, "Yes or no."),
-                col("negotiated_basic", "Negotiated basic salary", false, "Empty: the grade's basic salary."),
+                col("negotiated_basic", "Agreed salary", false, "At least the grade's basic; the rest is the salary complement. Empty: the grade's basic salary."),
+                col("agreed_net", "Agreed net salary", false, "Instead of the agreed salary: HR Pay works out the complement that gives this net."),
                 col("note", "Note", false, null)));
         COLUMNS.put(Kind.SALARIES, List.of(
                 col("registration_no", "Registration no.", true, null),
@@ -120,6 +121,13 @@ public class Imports {
 
     private static Column col(String key, String header, boolean required, String help) {
         return new Column(key, header, required, help);
+    }
+
+    private cd.hrpay.payroll.NegotiatedPay negotiated;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNegotiated(cd.hrpay.payroll.NegotiatedPay negotiated) {
+        this.negotiated = negotiated;
     }
 
     private final JdbcClient jdbc;
@@ -483,6 +491,7 @@ public class Imports {
         LocalDate end = row.date("end_date");
         String gradeCode = row.required("grade");
         BigDecimal basic = row.number("negotiated_basic");
+        BigDecimal net = row.number("agreed_net");
         boolean expatriate = row.bool("expatriate");
         Person p = requirePerson(row, out);
         if (!row.errors.isEmpty()) {
@@ -497,7 +506,7 @@ public class Imports {
                     .map(MasterData.Occupation::id)
                     .orElseThrow(() -> new BusinessRuleException(Texts.t("No occupation has the code %s.", occupation)));
         }
-        employees.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic, row.text("note"));
+        negotiated.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic, net, row.text("note"));
         out.action = "ADD";
     }
 

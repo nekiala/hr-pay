@@ -217,7 +217,7 @@ public class Letters {
             v.put("job.title", c.occupationName());
             v.put("job.grade", c.gradeCode() + " · " + c.gradeName());
         });
-        salaries.on(userId, today).ifPresent(s -> v.put("salary.gross", amount(s.grossMonthly()) + " " + s.currency()));
+        salaries.agreed(userId, today).ifPresent(s -> v.put("salary.gross", amount(s.grossMonthly()) + " " + s.currency()));
         if (u.getSite() != null) {
             v.put("site.name", u.getSite().getName());
         }

@@ -43,6 +43,24 @@ public class SalaryService {
                 .param(userId).param(date).query(Salary.class).optional();
     }
 
+    /**
+     * The agreed monthly salary on a date: the basic plus the negotiated salary complement in force that month (pay
+     * element COMPLEMENT, in the basic's currency). Payslips add the complement themselves; this is for what states
+     * a person's salary (certificates, letters, estimates of pay earned, the final settlement).
+     */
+    public Optional<Salary> agreed(long userId, LocalDate date) {
+        return on(userId, date).map(s -> {
+            BigDecimal complement = jdbc.sql("""
+                    select coalesce(sum(a.amount), 0) from employee_pay_element a join pay_element e on e.id = a.element_id
+                    where a.user_id = ? and e.code = 'COMPLEMENT' and e.active and not a.excluded
+                      and trim(a.currency) = ? and a.start_month <= ? and (a.end_month is null or a.end_month >= ?)""")
+                    .params(userId, s.currency(), date.withDayOfMonth(1), date.withDayOfMonth(1))
+                    .query(BigDecimal.class).single();
+            return complement.signum() == 0 ? s : new Salary(s.id(), s.userId(), s.effectiveFrom(),
+                    s.grossMonthly().add(complement), s.currency(), s.note(), s.createdBy(), s.createdAt());
+        });
+    }
+
     @Transactional
     public Salary add(long userId, LocalDate effectiveFrom, BigDecimal gross, String currency, String note) {
         return add(userId, effectiveFrom, gross, currency, note, CurrentUser.email());
