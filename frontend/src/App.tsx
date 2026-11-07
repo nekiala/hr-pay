@@ -16,6 +16,7 @@ import CheckInPage from './pages/CheckInPage'
 import KioskPage from './pages/KioskPage'
 import OutboxPage from './pages/OutboxPage'
 import UserAttendancePage from './pages/UserAttendancePage'
+import MissionsPage from './pages/MissionsPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -57,6 +58,7 @@ export default function App() {
         <nav>
           <NavLink to="/" end>Home</NavLink>
           <NavLink to="/check-in">Check in</NavLink>
+          {(can('mission.request') || can('mission.approve.all') || can('mission.approve.team')) && <NavLink to="/missions">Missions</NavLink>}
           {can('user.read') && <NavLink to="/users">Users</NavLink>}
           {can('role.read') && <NavLink to="/roles">Roles</NavLink>}
           {(can('site.read') || can('site.manage')) && <NavLink to="/sites">Sites</NavLink>}
@@ -87,6 +89,7 @@ export default function App() {
           <Route path="/holidays" element={<HolidaysPage />} />
           <Route path="/overtime" element={<Guard permission="overtime_policy.manage"><OvertimePage /></Guard>} />
           <Route path="/check-in" element={<CheckInPage />} />
+          <Route path="/missions" element={<MissionsPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<AfterLogin />} />

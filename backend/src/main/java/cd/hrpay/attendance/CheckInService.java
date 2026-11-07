@@ -47,9 +47,14 @@ public class CheckInService {
     private final OtpService otp;
     private final AuditService audit;
     private final JsonMapper json;
+    private final cd.hrpay.mission.MissionService missions;
+    private final AutoClose autoClose;
 
     public CheckInService(ClockEventRepository events, TrustedDevices devices, QrTokens qr, OtpService otp,
-                          AuditService audit, JsonMapper json) {
+                          AuditService audit, JsonMapper json, cd.hrpay.mission.MissionService missions,
+                          AutoClose autoClose) {
+        this.missions = missions;
+        this.autoClose = autoClose;
         this.events = events;
         this.devices = devices;
         this.qr = qr;
@@ -64,6 +69,8 @@ public class CheckInService {
 
     @Transactional
     public StartResult startCheckIn(AppUser user, Presence presence) {
+        // A day left open before today is closed now, so a forgotten end of day never blocks a new day.
+        openCheckIn(user.getId()).ifPresent(autoClose::closeIfPast);
         if (openCheckIn(user.getId()).isPresent()) {
             throw new BusinessRuleException("You are already checked in.");
         }
@@ -93,10 +100,25 @@ public class CheckInService {
 
     @Transactional
     public ClockEvent checkOut(AppUser user, Presence presence) {
-        openCheckIn(user.getId())
+        ClockEvent open = openCheckIn(user.getId())
                 .orElseThrow(() -> new BusinessRuleException("You are not checked in."));
+        OffsetDateTime now = OffsetDateTime.now();
+        // During an approved mission the employee may end the day wherever the mission is.
+        var mission = missions.activeMission(user, now).filter(m -> m.getWorkDate().equals(open.getWorkDate()));
+        if (mission.isPresent()) {
+            ClockEvent e = new ClockEvent(user.getId(), ClockEvent.Type.OUT, now, open.getWorkDate(),
+                    ClockEvent.Source.MISSION, user.getEmail());
+            e.setMissionId(mission.get().getId());
+            e.setIp(presence.ip());
+            e.setLocation(presence.lat(), presence.lng(), presence.accuracyM());
+            e.setNote("Mission: " + mission.get().getLocation());
+            events.save(e);
+            audit.record("attendance.check_out", "user", user.getId(), Map.of("eventId", e.getId(),
+                    "at", now.toString(), "missionId", mission.get().getId()));
+            return e;
+        }
         Verified verified = verify(user, presence, "check_out");
-        return record(user, ClockEvent.Type.OUT, OffsetDateTime.now(), verified);
+        return record(user, ClockEvent.Type.OUT, now, verified);
     }
 
     private ClockEvent record(AppUser user, ClockEvent.Type type, OffsetDateTime at, Verified v) {

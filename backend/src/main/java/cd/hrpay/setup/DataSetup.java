@@ -99,6 +99,7 @@ public class DataSetup implements ApplicationRunner {
         }
         assignSampleSchedules();
         addSampleSalaries();
+        assignSampleManager();
         allowLocalIpv6();
     }
 
@@ -112,6 +113,15 @@ public class DataSetup implements ApplicationRunner {
                 site.replaceIpRanges(ranges);
             }
         });
+    }
+
+    /** Sample employees report to the sample manager, so team approvals can be tried. */
+    private void assignSampleManager() {
+        users.findByEmailIgnoreCase("manager@demo.hrpay.cd").ifPresent(manager -> SAMPLE_USERS.stream()
+                .filter(s -> s.role().equals("EMPLOYEE"))
+                .forEach(s -> users.findByEmailIgnoreCase(s.email())
+                        .filter(u -> u.getManagerId() == null)
+                        .ifPresent(u -> u.setManagerId(manager.getId()))));
     }
 
     /** Fake gross salaries from 1 January 2026 so earnings to date can be tried; HR replaces them. */

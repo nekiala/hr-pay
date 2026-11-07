@@ -36,7 +36,7 @@ public class AttendanceController {
 
     public record EventView(Long id, ClockEvent.Type type, OffsetDateTime occurredAt, LocalDate workDate,
                             ClockEvent.Source source, boolean qrVerified, boolean trustedDevice, String note) {
-        static EventView of(ClockEvent e) {
+        public static EventView of(ClockEvent e) {
             return new EventView(e.getId(), e.getType(), e.getOccurredAt(), e.getWorkDate(), e.getSource(),
                     e.isQrVerified(), e.getTrustedDeviceId() != null, e.getNote());
         }
@@ -45,7 +45,10 @@ public class AttendanceController {
     public record SiteRules(String name, String timeZone, boolean qrRequired, boolean gpsRequired, int maxAccuracyM) {}
 
     public record Status(boolean checkedIn, OffsetDateTime since, SiteRules site, boolean trustedDevice,
-                         String trustedDeviceName, List<EventView> today) {}
+                         String trustedDeviceName, List<EventView> today, MissionNow mission) {}
+
+    /** An approved mission happening now: the day can be ended from the mission's location. */
+    public record MissionNow(Long id, String location, java.time.LocalTime startTime, java.time.LocalTime endTime) {}
 
     public record StartResponse(String status, EventView event, UUID challengeId, List<String> channels,
                                 OffsetDateTime expiresAt) {}
@@ -54,9 +57,11 @@ public class AttendanceController {
     private final ClockEventRepository events;
     private final TrustedDevices devices;
     private final UserService users;
+    private final cd.hrpay.mission.MissionService missions;
 
     public AttendanceController(CheckInService checkIn, ClockEventRepository events, TrustedDevices devices,
-                                UserService users) {
+                                UserService users, cd.hrpay.mission.MissionService missions) {
+        this.missions = missions;
         this.checkIn = checkIn;
         this.events = events;
         this.devices = devices;
@@ -77,7 +82,10 @@ public class AttendanceController {
                 device.isPresent(), device.map(TrustedDevices.Device::name).orElse(null),
                 events.findForPeriod(user.getId(), today.minusDays(1), today).stream()
                         .filter(e -> e.getWorkDate().equals(today) || open.map(o -> o.getWorkDate().equals(e.getWorkDate())).orElse(false))
-                        .map(EventView::of).toList());
+                        .map(EventView::of).toList(),
+                missions.activeMission(user, OffsetDateTime.now())
+                        .map(m -> new MissionNow(m.getId(), m.getLocation(), m.getStartTime(), m.getEndTime()))
+                        .orElse(null));
     }
 
     @PostMapping("/check-in")

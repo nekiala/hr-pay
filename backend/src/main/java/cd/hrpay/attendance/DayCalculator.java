@@ -31,11 +31,16 @@ public final class DayCalculator {
 
     public record Session(OffsetDateTime in, OffsetDateTime out, boolean open) {}
 
+    /** A clock event as shown to people correcting the day. */
+    public record Entry(Long id, ClockEvent.Type type, OffsetDateTime at, ClockEvent.Source source, String note,
+                        String createdBy) {}
+
     public record DayResult(LocalDate date, Status status, int scheduledMinutes, int workedMinutes,
                             int payableMinutes, int lateMinutes, int lateDeductedMinutes, int earlyMinutes,
                             int earlyDeductedMinutes, int overtimeMinutes, OvertimeRateTier.Kind overtimeKind,
                             boolean missingCheckOut, OffsetDateTime firstIn, OffsetDateTime lastOut,
-                            List<Session> sessions) {}
+                            List<Session> sessions, boolean autoClosed, boolean corrected, boolean mission,
+                            List<Entry> entries) {}
 
     private record Span(long from, long to) {
         long length() { return Math.max(0, to - from); }
@@ -103,21 +108,21 @@ public final class DayCalculator {
 
         if (plan.scheduleId() == null) {
             return result(date, Status.NO_SCHEDULE, 0, worked, 0, 0, 0, 0, 0, 0, null, missingCheckOut, firstIn,
-                    lastOut, sessions);
+                    lastOut, sessions, events);
         }
         if (!scheduled || plan.holiday()) {
             int overtime = round(worked, roundingMinutes);
             Status status = plan.holiday() ? Status.HOLIDAY : Status.REST_DAY;
             int payable = plan.holiday() && scheduled ? scheduledMinutes : 0;
             return result(date, status, plan.holiday() && scheduled ? scheduledMinutes : 0, worked, payable, 0, 0, 0,
-                    0, overtime, overtime > 0 ? kind : null, missingCheckOut, firstIn, lastOut, sessions);
+                    0, overtime, overtime > 0 ? kind : null, missingCheckOut, firstIn, lastOut, sessions, events);
         }
 
         if (sessions.isEmpty()) {
             Instant end = dayStart.plus(Duration.ofMinutes(window.to()));
             Status status = date.isAfter(today) ? Status.FUTURE
                     : date.equals(today) && now.isBefore(end) ? Status.NOT_STARTED : Status.ABSENT;
-            return result(date, status, scheduledMinutes, 0, 0, 0, 0, 0, 0, 0, null, false, null, null, sessions);
+            return result(date, status, scheduledMinutes, 0, 0, 0, 0, 0, 0, 0, null, false, null, null, sessions, events);
         }
 
         long late = Math.max(0, minute(dayStart, firstIn.toInstant()) - window.from());
@@ -138,15 +143,21 @@ public final class DayCalculator {
         int overtime = round(worked - inWindow, roundingMinutes);
         return result(date, inProgress ? Status.IN_PROGRESS : Status.PRESENT, scheduledMinutes, worked, payable,
                 late, lateDeducted ? late : 0, early, earlyDeducted ? early : 0, overtime, overtime > 0 ? kind : null,
-                missingCheckOut, firstIn, lastOut, sessions);
+                missingCheckOut, firstIn, lastOut, sessions, events);
     }
 
     private static DayResult result(LocalDate date, Status status, int scheduled, long worked, long payable, long late,
                                     long lateDeducted, long early, long earlyDeducted, int overtime,
                                     OvertimeRateTier.Kind kind, boolean missing, OffsetDateTime firstIn,
-                                    OffsetDateTime lastOut, List<Session> sessions) {
+                                    OffsetDateTime lastOut, List<Session> sessions, List<ClockEvent> events) {
+        boolean autoClosed = events.stream().anyMatch(e -> e.getSource() == ClockEvent.Source.AUTO_CLOSE);
+        boolean corrected = events.stream().anyMatch(e -> e.getSource() == ClockEvent.Source.HR_MANUAL);
+        boolean mission = events.stream().anyMatch(e -> e.getSource() == ClockEvent.Source.MISSION);
+        List<Entry> entries = events.stream().map(e -> new Entry(e.getId(), e.getType(), e.getOccurredAt(),
+                e.getSource(), e.getNote(), e.getCreatedBy())).toList();
         return new DayResult(date, status, scheduled, (int) worked, (int) payable, (int) late, (int) lateDeducted,
-                (int) early, (int) earlyDeducted, overtime, kind, missing, firstIn, lastOut, List.copyOf(sessions));
+                (int) early, (int) earlyDeducted, overtime, kind, missing, firstIn, lastOut, List.copyOf(sessions),
+                autoClosed, corrected, mission, entries);
     }
 
     private static int round(long minutes, int step) {

@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@org.springframework.scheduling.annotation.EnableScheduling
 public class HrPayApplication {
     public static void main(String[] args) {
         SpringApplication.run(HrPayApplication.class, args);

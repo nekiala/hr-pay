@@ -84,6 +84,7 @@ export type User = {
   hasPassword: boolean
   lastLoginAt: string | null
   createdAt: string
+  managerId: number | null
 }
 
 export type Page<T> = { items: T[]; page: number; size: number; total: number }
@@ -227,6 +228,7 @@ export type AttendanceStatus = {
   trustedDevice: boolean
   trustedDeviceName: string | null
   today: ClockEventView[]
+  mission: { id: number; location: string; startTime: string; endTime: string } | null
 }
 
 export type StartResponse = {
@@ -251,7 +253,9 @@ export function currentPosition(): Promise<Position> {
   })
 }
 
-export const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+/** Clock time in the site's time zone, whatever the browser's zone is. */
+export const time = (iso: string, timeZone = 'Africa/Kinshasa') =>
+  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone })
 
 export type DayStatus = 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
 
@@ -270,10 +274,41 @@ export type DayResult = {
   missingCheckOut: boolean
   firstIn: string | null
   lastOut: string | null
+  autoClosed: boolean
+  corrected: boolean
+  mission: boolean
+  entries: DayEntry[]
+}
+
+export type DayEntry = {
+  id: number
+  type: 'IN' | 'OUT'
+  at: string
+  source: 'SELF' | 'HR_MANUAL' | 'AUTO_CLOSE' | 'MISSION'
+  note: string | null
+  createdBy: string
+}
+
+export type Mission = {
+  id: number
+  userId: number
+  employeeName: string
+  registrationNo: string
+  workDate: string
+  startTime: string
+  endTime: string
+  location: string
+  purpose: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  requestedAt: string
+  decidedBy: string | null
+  decidedAt: string | null
+  decisionNote: string | null
 }
 
 export type MonthSummary = {
   month: string
+  timeZone: string
   asOf: string
   scheduledMinutesMonth: number
   scheduledMinutesToDate: number

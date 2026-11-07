@@ -31,7 +31,12 @@ export default function CheckInPage() {
 
   const presence = async () => {
     setBusy('Getting your location…')
-    const pos = status?.site?.gpsRequired && !status.trustedDevice ? await currentPosition() : { lat: null, lng: null, accuracyM: null }
+    const none = { lat: null, lng: null, accuracyM: null }
+    const onMission = status?.checkedIn && status.mission
+    // On a mission the location is recorded when available but not required.
+    const pos = status?.site?.gpsRequired && !status.trustedDevice
+      ? onMission ? await currentPosition().catch(() => none) : await currentPosition()
+      : none
     return { ...pos, qrToken }
   }
 
@@ -42,7 +47,7 @@ export default function CheckInPage() {
       const body = await presence()
       setBusy('Checking…')
       const result = await api<StartResponse>('/api/attendance/check-in', { method: 'POST', body })
-      if (result.status === 'CHECKED_IN') await finished(`Checked in at ${time(result.event!.occurredAt)}.`)
+      if (result.status === 'CHECKED_IN') await finished(`Checked in at ${time(result.event!.occurredAt, status?.site?.timeZone)}.`)
       else setChallenge(result)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Check-in failed.')
@@ -59,7 +64,7 @@ export default function CheckInPage() {
       const event = await api<{ occurredAt: string }>('/api/attendance/check-in/confirm', {
         method: 'POST', body: { challengeId: challenge!.challengeId, code },
       })
-      await finished(`Checked in at ${time(event.occurredAt)}.`)
+      await finished(`Checked in at ${time(event.occurredAt, status?.site?.timeZone)}.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wrong code.')
     } finally {
@@ -75,7 +80,7 @@ export default function CheckInPage() {
       const body = await presence()
       setBusy('Checking…')
       const event = await api<{ occurredAt: string }>('/api/attendance/check-out', { method: 'POST', body })
-      await finished(`Day ended at ${time(event.occurredAt)}.`)
+      await finished(`Day ended at ${time(event.occurredAt, status?.site?.timeZone)}.`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Check-out failed.')
     } finally {
@@ -90,8 +95,11 @@ export default function CheckInPage() {
     <section className="narrow">
       <div className="card checkin">
         <p className="muted">{status.site.name}{status.trustedDevice ? ` · office computer: ${status.trustedDeviceName}` : ''}</p>
-        <h2>{status.checkedIn ? `Checked in since ${time(status.since!)}` : 'Not checked in'}</h2>
+        <h2>{status.checkedIn ? `Checked in since ${time(status.since!, status?.site?.timeZone)}` : 'Not checked in'}</h2>
         {qrToken && <p className="success small">QR code scanned.</p>}
+        {status.mission && status.checkedIn && (
+          <p className="hint">You are on an approved mission ({status.mission.location}, {status.mission.startTime.slice(0, 5)}–{status.mission.endTime.slice(0, 5)}). You can end your day from there.</p>
+        )}
         {status.site.qrRequired && !qrToken && !status.trustedDevice && !status.checkedIn && (
           <p className="hint">Scan the QR code on the screen at the entrance to check in.</p>
         )}
@@ -119,7 +127,7 @@ export default function CheckInPage() {
             <h3>Today</h3>
             <ul className="events">
               {status.today.map((e) => (
-                <li key={e.id}>{e.type === 'IN' ? 'Arrived' : 'Left'} at {time(e.occurredAt)}{sourceLabel[e.source]}</li>
+                <li key={e.id}>{e.type === 'IN' ? 'Arrived' : 'Left'} at {time(e.occurredAt, status?.site?.timeZone)}{sourceLabel[e.source]}</li>
               ))}
             </ul>
           </>

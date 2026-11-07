@@ -186,6 +186,8 @@ export default function UserFormPage() {
 
       {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} />}
 
+      {!isNew && user && <ManagerCard user={user} editable={can('user.update')} onChange={setUser} />}
+
       {!isNew && user && canAssign && (
         <div className="card">
           <h3>Roles</h3>
@@ -266,6 +268,56 @@ function SalaryCard({ userId }: { userId: number }) {
       <p className="hint">A new amount applies from its date; earlier amounts stay in the history.</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
+    </div>
+  )
+}
+
+function ManagerCard({ user, editable, onChange }: { user: User; editable: boolean; onChange: (u: User) => void }) {
+  const [manager, setManager] = useState<User | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<User[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user.managerId) api<User>(`/api/users/${user.managerId}`).then(setManager).catch(() => setManager(null))
+    else setManager(null)
+  }, [user.managerId])
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return }
+    const t = setTimeout(() => {
+      api<{ items: User[] }>(`/api/users?q=${encodeURIComponent(query.trim())}&size=8`)
+        .then((p) => setResults(p.items.filter((u) => u.id !== user.id))).catch(() => setResults([]))
+    }, 250)
+    return () => clearTimeout(t)
+  }, [query, user.id])
+
+  const save = async (managerId: number | null) => {
+    setError(null)
+    try {
+      onChange(await api<User>(`/api/users/${user.id}/manager`, { method: 'PUT', body: { managerId } }))
+      setQuery('')
+      setResults([])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save.')
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3>Direct manager</h3>
+      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">None</span>}
+        {editable && manager && <> <button className="secondary void" onClick={() => void save(null)}>Remove</button></>}</p>
+      <p className="hint">The direct manager approves this employee's missions, overtime and leave, and scores evaluations.</p>
+      {editable && (
+        <>
+          <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {results.map((u) => (
+            <p key={u.id}><button className="secondary void" onClick={() => void save(u.id)}>Choose</button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
+          ))}
+        </>
+      )}
+      <ErrorText error={error} />
     </div>
   )
 }

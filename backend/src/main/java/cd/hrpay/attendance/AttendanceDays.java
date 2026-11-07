@@ -26,7 +26,7 @@ public class AttendanceDays {
     public record Earnings(BigDecimal grossMonthly, String currency, BigDecimal earnedToDate,
                            BigDecimal minuteRate) {}
 
-    public record MonthSummary(YearMonth month, LocalDate asOf, int scheduledMinutesMonth, int scheduledMinutesToDate,
+    public record MonthSummary(YearMonth month, String timeZone, LocalDate asOf, int scheduledMinutesMonth, int scheduledMinutesToDate,
                                int payableMinutesToDate, int workedMinutesToDate, int overtimeMinutesToDate,
                                int lateDays, int absentDays, int missingCheckOutDays, Earnings earnings,
                                List<DayResult> days) {}
@@ -89,7 +89,7 @@ public class AttendanceDays {
                 return new Earnings(s.grossMonthly(), s.currency(), earned, rate.setScale(6, RoundingMode.HALF_UP));
             }).orElse(null);
         }
-        return new MonthSummary(month, asOf, scheduledMonth, scheduledToDate, payable, worked, overtime, lateDays,
+        return new MonthSummary(month, zone.getId(), asOf, scheduledMonth, scheduledToDate, payable, worked, overtime, lateDays,
                 absent, missing, earnings, days);
     }
 }

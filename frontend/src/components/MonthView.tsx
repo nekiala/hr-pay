@@ -29,12 +29,25 @@ function notes(d: DayResult) {
   if (d.lateMinutes > 0) list.push(`Late ${hours(d.lateMinutes)}${d.lateDeductedMinutes ? ' (deducted)' : ' (within grace)'}`)
   if (d.earlyMinutes > 0) list.push(`Left early ${hours(d.earlyMinutes)}${d.earlyDeductedMinutes ? ' (deducted)' : ' (within grace)'}`)
   if (d.missingCheckOut) list.push('No end of day recorded')
+  if (d.autoClosed) list.push('Closed automatically, to confirm')
+  if (d.mission) list.push('Mission')
+  if (d.corrected) list.push('Corrected by HR')
   if (d.overtimeMinutes > 0) list.push(`Overtime ${hours(d.overtimeMinutes)}, awaiting approval`)
   return list.join(' · ')
 }
 
 /** Month to date for one employee: summary tiles, earnings (when allowed) and one row per day. */
-export default function MonthView({ source }: { source: string }) {
+const SOURCE: Record<string, string> = { SELF: 'self', HR_MANUAL: 'HR entry', AUTO_CLOSE: 'automatic', MISSION: 'mission' }
+
+/**
+ * Month to date for one employee. With {@code onVoid}, each day lists its entries with a Void button (HR view);
+ * change {@code version} to reload.
+ */
+export default function MonthView({ source, onVoid, version = 0 }: {
+  source: string
+  onVoid?: (entryId: number) => void
+  version?: number
+}) {
   const [month, setMonth] = useState(currentMonth())
   const [data, setData] = useState<MonthSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +55,7 @@ export default function MonthView({ source }: { source: string }) {
   useEffect(() => {
     setError(null)
     api<MonthSummary>(`${source}?month=${month}`).then(setData).catch((e: Error) => setError(e.message))
-  }, [source, month])
+  }, [source, month, version])
 
   const label = new Date(`${month}-01T12:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
   const days = data?.days.filter((d) => d.date <= data.asOf) ?? []
@@ -98,11 +111,23 @@ export default function MonthView({ source }: { source: string }) {
                   <tr key={d.date} className={d.status === 'ABSENT' ? 'absent' : undefined}>
                     <td>{new Date(`${d.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</td>
                     <td>{STATUS[d.status]}</td>
-                    <td>{d.firstIn ? time(d.firstIn) : ''}</td>
-                    <td>{d.lastOut ? time(d.lastOut) : ''}</td>
+                    <td>{d.firstIn ? time(d.firstIn, data.timeZone) : ''}</td>
+                    <td>{d.lastOut ? time(d.lastOut, data.timeZone) : ''}</td>
                     <td>{d.workedMinutes ? hours(d.workedMinutes) : ''}</td>
                     <td>{d.scheduledMinutes ? hours(d.payableMinutes) : ''}</td>
-                    <td className="muted">{notes(d)}</td>
+                    <td className="muted">
+                      {notes(d)}
+                      {onVoid && d.entries.length > 0 && (
+                        <ul className="entries">
+                          {d.entries.map((e) => (
+                            <li key={e.id}>
+                              {e.type === 'IN' ? 'In' : 'Out'} {time(e.at, data.timeZone)} ({SOURCE[e.source]}){e.note ? ` · ${e.note}` : ''}
+                              <button className="secondary void" onClick={() => onVoid(e.id)}>Void</button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
