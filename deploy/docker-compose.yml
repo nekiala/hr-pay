@@ -1,0 +1,101 @@
+# HR Pay in production: database, app, HTTPS proxy and backups. See README.md in this folder.
+#   cp .env.example .env      (then fill it in)
+#   docker compose up -d --build
+name: hrpay
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "10"
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-hrpay}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-hrpay}
+      TZ: Africa/Kinshasa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  app:
+    image: ${APP_IMAGE:-hr-pay:latest}
+    build:
+      context: ..
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-hrpay}
+      DB_USER: ${DB_USER:-hrpay}
+      DB_PASSWORD: ${DB_PASSWORD}
+      PUBLIC_URL: ${PUBLIC_URL:-https://${DOMAIN:?Set DOMAIN in .env}}
+      CORS_ORIGINS: ${PUBLIC_URL:-https://${DOMAIN}}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      SPRING_MAIL_HOST: ${SMTP_HOST:-}
+      SPRING_MAIL_PORT: ${SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SMTP_AUTH:-true}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-HR Pay <no-reply@example.com>}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      BACKUPS_EXPECTED: "true"
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError}
+    logging: *logging
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      TLS_MODE: "${TLS_MODE:?Set TLS_MODE in .env to an email address for Let's Encrypt, or to internal}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *logging
+
+  backup:
+    image: ${BACKUP_IMAGE:-hr-pay-backup:latest}
+    build: ./backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: ${DB_USER:-hrpay}
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: ${DB_NAME:-hrpay}
+      TZ: Africa/Kinshasa
+      BACKUP_AT: ${BACKUP_AT:-02:00}
+      KEEP_DAILY: ${KEEP_DAILY:-14}
+      KEEP_MONTHLY: ${KEEP_MONTHLY:-12}
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups
+      - ./rclone:/config/rclone:ro
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:

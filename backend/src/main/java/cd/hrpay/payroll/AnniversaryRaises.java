@@ -187,15 +187,24 @@ public class AnniversaryRaises {
     }
 
     /** Every morning: apply today's raises. On the 1st, send HR the list of raises not yet reported. */
+    private cd.hrpay.ops.JobLocks locks;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLocks(cd.hrpay.ops.JobLocks locks) {
+        this.locks = locks;
+    }
+
     @Scheduled(cron = "${app.raises.cron:0 30 6 * * *}", zone = "Africa/Kinshasa")
     public void daily() {
-        LocalDate today = LocalDate.now(clock.withZone(ZONE));
-        Outcome o = applyDue(today, null);
-        if (!o.applied().isEmpty() || !o.skipped().isEmpty()) {
-            log.info("Anniversary raises: {} applied, {} to do by hand", o.applied().size(), o.skipped().size());
-        }
-        if (today.getDayOfMonth() == 1) {
-            sendSummary();
-        }
+        locks.run("anniversary-raises", java.time.Duration.ofMinutes(30), () -> {
+            LocalDate today = LocalDate.now(clock.withZone(ZONE));
+            Outcome o = applyDue(today, null);
+            if (!o.applied().isEmpty() || !o.skipped().isEmpty()) {
+                log.info("Anniversary raises: {} applied, {} to do by hand", o.applied().size(), o.skipped().size());
+            }
+            if (today.getDayOfMonth() == 1) {
+                sendSummary();
+            }
+        });
     }
 }

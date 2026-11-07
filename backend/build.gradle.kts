@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "cd.hrpay"
-version = "0.1.0-SNAPSHOT"
+version = "0.9.0"
 
 java {
     toolchain {
@@ -26,6 +26,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // Sessions in PostgreSQL, so several API servers share them and a restart signs no one out.
+    implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     // PDF payslips.
     implementation("com.github.librepdf:openpdf:2.2.4")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
@@ -37,8 +39,41 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+tasks.named<Test>("test") {
+    useJUnitPlatform {
+        excludeTags("load")
+    }
+}
+
 tasks.withType<Test> {
-    useJUnitPlatform()
     // spring-security-test swaps CsrfFilter's final field; Java 26 warns unless this is allowed.
     jvmArgs("--enable-final-field-mutation=ALL-UNNAMED")
+}
+
+// Version and build time at /actuator/info and on the System page.
+springBoot {
+    buildInfo()
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveFileName = "hr-pay.jar"
+}
+
+// The load test (5,000 employees, 1,000 check-ins): ./gradlew loadTest. It adds people to the test database.
+tasks.register<Test>("loadTest") {
+    description = "Payroll of 5,000 employees and 1,000 check-ins against the test database."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform {
+        includeTags("load")
+    }
+    maxHeapSize = "2g"
+    // ./gradlew loadTest -Pload.employees=1000 -Pload.checkIns=200 for a quicker run.
+    listOf("load.employees", "load.checkIns").forEach { key ->
+        providers.gradleProperty(key).orNull?.let { systemProperty(key, it) }
+    }
+    testLogging {
+        showStandardStreams = true
+    }
 }

@@ -2,62 +2,60 @@ package cd.hrpay.security;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** Blocks an email address for 15 minutes after 5 failed password attempts within 15 minutes. */
+/**
+ * Blocks an email address for 15 minutes after 5 failed password attempts within 15 minutes. The failures are kept
+ * in the database, so the lockout holds on every API server and survives a restart.
+ */
 @Component
 public class LoginAttempts {
 
     static final int MAX_FAILURES = 5;
     static final Duration WINDOW = Duration.ofMinutes(15);
 
-    private final Map<String, Deque<Instant>> failures = new ConcurrentHashMap<>();
+    private final JdbcClient jdbc;
     private final Clock clock;
 
-    public LoginAttempts() {
-        this(Clock.systemUTC());
+    @Autowired
+    public LoginAttempts(JdbcClient jdbc) {
+        this(jdbc, Clock.systemUTC());
     }
 
-    LoginAttempts(Clock clock) {
+    LoginAttempts(JdbcClient jdbc, Clock clock) {
+        this.jdbc = jdbc;
         this.clock = clock;
     }
 
     public boolean isBlocked(String email) {
-        Deque<Instant> list = failures.get(key(email));
-        if (list == null) {
-            return false;
-        }
-        synchronized (list) {
-            prune(list);
-            return list.size() >= MAX_FAILURES;
-        }
+        int recent = jdbc.sql("select count(*) from login_failure where email = ? and failed_at > ?")
+                .param(key(email)).param(since()).query(Integer.class).single();
+        return recent >= MAX_FAILURES;
     }
 
     public void failed(String email) {
-        Deque<Instant> list = failures.computeIfAbsent(key(email), k -> new ArrayDeque<>());
-        synchronized (list) {
-            prune(list);
-            list.addLast(clock.instant());
-        }
+        jdbc.sql("delete from login_failure where failed_at <= ?").param(since()).update();
+        jdbc.sql("insert into login_failure (email, failed_at) values (?, ?)").param(key(email)).param(now()).update();
     }
 
     public void succeeded(String email) {
-        failures.remove(key(email));
+        jdbc.sql("delete from login_failure where email = ?").param(key(email)).update();
     }
 
-    private void prune(Deque<Instant> list) {
-        Instant limit = clock.instant().minus(WINDOW);
-        while (!list.isEmpty() && list.peekFirst().isBefore(limit)) {
-            list.removeFirst();
-        }
+    private OffsetDateTime now() {
+        return OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+    }
+
+    private OffsetDateTime since() {
+        return OffsetDateTime.ofInstant(clock.instant().minus(WINDOW), ZoneOffset.UTC);
     }
 
     private static String key(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
+        String k = email == null ? "" : email.trim().toLowerCase();
+        return k.length() > 200 ? k.substring(0, 200) : k;
     }
 }

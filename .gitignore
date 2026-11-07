@@ -7,3 +7,8 @@ backend/.gradle/
 backend/src/main/resources/static/
 frontend/node_modules/
 frontend/dist/
+
+# Production secrets and backups
+deploy/.env
+deploy/backups/
+deploy/rclone/rclone.conf

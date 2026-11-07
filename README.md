@@ -132,6 +132,13 @@ cd backend && ./gradlew test
 - **Three layouts** for payslips, chosen on the same page: **Classic** (one table with base and rate, year to date, employer charges), **Compact** (earnings and deductions side by side, half a page) and **Ledger** (a ruled table with element codes and separate employee and employer columns). "See a sample" renders a made-up payslip with the company's real header, so no one's pay is shown. Staff can also open any payslip in another layout with `?template=COMPACT` on the PDF link.
 - **Employee details on every payslip**: matricule, grade, occupation, unit, hire date and seniority (years and months at the end of the month), marital status as a code (S single, M married, D divorced, W widowed), the children counted for family allowances, contract, CNSS number and NIF. Marital status and hire date are kept in the payslip's snapshot from now on; older payslips take them from the current file.
 
+## Production (phase 9)
+
+- **Install, upgrade, backups**: see [deploy/README.md](deploy/README.md). One Docker image holds the API and the web app (`Dockerfile` at the root); `deploy/docker-compose.yml` adds PostgreSQL, HTTPS with Caddy and the backup job.
+- **Several servers**: sessions (Spring Session JDBC), the sign-in lockout and the scheduled jobs are kept in the database; each scheduled job runs on one server at a time (`job_lock`). A restart signs no one out.
+- **Monitoring**: the System page (`system.monitor`) shows the version, database size, backups, scheduled jobs and alerts. Unhandled errors, failed jobs and failed or missing backups email the people holding `system.monitor`, at most once an hour per problem. Health probes at `/actuator/health/liveness` and `/readiness`; `LOG_FORMAT=ecs` writes JSON logs.
+- **Load test**: `./gradlew loadTest` adds 5,000 people to the test database, calculates their payroll and checks in 1,000 of them (sign-in, code by email, confirm), 25 at a time. Smaller: `-Pload.employees=1000 -Pload.checkIns=200`.
+
 ## Configuration
 
 | Variable | Default | Purpose |

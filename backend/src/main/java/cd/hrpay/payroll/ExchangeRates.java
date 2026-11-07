@@ -163,13 +163,22 @@ public class ExchangeRates {
     }
 
     /** Twice a day on working hours, Kinshasa time. */
+    private cd.hrpay.ops.JobLocks locks;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLocks(cd.hrpay.ops.JobLocks locks) {
+        this.locks = locks;
+    }
+
     @Scheduled(cron = "${app.exchange-rates.cron:0 15 9,16 * * *}", zone = "Africa/Kinshasa")
     public void scheduledFetch() {
-        if (fetchEnabled) {
-            FetchResult r = fetch();
-            log.info("Exchange rates: {} stored, {} already known{}", r.stored(), r.alreadyKnown(),
-                    r.error() == null ? "" : ", " + r.error());
-        }
+        locks.run("exchange-rates", java.time.Duration.ofMinutes(10), () -> {
+            if (fetchEnabled) {
+                FetchResult r = fetch();
+                log.info("Exchange rates: {} stored, {} already known{}", r.stored(), r.alreadyKnown(),
+                        r.error() == null ? "" : ", " + r.error());
+            }
+        });
     }
 
     /** Fetches once in the background when the app starts, so a fresh install has a rate. */

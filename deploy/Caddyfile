@@ -1,0 +1,26 @@
+# HTTPS in front of HR Pay. With TLS_MODE set to an email address, Caddy gets and renews a Let's Encrypt
+# certificate for DOMAIN by itself (ports 80 and 443 must reach this server from the internet). On a server the
+# internet cannot reach, set TLS_MODE=internal: Caddy then makes its own certificate, which browsers must trust.
+
+{$DOMAIN} {
+	tls {$TLS_MODE}
+	encode zstd gzip
+
+	# The health probes are for Docker and monitoring, not for the internet.
+	@internal path /actuator/*
+	respond @internal 404
+
+	reverse_proxy app:8081 {
+		health_uri /actuator/health/readiness
+		health_interval 5s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
+		-Server
+	}
+}

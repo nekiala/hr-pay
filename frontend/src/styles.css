@@ -216,3 +216,7 @@ dl.facts dd { margin: 0; }
 .payslip-employer img { max-height: 56px; max-width: 160px; object-fit: contain; }
 .template .row { justify-content: flex-start; gap: 8px; }
 .template .row > * { flex: 0 0 auto; margin: 0; min-width: 0; width: auto; }
+.tile.warn { border-color: var(--danger); }
+.tile.warn strong { color: var(--danger); }
+tr.clickable { cursor: pointer; }
+pre.detail { white-space: pre-wrap; font-size: 11px; max-height: 260px; overflow: auto; background: var(--bg, #f6f7f9); padding: 8px; border-radius: 6px; }

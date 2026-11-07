@@ -43,6 +43,7 @@ import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
 import OrgSettingsPage from './pages/OrgSettingsPage'
 import CompanyPage from './pages/CompanyPage'
+import SystemPage from './pages/SystemPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -134,6 +135,7 @@ export default function App() {
           {(can('report.attendance.export') || can('report.finance.export')) && <NavLink to="/reports">Reports</NavLink>}
           {can('audit.read') && <NavLink to="/audit">Audit log</NavLink>}
           {can('audit.read') && <NavLink to="/outbox">Messages</NavLink>}
+          {can('system.monitor') && <NavLink to="/system">System</NavLink>}
         </nav>
         <span className="who">
           <NavLink to="/account">{me.firstName} {me.lastName}</NavLink>
@@ -183,6 +185,7 @@ export default function App() {
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/presence" element={<PresencePage />} />
+          <Route path="/system" element={<Guard permission="system.monitor"><SystemPage /></Guard>} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
