@@ -252,6 +252,9 @@ public class PayrollRuns {
             snapshot.put("expatriate", contract.expatriate());
             snapshot.put("basicMonthly", salary.grossMonthly());
             snapshot.put("childrenInCharge", children);
+            snapshot.put("maritalStatus", profile.maritalStatus());
+            LocalDate hired = user.getHireDate() != null ? user.getHireDate() : contract.startDate();
+            snapshot.put("hireDate", hired == null ? null : hired.toString());
             snapshot.put("dependantsInCharge", inCharge);
             snapshot.put("cnssNumber", profile.cnssNumber());
             snapshot.put("taxNumber", profile.taxNumber());
@@ -393,7 +396,41 @@ public class PayrollRuns {
                 head.currency(), head.gross(), head.cnssBase(), head.taxableBase(), head.taxableBaseCdf(),
                 head.employeeDeductions(), head.net(), head.employerCharges(), head.scheduledMinutes(),
                 head.paidMinutes(), head.daysWorked(), head.usdCdf(), head.rateDate(), head.projected(),
-                head.snapshot(), head.warnings(), lines);
+                withSeniority(head), head.warnings(), lines);
+    }
+
+    /** Marital status codes printed on payslips. */
+    public static final Map<String, String> MARITAL_CODES = Map.of("SINGLE", "S", "MARRIED", "M", "DIVORCED", "D", "WIDOWED", "W");
+
+    /**
+     * Adds the marital status code and the seniority at the end of the payslip's month. Payslips made before these
+     * were kept take the hire date and marital status from the employee's current file.
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> withSeniority(Payslip p) {
+        Map<String, Object> s = new LinkedHashMap<>(p.snapshot());
+        if (!s.containsKey("hireDate") || !s.containsKey("maritalStatus")) {
+            var user = users.findById(p.userId()).orElse(null);
+            if (!s.containsKey("maritalStatus")) {
+                s.put("maritalStatus", files.profile(p.userId()).maritalStatus());
+            }
+            if (!s.containsKey("hireDate") && user != null) {
+                LocalDate hired = user.getHireDate() != null ? user.getHireDate()
+                        : s.get("contractStart") == null ? null : LocalDate.parse(s.get("contractStart").toString());
+                s.put("hireDate", hired == null ? null : hired.toString());
+            }
+        }
+        Object marital = s.get("maritalStatus");
+        s.put("maritalCode", marital == null ? null : MARITAL_CODES.getOrDefault(marital.toString(), marital.toString()));
+        if (s.get("hireDate") != null) {
+            LocalDate hired = LocalDate.parse(s.get("hireDate").toString());
+            LocalDate end = p.month().withDayOfMonth(p.month().lengthOfMonth());
+            java.time.Period served = hired.isAfter(end) ? java.time.Period.ZERO : java.time.Period.between(hired, end.plusDays(1));
+            s.put("seniorityYears", served.getYears());
+            s.put("seniorityMonths", served.getMonths());
+            s.put("seniority", served.getYears() + " y " + served.getMonths() + " m");
+        }
+        return s;
     }
 
     /** An employee's own payslips: closed months only. */

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, money, type Payslip, type PayslipLine } from '../api'
+import { api, money, type Employer, type Payslip, type PayslipLine, type PayslipSettings } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 
@@ -8,6 +8,7 @@ const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateStrin
 const hours = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
 const num = (n: number | null, digits = 2) => (n === null ? '' : new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(n))
 type YearToDate = { year: number; months: number; currency: string; gross: number; cnss: number; ipr: number; net: number; otherCurrencies: boolean }
+const MARITAL: Record<string, string> = { S: 'single', M: 'married', D: 'divorced', W: 'widowed' }
 const PAYMENT: Record<string, string> = { BANK: 'Bank transfer', MOBILE_MONEY: 'Mobile money', CASH: 'Cash' }
 
 export default function PayslipPage() {
@@ -16,6 +17,12 @@ export default function PayslipPage() {
   const [slip, setSlip] = useState<Payslip | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ytd, setYtd] = useState<YearToDate | null>(null)
+  const [employer, setEmployer] = useState<Employer | null>(null)
+  const [brand, setBrand] = useState<PayslipSettings | null>(null)
+  useEffect(() => {
+    api<Employer>('/api/company').then(setEmployer).catch(() => undefined)
+    api<PayslipSettings>('/api/company/payslip-settings').then(setBrand).catch(() => undefined)
+  }, [])
   useEffect(() => {
     api<Payslip>(`/api/payslips/${id}`).then(setSlip).catch((e: Error) => setError(e.message))
     api<YearToDate>(`/api/payslips/${id}/year-to-date`).then(setYtd).catch(() => undefined)
@@ -54,6 +61,19 @@ export default function PayslipPage() {
       )}
 
       <div className="card">
+        {employer && (
+          <div className="payslip-employer small">
+            {brand?.hasLogo && <img src="/api/company/logo" alt="" />}
+            <div>
+              <strong>{employer.name}</strong>{brand?.legalForm ? ` · ${brand.legalForm}` : ''}<br />
+              {employer.address && <>{employer.address}<br /></>}
+              {[brand?.phone, brand?.email, brand?.website].filter(Boolean).join(' · ')}
+              {(brand?.phone || brand?.email || brand?.website) && <br />}
+              <span className="muted">{[['RCCM', employer.rccm], ['Id. Nat.', employer.nationalId], ['NIF', employer.taxNumber], ['CNSS', employer.cnssNumber]]
+                .filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(' · ')}</span>
+            </div>
+          </div>
+        )}
         <div className="payslip-head">
           <div>
             <h2>Payslip · {monthName(slip.month)}</h2>
@@ -61,7 +81,7 @@ export default function PayslipPage() {
           </div>
           <div className="right">
             <strong>{String(s.name)}</strong><br />
-            {String(s.registrationNo ?? '')}<br />
+            Matricule {String(s.registrationNo ?? '')}<br />
             {String(s.grade ?? '')}{s.occupation ? ` · ${String(s.occupation)}` : ''}
             {s.unit ? <><br />{String(s.unit)}{s.direction && s.direction !== s.unit ? ` · ${String(s.direction)}` : ''}{s.costCentre ? ` · CC ${String(s.costCentre)}` : ''}</> : null}
           </div>
@@ -69,7 +89,9 @@ export default function PayslipPage() {
         <div className="grid3 small">
           <div>Contract: {String(s.contractType ?? '').replace('_', ' ').toLowerCase()} since {String(s.contractStart ?? '')}</div>
           <div>CNSS no.: {String(s.cnssNumber ?? '—')} · NIF: {String(s.taxNumber ?? '—')}</div>
-          <div>Children in charge: {String(s.childrenInCharge)} · dependants: {String(s.dependantsInCharge)}</div>
+          <div>Hired: {String(s.hireDate ?? s.contractStart ?? '—')}{s.seniority ? ` · seniority ${Number(s.seniorityYears)} yr ${Number(s.seniorityMonths)} mo` : ''}</div>
+          <div title={s.maritalCode ? MARITAL[String(s.maritalCode)] : undefined}>Marital status: {String(s.maritalCode ?? '—')}</div>
+          <div>Children (family allowances): {String(s.childrenInCharge ?? 0)}</div>
           <div>Hours paid: {hours(slip.paidMinutes)} of {hours(slip.scheduledMinutes)}</div>
           <div>Days worked: {slip.daysWorked}</div>
           <div>Monthly basic: {money(Number(s.basicMonthly), cur)}</div>

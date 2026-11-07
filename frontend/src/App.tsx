@@ -42,6 +42,7 @@ import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
 import OrgSettingsPage from './pages/OrgSettingsPage'
+import CompanyPage from './pages/CompanyPage'
 import { useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -125,6 +126,7 @@ export default function App() {
           {can('declaration.manage') && <NavLink to="/payroll/declarations">Declarations</NavLink>}
           {can('payslip.read.all') && <NavLink to="/payroll/year" end>Year summary</NavLink>}
           {(can('loan.manage') || can('payslip.read.all')) && <NavLink to="/payroll/loans">Loans</NavLink>}
+          {can('company.manage') && <NavLink to="/company">Company</NavLink>}
           {can('masterdata.manage') && <NavLink to="/payroll/settings">Grades</NavLink>}
           {(can('salary.read') || can('masterdata.manage')) && <NavLink to="/payroll/elements">Pay elements</NavLink>}
           {(can('salary.read') || can('masterdata.manage')) && <NavLink to="/payroll/rates">Rates</NavLink>}
@@ -181,6 +183,7 @@ export default function App() {
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/presence" element={<PresencePage />} />
+          <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />

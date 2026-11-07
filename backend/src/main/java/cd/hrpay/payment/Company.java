@@ -14,6 +14,15 @@ public class Company {
     public record Details(String name, String address, String cnssNumber, String taxNumber, String nationalId,
                           String rccm, String inppNumber, String onemNumber, String bankName, String bankAccount) {}
 
+    /** How payslips look: contact details and legal mentions next to the logo, the footer, and the layout. */
+    public record PayslipSettings(String phone, String email, String website, String legalForm, String footer,
+                                  String template, boolean hasLogo) {}
+
+    public record Logo(String contentType, byte[] data) {}
+
+    private static final java.util.Set<String> LOGO_TYPES = java.util.Set.of("image/png", "image/jpeg");
+    private static final int LOGO_MAX_BYTES = 512 * 1024;
+
     private final JdbcClient jdbc;
     private final AuditService audit;
 
@@ -40,6 +49,56 @@ public class Company {
                 .update();
         audit.record("company.updated", "company", 1, Map.of("name", d.name().trim()));
         return get();
+    }
+
+    public PayslipSettings payslipSettings() {
+        return jdbc.sql("""
+                select phone, email, website, legal_form, payslip_footer as footer, payslip_template as template,
+                       logo is not null as has_logo from company where id = 1""").query(PayslipSettings.class).single();
+    }
+
+    @Transactional
+    public PayslipSettings savePayslipSettings(PayslipSettings s) {
+        jdbc.sql("""
+                update company set phone = ?, email = ?, website = ?, legal_form = ?, payslip_footer = ?, payslip_template = ?,
+                       updated_by = ?, updated_at = now() where id = 1""")
+                .params(blank(s.phone()), blank(s.email()), blank(s.website()), blank(s.legalForm()), blank(s.footer()),
+                        s.template(), CurrentUser.email()).update();
+        audit.record("company.payslip_settings_updated", "company", 1, Map.of("template", s.template()));
+        return payslipSettings();
+    }
+
+    public java.util.Optional<Logo> logo() {
+        return jdbc.sql("select logo_content_type, logo from company where id = 1 and logo is not null")
+                .query((rs, i) -> new Logo(rs.getString(1), rs.getBytes(2))).optional();
+    }
+
+    @Transactional
+    public void saveLogo(String contentType, byte[] data) {
+        if (!LOGO_TYPES.contains(contentType)) {
+            throw new cd.hrpay.common.BusinessRuleException("Send the logo as a PNG or JPEG image.");
+        }
+        if (data.length == 0 || data.length > LOGO_MAX_BYTES) {
+            throw new cd.hrpay.common.BusinessRuleException("The logo must be at most 500 KB.");
+        }
+        // Check it really is an image the PDF can draw.
+        try {
+            if (javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(data)) == null) {
+                throw new cd.hrpay.common.BusinessRuleException("The logo could not be read as an image.");
+            }
+        } catch (java.io.IOException e) {
+            throw new cd.hrpay.common.BusinessRuleException("The logo could not be read as an image.");
+        }
+        jdbc.sql("update company set logo = ?, logo_content_type = ?, updated_by = ?, updated_at = now() where id = 1")
+                .params(data, contentType, CurrentUser.email()).update();
+        audit.record("company.logo_changed", "company", 1, Map.of("bytes", data.length));
+    }
+
+    @Transactional
+    public void removeLogo() {
+        jdbc.sql("update company set logo = null, logo_content_type = null, updated_by = ?, updated_at = now() where id = 1")
+                .param(CurrentUser.email()).update();
+        audit.record("company.logo_removed", "company", 1, Map.of());
     }
 
     private static String blank(String s) {

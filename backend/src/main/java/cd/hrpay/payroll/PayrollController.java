@@ -111,7 +111,11 @@ public class PayrollController {
 
     @GetMapping("/payslips/{id}.pdf")
     @PreAuthorize("isAuthenticated()")
-    public org.springframework.http.ResponseEntity<byte[]> payslipPdf(@PathVariable long id) {
+    public org.springframework.http.ResponseEntity<byte[]> payslipPdf(@PathVariable long id,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String template) {
+        if (template != null && !template.matches("CLASSIC|COMPACT|LEDGER")) {
+            throw new cd.hrpay.common.BusinessRuleException("Choose the CLASSIC, COMPACT or LEDGER layout.");
+        }
         PayrollRuns.Payslip p = payslip(id);
         String name = "payslip-" + p.month().toString().substring(0, 7) + "-" + p.snapshot().getOrDefault("registrationNo", p.userId())
                 .toString().replaceAll("[^A-Za-z0-9_-]", "") + ".pdf";
@@ -119,7 +123,7 @@ public class PayrollController {
                 .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "inline; filename=\"" + name + "\"")
                 .header("X-Content-Type-Options", "nosniff")
-                .body(pdf.render(p));
+                .body(template == null ? pdf.render(p) : pdf.render(p, template));
     }
 
     @GetMapping("/payslips/{id}/year-to-date")

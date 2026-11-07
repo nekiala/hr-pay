@@ -126,6 +126,12 @@ cd backend && ./gradlew test
 - **Holiday moved inside a closed month**: when HR moves a holiday's observed date into or out of a month whose payroll is closed, that month's basic pay is worked out again with the new calendar; the difference goes into the first payroll not yet approved as "Holiday change, earlier month" (more, or less). Closed payslips never change. Payroll › Holiday changes lists them; calculate the target month again to include them. Moving the holiday back cancels the difference.
 - **Privacy**: at their first sign-in each person reads a notice on what is recorded, why, who sees it and for how long (also under Privacy at the bottom of every page). GPS positions of check-ins are erased after a period set on the Sites page (sample 90 days, 0 keeps them); the check-in itself stays.
 
+## Company and payslip layouts
+
+- **Company** (`/company`, `company.manage`): the employer's name, address and legal numbers (RCCM, Id. Nat., NIF, CNSS, INPP, ONEM), the logo (PNG or JPEG, at most 512 KB), the legal form and capital, phone, email, website and a payslip footer.
+- **Three layouts** for payslips, chosen on the same page: **Classic** (one table with base and rate, year to date, employer charges), **Compact** (earnings and deductions side by side, half a page) and **Ledger** (a ruled table with element codes and separate employee and employer columns). "See a sample" renders a made-up payslip with the company's real header, so no one's pay is shown. Staff can also open any payslip in another layout with `?template=COMPACT` on the PDF link.
+- **Employee details on every payslip**: matricule, grade, occupation, unit, hire date and seniority (years and months at the end of the month), marital status as a code (S single, M married, D divorced, W widowed), the children counted for family allowances, contract, CNSS number and NIF. Marital status and hire date are kept in the payslip's snapshot from now on; older payslips take them from the current file.
+
 ## Configuration
 
 | Variable | Default | Purpose |
