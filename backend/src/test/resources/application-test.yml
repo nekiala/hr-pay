@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/hrpay_test}
+  flyway:
+    clean-disabled: false
+app:
+  sample-data:
+    enabled: true
+    password: Demo@2026!
