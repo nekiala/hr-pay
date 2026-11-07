@@ -84,6 +84,9 @@ export type User = {
   hasPassword: boolean
   lastLoginAt: string | null
   createdAt: string
+  managerId: number | null
+  gradeCategoryId: number | null
+  hireDate: string | null
 }
 
 export type Page<T> = { items: T[]; page: number; size: number; total: number }
@@ -113,7 +116,18 @@ export type Site = {
   gpsRequired: boolean
   maxAccuracyM: number
   active: boolean
+  qrRequired: boolean
   ipRanges: IpRange[]
+}
+
+export type TrustedDevice = {
+  id: number
+  siteId: number
+  name: string
+  active: boolean
+  createdBy: string | null
+  createdAt: string
+  lastUsedAt: string | null
 }
 
 export type AuditEntry = {
@@ -126,3 +140,237 @@ export type AuditEntry = {
   details: string | null
   ip: string | null
 }
+
+export type ScheduleDay = {
+  weekday: number
+  workday: boolean
+  startTime: string | null
+  endTime: string | null
+  lunchEnabled: boolean
+  lunchStart: string | null
+  lunchMinutes: number | null
+  lunchPaid: boolean
+  scheduledMinutes?: number
+}
+
+export type Schedule = {
+  id: number
+  code: string
+  name: string
+  graceMinutes: number
+  deductLateArrival: boolean
+  deductEarlyDeparture: boolean
+  active: boolean
+  weeklyMinutes: number
+  days: ScheduleDay[]
+}
+
+export type ScheduleAssignment = { id: number; scheduleId: number; scheduleName: string; effectiveFrom: string }
+
+export type HolidayOccurrence = {
+  id: number
+  definitionId: number
+  name: string
+  year: number
+  officialDate: string
+  observedDate: string
+  moved: boolean
+  paid: boolean
+  announcementRef: string | null
+  setBy: string | null
+  setAt: string | null
+}
+
+export type HolidayDefinition = {
+  id: number
+  countryCode: string
+  name: string
+  usualMonth: number
+  usualDay: number
+  paid: boolean
+  active: boolean
+}
+
+export type OvertimeTier = { kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'; fromHour: number; toHour: number | null; multiplier: number }
+
+export type OvertimePolicy = {
+  id: number
+  countryCode: string
+  effectiveFrom: string
+  allowed: boolean
+  requiresApproval: boolean
+  roundingMinutes: number
+  maxWeeklyOvertimeMinutes: number | null
+  tiers: OvertimeTier[]
+}
+
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+export function hours(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`
+}
+
+export type ClockEventView = {
+  id: number
+  type: 'IN' | 'OUT'
+  occurredAt: string
+  workDate: string
+  source: 'SELF' | 'HR_MANUAL' | 'AUTO_CLOSE' | 'MISSION'
+  qrVerified: boolean
+  trustedDevice: boolean
+  note: string | null
+}
+
+export type AttendanceStatus = {
+  checkedIn: boolean
+  since: string | null
+  site: { name: string; timeZone: string; qrRequired: boolean; gpsRequired: boolean; maxAccuracyM: number } | null
+  trustedDevice: boolean
+  trustedDeviceName: string | null
+  today: ClockEventView[]
+  mission: { id: number; location: string; startTime: string; endTime: string } | null
+}
+
+export type StartResponse = {
+  status: 'CHECKED_IN' | 'CODE_SENT'
+  event: ClockEventView | null
+  challengeId: string | null
+  channels: string[] | null
+  expiresAt: string | null
+}
+
+export type Position = { lat: number | null; lng: number | null; accuracyM: number | null }
+
+/** Asks the browser for a fresh, precise position. Resolves with nulls if refused or unavailable. */
+export function currentPosition(): Promise<Position> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve({ lat: null, lng: null, accuracyM: null })
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: Number(p.coords.latitude.toFixed(6)), lng: Number(p.coords.longitude.toFixed(6)), accuracyM: Math.round(p.coords.accuracy) }),
+      () => resolve({ lat: null, lng: null, accuracyM: null }),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    )
+  })
+}
+
+/** Clock time in the site's time zone, whatever the browser's zone is. */
+export const time = (iso: string, timeZone = 'Africa/Kinshasa') =>
+  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone })
+
+export type DayStatus = 'LEAVE' | 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
+
+export type DayResult = {
+  date: string
+  status: DayStatus
+  scheduledMinutes: number
+  workedMinutes: number
+  payableMinutes: number
+  lateMinutes: number
+  lateDeductedMinutes: number
+  earlyMinutes: number
+  earlyDeductedMinutes: number
+  overtimeMinutes: number
+  overtimeKind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY' | null
+  missingCheckOut: boolean
+  firstIn: string | null
+  lastOut: string | null
+  autoClosed: boolean
+  corrected: boolean
+  mission: boolean
+  entries: DayEntry[]
+  leaveType: string | null
+}
+
+export type DayEntry = {
+  id: number
+  type: 'IN' | 'OUT'
+  at: string
+  source: 'SELF' | 'HR_MANUAL' | 'AUTO_CLOSE' | 'MISSION'
+  note: string | null
+  createdBy: string
+}
+
+export type Mission = {
+  id: number
+  userId: number
+  employeeName: string
+  registrationNo: string
+  workDate: string
+  startTime: string
+  endTime: string
+  location: string
+  purpose: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  requestedAt: string
+  decidedBy: string | null
+  decidedAt: string | null
+  decisionNote: string | null
+}
+
+export type MonthSummary = {
+  month: string
+  timeZone: string
+  asOf: string
+  scheduledMinutesMonth: number
+  scheduledMinutesToDate: number
+  payableMinutesToDate: number
+  workedMinutesToDate: number
+  overtimeMinutesToDate: number
+  lateDays: number
+  absentDays: number
+  missingCheckOutDays: number
+  earnings: { grossMonthly: number; currency: string; earnedToDate: number; minuteRate: number; overtimeEarned: number } | null
+  overtimeApprovedMinutes: number
+  overtimePendingMinutes: number
+  overtime: OvertimeDay[]
+  days: DayResult[]
+}
+
+export type Salary = {
+  id: number
+  userId: number
+  effectiveFrom: string
+  grossMonthly: number
+  currency: 'USD' | 'CDF'
+  note: string | null
+  createdBy: string
+  createdAt: string
+}
+
+export const money = (amount: number, currency: string) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2 }).format(amount)
+
+export type OvertimeDay = {
+  date: string
+  minutes: number
+  kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'AUTOMATIC'
+  approvedMinutes: number
+  decidedBy: string | null
+  note: string | null
+}
+
+export type PendingOvertime = {
+  userId: number
+  employeeName: string
+  registrationNo: string
+  date: string
+  minutes: number
+  kind: 'WEEKDAY' | 'REST_DAY' | 'HOLIDAY'
+  firstIn: string | null
+  lastOut: string | null
+}
+
+export type LeaveType = { id: number; code: string; name: string; paid: boolean; usesBalance: boolean; requiresDocument: boolean; maxDays: number | null; active: boolean }
+export type GradeCategory = { id: number; code: string; name: string; annualLeaveDays: number; active: boolean }
+export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
+export type LeaveRequest = {
+  id: number; userId: number; employeeName: string; registrationNo: string; leaveTypeId: number; leaveType: string
+  startDate: string; endDate: string; workingDays: number; reason: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'; requestedAt: string
+  decidedBy: string | null; decidedAt: string | null; decisionNote: string | null
+}
+export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
+export const days = (n: number) => `${Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 })} day${Number(n) === 1 ? '' : 's'}`

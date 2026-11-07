@@ -7,15 +7,15 @@ The design is in the project design document. Delivery is in five phases:
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 0. Foundation | Login, admin-registered users, roles and permissions, sites (allowed IPs and GPS area), audit log | This branch |
-| 1. Attendance and leave | Schedules, holidays, check-in with OTP, missions, overtime approval, leave | Next |
-| 2. Payroll core | Grades, pay elements, CNSS, IPR, loans, payslips | |
+| 0. Foundation | Login, admin-registered users, roles and permissions, sites (allowed IPs and GPS area), audit log | Done |
+| 1. Attendance and leave | Schedules, holidays, check-in with OTP, missions, overtime approval, leave, reports | This branch |
+| 2. Payroll core | Grades, pay elements, CNSS, IPR, loans, payslips | Next |
 | 3. Evaluations and 13th month | Weighted evaluations, contests, 13th month | |
 | 4. Payments and declarations | Bank and mobile-money files, CNSS and tax exports | |
 
 ## Stack
 
-- `backend/`: Spring Boot 4.1, Java 21, PostgreSQL 16, Flyway, Spring Security (session cookie + CSRF, optional Google sign-in)
+- `backend/`: Spring Boot 4.1, Java 26, PostgreSQL 16, Flyway, Spring Security (session cookie + CSRF, optional Google sign-in)
 - `frontend/`: React 19 + TypeScript, Vite
 
 ## Run locally
@@ -24,15 +24,30 @@ The design is in the project design document. Delivery is in five phases:
 docker compose up -d                       # PostgreSQL on :5432 (databases hrpay and hrpay_test)
 
 cd backend
-SAMPLE_DATA=true ./gradlew bootRun         # API on :8080, loads demo users
+SAMPLE_DATA=true ./gradlew bootRun         # API on :8081, loads demo users (needs JDK 26)
 
 cd ../frontend
 npm install && npm run dev                 # app on http://localhost:5173
+                                           # other API port: SERVER_PORT=9090 ./gradlew bootRun, API_URL=http://localhost:9090 npm run dev
 ```
 
 Sample users (password `Demo@2026!`): `admin@demo.hrpay.cd`, `hr@demo.hrpay.cd`, `finance@demo.hrpay.cd`,
 `manager@demo.hrpay.cd`, `employee1@demo.hrpay.cd` to `employee3@demo.hrpay.cd`. The sample site allows
-`127.0.0.1` so check-ins work locally in phase 1.
+`127.0.0.1` so check-ins work locally in phase 1. Check-in codes are not emailed without a mail server: an admin
+reads them on the Messages page. Sample employees report to the sample manager and have 2026 annual leave.
+
+## Attendance rules (phase 1)
+
+- Paid time per day = minutes worked inside the schedule, plus lateness or early departure that is within the grace
+  period or not deducted by the schedule, capped at the scheduled minutes. Unpaid lunch never counts.
+- Earned to date = gross monthly salary / scheduled minutes of the month x paid minutes. Holidays on workdays and
+  paid leave count as paid time.
+- Work outside the schedule, on rest days or on holidays is overtime, rounded down to the policy step, paid only when
+  approved, priced with the policy's weekly tiers (DRC sample: first 6 weekday hours x1.30, beyond x1.60, rest days
+  and holidays x2.00).
+- A day left open is closed at the schedule end (or the approved mission's end) and flagged for HR.
+- Clock entries are never edited: HR voids a wrong one with a reason and adds the right one.
+- The DRC values (overtime tiers, holidays, leave kinds, leave days) are samples to confirm with a payroll specialist.
 
 Tests run against the `hrpay_test` database, which they wipe and re-create:
 

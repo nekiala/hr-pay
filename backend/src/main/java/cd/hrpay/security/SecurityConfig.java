@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers", "/api/kiosk").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())

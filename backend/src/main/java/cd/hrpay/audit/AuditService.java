@@ -26,6 +26,13 @@ public class AuditService {
         recordAs(currentActor(), action, entityType, entityId, details);
     }
 
+    /** Records even when the caller's transaction rolls back, for refusals that end in an error. */
+    @org.springframework.transaction.annotation.Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void recordIndependently(String action, String entityType, Object entityId, Map<String, ?> details) {
+        recordAs(currentActor(), action, entityType, entityId, details);
+    }
+
     public void recordAs(String actor, String action, String entityType, Object entityId, Map<String, ?> details) {
         jdbc.sql("""
                 insert into audit_log (actor, action, entity_type, entity_id, details, ip)

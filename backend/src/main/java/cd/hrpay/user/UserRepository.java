@@ -14,6 +14,8 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
 
     Optional<AppUser> findByPhone(String phone);
 
+    java.util.List<AppUser> findByManagerId(Long managerId);
+
     @Query("""
             select u from AppUser u
             where :q is null

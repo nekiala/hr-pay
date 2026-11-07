@@ -9,7 +9,7 @@ version = "0.1.0-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(26)
     }
 }
 
@@ -23,6 +23,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
@@ -36,4 +37,6 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // spring-security-test swaps CsrfFilter's final field; Java 26 warns unless this is allowed.
+    jvmArgs("--enable-final-field-mutation=ALL-UNNAMED")
 }

@@ -93,6 +93,43 @@ public class UserService {
     }
 
     @Transactional
+    public AppUser setEmployment(Long id, Long gradeCategoryId, java.time.LocalDate hireDate) {
+        AppUser user = find(id);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        track(changes, "gradeCategoryId", user.getGradeCategoryId(), gradeCategoryId);
+        track(changes, "hireDate", user.getHireDate(), hireDate);
+        user.setGradeCategoryId(gradeCategoryId);
+        user.setHireDate(hireDate);
+        if (!changes.isEmpty()) {
+            audit.record("user.employment_changed", "user", id, changes);
+        }
+        return user;
+    }
+
+    @Transactional
+    public AppUser setManager(Long id, Long managerId) {
+        AppUser user = find(id);
+        if (managerId != null) {
+            if (managerId.equals(id)) {
+                throw new BusinessRuleException("An employee cannot be their own manager.");
+            }
+            // No loops: walking up from the new manager must never reach this employee.
+            Long current = find(managerId).getManagerId();
+            for (int depth = 0; current != null && depth < 50; depth++) {
+                if (current.equals(id)) {
+                    throw new BusinessRuleException("This would make a reporting loop.");
+                }
+                current = find(current).getManagerId();
+            }
+        }
+        if (!java.util.Objects.equals(user.getManagerId(), managerId)) {
+            audit.record("user.manager_changed", "user", id, java.util.Collections.singletonMap("managerId", managerId));
+            user.setManagerId(managerId);
+        }
+        return user;
+    }
+
+    @Transactional
     public AppUser setRoles(Long id, List<String> roleCodes) {
         AppUser user = find(id);
         if (roleCodes == null || roleCodes.isEmpty()) {

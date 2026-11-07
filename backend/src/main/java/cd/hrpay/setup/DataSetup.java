@@ -4,6 +4,10 @@ import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.AppProperties;
 import cd.hrpay.role.Role;
 import cd.hrpay.role.RoleRepository;
+import cd.hrpay.schedule.UserSchedule;
+import cd.hrpay.schedule.UserScheduleRepository;
+import cd.hrpay.schedule.WorkSchedule;
+import cd.hrpay.schedule.WorkScheduleRepository;
 import cd.hrpay.site.Site;
 import cd.hrpay.site.SiteIpRange;
 import cd.hrpay.site.SiteRepository;
@@ -11,6 +15,7 @@ import cd.hrpay.user.AppUser;
 import cd.hrpay.user.PasswordPolicy;
 import cd.hrpay.user.UserRepository;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,9 +54,21 @@ public class DataSetup implements ApplicationRunner {
     private final SiteRepository sites;
     private final PasswordEncoder passwordEncoder;
     private final AuditService audit;
+    private final WorkScheduleRepository schedules;
+    private final UserScheduleRepository assignments;
+    private final cd.hrpay.salary.SalaryService salaries;
+    private final cd.hrpay.leave.LeaveService leave;
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     public DataSetup(AppProperties properties, UserRepository users, RoleRepository roles, SiteRepository sites,
-                     PasswordEncoder passwordEncoder, AuditService audit) {
+                     PasswordEncoder passwordEncoder, AuditService audit, WorkScheduleRepository schedules,
+                     UserScheduleRepository assignments, cd.hrpay.salary.SalaryService salaries,
+                     cd.hrpay.leave.LeaveService leave, org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        this.salaries = salaries;
+        this.leave = leave;
+        this.jdbc = jdbc;
+        this.schedules = schedules;
+        this.assignments = assignments;
         this.properties = properties;
         this.users = users;
         this.roles = roles;
@@ -82,9 +99,84 @@ public class DataSetup implements ApplicationRunner {
     }
 
     private void loadSampleData(String password) {
-        if (users.findByEmailIgnoreCase(SAMPLE_USERS.getFirst().email()).isPresent()) {
+        if (users.findByEmailIgnoreCase(SAMPLE_USERS.getFirst().email()).isEmpty()) {
+            loadSampleUsers(password);
+        }
+        assignSampleSchedules();
+        addSampleSalaries();
+        assignSampleManager();
+        assignSampleEmployment();
+        allowLocalIpv6();
+    }
+
+    /** Browsers on the same machine may reach the API over ::1; the sample site allows it too. */
+    private void allowLocalIpv6() {
+        sites.findByCodeIgnoreCase("KIN-HQ").ifPresent(site -> {
+            if (site.getIpRanges().stream().noneMatch(r -> r.getCidr().equals("0:0:0:0:0:0:0:1/128"))) {
+                List<SiteIpRange> ranges = new java.util.ArrayList<>(site.getIpRanges().stream()
+                        .map(r -> new SiteIpRange(r.getCidr(), r.getLabel())).toList());
+                ranges.add(new SiteIpRange("0:0:0:0:0:0:0:1/128", "Local development (IPv6)"));
+                site.replaceIpRanges(ranges);
+            }
+        });
+    }
+
+    /** Sample grade categories and hire dates, then this year's annual leave. */
+    private void assignSampleEmployment() {
+        for (SampleUser s : SAMPLE_USERS) {
+            if (s.role().equals("ADMIN")) {
+                continue;
+            }
+            String category = s.role().equals("MANAGER") ? "CAT3" : s.role().equals("EMPLOYEE") ? "CAT1" : "CAT2";
+            Long categoryId = jdbc.sql("select id from grade_category where code = ?").param(category)
+                    .query(Long.class).optional().orElse(null);
+            users.findByEmailIgnoreCase(s.email()).filter(u -> u.getGradeCategoryId() == null).ifPresent(u -> {
+                u.setGradeCategoryId(categoryId);
+                u.setHireDate(LocalDate.of(2024, 1, 15));
+            });
+        }
+        users.flush();
+        leave.grantAnnual(LocalDate.now().getYear());
+    }
+
+    /** Sample employees report to the sample manager, so team approvals can be tried. */
+    private void assignSampleManager() {
+        users.findByEmailIgnoreCase("manager@demo.hrpay.cd").ifPresent(manager -> SAMPLE_USERS.stream()
+                .filter(s -> s.role().equals("EMPLOYEE"))
+                .forEach(s -> users.findByEmailIgnoreCase(s.email())
+                        .filter(u -> u.getManagerId() == null)
+                        .ifPresent(u -> u.setManagerId(manager.getId()))));
+    }
+
+    /** Fake gross salaries from 1 January 2026 so earnings to date can be tried; HR replaces them. */
+    private void addSampleSalaries() {
+        Map<String, String> gross = Map.of(
+                "hr@demo.hrpay.cd", "2800", "finance@demo.hrpay.cd", "3000", "manager@demo.hrpay.cd", "3500",
+                "employee1@demo.hrpay.cd", "4500", "employee2@demo.hrpay.cd", "1200", "employee3@demo.hrpay.cd", "950");
+        gross.forEach((email, amount) -> users.findByEmailIgnoreCase(email).ifPresent(user -> {
+            if (salaries.history(user.getId()).isEmpty()) {
+                salaries.add(user.getId(), LocalDate.of(2026, 1, 1), new BigDecimal(amount), "USD", "Sample data",
+                        "system");
+            }
+        }));
+    }
+
+    /** Gives every sample user the standard schedule from 1 January 2026, if they have none. */
+    private void assignSampleSchedules() {
+        WorkSchedule standard = schedules.findByCode("STANDARD").orElse(null);
+        if (standard == null) {
             return;
         }
+        for (SampleUser s : SAMPLE_USERS) {
+            users.findByEmailIgnoreCase(s.email()).ifPresent(user -> {
+                if (assignments.findByUserIdOrderByEffectiveFromDesc(user.getId()).isEmpty()) {
+                    assignments.save(new UserSchedule(user.getId(), standard, LocalDate.of(2026, 1, 1)));
+                }
+            });
+        }
+    }
+
+    private void loadSampleUsers(String password) {
         Site site = new Site("KIN-HQ");
         site.setName("Kinshasa head office (sample)");
         site.setTimeZone("Africa/Kinshasa");
