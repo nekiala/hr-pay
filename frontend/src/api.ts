@@ -113,7 +113,18 @@ export type Site = {
   gpsRequired: boolean
   maxAccuracyM: number
   active: boolean
+  qrRequired: boolean
   ipRanges: IpRange[]
+}
+
+export type TrustedDevice = {
+  id: number
+  siteId: number
+  name: string
+  active: boolean
+  createdBy: string | null
+  createdAt: string
+  lastUsedAt: string | null
 }
 
 export type AuditEntry = {
