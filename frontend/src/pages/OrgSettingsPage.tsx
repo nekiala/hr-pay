@@ -12,6 +12,17 @@ import { t } from '../i18n'
 const message = (err: unknown) => err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Something went wrong.')
 type LevelForm = { id: number | null; code: string; name: string; rank: string; headTitle: string; staff: boolean; active: boolean }
 
+/** The units in tree order, each with its depth, so the list reads like the chart. */
+function tree(units: OrgUnit[]): { unit: OrgUnit; depth: number }[] {
+  const ids = new Set(units.map((u) => u.id))
+  const children = (id: number | null) => units.filter((u) => (id === null ? u.parentId === null || !ids.has(u.parentId) : u.parentId === id))
+    .sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name))
+  const out: { unit: OrgUnit; depth: number }[] = []
+  const walk = (id: number | null, depth: number) => children(id).forEach((u) => { out.push({ unit: u, depth }); walk(u.id, depth + 1) })
+  walk(null, 0)
+  return out
+}
+
 /** HR tools for the structure: the levels, a spreadsheet import and export, and moving several people at once. */
 export default function OrgSettingsPage() {
   const [levels, setLevels] = useState<OrgLevel[]>([])
@@ -74,7 +85,7 @@ export default function OrgSettingsPage() {
 
   const source = members.filter((m) => String(m.unitId) === bulk.fromUnit)
   return (
-    <section className="narrow">
+    <section>
       <p className="small muted"><Link to="/org">{t('Org chart')}</Link></p>
       <h2>{t('Organizational structure')}</h2>
 
@@ -110,8 +121,28 @@ export default function OrgSettingsPage() {
         <ErrorText error={error.levels ?? null} />
       </div>
 
-      {newUnit ? <UnitForm units={units} levels={levels} onCancel={() => setNewUnit(false)} onSaved={() => { setNewUnit(false); load() }} />
-        : <p><Button className="secondary" onClick={() => setNewUnit(true)}>{t('Add a unit')}</Button></p>}
+      <div className="card">
+        <h3>{t('Units')}</h3>
+        <p className="hint">{t('Open a unit to rename it, move it, name its head or close it.')}</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>{t('Unit')}</th><th>{t('Code')}</th><th>{t('Level')}</th><th>{t('Head')}</th><th>{t('People')}</th></tr></thead>
+            <tbody>
+              {units.length === 0 && <tr><td colSpan={5} className="muted">{t('No unit yet.')}</td></tr>}
+              {tree(units).map(({ unit: u, depth }) => (
+                <tr key={u.id}>
+                  <td style={{ paddingLeft: 12 + depth * 18 }}><Link to={`/org/units/${u.id}`}>{u.name}</Link></td>
+                  <td><code>{u.code}</code></td><td>{u.levelName}</td>
+                  <td>{u.head?.userName ?? <span className="muted">{t('Vacant')}</span>}</td>
+                  <td>{u.members ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {newUnit ? <UnitForm units={units} levels={levels} onCancel={() => setNewUnit(false)} onSaved={() => { setNewUnit(false); load() }} />
+          : <Button className="secondary" onClick={() => setNewUnit(true)}>{t('Add a unit')}</Button>}
+      </div>
 
       <div className="card">
         <h3>{t('Spreadsheet')}</h3>

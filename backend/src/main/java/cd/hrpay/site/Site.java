@@ -36,6 +36,8 @@ public class Site {
     private int maxAccuracyM = 100;
     private boolean active = true;
     private boolean qrRequired;
+    /** What happens to a check-in made on the phone without a connection: OFF, REVIEW (HR decides) or IN_AREA. */
+    private String offlineCheckin = "REVIEW";
     private String kioskKey;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
@@ -104,6 +106,8 @@ public class Site {
     }
     public boolean isGpsRequired() { return gpsRequired; }
     public void setGpsRequired(boolean gpsRequired) { this.gpsRequired = gpsRequired; }
+    public String getOfflineCheckin() { return offlineCheckin; }
+    public void setOfflineCheckin(String offlineCheckin) { this.offlineCheckin = offlineCheckin; }
     public int getMaxAccuracyM() { return maxAccuracyM; }
     public void setMaxAccuracyM(int maxAccuracyM) { this.maxAccuracyM = maxAccuracyM; }
     public boolean isActive() { return active; }

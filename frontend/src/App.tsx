@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AccountPage from './pages/AccountPage'
 import PersonalDataPage from './pages/PersonalDataPage'
@@ -61,6 +62,9 @@ import ImportPage from './pages/ImportPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import TimeClocksPage from './pages/TimeClocksPage'
 import ExportLayoutsPage from './pages/ExportLayoutsPage'
+import LifecyclePage from './pages/LifecyclePage'
+import PersonLifecyclePage from './pages/PersonLifecyclePage'
+import MyDocumentsPage from './pages/MyDocumentsPage'
 import { Shell } from './components/Shell'
 import type { ReactNode } from 'react'
 import { t } from './i18n'
@@ -123,6 +127,8 @@ export default function App() {
 
   // The kiosk screen needs no sign-in.
   if (location.pathname === '/kiosk') return <Routes><Route path="/kiosk" element={<KioskPage />} /></Routes>
+  // The page an emailed link opens: it works signed out, and setting the password signs every browser out.
+  if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
   if (loading) return <p className="center">{t('Loading…')}</p>
   if (!me) {
     return (
@@ -143,6 +149,9 @@ export default function App() {
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
+          <Route path="/users/:id/lifecycle" element={<Guard permission="lifecycle.manage"><PersonLifecyclePage /></Guard>} />
+          <Route path="/lifecycle" element={<Guard permission="lifecycle.manage"><LifecyclePage /></Guard>} />
+          <Route path="/my/documents" element={<MyDocumentsPage />} />
           <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />
           <Route path="/departures" element={<PayrollStaff><DeparturesPage /></PayrollStaff>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />

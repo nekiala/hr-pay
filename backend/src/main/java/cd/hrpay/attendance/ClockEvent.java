@@ -17,7 +17,7 @@ public class ClockEvent {
 
     public enum Type { IN, OUT }
 
-    public enum Source { SELF, HR_MANUAL, AUTO_CLOSE, MISSION, BIOMETRIC, API }
+    public enum Source { SELF, HR_MANUAL, AUTO_CLOSE, MISSION, BIOMETRIC, API, OFFLINE }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

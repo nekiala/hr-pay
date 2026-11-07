@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, CORRECTION_FIELDS, download, longDay, type DataCorrection, type SignedInSession, type TwoStepStatus } from '../api'
+import { api, CORRECTION_FIELDS, download, longDay, type DataCorrection, type PushSettings, type SignedInSession, type TwoStepStatus } from '../api'
+import { currentSubscription, installed, isIos, pushSupported, turnOffPush, turnOnPush, useInstall } from '../pwa'
 import { useAuth } from '../auth'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
@@ -41,6 +42,7 @@ export default function AccountPage() {
               <TwoStepCard />
             </div>
             <LanguageCard me={me} />
+            <PhoneCard />
             <SessionsCard />
             <MyDataCard />
           </>
@@ -242,6 +244,53 @@ function MyDataCard() {
           </Form>
         </Modal>
       )}
+    </div>
+  )
+}
+
+/** The app on the phone: install it, and get notifications on it. */
+function PhoneCard() {
+  const { canInstall, install } = useInstall()
+  const [settings, setSettings] = useState<PushSettings | null>(null)
+  const [here, setHere] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const load = async () => {
+    const s = await api<PushSettings>('/api/notifications/push').catch(() => null)
+    setSettings(s)
+    const sub = await currentSubscription().catch(() => null)
+    setHere(!!sub && !!s?.phones.length)
+  }
+  useEffect(() => { void load() }, [])
+  const denied = pushSupported() && Notification.permission === 'denied'
+
+  return (
+    <div className="card">
+      <h3>{t('The app on your phone')}</h3>
+      <p className="small muted">{t('HR Pay installs like an app: check in (even without a connection), ask for leave, read your payslips and documents, and approve requests.')}</p>
+      {installed() ? <p className="small success">{t('Installed on this device.')}</p>
+        : canInstall ? <Button onClick={install}>{t('Install the app')}</Button>
+          : isIos() ? <p className="small">{t('On an iPhone: open HR Pay in Safari, tap Share, then Add to Home Screen.')}</p>
+            : <p className="small muted">{t('To install: open the browser menu and choose Install app or Add to Home screen.')}</p>}
+
+      <h4>{t('Notifications on this device')}</h4>
+      {!settings ? null : !settings.enabled ? <p className="small muted">{t('Phone notifications are not set up on this server yet. You still see them under the bell.')}</p>
+        : !pushSupported() ? <p className="small muted">{isIos() ? t('On an iPhone, install the app first (iOS 16.4 or later), then turn notifications on from the installed app.') : t('This browser cannot receive notifications.')}</p>
+          : denied ? <p className="small">{t('Notifications are blocked for HR Pay in this browser\'s settings.')}</p>
+            : here ? (
+              <div className="row">
+                <span className="badge ok">{t('On')}</span>
+                <Button className="secondary" onClick={async () => { setError(null); await turnOffPush(); await load() }}>{t('Turn off')}</Button>
+              </div>
+            ) : (
+              <Button onClick={async () => {
+                setError(null)
+                try { await turnOnPush(settings); await load() } catch (e) {
+                  setError((e as Error).message === 'denied' ? t('Notifications were not allowed.') : (e as Error).message)
+                }
+              }}>{t('Turn on notifications')}</Button>
+            )}
+      {settings && settings.phones.length > 0 && <p className="small muted">{plural('{a} device receives your notifications.', '{a} devices receive your notifications.', settings.phones.length, { a: settings.phones.length })}</p>}
+      <ErrorText error={error} />
     </div>
   )
 }

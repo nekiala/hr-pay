@@ -5,11 +5,16 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 import { t } from '../i18n'
+import { isOffline, knownStatus, queuePunch, rememberStatus, syncPunches, clearSent, useOnline, useQueue, type KnownStatus } from '../pwa'
 
-const sourceLabel = { SELF: '', HR_MANUAL: t(' (entered by HR)'), AUTO_CLOSE: t(' (closed automatically)'), MISSION: t(' (mission)') }
+const sourceLabel: Record<string, string> = { SELF: '', HR_MANUAL: t(' (entered by HR)'), AUTO_CLOSE: t(' (closed automatically)'), MISSION: t(' (mission)'), OFFLINE: t(' (sent from the phone)'), BIOMETRIC: t(' (time clock)') }
 
 export default function CheckInPage() {
-  const { signOut } = useAuth()
+  const { signOut, me } = useAuth()
+  const userId = me!.id
+  const online = useOnline()
+  const { waiting, done: answered } = useQueue(userId)
+  const [offline, setOffline] = useState<KnownStatus | null>(null)
   const [params] = useSearchParams()
   const qrToken = params.get('qr')
   const [status, setStatus] = useState<AttendanceStatus | null>(null)
@@ -19,8 +24,37 @@ export default function CheckInPage() {
   const [code, setCode] = useState('')
   const [done, setDone] = useState<string | null>(null)
 
-  const load = () => api<AttendanceStatus>('/api/attendance/status').then(setStatus).catch((e: Error) => setError(e.message))
-  useEffect(() => { void load() }, [])
+  const load = () => api<AttendanceStatus>('/api/attendance/status').then((s) => {
+    setStatus(s)
+    setOffline(null)
+    if (s.site) {
+      rememberStatus({ userId, checkedIn: s.checkedIn, siteName: s.site.name, timeZone: s.site.timeZone, offline: s.site.offlineCheckin, gps: s.site.gpsRequired })
+    }
+  }).catch((e: Error) => {
+    // Without a connection, the phone works from what it last knew.
+    if (isOffline(e)) setOffline(knownStatus(userId) ?? { userId, checkedIn: false, siteName: '', timeZone: 'Africa/Kinshasa', offline: 'OFF', gps: false })
+    else setError(e.message)
+  })
+  useEffect(() => { void load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back online: send what waited, then show the day as the server has it.
+  useEffect(() => {
+    if (!online) return
+    void syncPunches(userId).catch(() => undefined).finally(() => void load())
+  }, [online]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Keeps the check-in on the phone, to send as soon as there is a connection. */
+  const keep = async (type: 'IN' | 'OUT', known: KnownStatus) => {
+    setError(null)
+    setBusy(t('Getting your location…'))
+    const pos = await currentPosition().catch(() => ({ lat: null, lng: null, accuracyM: null }))
+    setBusy(null)
+    queuePunch(userId, type, pos)
+    const next = { ...known, checkedIn: type === 'IN' }
+    rememberStatus(next)
+    setOffline(next)
+    setDone(type === 'IN' ? t('Kept on the phone: your check-in is sent when the connection comes back.')
+      : t('Kept on the phone: your check-out is sent when the connection comes back.'))
+  }
 
   const finished = async (message: string) => {
     setDone(message)
@@ -52,7 +86,8 @@ export default function CheckInPage() {
       if (result.status === 'CHECKED_IN') await finished(t('Checked in at {a}.', { a: time(result.event!.occurredAt, status?.site?.timeZone) }))
       else setChallenge(result)
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('Check-in failed.'))
+      if (isOffline(e)) setOffline(knownStatus(userId))
+      setError(isOffline(e) ? t('No connection.') : e instanceof Error ? e.message : t('Check-in failed.'))
     } finally {
       setBusy(null)
     }
@@ -84,12 +119,43 @@ export default function CheckInPage() {
       const event = await api<{ occurredAt: string }>('/api/attendance/check-out', { method: 'POST', body })
       await finished(t('Day ended at {a}.', { a: time(event.occurredAt, status?.site?.timeZone) }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('Check-out failed.'))
+      if (isOffline(e)) setOffline(knownStatus(userId))
+      setError(isOffline(e) ? t('No connection.') : e instanceof Error ? e.message : t('Check-out failed.'))
     } finally {
       setBusy(null)
     }
   }
 
+  const queue = (
+    <OfflineQueue waiting={waiting} answered={answered} timeZone={offline?.timeZone ?? status?.site?.timeZone} onClear={() => clearSent(userId)} />
+  )
+  if (offline && (!status || !online)) {
+    return (
+      <section className="narrow">
+        <div className="card checkin">
+          <p className="notice">{t('No connection.')}</p>
+          {offline.siteName && <p className="muted">{offline.siteName}</p>}
+          <h2>{offline.checkedIn ? t('Checked in') : t('Not checked in')}</h2>
+          {offline.offline === 'OFF' ? (
+            <p className="hint">{t('Your site does not allow check-ins without a connection. Check in when you are back online.')}</p>
+          ) : (
+            <>
+              <p className="hint">{offline.offline === 'IN_AREA'
+                ? t('The phone keeps the time and your location. In the site\'s area it is recorded when sent; otherwise your manager approves it.')
+                : t('The phone keeps the time and your location; your manager approves it once it is sent.')}</p>
+              {offline.checkedIn
+                ? <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => { if (confirm_(t('End your day now?'))) void keep('OUT', offline) }}>{t('End my day')}</Button>
+                : <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => void keep('IN', offline)}>{t('Check in')}</Button>}
+            </>
+          )}
+          <ErrorText error={error} />
+          {done && <p className="success">{done}</p>}
+          {queue}
+          <Button className="secondary" onClick={() => { setError(null); void load() }}>{t('Try again')}</Button>
+        </div>
+      </section>
+    )
+  }
   if (!status) return <ErrorText error={error} />
   if (!status.site) return <p className="notice">{t('You are not assigned to a site yet. Contact HR.')}</p>
 
@@ -122,6 +188,7 @@ export default function CheckInPage() {
 
         <ErrorText error={error} />
         {done && <p className="success">{done}</p>}
+        {queue}
 
         {status.today.length > 0 && (
           <>
@@ -135,6 +202,46 @@ export default function CheckInPage() {
         )}
       </div>
     </section>
+  )
+}
+
+const OUTCOME: Record<string, [string, string]> = {
+  RECORDED: [t('Recorded'), 'badge ok'], REVIEW: [t('Sent to your manager'), 'badge warn'], REFUSED: [t('Not recorded'), 'badge off'],
+}
+
+/** The check-ins kept on the phone, and what became of the last ones sent. */
+function OfflineQueue({ waiting, answered, timeZone, onClear }: {
+  waiting: { clientId: string; type: 'IN' | 'OUT'; at: string }[]
+  answered: { clientId: string; type: 'IN' | 'OUT'; at: string; outcome: string; detail: string | null }[]
+  timeZone?: string
+  onClear: () => void
+}) {
+  if (waiting.length === 0 && answered.length === 0) return null
+  const label = (type: 'IN' | 'OUT') => type === 'IN' ? t('Arrived') : t('Left')
+  return (
+    <div className="stack small">
+      {waiting.length > 0 && (
+        <>
+          <h3>{t('Waiting to be sent')}</h3>
+          <ul className="events">
+            {waiting.map((p) => <li key={p.clientId}>{label(p.type)}{' '}{t('at')}{' '}{time(p.at, timeZone)} <span className="badge">{t('On the phone')}</span></li>)}
+          </ul>
+        </>
+      )}
+      {answered.length > 0 && (
+        <>
+          <div className="row between"><h3>{t('Sent from the phone')}</h3><Button className="link" onClick={onClear}>{t('Clear')}</Button></div>
+          <ul className="events">
+            {answered.slice(0, 5).map((p) => (
+              <li key={p.clientId}>{label(p.type)}{' '}{t('at')}{' '}{time(p.at, timeZone)}{' '}
+                <span className={OUTCOME[p.outcome]?.[1] ?? 'badge'}>{OUTCOME[p.outcome]?.[0] ?? p.outcome}</span>
+                {p.detail && <div className="muted">{p.detail}</div>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Banknote } from 'lucide-react'
 import { api, type Me, type TwoStepNeeded } from '../api'
 import { useAuth } from '../auth'
@@ -88,12 +88,15 @@ export default function LoginPage() {
     <div className="login">
       <Form className="card" onSubmit={submit}>
         {brand}
-        <p className="muted">{t('Sign in with the email address registered by HR.')}</p>
+        {params.get('reset') === 'done'
+          ? <p className="success">{t('Your new password is saved. Sign in with it.')}</p>
+          : <p className="muted">{t('Sign in with the email address registered by HR.')}</p>}
         <label>{t('Email')}<input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </label>
         <label>{t('Password')}<input type="password" autoComplete="current-password" value={password}
             onChange={(e) => setPassword(e.target.value)} required />
         </label>
+        <p className="small"><Link to="/reset-password">{t('Forgot your password?')}</Link></p>
         <ErrorText error={error} />
         <Button type="submit" pending={busy} pendingText={t('Signing in…')}>{t('Sign in')}</Button>
         {providers.microsoft && (

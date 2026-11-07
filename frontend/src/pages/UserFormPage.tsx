@@ -210,6 +210,7 @@ export default function UserFormPage() {
           <Link className="button secondary" to={`/users/${id}/attendance`}>{t('View attendance and earnings')}</Link>
           {can('salary.read') && <Link className="button secondary" to={`/users/${id}/file`}>{t('Contract and family')}</Link>}
           {(can('payroll.run') || can('payroll.approve')) && <Link className="button secondary" to={`/users/${id}/departure`}>{t('Departure')}</Link>}
+          {can('lifecycle.manage') && <Link className="button secondary" to={`/users/${id}/lifecycle`}>{t('Documents and checklists')}</Link>}
         </p>
       )}
 

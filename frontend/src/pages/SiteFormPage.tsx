@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, type IpRange, type Site, type TrustedDevice } from '../api'
+import { ApiError, api, OFFLINE_MODES, type IpRange, type OfflineMode, type Site, type TrustedDevice } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -11,7 +11,7 @@ type Form = Omit<Site, 'id'>
 
 const empty: Form = {
   code: '', name: '', countryCode: 'CD', timeZone: 'Africa/Kinshasa', centerLat: null, centerLng: null,
-  radiusM: 150, gpsRequired: true, maxAccuracyM: 100, active: true, qrRequired: false, ipRanges: [],
+  radiusM: 150, gpsRequired: true, maxAccuracyM: 100, active: true, qrRequired: false, offlineCheckin: 'REVIEW', ipRanges: [],
 }
 
 const zones = ['Africa/Kinshasa', 'Africa/Lubumbashi']
@@ -101,6 +101,11 @@ export default function SiteFormPage() {
             <label>{t('Maximum GPS accuracy (m)')}<input type="number" min={5} value={form.maxAccuracyM} onChange={(e) => update('maxAccuracyM', Number(e.target.value))} /></label>
           </div>
           <label className="check"><input type="checkbox" checked={form.qrRequired} onChange={(e) => update('qrRequired', e.target.checked)} />{t('Employees must scan the office QR code to check in')}</label>
+          <label>{t('Check-ins made without a connection (phone app)')}
+            <select value={form.offlineCheckin} onChange={(e) => update('offlineCheckin', e.target.value as OfflineMode)}>
+              {Object.entries(OFFLINE_MODES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </label>
           <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => update('active', e.target.checked)} />{t('Site is active')}</label>
         </fieldset>
         <ErrorText error={error} />

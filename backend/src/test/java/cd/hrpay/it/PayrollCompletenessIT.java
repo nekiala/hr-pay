@@ -70,6 +70,9 @@ class PayrollCompletenessIT extends IntegrationTest {
                 .andExpect(jsonPath("$.status").value("CONFIRMED"))
                 .andReturn().getResponse().getContentAsString();
         BigDecimal notice = new BigDecimal(JsonPath.read(confirmed, "$.noticeAmount").toString());
+        // The departure checklist starts by itself.
+        assertThat(jdbc.sql("select count(*) from employee_checklist where user_id = ? and kind = 'DEPARTURE' and status = 'OPEN'")
+                .param(esther).query(Integer.class).single()).isEqualTo(1);
         assertThat(notice).isPositive();
         assertThat(jdbc.sql("select end_date from employee_contract where user_id = ? and end_date = '2026-04-15'")
                 .param(esther).query(java.time.LocalDate.class).optional()).isPresent();
@@ -91,6 +94,8 @@ class PayrollCompletenessIT extends IntegrationTest {
             mvc.perform(delete("/api/users/" + esther + "/departure").session(hr).with(csrf())).andExpect(status().isNoContent());
         }
         assertThat(jdbc.sql("select count(*) from employee_contract where user_id = ? and end_date = '2026-04-15'")
+                .param(esther).query(Integer.class).single()).isZero();
+        assertThat(jdbc.sql("select count(*) from employee_checklist where user_id = ? and kind = 'DEPARTURE' and status = 'OPEN'")
                 .param(esther).query(Integer.class).single()).isZero();
         assertThat(jdbc.sql("select count(*) from pay_entry e join pay_element p on p.id = e.element_id where e.user_id = ? and p.code = 'NOTICE_PAY'")
                 .param(esther).query(Integer.class).single()).isZero();
