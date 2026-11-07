@@ -205,6 +205,25 @@ person sets it up again at their next sign-in. Five wrong codes end the attempt.
 **Signed-in browsers.** **My account** lists the browsers a person is signed in on and signs out one or all the others.
 A new password, a password reset, a disabled account or a second-step reset signs the person out everywhere.
 
+**Forgotten password.** *Forgot your password?* on the sign-in page emails a link (to `PUBLIC_URL/reset-password`) that
+works once, for 30 minutes; at most three links per person an hour, and the page answers the same whether or not the
+address has an account. Only a hash of the link is kept. The new password signs the person out everywhere, and the
+second step is still asked at the next sign-in. An administrator can also set a new password for anyone (Users, then
+the person).
+
+**When no administrator can sign in.** The provider opens the company on **Companies** and, under *Administrators*,
+emails one of them a link or sets a temporary password to give by phone, and can remove their second step (lost
+phone). A reason is required; it is written in the company's audit log and its administrators are told. On premise,
+run on the server:
+
+```sh
+docker compose exec app java -jar /app/app.jar reset-password admin@example.cd [--second-step]
+```
+
+It prints a temporary password to change at the next sign-in, lifts a lockout, signs the person out everywhere and
+writes the reset in the company's audit log. It uses the app's `DB_URL`, `DB_USER` and `DB_PASSWORD` and does not
+start the app.
+
 **Sign in with Microsoft 365.** Register an app in the Microsoft Entra admin centre (accounts in any organizational
 directory, redirect URI `https://<your domain>/login/oauth2/code/microsoft`), then set `MICROSOFT_CLIENT_ID` and
 `MICROSOFT_CLIENT_SECRET`. Each company's administrator pastes its own tenant ID on **Company**; a Microsoft sign-in

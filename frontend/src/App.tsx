@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import AccountPage from './pages/AccountPage'
 import PersonalDataPage from './pages/PersonalDataPage'
@@ -126,6 +127,8 @@ export default function App() {
 
   // The kiosk screen needs no sign-in.
   if (location.pathname === '/kiosk') return <Routes><Route path="/kiosk" element={<KioskPage />} /></Routes>
+  // The page an emailed link opens: it works signed out, and setting the password signs every browser out.
+  if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
   if (loading) return <p className="center">{t('Loading…')}</p>
   if (!me) {
     return (

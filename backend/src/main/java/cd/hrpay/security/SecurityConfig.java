@@ -86,7 +86,7 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
                 .cors(cors -> {})
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers", "/api/auth/two-step", "/api/auth/two-step/**", "/api/kiosk").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/csrf", "/api/auth/providers", "/api/auth/two-step", "/api/auth/two-step/**", "/api/auth/password-reset", "/api/auth/password-reset/confirm", "/api/kiosk").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/actuator/**").authenticated()
                         .requestMatchers("/api/**").authenticated()

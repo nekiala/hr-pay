@@ -103,6 +103,19 @@ upgrade, then `git checkout <previous tag>` and `docker compose up -d --build`.
 - **Logs**: `docker compose logs app`. The app writes one JSON line per entry (ECS format), ready for a log collector
   such as Grafana Loki or Elastic. Docker keeps 10 files of 50 MB per service.
 
+## When no administrator can sign in
+
+Anyone can use *Forgot your password?* on the sign-in page when email works. If it does not, or the only
+administrator lost their phone, run from this folder:
+
+```sh
+docker compose exec app java -jar /app/app.jar reset-password admin@example.cd --second-step
+```
+
+It prints a temporary password to give to the person (they choose their own at sign-in); `--second-step` also removes
+their second step. The reset is written in the company's audit log. Leave out `--second-step` when only the password
+is lost.
+
 ## Several app servers
 
 Sessions, the sign-in lockout and the scheduled jobs are kept in the database, so two or more app servers can share

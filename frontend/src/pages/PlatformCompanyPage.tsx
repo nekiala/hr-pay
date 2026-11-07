@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { InvoiceTable } from '../components/Invoices'
 import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { t, locale } from '../i18n'
 
 type Detail = {
@@ -118,6 +119,8 @@ export default function PlatformCompanyPage() {
         </div>
       </div>
 
+      <AdminAccess companyId={d.id} />
+
       {s ? (
         <div className="card">
           <div className="row between">
@@ -172,5 +175,90 @@ export default function PlatformCompanyPage() {
         )}
       </div>
     </section>
+  )
+}
+
+type Admin = { id: number; email: string; firstName: string; lastName: string; status: string; twoStep: boolean; lastLoginAt: string | null }
+type ResetDone = { mode: 'LINK' | 'PASSWORD'; email: string; temporaryPassword: string | null; delivery: string }
+
+/** The last resort when nobody at the company can sign in as an administrator. Written in the company's audit log. */
+function AdminAccess({ companyId }: { companyId: number }) {
+  const [admins, setAdmins] = useState<Admin[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [target, setTarget] = useState<Admin | null>(null)
+  const [mode, setMode] = useState<'LINK' | 'PASSWORD'>('LINK')
+  const [resetTwoStep, setResetTwoStep] = useState(false)
+  const [reason, setReason] = useState('')
+  const [done, setDone] = useState<ResetDone | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const load = () => api<Admin[]>(`/api/platform/companies/${companyId}/admins`).then(setAdmins).catch((e: Error) => setError(e.message))
+  useEffect(() => { void load() }, [companyId])
+
+  const open = (a: Admin) => { setTarget(a); setMode('LINK'); setResetTwoStep(false); setReason(''); setDone(null); setFormError(null) }
+  const reset = async () => {
+    setFormError(null)
+    try {
+      setDone(await api<ResetDone>(`/api/platform/companies/${companyId}/admins/${target!.id}/reset`, { method: 'POST', body: { mode, resetTwoStep, reason } }))
+      await load()
+    } catch (e) { setFormError((e as Error).message) }
+  }
+
+  return (
+    <div className="card">
+      <h3>{t('Administrators')}</h3>
+      <p className="hint">{t('When nobody at the company can sign in as an administrator, reset one of them here. Only on a request you checked with the company: it is written in the company\'s audit log and its administrators are told.')}</p>
+      <ErrorText error={error} />
+      {admins && (
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>{t('Name')}</th><th>{t('Email')}</th><th>{t('Second step')}</th><th>{t('Last sign-in')}</th><th></th></tr></thead>
+            <tbody>
+              {admins.length === 0 && <tr><td colSpan={5} className="muted">{t('No administrator.')}</td></tr>}
+              {admins.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.firstName} {a.lastName}{a.status !== 'ACTIVE' && <span className="badge off">{' '}{t('Disabled')}</span>}</td>
+                  <td className="small">{a.email}</td>
+                  <td>{a.twoStep ? t('Set up') : t('None')}</td>
+                  <td className="small">{a.lastLoginAt ? new Date(a.lastLoginAt).toLocaleString(locale()) : t('Never')}</td>
+                  <td className="num">{a.status === 'ACTIVE' && <Button className="secondary" onClick={() => open(a)}>{t('Reset access')}</Button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {target && (
+        <Modal title={t('Reset access for {a}', { a: `${target.firstName} ${target.lastName}` })} onClose={() => setTarget(null)}>
+          {done ? (
+            <div className="stack">
+              {done.temporaryPassword ? (
+                <>
+                  <p>{t('Temporary password for {a}, shown only now. Give it to them by phone, not by email; they choose their own at sign-in.', { a: done.email })}</p>
+                  <p className="mono code-input">{done.temporaryPassword}</p>
+                </>
+              ) : (
+                <p>{done.delivery === 'FAILED'
+                  ? t('The email to {a} could not be sent. Check the mail settings, or set a temporary password instead.', { a: done.email })
+                  : t('A link to choose a new password was sent to {a}. It works once, for 30 minutes.', { a: done.email })}</p>
+              )}
+              <Button onClick={() => setTarget(null)}>{t('Close')}</Button>
+            </div>
+          ) : (
+            <Form onSubmit={reset} className="stack">
+              <label className="check"><input type="radio" name="mode" checked={mode === 'LINK'} onChange={() => setMode('LINK')} />{' '}{t('Email them a link to choose a new password')}</label>
+              <label className="check"><input type="radio" name="mode" checked={mode === 'PASSWORD'} onChange={() => setMode('PASSWORD')} />{' '}{t('Set a temporary password that I give them (when their email does not work)')}</label>
+              <label className="check"><input type="checkbox" checked={resetTwoStep} onChange={(e) => setResetTwoStep(e.target.checked)} />{' '}{t('Also remove their second step (lost phone); they set it up again at sign-in')}</label>
+              <label>{t('Who asked, and how you checked it (the company reads it)')}<textarea required maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+              <ErrorText error={formError} />
+              <div className="row">
+                <Button type="submit" className="danger" disabled={!reason.trim()}>{t('Reset access')}</Button>
+                <Button className="secondary" onClick={() => setTarget(null)}>{t('Cancel')}</Button>
+              </div>
+            </Form>
+          )}
+        </Modal>
+      )}
+    </div>
   )
 }

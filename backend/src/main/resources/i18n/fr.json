@@ -864,5 +864,18 @@
  "Older than three days: ask for a correction instead.": "Plus de trois jours : demandez plutôt une correction.",
  "Not recorded: %s.": "Non enregistré : %s.",
  "You cannot ask for corrections.": "Vous ne pouvez pas demander de corrections.",
- "Sent to your manager for approval.": "Envoyé à votre responsable pour approbation."
+ "Sent to your manager for approval.": "Envoyé à votre responsable pour approbation.",
+ "%s: %s. Reason given: %s": "%s : %s. Motif donné : %s",
+ "Choose a new HR Pay password": "Choisir un nouveau mot de passe HR Pay",
+ "Hello %s,\n\nSomeone asked to choose a new password for your HR Pay account. If it was you, open this link:": "Bonjour %s,\n\nQuelqu'un a demandé à choisir un nouveau mot de passe pour votre compte HR Pay. Si c'est vous, ouvrez ce lien :",
+ "Hello %s,\n\nYour HR Pay provider's support reset your password, at your company's request. They will give you a temporary password; you choose your own at the next sign-in.\n\nIf nobody at your company asked for this, tell your HR department.": "Bonjour %s,\n\nLe support de votre fournisseur HR Pay a réinitialisé votre mot de passe, à la demande de votre entreprise. Il vous donnera un mot de passe provisoire ; vous choisirez le vôtre à la prochaine connexion.\n\nSi personne dans votre entreprise ne l'a demandé, prévenez votre service RH.",
+ "Hello %s,\n\nYour HR Pay provider's support sent you this link to choose a new password, at your company's request.": "Bonjour %s,\n\nLe support de votre fournisseur HR Pay vous envoie ce lien pour choisir un nouveau mot de passe, à la demande de votre entreprise.",
+ "Provider support reset an administrator's access": "Le support du fournisseur a réinitialisé l'accès d'un administrateur",
+ "The link works once, for 30 minutes. If you did not ask for it, ignore this email: your password does not change.": "Le lien fonctionne une fois, pendant 30 minutes. Si vous ne l'avez pas demandé, ignorez cet e-mail : votre mot de passe ne change pas.",
+ "Your HR Pay password was reset": "Votre mot de passe HR Pay a été réinitialisé",
+ "link to choose a new password": "lien pour choisir un nouveau mot de passe",
+ "temporary password": "mot de passe provisoire",
+ "Only a company administrator can be reset from here.": "Seul un administrateur de l'entreprise peut être réinitialisé ici.",
+ "This account is disabled. Reactivate it first.": "Ce compte est désactivé. Réactivez-le d'abord.",
+ "This link no longer works. Ask for a new one from the sign-in page.": "Ce lien ne fonctionne plus. Demandez-en un nouveau depuis la page de connexion."
 }
