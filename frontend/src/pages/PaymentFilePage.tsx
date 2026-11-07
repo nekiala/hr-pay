@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api, money } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { METHOD, type PayMethodKind } from './PaymentsPage'
+import { Button } from '../components/Button'
 
 type Line = { payslipId: number; userId: number; beneficiary: string; registrationNo: string | null; account: string | null; amount: number; currency: string
   unitId: number | null; directionName: string | null; unitName: string | null }
@@ -43,7 +44,7 @@ export default function PaymentFilePage() {
   return (
     <section className="narrow">
       <p className="no-print"><Link to={`/payroll/payments?month=${view.month}`}>← Payments {view.month}</Link>
-        {' · '}<button className="link" onClick={() => window.print()}>Print or save as PDF</button>
+        {' · '}<Button className="link" onClick={() => window.print()}>Print or save as PDF</Button>
         {directions.length > 1 && <>{' · '}
           <select value={direction} onChange={(e) => setDirection(e.target.value)}>
             <option value="">Every Direction</option>

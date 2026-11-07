@@ -4,6 +4,8 @@ import { ApiError, api, days, fileToBase64, type LeaveBalance, type LeaveDocumen
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 const STATUS: Record<LeaveRequest['status'], string> = {
   PENDING: 'Waiting for approval', AWAITING_HR: 'Approved, HR to check the document', APPROVED: 'Approved',
@@ -54,6 +56,7 @@ function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAd
 }
 
 export default function LeavePage() {
+  const [requesting, setRequesting] = useState(false)
   const { can } = useAuth()
   const canRequest = can('leave.request')
   const isHr = can('leave.manage')
@@ -92,8 +95,10 @@ export default function LeavePage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -101,7 +106,7 @@ export default function LeavePage() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       const created = await api<LeaveRequest>('/api/leave/requests', {
         method: 'POST',
         body: { ...form, leaveTypeId: Number(form.leaveTypeId), halfDay: oneDay && form.halfDay ? form.halfDay : null },
@@ -120,7 +125,7 @@ export default function LeavePage() {
 
   const decide = (r: LeaveRequest, approve: boolean) => {
     const path = r.status === 'AWAITING_HR' ? 'document-check' : 'decision'
-    void run(() => api(`/api/leave/requests/${r.id}/${path}`, { method: 'POST', body: { approve, note: notes[r.id] } }),
+    return run(() => api(`/api/leave/requests/${r.id}/${path}`, { method: 'POST', body: { approve, note: notes[r.id] } }),
       approve ? (r.status === 'AWAITING_HR' ? 'Document accepted; the leave counts as approved.' : 'Leave approved.') : 'Leave rejected.')
   }
 
@@ -130,7 +135,10 @@ export default function LeavePage() {
   return (
     <section>
       <div className="row space">
-        <h2>Leave</h2>
+        <div className="row between">
+          <h2>Leave</h2>
+          {canRequest && <Button onClick={() => setRequesting(true)}>Request leave</Button>}
+        </div>
         {isHr && <Link className="button secondary" to="/leave/settings">Leave settings</Link>}
       </div>
       <ErrorText error={error} />
@@ -162,51 +170,53 @@ export default function LeavePage() {
               <div className="row">
                 <input placeholder="Note (required to reject)" value={notes[r.id] ?? ''}
                   onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} />
-                <button onClick={() => decide(r, true)}>{r.status === 'AWAITING_HR' ? 'Accept document' : 'Approve'}</button>
-                <button className="secondary" onClick={() => decide(r, false)}>{r.status === 'AWAITING_HR' ? 'Refuse document' : 'Reject'}</button>
+                <Button onClick={() => decide(r, true)}>{r.status === 'AWAITING_HR' ? 'Accept document' : 'Approve'}</Button>
+                <Button className="secondary" onClick={() => decide(r, false)}>{r.status === 'AWAITING_HR' ? 'Refuse document' : 'Reject'}</Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {canRequest && (
-        <form className="card" onSubmit={submit}>
-          <h3>Request leave</h3>
-          <div className="grid3">
-            <label>Kind
-              <select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
-                <option value="">Choose</option>
-                {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </label>
-            <label>First day<input type="date" value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate && form.endDate >= e.target.value ? form.endDate : e.target.value })} required /></label>
-            <label>Last day<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
-          </div>
-          {oneDay && (
-            <label>Part of the day
-              <select value={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.value })}>
-                <option value="">The whole day</option>
-                <option value="AM">The morning only</option>
-                <option value="PM">The afternoon only</option>
-              </select>
-            </label>
-          )}
-          <label>Reason (optional)<input value={form.reason} maxLength={500} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-          {halfPreview !== null && <p className="hint">{days(halfPreview)} of work. Rest days and public holidays are not counted.</p>}
-          {selected?.requiresDocument && (
-            <label>Supporting document (for example a medical certificate; PDF, JPEG or PNG, at most 5 MB)
-              <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <small className="muted">You can also add it later. HR checks it before the leave counts.</small>
-            </label>
-          )}
-          {selected && selected.payPercent === 0 && <p className="hint">This leave is unpaid.</p>}
-          {selected && selected.payPercent > 0 && selected.payPercent < 100 && (
-            <p className="hint">This leave is paid at {Number(selected.payPercent).toLocaleString()}% of the usual pay.</p>
-          )}
-          <button type="submit">Send request</button>
-        </form>
+      {canRequest && requesting && (
+        <Modal title="Request leave" size="md" onClose={() => setRequesting(false)}>
+          <Form onSubmit={async (e) => { if (await submit(e)) setRequesting(false) }}>
+            <div className="grid3">
+              <label>Kind
+                <select value={form.leaveTypeId} onChange={(e) => setForm({ ...form, leaveTypeId: e.target.value })} required>
+                  <option value="">Choose</option>
+                  {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </label>
+              <label>First day<input type="date" value={form.startDate}
+                onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate && form.endDate >= e.target.value ? form.endDate : e.target.value })} required /></label>
+              <label>Last day<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
+            </div>
+            {oneDay && (
+              <label>Part of the day
+                <select value={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.value })}>
+                  <option value="">The whole day</option>
+                  <option value="AM">The morning only</option>
+                  <option value="PM">The afternoon only</option>
+                </select>
+              </label>
+            )}
+            <label>Reason (optional)<input value={form.reason} maxLength={500} onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+            {halfPreview !== null && <p className="hint">{days(halfPreview)} of work. Rest days and public holidays are not counted.</p>}
+            {selected?.requiresDocument && (
+              <label>Supporting document (for example a medical certificate; PDF, JPEG or PNG, at most 5 MB)
+                <input type="file" accept="application/pdf,image/jpeg,image/png" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                <small className="muted">You can also add it later. HR checks it before the leave counts.</small>
+              </label>
+            )}
+            {selected && selected.payPercent === 0 && <p className="hint">This leave is unpaid.</p>}
+            {selected && selected.payPercent > 0 && selected.payPercent < 100 && (
+              <p className="hint">This leave is paid at {Number(selected.payPercent).toLocaleString()}% of the usual pay.</p>
+            )}
+            <ErrorText error={error} />
+          <div className="modal-foot"><Button className="secondary" onClick={() => setRequesting(false)}>Cancel</Button><Button type="submit">Send request</Button></div>
+          </Form>
+        </Modal>
       )}
 
       {canRequest && mine.length > 0 && (
@@ -224,7 +234,7 @@ export default function LeavePage() {
                     <Documents request={r} canAdd={['PENDING', 'AWAITING_HR', 'APPROVED'].includes(r.status)} onChange={load} />
                   )}</td>
                   <td>{(r.status === 'PENDING' || r.status === 'AWAITING_HR') && (
-                    <button className="secondary" onClick={() => void run(() => api(`/api/leave/requests/${r.id}/cancel`, { method: 'POST', body: {} }), 'Request cancelled.')}>Cancel</button>
+                    <Button className="secondary" onClick={() => run(() => api(`/api/leave/requests/${r.id}/cancel`, { method: 'POST', body: {} }), 'Request cancelled.')}>Cancel</Button>
                   )}</td>
                 </tr>
               ))}

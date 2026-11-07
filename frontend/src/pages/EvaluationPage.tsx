@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ApiError, EVAL_STATUS, api, type Evaluation } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 export default function EvaluationPage() {
   const { id } = useParams()
@@ -28,8 +29,10 @@ export default function EvaluationPage() {
     try {
       show(await action())
       setMessage(done)
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
@@ -94,8 +97,8 @@ export default function EvaluationPage() {
             <label>Comment for the employee<textarea rows={3} maxLength={1000} value={managerComment} onChange={(e) => setManagerComment(e.target.value)} /></label>
             {ev.status === 'CONTESTED' && <p className="notice">The employee contested: “{ev.employeeComment}”. Revise and submit again, or leave it for HR to decide.</p>}
             <div className="row">
-              <button className="secondary" onClick={() => void save(false)}>Save draft</button>
-              <button onClick={() => void save(true)}>{ev.status === 'DRAFT' ? 'Submit to the employee' : 'Submit again'}</button>
+              <Button className="secondary" onClick={() => save(false)}>Save draft</Button>
+              <Button onClick={() => save(true)}>{ev.status === 'DRAFT' ? 'Submit to the employee' : 'Submit again'}</Button>
             </div>
           </>
         ) : ev.managerComment && <p><strong>Manager:</strong> {ev.managerComment}</p>}
@@ -108,8 +111,8 @@ export default function EvaluationPage() {
           <h3>Your answer</h3>
           <label>Comment (needed if you disagree)<textarea rows={3} maxLength={1000} value={answer} onChange={(e) => setAnswer(e.target.value)} /></label>
           <div className="row">
-            <button onClick={() => void run(() => api<Evaluation>(`/api/evaluations/${ev.id}/answer`, { method: 'POST', body: { acknowledge: true, comment: answer || null } }), 'Thank you. HR will finalise it.')}>I acknowledge</button>
-            <button className="secondary" onClick={() => void run(() => api<Evaluation>(`/api/evaluations/${ev.id}/answer`, { method: 'POST', body: { acknowledge: false, comment: answer } }), 'Sent back to your manager and HR.')}>I disagree</button>
+            <Button onClick={() => run(() => api<Evaluation>(`/api/evaluations/${ev.id}/answer`, { method: 'POST', body: { acknowledge: true, comment: answer || null } }), 'Thank you. HR will finalise it.')}>I acknowledge</Button>
+            <Button className="secondary" onClick={() => run(() => api<Evaluation>(`/api/evaluations/${ev.id}/answer`, { method: 'POST', body: { acknowledge: false, comment: answer } }), 'Sent back to your manager and HR.')}>I disagree</Button>
           </div>
         </div>
       )}
@@ -118,7 +121,7 @@ export default function EvaluationPage() {
         <div className="card">
           <h3>HR decision</h3>
           <label>{ev.status === 'CONTESTED' ? 'Decision on the contest (required)' : 'Comment (optional)'}<textarea rows={2} maxLength={1000} value={hrComment} onChange={(e) => setHrComment(e.target.value)} /></label>
-          <button onClick={() => void run(() => api<Evaluation>(`/api/evaluations/${ev.id}/approve`, { method: 'POST', body: { hrComment: hrComment || null } }), 'Approved. It now counts for the 13th month.')}>Approve with this score</button>
+          <Button onClick={() => run(() => api<Evaluation>(`/api/evaluations/${ev.id}/approve`, { method: 'POST', body: { hrComment: hrComment || null } }), 'Approved. It now counts for the 13th month.')}>Approve with this score</Button>
         </div>
       )}
     </section>

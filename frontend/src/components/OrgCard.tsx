@@ -4,6 +4,8 @@ import { ApiError, api } from '../api'
 import { useAuth } from '../auth'
 import { flatten, REASON, unitPath, type OrgAssignment, type OrgBoss, type OrgHead, type OrgUnit } from '../org'
 import { ErrorText } from './ErrorText'
+import { Button, Form } from './Button'
+import { Modal } from './Modal'
 
 /** A select of the open units, indented by depth. */
 export function UnitSelect({ units, value, onChange, required, exclude, placeholder = 'Choose a unit' }: {
@@ -76,22 +78,25 @@ export function OrgCard({ userId }: { userId: number }) {
           </table>
         </details>
       )}
-      {editable && !move && <button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'TRANSFER', note: '' })}>Move to another unit</button>}
+      {editable && !move && <Button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'TRANSFER', note: '' })}>Move to another unit</Button>}
       {move && (
-        <form className="sub-form" onSubmit={(e) => void save(e)}>
-          <div className="grid3">
-            <label>New unit<UnitSelect units={units} value={move.unitId} required exclude={current?.unitId} onChange={(v) => setMove({ ...move, unitId: v })} /></label>
-            <label>From<input type="date" required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
-            <label>Why
-              <select value={move.reason} onChange={(e) => setMove({ ...move, reason: e.target.value })}>
-                {['TRANSFER', 'PROMOTION', 'REORGANISATION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
-              </select>
-            </label>
-          </div>
-          {move.reason === 'CORRECTION' && <p className="hint">A correction fixes the current unit without adding a line to the history.</p>}
-          <label>Note (optional)<input maxLength={300} value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} /></label>
-          <div className="row"><button type="submit">Save</button><button type="button" className="secondary" onClick={() => setMove(null)}>Cancel</button></div>
-        </form>
+        <Modal title="Move to another unit" size="md" onClose={() => setMove(null)}>
+          <Form onSubmit={(e) => save(e)}>
+            <div className="grid3">
+              <label>New unit<UnitSelect units={units} value={move.unitId} required exclude={current?.unitId} onChange={(v) => setMove({ ...move, unitId: v })} /></label>
+              <label>From<input type="date" required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
+              <label>Why
+                <select value={move.reason} onChange={(e) => setMove({ ...move, reason: e.target.value })}>
+                  {['TRANSFER', 'PROMOTION', 'REORGANISATION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
+                </select>
+              </label>
+            </div>
+            {move.reason === 'CORRECTION' && <p className="hint">A correction fixes the current unit without adding a line to the history.</p>}
+            <label>Note (optional)<input maxLength={300} value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} /></label>
+            <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setMove(null)}>Cancel</Button><Button type="submit">Save</Button></div>
+          </Form>
+        </Modal>
       )}
       <ErrorText error={error} />
     </div>

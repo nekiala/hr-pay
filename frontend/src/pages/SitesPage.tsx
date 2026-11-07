@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ApiError, api, type Site } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button } from '../components/Button'
 
 export default function SitesPage() {
   const { can } = useAuth()
@@ -60,7 +61,7 @@ export default function SitesPage() {
           <div className="row">
             <label>Keep for (days)<input type="number" min={0} max={3650} className="narrow-input" value={retention} disabled={!can('site.manage')}
               onChange={(e) => setRetention(Number(e.target.value))} /></label>
-            {can('site.manage') && <button className="secondary" onClick={() => void saveRetention()}>Save</button>}
+            {can('site.manage') && <Button className="secondary" onClick={() => saveRetention()}>Save</Button>}
           </div>
         </div>
       )}

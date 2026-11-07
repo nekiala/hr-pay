@@ -2,8 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { api, type Permission, type Role } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { useAsk } from '../components/Dialogs'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 export default function RolesPage() {
+  const ask = useAsk()
   const { can, refresh } = useAuth()
   const editable = can('role.manage')
   const [roles, setRoles] = useState<Role[]>([])
@@ -15,6 +19,7 @@ export default function RolesPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [newCode, setNewCode] = useState('')
   const [newName, setNewName] = useState('')
+  const [creating, setCreating] = useState(false)
 
   const load = async (keep?: number) => {
     const list = await api<Role[]>('/api/roles')
@@ -67,14 +72,12 @@ export default function RolesPage() {
     }
   }
 
-  const remove = async () => {
-    if (!role || !confirm(`Delete the role ${role.name}?`)) return
-    try {
-      await api(`/api/roles/${role.id}`, { method: 'DELETE' })
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not delete.')
-    }
+  const remove = () => {
+    if (!role) return
+    ask({
+      title: `Delete the role ${role.name}?`, message: 'People who have it lose its permissions.', confirmLabel: 'Delete role', danger: true,
+      onConfirm: async () => { await api(`/api/roles/${role.id}`, { method: 'DELETE' }); await load() },
+    })
   }
 
   const create = async (e: FormEvent) => {
@@ -87,6 +90,7 @@ export default function RolesPage() {
       })
       setNewCode('')
       setNewName('')
+      setCreating(false)
       await load(created.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the role.')
@@ -96,22 +100,26 @@ export default function RolesPage() {
   return (
     <section>
       <h2>Roles and permissions</h2>
+      {creating && (
+        <Modal title="New role" size="sm" onClose={() => setCreating(false)}>
+          <Form onSubmit={create}>
+            <label>Code<input placeholder="e.g. SITE_MANAGER" value={newCode} onChange={(e) => setNewCode(e.target.value)} required /></label>
+            <label>Name<input value={newName} onChange={(e) => setNewName(e.target.value)} required /></label>
+            <p className="hint">The role starts with no permissions; tick them after creating it.</p>
+            <ErrorText error={error} />
+            <div className="modal-foot"><Button className="secondary" onClick={() => setCreating(false)}>Cancel</Button><Button type="submit">Create role</Button></div>
+          </Form>
+        </Modal>
+      )}
       <div className="split">
         <aside className="card">
           {roles.map((r) => (
-            <button key={r.id} className={`list-item ${r.id === selected ? 'active' : ''}`} onClick={() => choose(r)}>
+            <Button key={r.id} className={`list-item ${r.id === selected ? 'active' : ''}`} onClick={() => choose(r)}>
               {r.name}
               <span className="muted small">{r.permissions.length} permissions{r.systemRole ? ' · built-in' : ''}</span>
-            </button>
+            </Button>
           ))}
-          {editable && (
-            <form onSubmit={create} className="stack">
-              <h3>New role</h3>
-              <input placeholder="Code, e.g. SITE_MANAGER" value={newCode} onChange={(e) => setNewCode(e.target.value)} required />
-              <input placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} required />
-              <button type="submit" className="secondary">Create role</button>
-            </form>
-          )}
+          {editable && <Button className="secondary" onClick={() => { setError(null); setCreating(true) }}>New role</Button>}
         </aside>
         {role && (
           <div className="card grow">
@@ -135,8 +143,8 @@ export default function RolesPage() {
             {message && <p className="success">{message}</p>}
             {editable && (
               <div className="row">
-                <button onClick={() => void save()}>Save role</button>
-                {!role.systemRole && <button className="danger" onClick={() => void remove()}>Delete role</button>}
+                <Button onClick={() => save()}>Save role</Button>
+                {!role.systemRole && <Button className="danger" onClick={() => remove()}>Delete role</Button>}
               </div>
             )}
           </div>

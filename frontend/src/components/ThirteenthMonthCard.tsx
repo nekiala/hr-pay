@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, api, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from './ErrorText'
+import { Button } from './Button'
 
 type Settings = { enabled: boolean; base: 'AVERAGE_BASIC' | 'LAST_BASIC'; fallbackPercent: number; payMonth: number; prorate: boolean }
 type Row = { userId: number; name: string; scorePercent: number; scoreSource: 'EVALUATIONS' | 'FALLBACK'; evaluations: number; base: number; currency: string; monthsWorked: number; amount: number }
@@ -69,7 +70,7 @@ export function ThirteenthMonthCard() {
             <label>Fallback score %<input type="number" disabled={!editable} min={0} max={100} step={0.01} value={form.fallbackPercent} onChange={(e) => setForm({ ...form, fallbackPercent: Number(e.target.value) })} /></label>
             <label className="check"><input type="checkbox" disabled={!editable} checked={form.prorate} onChange={(e) => setForm({ ...form, prorate: e.target.checked })} /> Prorate by months worked</label>
           </div>
-          {editable && <button className="secondary" onClick={() => void save()}>Save rules</button>}
+          {editable && <Button className="secondary" onClick={() => save()}>Save rules</Button>}
         </>
       )}
 

@@ -3,6 +3,8 @@ import { ApiError, api, type Mission } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 const STATUS: Record<Mission['status'], string> = {
   PENDING: 'Waiting for approval', APPROVED: 'Approved', REJECTED: 'Rejected', CANCELLED: 'Cancelled',
@@ -12,6 +14,7 @@ const today = () => new Date().toISOString().slice(0, 10)
 const hm = (t: string) => t.slice(0, 5)
 
 export default function MissionsPage() {
+  const [requesting, setRequesting] = useState(false)
   const { can } = useAuth()
   const canRequest = can('mission.request')
   const canDecide = can('mission.approve.all') || can('mission.approve.team')
@@ -36,14 +39,16 @@ export default function MissionsPage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    void run(async () => {
+    return run(async () => {
       await api('/api/missions', { method: 'POST', body: form })
       setForm({ ...form, location: '', purpose: '' })
     }, 'Mission requested. Your manager will be asked to approve it.')
@@ -51,7 +56,10 @@ export default function MissionsPage() {
 
   return (
     <section>
-      <h2>Missions</h2>
+      <div className="row between">
+        <h2>Missions</h2>
+        {canRequest && <Button onClick={() => setRequesting(true)}>Request a mission</Button>}
+      </div>
       <p className="muted">A mission is work away from the office. Once approved, you can end your day where the mission is, and a day left open is closed at the mission's end.</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
@@ -68,26 +76,28 @@ export default function MissionsPage() {
               <div className="row">
                 <input placeholder="Note (required to reject)" value={notes[m.id] ?? ''}
                   onChange={(e) => setNotes({ ...notes, [m.id]: e.target.value })} />
-                <button onClick={() => void run(() => api(`/api/missions/${m.id}/decision`, { method: 'POST', body: { approve: true, note: notes[m.id] } }), 'Mission approved.')}>Approve</button>
-                <button className="secondary" onClick={() => void run(() => api(`/api/missions/${m.id}/decision`, { method: 'POST', body: { approve: false, note: notes[m.id] } }), 'Mission rejected.')}>Reject</button>
+                <Button onClick={() => run(() => api(`/api/missions/${m.id}/decision`, { method: 'POST', body: { approve: true, note: notes[m.id] } }), 'Mission approved.')}>Approve</Button>
+                <Button className="secondary" onClick={() => run(() => api(`/api/missions/${m.id}/decision`, { method: 'POST', body: { approve: false, note: notes[m.id] } }), 'Mission rejected.')}>Reject</Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {canRequest && (
-        <form className="card" onSubmit={submit}>
-          <h3>Request a mission</h3>
-          <div className="grid3">
-            <label>Date<input type="date" value={form.workDate} onChange={(e) => setForm({ ...form, workDate: e.target.value })} required /></label>
-            <label>From<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} required /></label>
-            <label>To<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required /></label>
-          </div>
-          <label>Where<input value={form.location} maxLength={200} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="For example Ministry of Labour, Gombe" required /></label>
-          <label>Why<input value={form.purpose} maxLength={500} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="For example submit the CNSS declaration" required /></label>
-          <button type="submit">Send request</button>
-        </form>
+      {canRequest && requesting && (
+        <Modal title="Request a mission" size="md" onClose={() => setRequesting(false)}>
+          <Form onSubmit={async (e) => { if (await submit(e)) setRequesting(false) }}>
+            <div className="grid3">
+              <label>Date<input type="date" value={form.workDate} onChange={(e) => setForm({ ...form, workDate: e.target.value })} required /></label>
+              <label>From<input type="time" value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} required /></label>
+              <label>To<input type="time" value={form.endTime} onChange={(e) => setForm({ ...form, endTime: e.target.value })} required /></label>
+            </div>
+            <label>Where<input value={form.location} maxLength={200} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="For example Ministry of Labour, Gombe" required /></label>
+            <label>Why<input value={form.purpose} maxLength={500} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder="For example submit the CNSS declaration" required /></label>
+            <ErrorText error={error} />
+          <div className="modal-foot"><Button className="secondary" onClick={() => setRequesting(false)}>Cancel</Button><Button type="submit">Send request</Button></div>
+          </Form>
+        </Modal>
       )}
 
       {canRequest && mine.length > 0 && (
@@ -101,7 +111,7 @@ export default function MissionsPage() {
                   <td>{hm(m.startTime)}–{hm(m.endTime)}</td>
                   <td>{m.location}<br /><span className="muted">{m.purpose}</span></td>
                   <td>{STATUS[m.status]}{m.decidedBy ? <><br /><span className="muted">by {m.decidedBy}{m.decisionNote ? `: ${m.decisionNote}` : ''}</span></> : null}</td>
-                  <td>{m.status === 'PENDING' && <button className="secondary" onClick={() => void run(() => api(`/api/missions/${m.id}/cancel`, { method: 'POST' }), 'Mission cancelled.')}>Cancel</button>}</td>
+                  <td>{m.status === 'PENDING' && <Button className="secondary" onClick={() => run(() => api(`/api/missions/${m.id}/cancel`, { method: 'POST' }), 'Mission cancelled.')}>Cancel</Button>}</td>
                 </tr>
               ))}
             </tbody>

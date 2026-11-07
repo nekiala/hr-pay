@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
+import { Button, Form } from '../components/Button'
 
 export default function ChangePasswordPage({ forced = false }: { forced?: boolean }) {
   const { me, refresh, signOut } = useAuth()
@@ -30,7 +31,7 @@ export default function ChangePasswordPage({ forced = false }: { forced?: boolea
 
   return (
     <div className={forced ? 'login' : ''}>
-      <form className="card" onSubmit={submit}>
+      <Form className="card" onSubmit={submit}>
         <h2>{forced ? 'Choose a new password' : 'My account'}</h2>
         {!forced && me && (
           <p className="muted">{me.email} · {me.roles.join(', ')}</p>
@@ -42,9 +43,9 @@ export default function ChangePasswordPage({ forced = false }: { forced?: boolea
         <p className="hint">At least 10 characters, with a letter and a digit.</p>
         <ErrorText error={error} />
         {done && <p className="success">Password changed.</p>}
-        <button type="submit">Change password</button>
-        {forced && <button type="button" className="secondary" onClick={() => void signOut()}>Sign out</button>}
-      </form>
+        <Button type="submit">Change password</Button>
+        {forced && <Button type="button" className="secondary" onClick={() => signOut()}>Sign out</Button>}
+      </Form>
     </div>
   )
 }

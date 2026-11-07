@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api, hours, money, time, type DayResult, type DayStatus, type MonthSummary, type OvertimeDay } from '../api'
 import { ErrorText } from './ErrorText'
+import { Button } from './Button'
 
 const STATUS: Record<DayStatus, string> = {
   FUTURE: '',
@@ -72,9 +73,9 @@ export default function MonthView({ source, onVoid, version = 0 }: {
   return (
     <div className="month">
       <div className="row month-nav">
-        <button className="secondary" onClick={() => setMonth(shiftMonth(month, -1))}>Previous</button>
+        <Button className="secondary" onClick={() => setMonth(shiftMonth(month, -1))}>Previous</Button>
         <strong>{label}</strong>
-        <button className="secondary" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= currentMonth()}>Next</button>
+        <Button className="secondary" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= currentMonth()}>Next</Button>
       </div>
       <ErrorText error={error} />
       {data && (
@@ -134,7 +135,7 @@ export default function MonthView({ source, onVoid, version = 0 }: {
                           {d.entries.map((e) => (
                             <li key={e.id}>
                               {e.type === 'IN' ? 'In' : 'Out'} {time(e.at, data.timeZone)} ({SOURCE[e.source]}){e.note ? ` · ${e.note}` : ''}
-                              <button className="secondary void" onClick={() => onVoid(e.id)}>Void</button>
+                              <Button className="secondary void" onClick={() => onVoid(e.id)}>Void</Button>
                             </li>
                           ))}
                         </ul>

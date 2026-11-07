@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from './ErrorText'
+import { Button } from './Button'
 
 /** What the app records about people, why, who sees it and for how long. */
 export function PrivacyText() {
@@ -52,7 +53,7 @@ export function PrivacyGate() {
         <h2 id="privacy-title">How your data is used</h2>
         <PrivacyText />
         <ErrorText error={error} />
-        <button onClick={() => void accept()}>I have read this</button>
+        <Button onClick={() => accept()}>I have read this</Button>
       </div>
     </div>
   )

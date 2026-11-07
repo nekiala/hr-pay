@@ -5,6 +5,8 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import { headTitle, unitPath, type OrgHead, type OrgLevel, type OrgMember, type OrgUnit } from '../org'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 type Detail = { unit: OrgUnit; heads: OrgHead[]; members?: OrgMember[] }
 const today = () => new Date().toISOString().slice(0, 10)
@@ -93,9 +95,9 @@ export default function OrgUnitPage() {
 
       {manage && u.open && (
         <div className="row">
-          <button className="secondary" onClick={() => setMode('edit')}>Edit</button>
-          <button className="secondary" onClick={() => setMode('child')}>Add a sub-unit</button>
-          {u.parentId !== null && <button className="danger" onClick={() => setMode('close')}>Close this unit</button>}
+          <Button className="secondary" onClick={() => setMode('edit')}>Edit</Button>
+          <Button className="secondary" onClick={() => setMode('child')}>Add a sub-unit</Button>
+          {u.parentId !== null && <Button className="danger" onClick={() => setMode('close')}>Close this unit</Button>}
         </div>
       )}
       {mode === 'edit' && <UnitForm units={units} levels={levels} unit={u} onCancel={() => setMode('')}
@@ -149,30 +151,32 @@ function HeadRow({ unit, role, head, levels, editable, onSaved }: {
         <span className="muted">{label}: </span>
         {head ? <><strong>{head.userName}</strong> <span className="muted">{headTitle(unit, head, levels)} since {head.validFrom}</span></>
           : <span className="muted">{role === 'HEAD' ? 'Vacant. Its people report to the nearest head above.' : 'None'}</span>}
-        {editable && !open && <> <button className="secondary void" onClick={() => setOpen(true)}>{head ? 'Replace' : 'Appoint'}</button></>}
-        {editable && head && !open && <> <button className="secondary void" onClick={() => void end()}>End today</button></>}
+        {editable && !open && <> <Button className="secondary void" onClick={() => setOpen(true)}>{head ? 'Replace' : 'Appoint'}</Button></>}
+        {editable && head && !open && <> <Button className="secondary void" onClick={() => end()}>End today</Button></>}
       </p>
       {open && (
-        <form className="sub-form" onSubmit={(e) => void save(e)}>
-          {form.userId ? (
-            <p>{form.name} <button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: 0, name: '' })}>Change</button></p>
-          ) : (
-            <>
-              <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
-              {results.map((r) => (
-                <p key={r.id}><button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: r.id, name: `${r.firstName} ${r.lastName}` })}>Choose</button> {r.firstName} {r.lastName} <span className="muted">{r.registrationNo}</span></p>
-              ))}
-            </>
-          )}
-          <div className="grid3">
-            <label>From<input type="date" required value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} /></label>
-            <label>Title (optional)<input maxLength={100} placeholder={levels.find((l) => l.id === unit.levelId)?.headTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
-            <label className="check"><input type="checkbox" checked={form.interim} onChange={(e) => setForm({ ...form, interim: e.target.checked })} />Ad interim (a.i.)</label>
-          </div>
-          <p className="hint">One person can head several units. The previous {label.toLowerCase()}'s term ends the day before.</p>
-          <div className="row"><button type="submit" disabled={!form.userId}>Save</button><button type="button" className="secondary" onClick={() => setOpen(false)}>Cancel</button></div>
-          <ErrorText error={error} />
-        </form>
+        <Modal title={`${head ? 'Replace' : 'Appoint'} the ${label.toLowerCase()}`} size="md" onClose={() => setOpen(false)}>
+          <Form onSubmit={(e) => save(e)}>
+            {form.userId ? (
+              <p>{form.name} <Button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: 0, name: '' })}>Change</Button></p>
+            ) : (
+              <>
+                <input placeholder="Search by name or registration number" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
+                {results.map((r) => (
+                  <p key={r.id}><Button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: r.id, name: `${r.firstName} ${r.lastName}` })}>Choose</Button> {r.firstName} {r.lastName} <span className="muted">{r.registrationNo}</span></p>
+                ))}
+              </>
+            )}
+            <div className="grid3">
+              <label>From<input type="date" required value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} /></label>
+              <label>Title (optional)<input maxLength={100} placeholder={levels.find((l) => l.id === unit.levelId)?.headTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
+              <label className="check"><input type="checkbox" checked={form.interim} onChange={(e) => setForm({ ...form, interim: e.target.checked })} />Ad interim (a.i.)</label>
+            </div>
+            <p className="hint">One person can head several units. The previous {label.toLowerCase()}'s term ends the day before.</p>
+            <div className="modal-foot"><Button className="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" disabled={!form.userId}>Save</Button></div>
+            <ErrorText error={error} />
+          </Form>
+        </Modal>
       )}
       {!open && <ErrorText error={error} />}
     </div>
@@ -201,8 +205,8 @@ export function UnitForm({ units, levels, unit, parentId, onSaved, onCancel }: {
   }
 
   return (
-    <form className="card" onSubmit={(e) => void save(e)}>
-      <h3>{unit ? 'Edit unit' : 'New unit'}</h3>
+    <Modal title={unit ? `Edit ${unit.name}` : 'New unit'} size="lg" onClose={onCancel}>
+    <Form onSubmit={(e) => save(e)}>
       <div className="grid2">
         <label>Code<input required maxLength={32} pattern="[A-Za-z0-9_.\-]+" disabled={!!unit} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} />
           <span className="hint">Short and unique, for example DAF or SPAIE.</span></label>
@@ -217,9 +221,10 @@ export function UnitForm({ units, levels, unit, parentId, onSaved, onCancel }: {
         <label>Cost centre (optional)<input maxLength={40} value={form.costCentre} onChange={(e) => setForm({ ...form, costCentre: e.target.value })} /></label>
         {!unit && <label>Opens on<input type="date" required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>}
       </div>
-      <div className="row"><button type="submit">Save</button><button type="button" className="secondary" onClick={onCancel}>Cancel</button></div>
       <ErrorText error={error} />
-    </form>
+      <div className="modal-foot"><Button className="secondary" onClick={onCancel}>Cancel</Button><Button type="submit">Save</Button></div>
+    </Form>
+    </Modal>
   )
 }
 
@@ -235,12 +240,13 @@ function CloseForm({ unit, onSaved, onCancel }: { unit: OrgUnit; onSaved: () => 
     } catch (err) { setError(message(err)) }
   }
   return (
-    <form className="card" onSubmit={(e) => void save(e)}>
-      <h3>Close {unit.name}</h3>
+    <Modal title={`Close ${unit.name}`} size="sm" onClose={onCancel}>
+    <Form onSubmit={(e) => save(e)}>
       <p className="hint">Move its people and sub-units elsewhere first. Closing ends the head's and deputy's terms; the history stays.</p>
       <label>Last day<input type="date" required value={on} onChange={(e) => setOn(e.target.value)} /></label>
-      <div className="row"><button type="submit" className="danger">Close unit</button><button type="button" className="secondary" onClick={onCancel}>Cancel</button></div>
       <ErrorText error={error} />
-    </form>
+      <div className="modal-foot"><Button className="secondary" onClick={onCancel}>Cancel</Button><Button type="submit" className="danger">Close unit</Button></div>
+    </Form>
+    </Modal>
   )
 }

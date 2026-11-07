@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { headTitle, unitTree, type OrgLevel, type OrgMember, type OrgUnit, type TreeNode } from '../org'
+import { Button } from '../components/Button'
 
 /** The org chart: units with their heads (or "Vacant"), and for HR a people view built from who reports to whom. */
 export default function OrgChartPage() {
@@ -86,9 +87,9 @@ export default function OrgChartPage() {
       <li key={n.item.id}>
         {unitBox(n.item)}
         {n.children.length > 0 && (
-          <button className="secondary org-toggle no-print" onClick={() => toggle(n.item.id)}>
+          <Button className="secondary org-toggle no-print" onClick={() => toggle(n.item.id)}>
             {collapsed.has(n.item.id) ? `+ ${n.children.length}` : '−'}
-          </button>
+          </Button>
         )}
         {n.children.length > 0 && !collapsed.has(n.item.id) && renderUnits(n.children)}
       </li>
@@ -118,9 +119,9 @@ export default function OrgChartPage() {
           {n.item.heads.length > 0 && <small>Heads {n.item.heads.map((h) => units.find((u) => u.id === h)?.name ?? `#${h}`).join(', ')}</small>}
         </div>
         {n.children.length > 0 && (
-          <button className="secondary org-toggle no-print" onClick={() => toggle(-n.item.userId)}>
+          <Button className="secondary org-toggle no-print" onClick={() => toggle(-n.item.userId)}>
             {collapsed.has(-n.item.userId) ? `+ ${n.children.length}` : '−'}
-          </button>
+          </Button>
         )}
         {n.children.length > 0 && !collapsed.has(-n.item.userId) && renderPeople(n.children)}
       </li>
@@ -150,8 +151,8 @@ export default function OrgChartPage() {
             {sites.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
           </select>
         )}
-        <button className="secondary" onClick={() => setCollapsed(new Set())}>Expand all</button>
-        <button className="secondary" onClick={() => window.print()}>Print or save as PDF</button>
+        <Button className="secondary" onClick={() => setCollapsed(new Set())}>Expand all</Button>
+        <Button className="secondary" onClick={() => window.print()}>Print or save as PDF</Button>
         {can('org.manage') && <Link className="button secondary" to="/org/manage">Levels, import and moves</Link>}
       </div>
       <h2 className="print-only">Org chart{site && ` · ${sites.find(([id]) => String(id) === site)?.[1]}`} · {new Date().toISOString().slice(0, 10)}</h2>

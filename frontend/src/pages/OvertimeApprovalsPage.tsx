@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ApiError, api, hours, time, type PendingOvertime } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
+import { Button } from '../components/Button'
 
 const KIND = { WEEKDAY: 'Workday', REST_DAY: 'Rest day', HOLIDAY: 'Public holiday' }
 
@@ -59,8 +60,8 @@ export default function OvertimeApprovalsPage() {
                     <td><input placeholder="Required to reject" value={edit.note ?? ''}
                       onChange={(e) => setEdits({ ...edits, [key(p)]: { ...edit, note: e.target.value } })} /></td>
                     <td className="actions">
-                      <button onClick={() => void decide(p, true)}>Approve</button>
-                      <button className="secondary" onClick={() => void decide(p, false)}>Reject</button>
+                      <Button onClick={() => decide(p, true)}>Approve</Button>
+                      <Button className="secondary" onClick={() => decide(p, false)}>Reject</Button>
                     </td>
                   </tr>
                 )

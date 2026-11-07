@@ -4,6 +4,8 @@ import { ApiError, api, money, type PayrollRun, type RunView } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { ThirteenthMonthCard } from '../components/ThirteenthMonthCard'
+import { useAsk } from '../components/Dialogs'
+import { Button } from '../components/Button'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const STATUS = { CALCULATED: 'Calculated, waiting for approval', APPROVED: 'Approved, ready to close', CLOSED: 'Closed' }
@@ -13,6 +15,7 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(undefin
 type HolidayAdjustment = { id: number; userId: number; userName: string; payslipId: number; closedMonth: string; amount: number; currency: string; targetMonth: string; note: string; createdBy: string }
 
 export default function PayrollRunsPage() {
+  const ask = useAsk()
   const { can } = useAuth()
   const [runs, setRuns] = useState<PayrollRun[]>([])
   const [month, setMonth] = useState(lastMonth())
@@ -40,8 +43,10 @@ export default function PayrollRunsPage() {
       setView(await api<RunView>(`/api/payroll/runs/${month}/${path}`, { method: 'POST', body }))
       setMessage(done)
       await loadRuns()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     } finally {
       setBusy(false)
     }
@@ -90,7 +95,7 @@ export default function PayrollRunsPage() {
           <label className="month-pick">Month <input type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} /></label>
           {runs.length > 0 && (
             <span className="muted">Recent: {runs.slice(0, 6).map((r) => (
-              <button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({r.status.toLowerCase()})</button>
+              <Button key={r.id} className="link" onClick={() => setMonth(r.month.slice(0, 7))}>{r.month.slice(0, 7)} ({r.status.toLowerCase()})</Button>
             ))}</span>
           )}
         </div>
@@ -110,22 +115,21 @@ export default function PayrollRunsPage() {
 
         <div className="row">
           {can('payroll.run') && (!run || run.status === 'CALCULATED') && (
-            <button disabled={busy} onClick={() => void act('calculate', 'Payroll calculated.')}>{run ? 'Calculate again' : `Calculate ${month}`}</button>
+            <Button disabled={busy} onClick={() => act('calculate', 'Payroll calculated.')}>{run ? 'Calculate again' : `Calculate ${month}`}</Button>
           )}
           {can('payroll.approve') && run?.status === 'CALCULATED' && (
-            <button disabled={busy} onClick={() => { if (confirm(`Approve the ${month} payroll?`)) void act('approve', 'Payroll approved.') }}>Approve</button>
+            <Button disabled={busy} onClick={() => ask({ title: `Approve the ${month} payroll?`, message: 'HR can then close the month.', confirmLabel: 'Approve', onConfirm: () => act('approve', 'Payroll approved.') })}>Approve</Button>
           )}
           {(can('payroll.approve') || can('payroll.run')) && run?.status === 'APPROVED' && (
-            <button className="secondary" disabled={busy} onClick={() => {
-              const reason = prompt('Why is it sent back?')
-              if (reason) void act('send-back', 'Sent back for changes.', { reason })
-            }}>Send back</button>
+            <Button className="secondary" disabled={busy} onClick={() => ask({
+              title: `Send the ${month} payroll back`, confirmLabel: 'Send back', fields: [{ label: 'What needs changing?', required: true, multiline: true }],
+              onConfirm: ([reason]) => act('send-back', 'Sent back for changes.', { reason }),
+            })}>Send back</Button>
           )}
           {can('payroll.close') && run?.status === 'APPROVED' && (
-            <button disabled={busy} onClick={() => { if (confirm(`Close ${month}? Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.`)) void act('close', 'Month closed. Employees can now see their payslips.') }}>Close the month</button>
+            <Button disabled={busy} onClick={() => ask({ title: `Close ${month}?`, message: 'Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.', confirmLabel: 'Close the month', danger: true, onConfirm: () => act('close', 'Month closed. Employees can now see their payslips.') })}>Close the month</Button>
           )}
         </div>
-        {busy && <p className="muted">Working…</p>}
       </div>
 
       {view && view.skipped.length > 0 && (
@@ -227,22 +231,22 @@ export default function PayrollRunsPage() {
           )}
           {can('salary.write') && (
             <div className="row">
-              <button className="secondary" disabled={busy} onClick={async () => {
+              <Button className="secondary" disabled={busy} onClick={async () => {
                 setError(null); setMessage(null)
                 try {
                   const o = await api<{ applied: Raise[]; skipped: string[] }>('/api/raises/apply', { method: 'POST' })
                   setMessage(`${o.applied.length} raise(s) applied.${o.skipped.length ? ' To do by hand: ' + o.skipped.join(' ') : ''}`)
                   await loadRaises()
                 } catch (e) { setError((e as Error).message) }
-              }}>Check today's anniversaries now</button>
-              <button className="secondary" disabled={busy} onClick={async () => {
+              }}>Check today's anniversaries now</Button>
+              <Button className="secondary" disabled={busy} onClick={async () => {
                 setError(null); setMessage(null)
                 try {
                   const r = await api<{ listed: number }>('/api/raises/notify', { method: 'POST' })
                   setMessage(r.listed ? `Email sent to HR listing ${r.listed} raise(s).` : 'No new raise to report.')
                   await loadRaises()
                 } catch (e) { setError((e as Error).message) }
-              }}>Email HR the list now</button>
+              }}>Email HR the list now</Button>
             </div>
           )}
         </div>

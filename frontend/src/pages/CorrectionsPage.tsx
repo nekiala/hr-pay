@@ -3,6 +3,8 @@ import { ApiError, api, time } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
+import { Button, Form } from '../components/Button'
+import { Modal } from '../components/Modal'
 
 type Request = {
   id: number; userId: number; employeeName: string; registrationNo: string; workDate: string; action: 'ADD' | 'VOID'
@@ -29,6 +31,7 @@ const blank = { userId: '', workDate: '', action: 'ADD' as 'ADD' | 'VOID', type:
  * branch proposes it, and HR applies it. A head can also propose one directly for someone in their branch.
  */
 export default function CorrectionsPage() {
+  const [requesting, setRequesting] = useState(false)
   const { can } = useAuth()
   const canAsk = can('attendance.correct.request')
   const isHead = can('attendance.correct.propose')
@@ -62,15 +65,17 @@ export default function CorrectionsPage() {
       await action()
       setMessage(done)
       load()
+      return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : 'Something went wrong.')
+      return false
     }
   }
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const forOther = form.userId !== ''
-    void run(async () => {
+    return run(async () => {
       await api('/api/corrections', {
         method: 'POST',
         body: {
@@ -84,14 +89,17 @@ export default function CorrectionsPage() {
   }
 
   const act = (r: Request, step: 'propose' | 'apply' | 'reject', done: string) =>
-    void run(() => api(`/api/corrections/${r.id}/${step}`, { method: 'POST', body: { note: notes[r.id] } }), done)
+    run(() => api(`/api/corrections/${r.id}/${step}`, { method: 'POST', body: { note: notes[r.id] } }), done)
 
   const shown = toDecide.filter((r) => units.keep(r.userId))
   const team = isHead && !isHr ? units.people : []
 
   return (
     <section>
-      <h2>Attendance corrections</h2>
+      <div className="row between">
+        <h2>Attendance corrections</h2>
+        {(canAsk || team.length > 0) && <Button onClick={() => setRequesting(true)}>{team.length > 0 ? 'Ask or propose a correction' : 'Ask for a correction'}</Button>}
+      </div>
       <p className="muted">
         Ask for a forgotten check-in or check-out to be added, or a wrong one removed, up to two months back.
         A head of the unit proposes it and HR applies it; the change then shows on the day with its reason.
@@ -116,59 +124,61 @@ export default function CorrectionsPage() {
                 <input placeholder="Note (required to reject)" value={notes[r.id] ?? ''} maxLength={300}
                   onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} />
                 {isHr
-                  ? <button onClick={() => act(r, 'apply', 'Correction applied.')}>Apply</button>
-                  : <button onClick={() => act(r, 'propose', 'Proposed to HR.')}>Propose to HR</button>}
-                <button className="secondary" onClick={() => act(r, 'reject', 'Request rejected.')}>Reject</button>
+                  ? <Button onClick={() => act(r, 'apply', 'Correction applied.')}>Apply</Button>
+                  : <Button onClick={() => act(r, 'propose', 'Proposed to HR.')}>Propose to HR</Button>}
+                <Button className="secondary" onClick={() => act(r, 'reject', 'Request rejected.')}>Reject</Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {(canAsk || team.length > 0) && (
-        <form className="card" onSubmit={submit}>
-          <h3>{team.length > 0 ? 'Ask or propose a correction' : 'Ask for a correction'}</h3>
-          <div className="grid3">
-            {team.length > 0 && (
-              <label>For
-                <select value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value, eventId: '' })}>
-                  {canAsk && <option value="">Myself</option>}
-                  {!canAsk && <option value="">Choose a person</option>}
-                  {team.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
+      {(canAsk || team.length > 0) && requesting && (
+        <Modal title={team.length > 0 ? 'Ask or propose a correction' : 'Ask for a correction'} size="md" onClose={() => setRequesting(false)}>
+          <Form onSubmit={async (e) => { if (await submit(e)) setRequesting(false) }}>
+            <div className="grid3">
+              {team.length > 0 && (
+                <label>For
+                  <select value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value, eventId: '' })}>
+                    {canAsk && <option value="">Myself</option>}
+                    {!canAsk && <option value="">Choose a person</option>}
+                    {team.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
+                  </select>
+                </label>
+              )}
+              <label>Day<input type="date" value={form.workDate} max={today()} required
+                onChange={(e) => setForm({ ...form, workDate: e.target.value, eventId: '' })} /></label>
+              <label>What
+                <select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value as 'ADD' | 'VOID' })}>
+                  <option value="ADD">Add a missing entry</option>
+                  <option value="VOID">Remove a wrong entry</option>
+                </select>
+              </label>
+            </div>
+            {form.action === 'ADD' ? (
+              <div className="grid3">
+                <label>Entry
+                  <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'IN' | 'OUT' })}>
+                    <option value="IN">Check-in</option>
+                    <option value="OUT">Check-out</option>
+                  </select>
+                </label>
+                <label>Time<input type="time" value={form.time} required onChange={(e) => setForm({ ...form, time: e.target.value })} /></label>
+              </div>
+            ) : (
+              <label>Entry to remove
+                <select value={form.eventId} required onChange={(e) => setForm({ ...form, eventId: e.target.value })}>
+                  <option value="">{form.workDate ? (entries.length ? 'Choose' : 'No entries that day') : 'Choose the day first'}</option>
+                  {entries.map((x) => <option key={x.id} value={x.id}>{x.type === 'IN' ? 'Check-in' : 'Check-out'} at {time(x.occurredAt)}</option>)}
                 </select>
               </label>
             )}
-            <label>Day<input type="date" value={form.workDate} max={today()} required
-              onChange={(e) => setForm({ ...form, workDate: e.target.value, eventId: '' })} /></label>
-            <label>What
-              <select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value as 'ADD' | 'VOID' })}>
-                <option value="ADD">Add a missing entry</option>
-                <option value="VOID">Remove a wrong entry</option>
-              </select>
-            </label>
-          </div>
-          {form.action === 'ADD' ? (
-            <div className="grid3">
-              <label>Entry
-                <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'IN' | 'OUT' })}>
-                  <option value="IN">Check-in</option>
-                  <option value="OUT">Check-out</option>
-                </select>
-              </label>
-              <label>Time<input type="time" value={form.time} required onChange={(e) => setForm({ ...form, time: e.target.value })} /></label>
-            </div>
-          ) : (
-            <label>Entry to remove
-              <select value={form.eventId} required onChange={(e) => setForm({ ...form, eventId: e.target.value })}>
-                <option value="">{form.workDate ? (entries.length ? 'Choose' : 'No entries that day') : 'Choose the day first'}</option>
-                {entries.map((x) => <option key={x.id} value={x.id}>{x.type === 'IN' ? 'Check-in' : 'Check-out'} at {time(x.occurredAt)}</option>)}
-              </select>
-            </label>
-          )}
-          <label>Why<input value={form.reason} required maxLength={500} placeholder="For example: the badge reader was down"
-            onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
-          <button type="submit" disabled={!canAsk && form.userId === ''}>{form.userId ? 'Propose to HR' : 'Send request'}</button>
-        </form>
+            <label>Why<input value={form.reason} required maxLength={500} placeholder="For example: the badge reader was down"
+              onChange={(e) => setForm({ ...form, reason: e.target.value })} /></label>
+            <ErrorText error={error} />
+          <div className="modal-foot"><Button className="secondary" onClick={() => setRequesting(false)}>Cancel</Button><Button type="submit" disabled={!canAsk && form.userId === ''}>{form.userId ? 'Propose to HR' : 'Send request'}</Button></div>
+          </Form>
+        </Modal>
       )}
 
       {mine.length > 0 && (
@@ -185,7 +195,7 @@ export default function CorrectionsPage() {
                   <td>{STATUS[r.status]}{r.decidedBy && r.status !== 'CANCELLED'
                     ? <><br /><span className="muted">by {r.decidedBy}{r.decisionNote ? `: ${r.decisionNote}` : ''}</span></> : null}</td>
                   <td>{r.status === 'PENDING' && (
-                    <button className="secondary" onClick={() => void run(() => api(`/api/corrections/${r.id}/cancel`, { method: 'POST' }), 'Request cancelled.')}>Cancel</button>
+                    <Button className="secondary" onClick={() => run(() => api(`/api/corrections/${r.id}/cancel`, { method: 'POST' }), 'Request cancelled.')}>Cancel</Button>
                   )}</td>
                 </tr>
               ))}
