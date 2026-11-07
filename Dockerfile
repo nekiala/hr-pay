@@ -9,7 +9,7 @@ RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-FROM eclipse-temurin:26-jdk AS api
+FROM eclipse-temurin:27-jdk AS api
 WORKDIR /src
 COPY backend/gradlew backend/settings.gradle.kts backend/build.gradle.kts ./
 COPY backend/gradle gradle
@@ -19,7 +19,7 @@ COPY backend/src src
 COPY --from=web /web/dist src/main/resources/static
 RUN ./gradlew --no-daemon -q bootJar
 
-FROM eclipse-temurin:26-jre
+FROM eclipse-temurin:27-jre
 RUN groupadd --system hrpay && useradd --system --gid hrpay --home-dir /app --shell /usr/sbin/nologin hrpay \
     && mkdir -p /app && chown hrpay:hrpay /app
 WORKDIR /app
