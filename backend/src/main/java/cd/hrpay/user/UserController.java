@@ -80,6 +80,13 @@ public class UserController {
 
     private cd.hrpay.org.OrgStructure org;
 
+    private cd.hrpay.security.UserSessions sessions;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setSessions(cd.hrpay.security.UserSessions sessions) {
+        this.sessions = sessions;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     void setOrg(cd.hrpay.org.OrgStructure org) {
         this.org = org;
@@ -165,7 +172,9 @@ public class UserController {
     @PostMapping("/{id}/disable")
     @PreAuthorize("hasAuthority('user.disable')")
     public UserView disable(@PathVariable Long id) {
-        return UserView.of(service.setStatus(id, UserStatus.DISABLED));
+        UserView view = UserView.of(service.setStatus(id, UserStatus.DISABLED));
+        sessions.endAll(id, null, cd.hrpay.security.CurrentUser.email());
+        return view;
     }
 
     @PostMapping("/{id}/enable")
@@ -179,5 +188,6 @@ public class UserController {
     @PreAuthorize("hasAuthority('user.update')")
     public void resetPassword(@PathVariable Long id, @Valid @RequestBody PasswordInput body) {
         service.resetPassword(id, body.password());
+        sessions.endAll(id, null, cd.hrpay.security.CurrentUser.email());
     }
 }

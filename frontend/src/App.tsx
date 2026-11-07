@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
+import AccountPage from './pages/AccountPage'
+import PersonalDataPage from './pages/PersonalDataPage'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/UsersPage'
 import UserFormPage from './pages/UserFormPage'
@@ -112,7 +114,7 @@ export default function App() {
     <Shell>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/account" element={<ChangePasswordPage />} />
+          <Route path="/account" element={<AccountPage />} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
@@ -160,6 +162,7 @@ export default function App() {
           <Route path="/system" element={<Guard permission="system.monitor"><SystemPage /></Guard>} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/privacy/requests" element={<Guard permission="privacy.manage"><PersonalDataPage /></Guard>} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />
           <Route path="/audit" element={<Guard permission="audit.read"><AuditPage /></Guard>} />
           <Route path="/login" element={<AfterLogin />} />

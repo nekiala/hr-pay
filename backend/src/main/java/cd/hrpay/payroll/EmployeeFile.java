@@ -43,14 +43,16 @@ public class EmployeeFile {
             """;
 
     private final JdbcClient jdbc;
+    private final cd.hrpay.security.DataCrypto crypto;
     private final UserService users;
     private final MasterData masterData;
     private final SalaryService salaries;
     private final AuditService audit;
 
     public EmployeeFile(JdbcClient jdbc, UserService users, MasterData masterData, SalaryService salaries,
-                        AuditService audit) {
+                        AuditService audit, cd.hrpay.security.DataCrypto crypto) {
         this.jdbc = jdbc;
+        this.crypto = crypto;
         this.users = users;
         this.masterData = masterData;
         this.salaries = salaries;
@@ -121,6 +123,9 @@ public class EmployeeFile {
                 select birth_date, gender, nationality, marital_status, cnss_number, tax_number, payment_method,
                        bank_name, bank_account, mobile_money_operator, mobile_money_number
                 from employee_profile where user_id = ?""").param(userId).query(Profile.class).optional()
+                .map(p -> new Profile(p.birthDate(), p.gender(), p.nationality(), p.maritalStatus(),
+                        crypto.decrypt(p.cnssNumber()), crypto.decrypt(p.taxNumber()), p.paymentMethod(), p.bankName(),
+                        crypto.decrypt(p.bankAccount()), p.mobileMoneyOperator(), crypto.decrypt(p.mobileMoneyNumber())))
                 .orElse(new Profile(null, null, null, "SINGLE", null, null, "BANK", null, null, null, null));
     }
 
@@ -145,9 +150,10 @@ public class EmployeeFile {
                     bank_account = excluded.bank_account, mobile_money_operator = excluded.mobile_money_operator,
                     mobile_money_number = excluded.mobile_money_number, updated_by = excluded.updated_by,
                     updated_at = now()""")
-                .params(userId, p.birthDate(), p.gender(), trim(p.nationality()), p.maritalStatus(), trim(p.cnssNumber()),
-                        trim(p.taxNumber()), p.paymentMethod(), trim(p.bankName()), trim(p.bankAccount()),
-                        trim(p.mobileMoneyOperator()), trim(p.mobileMoneyNumber()), CurrentUser.email())
+                .params(userId, p.birthDate(), p.gender(), trim(p.nationality()), p.maritalStatus(),
+                        crypto.encrypt(trim(p.cnssNumber())), crypto.encrypt(trim(p.taxNumber())), p.paymentMethod(),
+                        trim(p.bankName()), crypto.encrypt(trim(p.bankAccount())), trim(p.mobileMoneyOperator()),
+                        crypto.encrypt(trim(p.mobileMoneyNumber())), CurrentUser.email())
                 .update();
         audit.record("profile.saved", "user", userId, Map.of("maritalStatus", p.maritalStatus(),
                 "paymentMethod", p.paymentMethod()));

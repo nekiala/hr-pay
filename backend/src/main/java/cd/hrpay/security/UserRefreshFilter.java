@@ -33,8 +33,10 @@ class UserRefreshFilter extends OncePerRequestFilter {
     private final Tenants tenants;
     private final SupportAccess support;
     private final JdbcClient jdbc;
+    private final UserSessions sessions;
 
-    UserRefreshFilter(UserRepository users, Tenants tenants, SupportAccess support, JdbcClient jdbc) {
+    UserRefreshFilter(UserRepository users, Tenants tenants, SupportAccess support, JdbcClient jdbc, UserSessions sessions) {
+        this.sessions = sessions;
         this.users = users;
         this.tenants = tenants;
         this.support = support;
@@ -152,11 +154,14 @@ class UserRefreshFilter extends OncePerRequestFilter {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {
             Optional<AppUser> user = resolve(auth);
-            if (user.isPresent() && user.get().isActive()) {
+            HttpSession current = request.getSession(false);
+            // A session signed out from another browser (by its owner or an administrator) ends here.
+            boolean open = current == null || sessions.stillOpen(current.getId());
+            if (user.isPresent() && user.get().isActive() && open) {
                 SecurityContext context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(Authorities.token(user.get()));
                 SecurityContextHolder.setContext(context);
-            } else if (user.isPresent() || auth.getPrincipal() instanceof AuthenticatedUser
+            } else if (!open || user.isPresent() || auth.getPrincipal() instanceof AuthenticatedUser
                     || auth.getPrincipal() instanceof OidcUser) {
                 SecurityContextHolder.clearContext();
                 HttpSession session = request.getSession(false);

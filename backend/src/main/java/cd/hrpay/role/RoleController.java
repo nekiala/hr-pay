@@ -34,10 +34,10 @@ public class RoleController {
     public record PermissionView(String code, String category, String description) {}
 
     public record RoleView(Long id, String code, String name, String description, boolean systemRole,
-                           Set<String> permissions) {
+                           Set<String> permissions, boolean twoStepRequired) {
         static RoleView of(Role role) {
             return new RoleView(role.getId(), role.getCode(), role.getName(), role.getDescription(),
-                    role.isSystemRole(), new TreeSet<>(role.getPermissions()));
+                    role.isSystemRole(), new TreeSet<>(role.getPermissions()), role.isTwoStepRequired());
         }
     }
 
@@ -46,10 +46,12 @@ public class RoleController {
             String code,
             @NotBlank @Size(max = 100) String name,
             @Size(max = 255) String description,
-            @NotNull Set<String> permissions) {}
+            @NotNull Set<String> permissions,
+            Boolean twoStepRequired) {}
 
+    /** twoStepRequired left out keeps the role's current setting. */
     public record UpdateRole(@NotBlank @Size(max = 100) String name, @Size(max = 255) String description,
-                             @NotNull Set<String> permissions) {}
+                             @NotNull Set<String> permissions, Boolean twoStepRequired) {}
 
     private final RoleRepository roles;
     private final PermissionRepository permissions;
@@ -87,6 +89,7 @@ public class RoleController {
         }
         Role role = new Role(body.code(), body.name().trim(), body.description());
         role.setPermissions(checkedPermissions(body.permissions()));
+        role.setTwoStepRequired(Boolean.TRUE.equals(body.twoStepRequired()));
         roles.save(role);
         audit.record("role.created", "role", role.getId(),
                 Map.of("code", role.getCode(), "permissions", new TreeSet<>(role.getPermissions())));
@@ -106,8 +109,17 @@ public class RoleController {
         role.setName(body.name().trim());
         role.setDescription(body.description());
         role.setPermissions(after);
+        boolean twoStepBefore = role.isTwoStepRequired();
+        if (body.twoStepRequired() != null) {
+            role.setTwoStepRequired(body.twoStepRequired());
+        }
         audit.record("role.updated", "role", role.getId(),
-                Map.of("added", difference(after, before), "removed", difference(before, after)));
+                Map.of("added", difference(after, before), "removed", difference(before, after),
+                        "twoStepRequired", role.isTwoStepRequired()));
+        if (twoStepBefore != role.isTwoStepRequired()) {
+            audit.record("role.two_step_" + (role.isTwoStepRequired() ? "required" : "optional"), "role", role.getId(),
+                    Map.of("code", role.getCode()));
+        }
         return RoleView.of(role);
     }
 

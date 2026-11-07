@@ -1336,35 +1336,40 @@
      "code": "ADMIN",
      "name": "Administrator",
      "description": "Platform configuration, users and roles",
-     "system_role": true
+     "system_role": true,
+     "two_step_required": true
     },
     {
      "id": 2,
      "code": "HR",
      "name": "Human resources",
      "description": "Employees, schedules, payroll",
-     "system_role": true
+     "system_role": true,
+     "two_step_required": true
     },
     {
      "id": 3,
      "code": "FINANCE",
      "name": "Finance",
      "description": "Payroll approval and finance reports",
-     "system_role": true
+     "system_role": true,
+     "two_step_required": true
     },
     {
      "id": 4,
      "code": "MANAGER",
      "name": "Manager",
      "description": "Team attendance, approvals and evaluations",
-     "system_role": true
+     "system_role": true,
+     "two_step_required": false
     },
     {
      "id": 5,
      "code": "EMPLOYEE",
      "name": "Employee",
      "description": "Own attendance, leave and payslips",
-     "system_role": true
+     "system_role": true,
+     "two_step_required": false
     }
    ]
   },
@@ -1709,6 +1714,14 @@
     {
      "role_id": 1,
      "permission_code": "subscription.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "privacy.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "privacy.manage"
     }
    ]
   }

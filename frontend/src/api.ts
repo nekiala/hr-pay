@@ -246,6 +246,69 @@ export type Role = {
   description: string | null
   systemRole: boolean
   permissions: string[]
+  twoStepRequired: boolean
+}
+
+/** What a password (or Google, or Microsoft) sign-in still needs before the person is in. */
+export type TwoStepNeeded = { method: 'TOTP' | 'CODE' | null; setup: boolean; codesAvailable: boolean; sentTo: string[] }
+
+export type TwoStepSetup = { method: 'TOTP' | 'CODE'; secret: string; uri: string | null }
+
+export type TwoStepStatus = {
+  enabled: boolean
+  method: 'TOTP' | 'CODE' | null
+  required: boolean
+  recoveryCodesLeft: number
+  confirmedAt: string | null
+  codesAvailable: boolean
+}
+
+export type SignedInSession = {
+  id: string
+  method: string
+  ip: string | null
+  userAgent: string | null
+  signedInAt: string
+  lastSeenAt: string
+  current: boolean
+}
+
+export type DataCorrection = {
+  id: number
+  userId: number
+  name: string
+  field: string
+  current: string | null
+  requested: string
+  reason: string | null
+  status: 'OPEN' | 'DONE' | 'REFUSED'
+  answer: string | null
+  createdAt: string
+  decidedAt: string | null
+  decidedBy: string | null
+}
+
+export const CORRECTION_FIELDS: Record<string, string> = {
+  NAME: 'Name', EMAIL: 'Email', PHONE: 'Phone', BIRTH_DATE: 'Date of birth', MARITAL_STATUS: 'Marital status',
+  DEPENDANTS: 'Dependants', NATIONALITY: 'Nationality', CNSS_NUMBER: 'CNSS number', TAX_NUMBER: 'Tax number (NIF)',
+  BANK_ACCOUNT: 'Bank account', MOBILE_MONEY: 'Mobile money number', OTHER: 'Something else',
+}
+
+/** Downloads a file the API sends as an attachment. */
+export async function download(path: string, fallbackName: string) {
+  const response = await fetch(path, { credentials: 'same-origin' })
+  if (!response.ok) {
+    let message = `Download failed (${response.status})`
+    try { message = (await response.json()).detail ?? message } catch { /* not JSON */ }
+    throw new ApiError(response.status, message)
+  }
+  const name = /filename="([^"]+)"/.exec(response.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName
+  const url = URL.createObjectURL(await response.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export type Permission = { code: string; category: string; description: string }

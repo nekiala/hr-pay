@@ -30,6 +30,8 @@ public class Role {
     private String description;
     @Column(name = "system_role")
     private boolean systemRole;
+    @Column(name = "two_step_required")
+    private boolean twoStepRequired;
     private OffsetDateTime createdAt = OffsetDateTime.now();
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
@@ -56,6 +58,8 @@ public class Role {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public boolean isSystemRole() { return systemRole; }
+    public boolean isTwoStepRequired() { return twoStepRequired; }
+    public void setTwoStepRequired(boolean twoStepRequired) { this.twoStepRequired = twoStepRequired; }
     public Set<String> getPermissions() { return permissions; }
     public void setPermissions(Set<String> permissions) {
         this.permissions.clear();

@@ -5,7 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 
 export default function ChangePasswordPage({ forced = false }: { forced?: boolean }) {
-  const { me, refresh, signOut } = useAuth()
+  const { refresh, signOut } = useAuth()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -32,17 +32,14 @@ export default function ChangePasswordPage({ forced = false }: { forced?: boolea
   return (
     <div className={forced ? 'login' : ''}>
       <Form className="card" onSubmit={submit}>
-        <h2>{forced ? 'Choose a new password' : 'My account'}</h2>
-        {!forced && me && (
-          <p className="muted">{me.email} · {me.roles.join(', ')}</p>
-        )}
+        {forced ? <h2>Choose a new password</h2> : <h3>Password</h3>}
         {forced && <p className="muted">Your password was set by an administrator. Choose your own to continue.</p>}
         <label>Current password<input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required /></label>
         <label>New password<input type="password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={10} /></label>
         <label>Repeat new password<input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required /></label>
         <p className="hint">At least 10 characters, with a letter and a digit.</p>
         <ErrorText error={error} />
-        {done && <p className="success">Password changed.</p>}
+        {done && <p className="success">Password changed. Your other browsers were signed out.</p>}
         <Button type="submit">Change password</Button>
         {forced && <Button type="button" className="secondary" onClick={() => signOut()}>Sign out</Button>}
       </Form>

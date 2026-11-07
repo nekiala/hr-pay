@@ -193,6 +193,46 @@ users do, read-only. Every request they make is listed on the company's Billing 
 both companies' audit logs. On premise there are no invoices; support access still works between companies of the
 installation.
 
+## Security and personal data (phase 12)
+
+**Two-step sign-in.** After the password (or Google, or Microsoft), members of the roles marked *two-step required*
+(Administrator, Human resources and Finance by default; set on **Roles**) enter a six-digit code from an authenticator
+app (Google Authenticator, Microsoft Authenticator, Aegis…), or a code sent by email when an email server is set. The
+first sign-in sets it up with a QR code and gives ten one-time recovery codes. Anyone else can turn it on in **My
+account**. An administrator resets the second step of someone who lost their phone (Users, then the person); the
+person sets it up again at their next sign-in. Five wrong codes end the attempt.
+
+**Signed-in browsers.** **My account** lists the browsers a person is signed in on and signs out one or all the others.
+A new password, a password reset, a disabled account or a second-step reset signs the person out everywhere.
+
+**Sign in with Microsoft 365.** Register an app in the Microsoft Entra admin centre (accounts in any organizational
+directory, redirect URI `https://<your domain>/login/oauth2/code/microsoft`), then set `MICROSOFT_CLIENT_ID` and
+`MICROSOFT_CLIENT_SECRET`. Each company's administrator pastes its own tenant ID on **Company**; a Microsoft sign-in
+from any other tenant is refused. As with Google, only accounts already registered in HR Pay can sign in. SAML is not
+available yet.
+
+**Encryption.** With `HRPAY_DATA_KEY` set (`openssl rand -base64 32`, or a file named by `HRPAY_DATA_KEY_FILE`), bank
+and mobile money accounts, CNSS and tax numbers (in the employee file and on payslips) and authenticator secrets are
+stored encrypted (AES-256-GCM). Values written before the key was set are encrypted at the next start. Keep a copy of
+the key away from the server and its backups: a backup cannot be read without it. Salaries are not encrypted in the
+database; company separation, permissions and the audit log protect them. The System page says when no key is set.
+
+**Audit log.** Append-only (a trigger refuses changes), and chained: each entry's hash covers its content and the hash
+of the one before, so an entry changed or deleted directly in the database shows. The chain is checked every night
+(2:30 Kinshasa) and on the System page; a break raises an alert. Write down the last hash shown there from time to
+time (or keep it with your backups): it proves later that nothing before it was rewritten.
+
+**Personal data.** Each person downloads everything held about them (**My account**, a JSON file) and asks HR to
+correct something; HR answers on **Privacy**, where they can also download a person's data. A former employee (account
+disabled, last contract ended) can be erased once the retention period after they left has passed (10 years by
+default, set on **Privacy**): name, contact details, employee file, dependants, GPS positions and the identifiers
+copied on payslips are removed; payroll amounts, the registration number and the audit log stay. Erasure is done by
+HR, one person at a time, and cannot be undone. The retention period and the wording of the privacy notice must be
+checked by a lawyer against the DRC's Code du numérique (2023).
+
+**Dependencies.** Dependabot opens weekly update pull requests (`.github/dependabot.yml`); CI fails on high or
+critical advisories in the browser app (`npm audit`) and in the container image (Trivy). See `SECURITY.md`.
+
 ## Configuration
 
 | Variable | Default | Purpose |
@@ -207,7 +247,10 @@ installation.
 | `COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
 | `FORWARD_HEADERS` | `none` | Set to `native` behind a reverse proxy so the client IP comes from `X-Forwarded-For` |
 | `CORS_ORIGINS` | `http://localhost:5173` | Only needed if the app is served from another origin |
-| `SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` / `..._CLIENT_SECRET` | empty | Turns on "Sign in with Google". Only pre-registered, active, verified emails are accepted. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | empty | Turns on "Sign in with Google". Only pre-registered, active, verified emails are accepted. (`SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID` still works.) |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` | empty | Turns on "Sign in with Microsoft" (work accounts, from each company's own tenant). |
+| `HRPAY_DATA_KEY` or `HRPAY_DATA_KEY_FILE` | empty | Key encrypting bank accounts, ID numbers and authenticator secrets. Keep a copy elsewhere. |
+| `TWO_STEP_ENFORCED` | `true` | Set to `false` only to let roles marked "two-step required" sign in without it (for example on a test copy). |
 
 For production, build the app and copy it into the API's static folder so both are served from one origin:
 

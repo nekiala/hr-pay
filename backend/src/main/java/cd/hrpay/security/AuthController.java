@@ -67,7 +67,18 @@ public class AuthController {
         }
     }
 
-    public record Providers(boolean password, boolean google) {}
+    public record Providers(boolean password, boolean google, boolean microsoft) {}
+
+    /** The answer to a password that needs a second step: what to ask for. */
+    public record TwoStepNeeded(String method, boolean setup, boolean codesAvailable, java.util.List<String> sentTo) {}
+
+    public record CodeInput(@NotBlank String code) {}
+
+    public record SetupInput(@NotBlank String method) {}
+
+    public record ConfirmInput(@NotBlank String method, @NotBlank String code, String challenge) {}
+
+    public record Confirmed(java.util.List<String> recoveryCodes, Me me) {}
 
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository contextRepository;
@@ -79,11 +90,18 @@ public class AuthController {
     private final Tenants tenants;
     private final TransactionTemplate tx;
     private final cd.hrpay.platform.Entitlements entitlements;
+    private final TwoStep twoStep;
+    private final UserSessions sessions;
+    private final SignInSteps steps;
 
     public AuthController(AuthenticationManager authenticationManager, SecurityContextRepository contextRepository,
                           UserRepository users, UserService userService, LoginAttempts attempts,
                           AuditService audit, ObjectProvider<ClientRegistrationRepository> googleClients,
-                          Tenants tenants, TransactionTemplate tx, cd.hrpay.platform.Entitlements entitlements) {
+                          Tenants tenants, TransactionTemplate tx, cd.hrpay.platform.Entitlements entitlements,
+                          TwoStep twoStep, UserSessions sessions, SignInSteps steps) {
+        this.steps = steps;
+        this.twoStep = twoStep;
+        this.sessions = sessions;
         this.tenants = tenants;
         this.tx = tx;
         this.entitlements = entitlements;
@@ -104,7 +122,13 @@ public class AuthController {
 
     @GetMapping("/providers")
     public Providers providers() {
-        return new Providers(true, googleClients.getIfAvailable() != null);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        if (googleClients.getIfAvailable() instanceof Iterable<?> registrations) {
+            for (Object r : registrations) {
+                ids.add(((org.springframework.security.oauth2.client.registration.ClientRegistration) r).getRegistrationId());
+            }
+        }
+        return new Providers(true, ids.contains("google"), ids.contains("microsoft"));
     }
 
     @PostMapping("/login")
@@ -137,17 +161,129 @@ public class AuthController {
         }
         attempts.succeeded(email);
         AppUser user = users.findByEmailIgnoreCase(email).orElseThrow();
-        user.setLastLoginAt(OffsetDateTime.now());
-
-        if (request.getSession(false) != null) {
-            request.changeSessionId();
+        java.util.Optional<TwoStep.Pending> pending = steps.afterFirstFactor(user, request, response, "password");
+        if (pending.isPresent()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(needed(pending.get(), user));
         }
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(Authorities.token(user));
-        SecurityContextHolder.setContext(context);
-        contextRepository.saveContext(context, request, response);
-        audit.recordAs(user.getEmail(), "auth.login", "user", user.getId(), Map.of("method", "password"));
         return ResponseEntity.ok(Me.of(user, entitlements.current()));
+    }
+
+    private TwoStepNeeded needed(TwoStep.Pending p, AppUser user) {
+        java.util.List<String> sentTo = p.method() == TwoStep.Method.CODE ? java.util.List.of(mask(user.getEmail())) : java.util.List.of();
+        return new TwoStepNeeded(p.method() == null ? null : p.method().name(), p.setup(), twoStep.codesAvailable(), sentTo);
+    }
+
+    private static String mask(String email) {
+        int at = email.indexOf('@');
+        return at <= 1 ? email : email.charAt(0) + "•••" + email.substring(at);
+    }
+
+    private Me finish(AppUser user, HttpServletRequest request, HttpServletResponse response, String method) {
+        steps.finish(user, request, response, method);
+        return Me.of(user, entitlements.current());
+    }
+
+    // ---- the second step ----
+
+    /** The sign-in waiting for its second step on this browser; it lasts 10 minutes. */
+    private TwoStep.Pending pending(HttpServletRequest request) {
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        Object p = session == null ? null : session.getAttribute(TwoStep.SESSION_KEY);
+        if (!(p instanceof TwoStep.Pending pending)
+                || pending.startedAt().isBefore(OffsetDateTime.now().minusMinutes(10))) {
+            throw new BusinessRuleException("Sign in again with your password.");
+        }
+        return pending;
+    }
+
+    private <T> T inCompany(TwoStep.Pending p, java.util.function.Function<AppUser, T> work) {
+        return tenants.callAs(p.companyId(), () -> tx.execute(s -> {
+            AppUser user = users.findById(p.userId()).filter(AppUser::isActive)
+                    .orElseThrow(() -> new BusinessRuleException("This account is disabled. Contact HR."));
+            return work.apply(user);
+        }));
+    }
+
+    /** The step this browser waits for, after a Google or Microsoft sign-in sent it back to the sign-in page. */
+    @GetMapping("/two-step")
+    public TwoStepNeeded waiting(HttpServletRequest request) {
+        TwoStep.Pending p = pending(request);
+        return inCompany(p, user -> needed(p, user));
+    }
+
+    @PostMapping("/two-step")
+    public ResponseEntity<?> verifyTwoStep(@Valid @RequestBody CodeInput body, HttpServletRequest request,
+                                           HttpServletResponse response) {
+        TwoStep.Pending p = pending(request);
+        if (p.setup()) {
+            throw new BusinessRuleException("Set up the second step first.");
+        }
+        return inCompany(p, user -> {
+            if (twoStep.verify(p, user, body.code())) {
+                return ResponseEntity.ok(finish(user, request, response, p.via() + "+" + p.method().name().toLowerCase()));
+            }
+            TwoStep.Pending next = p.withAttempt();
+            audit.recordAs(user.getEmail(), "auth.two_step_failed", "user", user.getId(), Map.of("attempt", next.attempts()));
+            if (next.attempts() >= TwoStep.MAX_ATTEMPTS) {
+                request.getSession().removeAttribute(TwoStep.SESSION_KEY);
+                return problem(HttpStatus.UNAUTHORIZED, "Too many wrong codes. Sign in again with your password.");
+            }
+            request.getSession().setAttribute(TwoStep.SESSION_KEY, next);
+            return problem(HttpStatus.UNAUTHORIZED, "The code is not correct.");
+        });
+    }
+
+    @PostMapping("/two-step/resend")
+    public TwoStepNeeded resend(HttpServletRequest request) {
+        TwoStep.Pending p = pending(request);
+        return inCompany(p, user -> {
+            TwoStep.Pending next = twoStep.resend(p, user);
+            request.getSession().setAttribute(TwoStep.SESSION_KEY, next);
+            return needed(next, user);
+        });
+    }
+
+    /** Starts setting up the second step: during a sign-in that requires it, or from My account. */
+    @PostMapping("/two-step/setup")
+    public TwoStep.Setup setup(@Valid @RequestBody SetupInput body, HttpServletRequest request) {
+        TwoStep.Method method = method(body.method());
+        Long signedIn = CurrentUser.id();
+        if (signedIn != null) {
+            return tx.execute(s -> twoStep.beginSetup(userService.find(signedIn), method));
+        }
+        TwoStep.Pending p = pending(request);
+        if (!p.setup()) {
+            throw new BusinessRuleException("Enter the code of your second step.");
+        }
+        return inCompany(p, user -> twoStep.beginSetup(user, method));
+    }
+
+    @PostMapping("/two-step/confirm")
+    public Confirmed confirm(@Valid @RequestBody ConfirmInput body, HttpServletRequest request, HttpServletResponse response) {
+        TwoStep.Method method = method(body.method());
+        Long signedIn = CurrentUser.id();
+        if (signedIn != null) {
+            return tx.execute(s -> {
+                AppUser user = userService.find(signedIn);
+                return new Confirmed(twoStep.confirm(user, method, body.code(), body.challenge()), Me.of(user, entitlements.current()));
+            });
+        }
+        TwoStep.Pending p = pending(request);
+        if (!p.setup()) {
+            throw new BusinessRuleException("Enter the code of your second step.");
+        }
+        return inCompany(p, user -> {
+            java.util.List<String> codes = twoStep.confirm(user, method, body.code(), body.challenge());
+            return new Confirmed(codes, finish(user, request, response, p.via() + "+" + method.name().toLowerCase()));
+        });
+    }
+
+    private static TwoStep.Method method(String m) {
+        try {
+            return TwoStep.Method.valueOf(m);
+        } catch (RuntimeException e) {
+            throw new BusinessRuleException("Choose an authenticator app or a code by email.");
+        }
     }
 
     @GetMapping("/me")
@@ -176,8 +312,10 @@ public class AuthController {
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void changePassword(@Valid @RequestBody ChangePassword body) {
+    public void changePassword(@Valid @RequestBody ChangePassword body, HttpServletRequest request) {
         userService.changeOwnPassword(CurrentUser.id(), body.currentPassword(), body.newPassword());
+        // A new password signs out the other browsers, in case the old one was known to someone else.
+        sessions.endAll(CurrentUser.id(), request.getSession().getId(), CurrentUser.email());
     }
 
     private static ResponseEntity<ProblemDetail> problem(HttpStatus status, String detail) {

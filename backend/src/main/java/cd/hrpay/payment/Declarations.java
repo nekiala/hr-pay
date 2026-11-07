@@ -42,6 +42,7 @@ public class Declarations {
     private record RunRow(long id, String status, BigDecimal usdCdf, LocalDate rateDate) {}
 
     private final JdbcClient jdbc;
+    private final cd.hrpay.security.DataCrypto crypto;
     private final AuditService audit;
     private final Clock clock;
     private cd.hrpay.org.OrgStructure org;
@@ -51,8 +52,9 @@ public class Declarations {
         this.org = org;
     }
 
-    public Declarations(JdbcClient jdbc, AuditService audit, Clock clock) {
+    public Declarations(JdbcClient jdbc, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
         this.jdbc = jdbc;
+        this.crypto = crypto;
         this.audit = audit;
         this.clock = clock;
     }
@@ -125,7 +127,7 @@ public class Declarations {
                     BigDecimal r = cdf(employer, currency, run.usdCdf());
                     var place = units.get(rs.getObject("unit_id", Long.class));
                     return new Row(rs.getLong("user_id"), rs.getString("registration_no"), rs.getString("name"),
-                            rs.getString("id_number"), currency, base, baseCdf, e, r, e.add(r),
+                            crypto.decrypt(rs.getString("id_number")), currency, base, baseCdf, e, r, e.add(r),
                             place == null ? null : place.directionName(), place == null ? null : place.unitName());
                 }).list().stream().filter(java.util.Objects::nonNull).forEach(rows::add);
         if (idKey != null) {
