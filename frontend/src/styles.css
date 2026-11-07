@@ -207,3 +207,12 @@ dl.facts dd { margin: 0; }
 .status-pill.absent { background: #f8d7d7; color: #8c1f1f; }
 .status-pill.away { background: #dde8f7; color: #1f4c86; }
 .row.space .row select { width: auto; max-width: 22rem; }
+.company-logo { max-height: 64px; max-width: 220px; object-fit: contain; border: 1px solid var(--border, #ddd); padding: 4px; background: #fff; }
+.templates { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.template { display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--border, #ddd); border-radius: 8px; cursor: pointer; }
+.template.chosen { border-color: var(--accent, #2563eb); box-shadow: 0 0 0 1px var(--accent, #2563eb); }
+.template input[type="radio"] { width: auto; }
+.payslip-employer { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.payslip-employer img { max-height: 56px; max-width: 160px; object-fit: contain; }
+.template .row { justify-content: flex-start; gap: 8px; }
+.template .row > * { flex: 0 0 auto; margin: 0; min-width: 0; width: auto; }

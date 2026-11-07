@@ -10,7 +10,7 @@ public class SpaForwardController {
     @GetMapping({"/", "/login", "/users/**", "/roles/**", "/org/**", "/sites/**", "/audit/**", "/account/**", "/schedules/**", "/holidays/**",
             "/overtime/**", "/check-in/**", "/kiosk/**", "/outbox/**", "/my/**", "/team/**", "/leave/**", "/reports/**", "/missions/**",
             "/payroll/**", "/payslips/**",
-            "/evaluations/**", "/corrections/**", "/presence/**", "/privacy/**"})
+            "/evaluations/**", "/corrections/**", "/presence/**", "/privacy/**", "/company/**"})
     public String index() {
         return "forward:/index.html";
     }

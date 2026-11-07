@@ -38,6 +38,13 @@ public class PaymentController {
                                @Size(max = 40) String inppNumber, @Size(max = 40) String onemNumber,
                                @Size(max = 100) String bankName, @Size(max = 60) String bankAccount) {}
 
+    public record PayslipSettingsInput(@Size(max = 40) String phone, @Size(max = 150) String email,
+                                       @Size(max = 150) String website, @Size(max = 200) String legalForm,
+                                       @Size(max = 300) String footer,
+                                       @NotNull @Pattern(regexp = "CLASSIC|COMPACT|LEDGER") String template) {}
+
+    public record LogoInput(@NotBlank String contentType, @NotBlank @Size(max = 800_000) String base64) {}
+
     public record PrepareInput(@NotNull @Pattern(regexp = "BANK|MOBILE_MONEY|CASH") String method,
                                @NotBlank @Size(max = 100) String provider, @NotNull @Pattern(regexp = "USD|CDF") String currency) {}
 
@@ -53,6 +60,12 @@ public class PaymentController {
     private final YearSummaries years;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.payroll.PayslipPdf payslipPdf;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setPayslipPdf(cd.hrpay.payroll.PayslipPdf payslipPdf) {
+        this.payslipPdf = payslipPdf;
+    }
 
     public PaymentController(Company company, Payments payments, Declarations declarations, YearSummaries years,
                              AuditService audit, Clock clock) {
@@ -81,6 +94,65 @@ public class PaymentController {
     public Company.Details saveCompany(@Valid @RequestBody CompanyInput b) {
         return company.save(new Company.Details(b.name(), b.address(), b.cnssNumber(), b.taxNumber(), b.nationalId(),
                 b.rccm(), b.inppNumber(), b.onemNumber(), b.bankName(), b.bankAccount()));
+    }
+
+    @GetMapping("/company/payslip-settings")
+    @PreAuthorize("isAuthenticated()")
+    public Company.PayslipSettings payslipSettings() {
+        return company.payslipSettings();
+    }
+
+    @PutMapping("/company/payslip-settings")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public Company.PayslipSettings savePayslipSettings(@Valid @RequestBody PayslipSettingsInput b) {
+        return company.savePayslipSettings(new Company.PayslipSettings(b.phone(), b.email(), b.website(), b.legalForm(),
+                b.footer(), b.template(), false));
+    }
+
+    /** A made-up payslip in one of the layouts, with the company's real header, to compare the layouts. */
+    @GetMapping("/company/payslip-preview.pdf")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public org.springframework.http.ResponseEntity<byte[]> payslipPreview(@RequestParam String template) {
+        if (!template.matches("CLASSIC|COMPACT|LEDGER")) {
+            throw new cd.hrpay.common.BusinessRuleException("Choose the CLASSIC, COMPACT or LEDGER layout.");
+        }
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"payslip-sample-" + template.toLowerCase() + ".pdf\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(payslipPdf.sample(template));
+    }
+
+    /** The logo, for the payslip screen. Every signed-in person may see it. */
+    @GetMapping("/company/logo")
+    @PreAuthorize("isAuthenticated()")
+    public org.springframework.http.ResponseEntity<byte[]> logo() {
+        return company.logo().map(l -> org.springframework.http.ResponseEntity.ok()
+                        .contentType(org.springframework.http.MediaType.parseMediaType(l.contentType()))
+                        .header("X-Content-Type-Options", "nosniff")
+                        .header("Cache-Control", "private, max-age=300")
+                        .body(l.data()))
+                .orElseGet(() -> org.springframework.http.ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/company/logo")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public Company.PayslipSettings saveLogo(@Valid @RequestBody LogoInput b) {
+        byte[] data;
+        try {
+            data = java.util.Base64.getDecoder().decode(b.base64().replaceFirst("^data:[^,]*,", ""));
+        } catch (IllegalArgumentException e) {
+            throw new cd.hrpay.common.BusinessRuleException("The file could not be read.");
+        }
+        company.saveLogo(b.contentType(), data);
+        return company.payslipSettings();
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/company/logo")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public Company.PayslipSettings removeLogo() {
+        company.removeLogo();
+        return company.payslipSettings();
     }
 
     // ---- payments ----------------------------------------------------------------------------------------------

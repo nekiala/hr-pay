@@ -6,6 +6,7 @@ import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.Element;
 import com.lowagie.text.Font;
+import com.lowagie.text.Image;
 import com.lowagie.text.PageSize;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.Phrase;
@@ -20,14 +21,21 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * The payslip as a PDF document: employer and employee details, earnings, deductions, net pay, employer charges and
- * the totals of the year to date (closed months before this one, plus this one).
+ * The payslip as a PDF document, in the layout the company chose:
+ * <ul>
+ *   <li>CLASSIC: earnings, then deductions, then employer charges, one table under the other;</li>
+ *   <li>COMPACT: earnings and deductions side by side, fits a half page;</li>
+ *   <li>LEDGER: one ruled table with a column for what is paid, what is withheld and what the employer pays.</li>
+ * </ul>
+ * All three carry the company's logo and legal information, the employee's details (matricule, grade, seniority,
+ * marital status, children counted for family allowances) and the year-to-date totals.
  */
 @Service
 public class PayslipPdf {
@@ -36,11 +44,14 @@ public class PayslipPdf {
                              BigDecimal net, boolean otherCurrencies) {}
 
     private static final Font TITLE = new Font(Font.HELVETICA, 14, Font.BOLD);
-    private static final Font BOLD = new Font(Font.HELVETICA, 9, Font.BOLD);
-    private static final Font NORMAL = new Font(Font.HELVETICA, 9, Font.NORMAL);
-    private static final Font SMALL = new Font(Font.HELVETICA, 7.5f, Font.NORMAL, new Color(90, 90, 90));
+    private static final Font BIG = new Font(Font.HELVETICA, 12, Font.BOLD);
+    private static final Font BOLD = new Font(Font.HELVETICA, 8.5f, Font.BOLD);
+    private static final Font NORMAL = new Font(Font.HELVETICA, 8.5f, Font.NORMAL);
+    private static final Font SMALL = new Font(Font.HELVETICA, 7f, Font.NORMAL, new Color(90, 90, 90));
+    private static final Font SMALL_BOLD = new Font(Font.HELVETICA, 7f, Font.BOLD, new Color(60, 60, 60));
     private static final Font NOTICE = new Font(Font.HELVETICA, 9, Font.BOLD, new Color(170, 60, 0));
     private static final Color SHADE = new Color(236, 240, 245);
+    private static final Color RULE = new Color(150, 160, 170);
     private static final Map<String, String> PAYMENT = Map.of("BANK", "Bank transfer", "MOBILE_MONEY", "Mobile money", "CASH", "Cash");
 
     private final YearSummaries years;
@@ -72,156 +83,441 @@ public class PayslipPdf {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    /** The payslip in the company's chosen layout. */
     public byte[] render(PayrollRuns.Payslip p) {
-        Map<String, Object> s = p.snapshot();
-        Company.Details employer = company.get();
-        YearToDate ytd = yearToDate(p);
-        String cur = p.currency();
+        return render(p, company.payslipSettings().template());
+    }
+
+    /** The payslip in a given layout (CLASSIC, COMPACT or LEDGER), for previews. */
+    public byte[] render(PayrollRuns.Payslip p, String template) {
+        return draw(p, template, yearToDate(p));
+    }
+
+    /** A made-up payslip in a given layout, with the company's real header, so HR can compare the layouts without showing anyone's pay. */
+    public byte[] sample(String template) {
+        java.time.LocalDate month = java.time.LocalDate.now().withDayOfMonth(1);
+        Map<String, Object> s = new java.util.LinkedHashMap<>();
+        s.put("name", "Sample Employee");
+        s.put("registrationNo", "EMP-0000");
+        s.put("contractType", "PERMANENT");
+        s.put("contractStart", month.minusYears(6).minusMonths(4).toString());
+        s.put("hireDate", month.minusYears(6).minusMonths(4).toString());
+        s.put("seniority", "6 y 4 m");
+        s.put("seniorityYears", 6);
+        s.put("seniorityMonths", 4);
+        s.put("grade", "B2 · Officer");
+        s.put("occupation", "Accountant");
+        s.put("unit", "Accounting");
+        s.put("direction", "Finance");
+        s.put("basicMonthly", new BigDecimal("900.00"));
+        s.put("childrenInCharge", 3);
+        s.put("dependantsInCharge", 4);
+        s.put("maritalStatus", "MARRIED");
+        s.put("maritalCode", "M");
+        s.put("cnssNumber", "000000000");
+        s.put("taxNumber", "A0000000X");
+        s.put("paymentMethod", "BANK");
+        s.put("bankName", "Sample bank");
+        s.put("bankAccount", "0000 0000 0000");
+        List<PayrollRuns.Line> lines = List.of(
+                new PayrollRuns.Line("BASIC", "Basic salary", "EARNING", new BigDecimal("900.00"), null, new BigDecimal("900.00"), 10, null),
+                new PayrollRuns.Line("HOUSING", "Housing allowance", "EARNING", new BigDecimal("900.00"), new BigDecimal("30"), new BigDecimal("270.00"), 20, null),
+                new PayrollRuns.Line("TRANSPORT", "Transport allowance", "EARNING", null, null, new BigDecimal("60.00"), 30, null),
+                new PayrollRuns.Line("FAMILY", "Family allowances", "EARNING", new BigDecimal("3"), null, new BigDecimal("45.00"), 40, null),
+                new PayrollRuns.Line("CNSS_EMPLOYEE", "CNSS (employee share)", "DEDUCTION", new BigDecimal("900.00"), new BigDecimal("5"), new BigDecimal("45.00"), 100, null),
+                new PayrollRuns.Line("IPR", "IPR (income tax)", "DEDUCTION", new BigDecimal("855.00"), null, new BigDecimal("98.50"), 110, null),
+                new PayrollRuns.Line("CNSS_EMPLOYER", "CNSS (employer share)", "EMPLOYER_CHARGE", new BigDecimal("900.00"), new BigDecimal("13"), new BigDecimal("117.00"), 200, null),
+                new PayrollRuns.Line("INPP", "INPP", "EMPLOYER_CHARGE", new BigDecimal("900.00"), new BigDecimal("3"), new BigDecimal("27.00"), 210, null));
+        PayrollRuns.Payslip p = new PayrollRuns.Payslip(0, 0, month, "SAMPLE", 0, "SAMPLE-0001", "USD",
+                new BigDecimal("1275.00"), new BigDecimal("900.00"), new BigDecimal("855.00"), new BigDecimal("1881000"),
+                new BigDecimal("143.50"), new BigDecimal("1131.50"), new BigDecimal("144.00"), 10560, 10560, 22,
+                new BigDecimal("2200"), month, false, s, List.of(), lines);
+        YearToDate ytd = new YearToDate(month.getYear(), month.getMonthValue(), "USD",
+                new BigDecimal("1275.00").multiply(BigDecimal.valueOf(month.getMonthValue())),
+                new BigDecimal("45.00").multiply(BigDecimal.valueOf(month.getMonthValue())),
+                new BigDecimal("98.50").multiply(BigDecimal.valueOf(month.getMonthValue())),
+                new BigDecimal("1131.50").multiply(BigDecimal.valueOf(month.getMonthValue())), false);
+        return draw(p, template, ytd);
+    }
+
+    private byte[] draw(PayrollRuns.Payslip p, String template, YearToDate ytd) {
+        Context c = new Context(p, company.get(), company.payslipSettings(), company.logo().orElse(null), ytd);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 40, 40, 36, 36);
+        Document doc = new Document(PageSize.A4, 36, 36, 30, 30);
         PdfWriter.getInstance(doc, bytes);
-        doc.addTitle("Payslip " + p.month().toString().substring(0, 7) + " " + text(s.get("name")));
+        doc.addTitle("Payslip " + p.month().toString().substring(0, 7) + " " + text(p.snapshot().get("name")));
         doc.addCreator("HR Pay");
         doc.open();
-
-        // Employer on the left, employee on the right.
-        PdfPTable head = table(new float[] {1, 1});
-        PdfPCell left = cell("", NORMAL, Element.ALIGN_LEFT, false);
-        left.addElement(new Paragraph(text(employer.name()), BOLD));
-        left.addElement(new Paragraph(text(employer.address()), NORMAL));
-        left.addElement(new Paragraph(join("CNSS " + text(employer.cnssNumber()), "NIF " + text(employer.taxNumber()),
-                "Id. Nat. " + text(employer.nationalId())), SMALL));
-        PdfPCell right = cell("", NORMAL, Element.ALIGN_RIGHT, false);
-        right.addElement(right(text(s.get("name")), BOLD));
-        right.addElement(right(join(text(s.get("registrationNo")), text(s.get("grade"))), NORMAL));
-        right.addElement(right(text(s.get("occupation")), NORMAL));
-        if (s.get("unit") != null) {
-            String dir = text(s.get("direction"));
-            right.addElement(right(join(text(s.get("unit")), dir.equals(text(s.get("unit"))) ? "" : dir,
-                    s.get("costCentre") == null ? "" : "CC " + text(s.get("costCentre"))), NORMAL));
+        switch (template == null ? "CLASSIC" : template) {
+            case "COMPACT" -> compact(doc, c);
+            case "LEDGER" -> ledger(doc, c);
+            default -> classic(doc, c);
         }
-        head.addCell(left);
-        head.addCell(right);
-        doc.add(head);
+        doc.close();
+        return bytes.toByteArray();
+    }
 
-        Paragraph title = new Paragraph("Payslip · " + p.month().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)), TITLE);
-        title.setSpacingBefore(10);
-        doc.add(title);
-        doc.add(new Paragraph(p.number() == null ? "Not numbered yet" : p.number(), SMALL));
-        if (!"CLOSED".equals(p.runStatus())) {
-            doc.add(new Paragraph("DRAFT: this payroll is " + p.runStatus().toLowerCase() + " and not yet closed.", NOTICE));
+    private record Context(PayrollRuns.Payslip p, Company.Details employer, Company.PayslipSettings settings,
+                           Company.Logo logo, YearToDate ytd) {
+        Map<String, Object> s() {
+            return p.snapshot();
         }
 
-        PdfPTable facts = table(new float[] {1, 1, 1});
-        facts.setSpacingBefore(8);
-        for (String f : List.of(
-                "Contract: " + text(s.get("contractType")).replace('_', ' ').toLowerCase() + " since " + text(s.get("contractStart")),
-                "CNSS no.: " + dash(s.get("cnssNumber")) + " · NIF: " + dash(s.get("taxNumber")),
-                "Children in charge: " + text(s.get("childrenInCharge")) + " · dependants: " + text(s.get("dependantsInCharge")),
-                "Hours paid: " + hours(p.paidMinutes()) + " of " + hours(p.scheduledMinutes()),
-                "Days worked: " + p.daysWorked(),
-                "Monthly basic: " + money(new BigDecimal(text(s.get("basicMonthly"))), cur))) {
-            facts.addCell(cell(f, SMALL, Element.ALIGN_LEFT, false));
+        String cur() {
+            return p.currency();
         }
-        doc.add(facts);
+    }
+
+    // ---- Layouts ---------------------------------------------------------------------------------------------
+
+    private void classic(Document doc, Context c) {
+        doc.add(header(c, true));
+        doc.add(titleLine(c));
+        draftNotice(doc, c);
+        doc.add(employeeGrid(c, 3));
 
         PdfPTable lines = table(new float[] {5, 2, 1.6f, 2.4f});
-        lines.setSpacingBefore(10);
+        lines.setSpacingBefore(8);
         lines.setHeaderRows(1);
         for (String h : List.of("Item", "Base", "Rate", "Amount")) {
-            PdfPCell c = cell(h, BOLD, h.equals("Item") ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, true);
-            c.setBorder(Rectangle.BOTTOM);
-            lines.addCell(c);
+            PdfPCell x = cell(h, BOLD, h.equals("Item") ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, true);
+            x.setBorder(Rectangle.BOTTOM);
+            lines.addCell(x);
         }
-        section(lines, "Earnings", p, "EARNING", p.gross(), "Gross pay");
-        section(lines, "Deductions", p, "DEDUCTION", p.employeeDeductions(), "Total deductions");
-        PdfPCell net = cell("Net pay", TITLE, Element.ALIGN_LEFT, true);
-        net.setColspan(3);
-        lines.addCell(net);
-        lines.addCell(cell(money(p.net(), cur), TITLE, Element.ALIGN_RIGHT, true));
+        section(lines, "Earnings", c, "EARNING", c.p().gross(), "Gross pay");
+        section(lines, "Deductions", c, "DEDUCTION", c.p().employeeDeductions(), "Total deductions");
+        netRow(lines, c, 3);
         doc.add(lines);
+        doc.add(paidBy(c));
+        doc.add(yearTable(c));
+        if (c.ytd().otherCurrencies()) {
+            doc.add(new Paragraph("Months paid in another currency are not included above.", SMALL));
+        }
 
+        PdfPTable charges = table(new float[] {5, 2, 1.6f, 2.4f});
+        charges.setSpacingBefore(10);
+        PdfPCell ch = cell("Employer charges (not deducted from pay)", BOLD, Element.ALIGN_LEFT, true);
+        ch.setColspan(4);
+        charges.addCell(ch);
+        for (PayrollRuns.Line l : c.p().lines()) {
+            if (l.kind().equals("EMPLOYER_CHARGE") && l.amount().signum() > 0) {
+                line(charges, l, c.cur());
+            }
+        }
+        total(charges, "Total employer charges", c.p().employerCharges(), c.cur(), 3);
+        doc.add(charges);
+        footer(doc, c);
+    }
+
+    private void compact(Document doc, Context c) {
+        doc.add(header(c, false));
+        doc.add(titleLine(c));
+        draftNotice(doc, c);
+        doc.add(employeeGrid(c, 4));
+
+        PdfPTable two = table(new float[] {1, 1});
+        two.setSpacingBefore(8);
+        two.addCell(column("Earnings", c, "EARNING", c.p().gross(), "Gross pay"));
+        two.addCell(column("Deductions", c, "DEDUCTION", c.p().employeeDeductions(), "Total deductions"));
+        doc.add(two);
+
+        PdfPTable net = table(new float[] {3, 1});
+        net.setSpacingBefore(4);
+        netRow(net, c, 1);
+        doc.add(net);
+        doc.add(paidBy(c));
+
+        YearToDate y = c.ytd();
+        Paragraph ytd = new Paragraph("Year to date " + y.year() + " (" + y.months() + " month" + (y.months() == 1 ? "" : "s")
+                + "): gross " + money(y.gross(), y.currency()) + " · CNSS " + money(y.cnss(), y.currency()) + " · IPR "
+                + money(y.ipr(), y.currency()) + " · net " + money(y.net(), y.currency()), SMALL_BOLD);
+        ytd.setSpacingBefore(6);
+        doc.add(ytd);
+        Paragraph employer = new Paragraph("Employer charges this month: " + money(c.p().employerCharges(), c.cur())
+                + ". Taxable income for IPR: " + money(c.p().taxableBase(), c.cur()) + ".", SMALL);
+        doc.add(employer);
+        footer(doc, c);
+    }
+
+    private void ledger(Document doc, Context c) {
+        doc.add(header(c, true));
+        doc.add(titleLine(c));
+        draftNotice(doc, c);
+        doc.add(employeeGrid(c, 3));
+
+        String cur = c.cur();
+        PdfPTable t = table(new float[] {2.1f, 3.6f, 1.6f, 1.1f, 1.9f, 1.9f, 1.1f, 1.9f});
+        t.setSpacingBefore(8);
+        t.setHeaderRows(2);
+        String[] top = {"Code", "Item", "Base", "Employee", "", "", "Employer", ""};
+        int[] spans = {1, 1, 1, 3, 0, 0, 2, 0};
+        for (int i = 0; i < top.length; i++) {
+            if (spans[i] == 0) {
+                continue;
+            }
+            PdfPCell h = ruled(top[i], BOLD, i < 2 ? Element.ALIGN_LEFT : Element.ALIGN_CENTER, true);
+            h.setColspan(spans[i]);
+            t.addCell(h);
+        }
+        for (String h : List.of("", "", "", "Rate", "Paid", "Withheld", "Rate", "Amount")) {
+            t.addCell(ruled(h, SMALL_BOLD, Element.ALIGN_CENTER, true));
+        }
+        // One row per item: earnings and deductions, then each employer charge on the row of its base.
+        List<PayrollRuns.Line> rows = new ArrayList<>();
+        c.p().lines().stream().filter(l -> l.kind().equals("EARNING")).forEach(rows::add);
+        c.p().lines().stream().filter(l -> l.kind().equals("DEDUCTION")).forEach(rows::add);
+        c.p().lines().stream().filter(l -> l.kind().equals("EMPLOYER_CHARGE") && l.amount().signum() > 0).forEach(rows::add);
+        for (PayrollRuns.Line l : rows) {
+            boolean earning = l.kind().equals("EARNING");
+            boolean employer = l.kind().equals("EMPLOYER_CHARGE");
+            t.addCell(ruled(l.elementCode() == null ? "" : l.elementCode(), SMALL, Element.ALIGN_LEFT, false));
+            t.addCell(ruled(l.label(), NORMAL, Element.ALIGN_LEFT, false));
+            t.addCell(ruled(l.base() == null ? "" : number(l.base(), 2), NORMAL, Element.ALIGN_RIGHT, false));
+            t.addCell(ruled(employer ? "" : rate(l), NORMAL, Element.ALIGN_RIGHT, false));
+            t.addCell(ruled(earning ? money(l.amount(), cur) : "", NORMAL, Element.ALIGN_RIGHT, false));
+            t.addCell(ruled(l.kind().equals("DEDUCTION") ? money(l.amount(), cur) : "", NORMAL, Element.ALIGN_RIGHT, false));
+            t.addCell(ruled(employer ? rate(l) : "", NORMAL, Element.ALIGN_RIGHT, false));
+            t.addCell(ruled(employer ? money(l.amount(), cur) : "", NORMAL, Element.ALIGN_RIGHT, false));
+        }
+        PdfPCell totals = ruled("Totals", BOLD, Element.ALIGN_LEFT, true);
+        totals.setColspan(4);
+        t.addCell(totals);
+        t.addCell(ruled(money(c.p().gross(), cur), BOLD, Element.ALIGN_RIGHT, true));
+        t.addCell(ruled(money(c.p().employeeDeductions(), cur), BOLD, Element.ALIGN_RIGHT, true));
+        t.addCell(ruled("", BOLD, Element.ALIGN_RIGHT, true));
+        t.addCell(ruled(money(c.p().employerCharges(), cur), BOLD, Element.ALIGN_RIGHT, true));
+        PdfPCell net = ruled("NET PAY", BIG, Element.ALIGN_LEFT, true);
+        net.setColspan(5);
+        t.addCell(net);
+        PdfPCell netAmount = ruled(money(c.p().net(), cur), BIG, Element.ALIGN_RIGHT, true);
+        netAmount.setColspan(3);
+        t.addCell(netAmount);
+        doc.add(t);
+        doc.add(paidBy(c));
+        doc.add(yearTable(c));
+        Paragraph bases = new Paragraph("Taxable income for IPR: " + money(c.p().taxableBase(), cur) + " ("
+                + money(c.p().taxableBaseCdf(), "CDF") + "). CNSS base: " + money(c.p().cnssBase(), cur) + ".", SMALL);
+        bases.setSpacingBefore(4);
+        doc.add(bases);
+        footer(doc, c);
+    }
+
+    // ---- Shared blocks ---------------------------------------------------------------------------------------
+
+    /** Logo and employer on the left; for the full layouts, the legal numbers on the right. */
+    private PdfPTable header(Context c, boolean full) {
+        Company.Details e = c.employer();
+        Company.PayslipSettings s = c.settings();
+        PdfPTable head = table(c.logo() == null ? new float[] {3, 2} : new float[] {1.6f, 2.5f, 2.0f});
+        if (c.logo() != null) {
+            PdfPCell logo = cell("", NORMAL, Element.ALIGN_LEFT, false);
+            try {
+                Image img = Image.getInstance(c.logo().data());
+                img.scaleToFit(125, 55);
+                logo.addElement(img);
+            } catch (Exception ignored) {
+                // A logo that cannot be drawn is left out rather than failing the payslip.
+            }
+            head.addCell(logo);
+        }
+        PdfPCell left = cell("", NORMAL, Element.ALIGN_LEFT, false);
+        left.addElement(new Paragraph(text(e.name()), BIG));
+        if (s.legalForm() != null) {
+            left.addElement(new Paragraph(s.legalForm(), SMALL));
+        }
+        left.addElement(new Paragraph(text(e.address()), NORMAL));
+        String contact = join(s.phone(), s.email(), s.website());
+        if (!contact.isEmpty()) {
+            left.addElement(new Paragraph(contact, SMALL));
+        }
+        head.addCell(left);
+        PdfPCell right = cell("", NORMAL, Element.ALIGN_RIGHT, false);
+        List<String> legal = new ArrayList<>();
+        add(legal, "RCCM", e.rccm());
+        add(legal, "Id. Nat.", e.nationalId());
+        add(legal, "NIF", e.taxNumber());
+        add(legal, "CNSS", e.cnssNumber());
+        if (full) {
+            add(legal, "INPP", e.inppNumber());
+            add(legal, "ONEM", e.onemNumber());
+        }
+        for (String l : legal) {
+            right.addElement(right(l, SMALL));
+        }
+        head.addCell(right);
+        return head;
+    }
+
+    private Paragraph titleLine(Context c) {
+        PayrollRuns.Payslip p = c.p();
+        Paragraph title = new Paragraph();
+        title.add(new Chunk("Payslip · " + p.month().format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH)), TITLE));
+        title.add(new Chunk("    " + (p.number() == null ? "not numbered yet" : "No. " + p.number())
+                + " · period " + p.month() + " to " + p.month().withDayOfMonth(p.month().lengthOfMonth()), SMALL));
+        title.setSpacingBefore(8);
+        return title;
+    }
+
+    private static void draftNotice(Document doc, Context c) {
+        if ("SAMPLE".equals(c.p().runStatus())) {
+            doc.add(new Paragraph("SAMPLE: made-up figures to show the layout.", NOTICE));
+        } else if (!"CLOSED".equals(c.p().runStatus())) {
+            doc.add(new Paragraph("DRAFT: this payroll is " + c.p().runStatus().toLowerCase() + " and not yet closed.", NOTICE));
+        }
+    }
+
+    /** The employee's details as a ruled grid of label and value pairs. */
+    private PdfPTable employeeGrid(Context c, int perRow) {
+        Map<String, Object> s = c.s();
+        List<String[]> facts = new ArrayList<>();
+        facts.add(new String[] {"Employee", text(s.get("name"))});
+        facts.add(new String[] {"Matricule", text(s.get("registrationNo"))});
+        facts.add(new String[] {"Grade", text(s.get("grade"))});
+        facts.add(new String[] {"Occupation", dash(s.get("occupation"))});
+        if (s.get("unit") != null) {
+            String dir = text(s.get("direction"));
+            facts.add(new String[] {"Unit", join(text(s.get("unit")), dir.equals(text(s.get("unit"))) ? "" : dir)});
+        }
+        facts.add(new String[] {"Hired", dash(s.get("hireDate"))});
+        facts.add(new String[] {"Seniority", s.get("seniorityYears") == null ? "—"
+                : s.get("seniorityYears") + " yr " + s.get("seniorityMonths") + " mo"});
+        facts.add(new String[] {"Marital status", dash(s.get("maritalCode"))});
+        facts.add(new String[] {"Children (family allowances)", text(s.get("childrenInCharge"))});
+        facts.add(new String[] {"Contract", text(s.get("contractType")).replace('_', ' ').toLowerCase()
+                + (Boolean.TRUE.equals(s.get("expatriate")) ? ", expatriate" : "")});
+        facts.add(new String[] {"CNSS no.", dash(s.get("cnssNumber"))});
+        facts.add(new String[] {"NIF", dash(s.get("taxNumber"))});
+        facts.add(new String[] {"Hours paid", hours(c.p().paidMinutes()) + " of " + hours(c.p().scheduledMinutes())});
+        facts.add(new String[] {"Days worked", String.valueOf(c.p().daysWorked())});
+        facts.add(new String[] {"Monthly basic", money(new BigDecimal(text(s.get("basicMonthly")).isEmpty() ? "0"
+                : text(s.get("basicMonthly"))), c.cur())});
+        if (c.cur().equals("USD") && c.p().usdCdf() != null) {
+            facts.add(new String[] {"BCC rate", "$1 = " + c.p().usdCdf().stripTrailingZeros().toPlainString() + " CDF ("
+                    + c.p().rateDate() + ")"});
+        }
+        PdfPTable grid = table(repeat(perRow));
+        grid.setSpacingBefore(6);
+        for (String[] f : facts) {
+            PdfPCell x = new PdfPCell();
+            x.setBorderColor(RULE);
+            x.setBorderWidth(0.4f);
+            x.setPadding(3);
+            x.addElement(new Paragraph(f[0], SMALL));
+            x.addElement(new Paragraph(f[1], BOLD));
+            grid.addCell(x);
+        }
+        for (int i = facts.size() % perRow; i > 0 && i < perRow; i++) {
+            PdfPCell empty = new PdfPCell();
+            empty.setBorder(com.lowagie.text.Rectangle.TOP);
+            empty.setBorderColor(RULE);
+            empty.setBorderWidth(0.4f);
+            grid.addCell(empty);
+        }
+        return grid;
+    }
+
+    private static float[] repeat(int n) {
+        float[] w = new float[n];
+        java.util.Arrays.fill(w, 1);
+        return w;
+    }
+
+    private static void section(PdfPTable t, String title, Context c, String kind, BigDecimal total, String totalLabel) {
+        PdfPCell h = cell(title, BOLD, Element.ALIGN_LEFT, true);
+        h.setColspan(4);
+        t.addCell(h);
+        for (PayrollRuns.Line l : c.p().lines()) {
+            if (l.kind().equals(kind)) {
+                line(t, l, c.cur());
+            }
+        }
+        total(t, totalLabel, total, c.cur(), 3);
+    }
+
+    /** One column of the compact layout: item and amount only. */
+    private static PdfPCell column(String title, Context c, String kind, BigDecimal total, String totalLabel) {
+        PdfPTable t = table(new float[] {3, 1.4f});
+        PdfPCell h = cell(title, BOLD, Element.ALIGN_LEFT, true);
+        h.setColspan(2);
+        t.addCell(h);
+        for (PayrollRuns.Line l : c.p().lines()) {
+            if (l.kind().equals(kind)) {
+                t.addCell(cell(l.label(), NORMAL, Element.ALIGN_LEFT, false));
+                t.addCell(cell(money(l.amount(), c.cur()), NORMAL, Element.ALIGN_RIGHT, false));
+            }
+        }
+        total(t, totalLabel, total, c.cur(), 1);
+        PdfPCell holder = new PdfPCell(t);
+        holder.setBorder(Rectangle.NO_BORDER);
+        holder.setPaddingRight(4);
+        return holder;
+    }
+
+    private static void netRow(PdfPTable t, Context c, int labelSpan) {
+        PdfPCell net = cell("Net pay", TITLE, Element.ALIGN_LEFT, true);
+        net.setColspan(labelSpan);
+        t.addCell(net);
+        t.addCell(cell(money(c.p().net(), c.cur()), TITLE, Element.ALIGN_RIGHT, true));
+    }
+
+    private static Paragraph paidBy(Context c) {
+        Map<String, Object> s = c.s();
         String pay = PAYMENT.getOrDefault(text(s.get("paymentMethod")), text(s.get("paymentMethod")));
         if ("BANK".equals(s.get("paymentMethod")) && s.get("bankName") != null) {
             pay += ": " + text(s.get("bankName")) + " " + text(s.get("bankAccount"));
         } else if ("MOBILE_MONEY".equals(s.get("paymentMethod"))) {
             pay += ": " + text(s.get("mobileMoneyOperator")) + " " + text(s.get("mobileMoneyNumber"));
         }
-        if (cur.equals("USD") && p.usdCdf() != null) {
-            pay += " · net in CDF: " + money(p.net().multiply(p.usdCdf()).setScale(0, RoundingMode.HALF_UP), "CDF")
-                    + " at the BCC rate of " + p.rateDate() + " ($1 = " + p.usdCdf().stripTrailingZeros().toPlainString() + " CDF)";
+        if (c.cur().equals("USD") && c.p().usdCdf() != null) {
+            pay += " · net in CDF: " + money(c.p().net().multiply(c.p().usdCdf()).setScale(0, RoundingMode.HALF_UP), "CDF");
         }
         Paragraph paid = new Paragraph("Paid by " + pay, NORMAL);
-        paid.setSpacingBefore(6);
-        doc.add(paid);
+        paid.setSpacingBefore(5);
+        return paid;
+    }
 
-        // Year to date.
+    private static PdfPTable yearTable(Context c) {
+        YearToDate y = c.ytd();
         PdfPTable year = table(new float[] {3, 2, 2, 2, 2});
-        year.setSpacingBefore(12);
-        PdfPCell yh = cell("Year to date " + ytd.year() + " (" + ytd.months() + " month" + (ytd.months() == 1 ? "" : "s")
-                + ", in " + ytd.currency() + ")", BOLD, Element.ALIGN_LEFT, true);
+        year.setSpacingBefore(10);
+        PdfPCell yh = cell("Year to date " + y.year() + " (" + y.months() + " month" + (y.months() == 1 ? "" : "s")
+                + ", in " + y.currency() + ")", BOLD, Element.ALIGN_LEFT, true);
         yh.setColspan(5);
         year.addCell(yh);
         for (String h : List.of("", "Gross", "CNSS", "IPR", "Net")) {
             year.addCell(cell(h, BOLD, h.isEmpty() ? Element.ALIGN_LEFT : Element.ALIGN_RIGHT, false));
         }
         year.addCell(cell("Total", NORMAL, Element.ALIGN_LEFT, false));
-        for (BigDecimal v : List.of(ytd.gross(), ytd.cnss(), ytd.ipr(), ytd.net())) {
-            year.addCell(cell(money(v, cur), NORMAL, Element.ALIGN_RIGHT, false));
+        for (BigDecimal v : List.of(y.gross(), y.cnss(), y.ipr(), y.net())) {
+            year.addCell(cell(money(v, y.currency()), NORMAL, Element.ALIGN_RIGHT, false));
         }
-        doc.add(year);
-        if (ytd.otherCurrencies()) {
-            doc.add(new Paragraph("Months paid in another currency are not included above.", SMALL));
-        }
-
-        PdfPTable charges = table(new float[] {5, 2, 1.6f, 2.4f});
-        charges.setSpacingBefore(12);
-        PdfPCell ch = cell("Employer charges (not deducted from pay)", BOLD, Element.ALIGN_LEFT, true);
-        ch.setColspan(4);
-        charges.addCell(ch);
-        for (PayrollRuns.Line l : p.lines()) {
-            if (l.kind().equals("EMPLOYER_CHARGE") && l.amount().signum() > 0) {
-                line(charges, l, cur);
-            }
-        }
-        total(charges, "Total employer charges", p.employerCharges(), cur);
-        doc.add(charges);
-
-        Paragraph foot = new Paragraph("Taxable income for IPR: " + money(p.taxableBase(), cur) + " ("
-                + money(p.taxableBaseCdf(), "CDF") + "). CNSS base: " + money(p.cnssBase(), cur) + ".", SMALL);
-        foot.setSpacingBefore(8);
-        doc.add(foot);
-        doc.add(new Paragraph("Keep this payslip without time limit.", SMALL));
-        doc.close();
-        return bytes.toByteArray();
+        return year;
     }
 
-    private void section(PdfPTable t, String title, PayrollRuns.Payslip p, String kind, BigDecimal total, String totalLabel) {
-        PdfPCell h = cell(title, BOLD, Element.ALIGN_LEFT, true);
-        h.setColspan(4);
-        t.addCell(h);
-        for (PayrollRuns.Line l : p.lines()) {
-            if (l.kind().equals(kind)) {
-                line(t, l, p.currency());
-            }
-        }
-        total(t, totalLabel, total, p.currency());
+    private static void footer(Document doc, Context c) {
+        Paragraph keep = new Paragraph((c.settings().footer() == null ? "" : c.settings().footer() + " ")
+                + "Keep this payslip without time limit.", SMALL);
+        keep.setSpacingBefore(10);
+        doc.add(keep);
     }
 
     private static void line(PdfPTable t, PayrollRuns.Line l, String cur) {
         t.addCell(cell(l.label(), NORMAL, Element.ALIGN_LEFT, false));
         t.addCell(cell(l.base() == null ? "" : number(l.base(), 2), NORMAL, Element.ALIGN_RIGHT, false));
-        String rate = l.rate() == null ? ""
-                : l.kind().equals("EARNING") && !"HOUSING".equals(l.elementCode()) ? number(l.rate(), 4) : number(l.rate(), 3) + "%";
-        t.addCell(cell(rate, NORMAL, Element.ALIGN_RIGHT, false));
+        t.addCell(cell(rate(l), NORMAL, Element.ALIGN_RIGHT, false));
         t.addCell(cell(money(l.amount(), cur), NORMAL, Element.ALIGN_RIGHT, false));
     }
 
-    private static void total(PdfPTable t, String label, BigDecimal amount, String cur) {
-        PdfPCell c = cell(label, BOLD, Element.ALIGN_LEFT, false);
-        c.setColspan(3);
-        c.setBorder(Rectangle.TOP);
-        t.addCell(c);
+    private static String rate(PayrollRuns.Line l) {
+        return l.rate() == null ? ""
+                : l.kind().equals("EARNING") && !"HOUSING".equals(l.elementCode()) ? number(l.rate(), 4) : number(l.rate(), 3) + "%";
+    }
+
+    private static void total(PdfPTable t, String label, BigDecimal amount, String cur, int labelSpan) {
+        PdfPCell x = cell(label, BOLD, Element.ALIGN_LEFT, false);
+        x.setColspan(labelSpan);
+        x.setBorder(Rectangle.TOP);
+        t.addCell(x);
         PdfPCell a = cell(money(amount, cur), BOLD, Element.ALIGN_RIGHT, false);
         a.setBorder(Rectangle.TOP);
         t.addCell(a);
@@ -244,10 +540,24 @@ public class PayslipPdf {
         return c;
     }
 
+    private static PdfPCell ruled(String text, Font font, int align, boolean shaded) {
+        PdfPCell c = cell(text, font, align, shaded);
+        c.setBorder(Rectangle.BOX);
+        c.setBorderColor(RULE);
+        c.setBorderWidth(0.4f);
+        return c;
+    }
+
     private static Paragraph right(String text, Font font) {
         Paragraph p = new Paragraph(text, font);
         p.setAlignment(Element.ALIGN_RIGHT);
         return p;
+    }
+
+    private static void add(List<String> out, String label, String value) {
+        if (value != null && !value.isBlank()) {
+            out.add(label + " " + value);
+        }
     }
 
     private static String text(Object v) {
@@ -268,7 +578,7 @@ public class PayslipPdf {
 
     private static String number(BigDecimal v, int digits) {
         DecimalFormat f = new DecimalFormat("#,##0." + "#".repeat(digits), DecimalFormatSymbols.getInstance(Locale.FRANCE));
-        return f.format(v).replace('\u202f', ' ').replace('\u00a0', ' ');
+        return f.format(v).replace(' ', ' ').replace(' ', ' ');
     }
 
     static String money(BigDecimal v, String currency) {

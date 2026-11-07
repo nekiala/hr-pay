@@ -475,3 +475,6 @@ export type EvalTemplate = {
   criteria: { criterionId: number; code: string; name: string; source: string; weight: number }[]
 }
 export const FREQUENCY = { MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', SEMI_ANNUAL: 'Every six months' }
+
+export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
+export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean }
