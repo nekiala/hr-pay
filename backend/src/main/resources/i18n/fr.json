@@ -893,5 +893,7 @@
  "This incident is already resolved.": "Cet incident est déjà résolu.",
  "This step is done from its own page.": "Cette étape se fait depuis sa propre page.",
  "Write a message of at most 5,000 characters.": "Écrivez un message de 5 000 caractères au plus.",
- "Write the French and the English text.": "Écrivez le texte en français et en anglais."
+ "Write the French and the English text.": "Écrivez le texte en français et en anglais.",
+ "Tel. %s": "Tél. %s",
+ "CNSS no. %s": "N° CNSS %s"
 }

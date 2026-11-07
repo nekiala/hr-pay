@@ -205,8 +205,8 @@ class LifecycleIT extends IntegrationTest {
                 .andReturn().getResponse().getContentAsByteArray();
         assertThat(new String(signed, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
         assertThat(Documents.sha256(signed)).isNotEqualTo(sha);
-        try (var reader = new com.lowagie.text.pdf.PdfReader(signed)) {
-            String last = new com.lowagie.text.pdf.parser.PdfTextExtractor(reader).getTextFromPage(reader.getNumberOfPages());
+        try (var reader = new org.openpdf.text.pdf.PdfReader(signed)) {
+            String last = new org.openpdf.text.pdf.parser.PdfTextExtractor(reader).getTextFromPage(reader.getNumberOfPages());
             assertThat(last).contains(sha);
         }
         // Filed in the vault, recorded in the audit log, and the sender is told.
