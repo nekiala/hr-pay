@@ -37,7 +37,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain api(HttpSecurity http, UserRepository users, AuditService audit, Tenants tenants,
                             ObjectProvider<ClientRegistrationRepository> googleClients,
-                            SecurityContextRepository contextRepository) throws Exception {
+                            SecurityContextRepository contextRepository, cd.hrpay.platform.SupportAccess support,
+                            org.springframework.jdbc.core.simple.JdbcClient jdbc) throws Exception {
         http
                 .securityContext(c -> c.securityContextRepository(contextRepository))
                 .csrf(csrf -> csrf
@@ -55,7 +56,7 @@ public class SecurityConfig {
                 .httpBasic(b -> b.disable())
                 .logout(l -> l.logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((req, res, a) -> res.setStatus(HttpStatus.NO_CONTENT.value())))
-                .addFilterBefore(new UserRefreshFilter(users, tenants), AuthorizationFilter.class);
+                .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc), AuthorizationFilter.class);
 
         if (googleClients.getIfAvailable() != null) {
             http.oauth2Login(o -> o

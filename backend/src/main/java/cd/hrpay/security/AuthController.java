@@ -44,17 +44,26 @@ public class AuthController {
     public record ChangePassword(@NotBlank String currentPassword, @NotBlank String newPassword) {}
 
     public record CompanyInfo(long id, String name, String mode, String plan, Set<String> modules, Integer maxEmployees,
-                              int employees, boolean locked, java.util.List<cd.hrpay.platform.Entitlements.Notice> notices) {}
+                              int employees, boolean locked, String readOnly,
+                              java.util.List<cd.hrpay.platform.Entitlements.Notice> notices) {}
+
+    /** A provider administrator looking at a company on a support visit. */
+    public record SupportInfo(long companyId, String companyName, java.time.OffsetDateTime expiresAt) {}
 
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
-                     Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company) {
+                     Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company,
+                     SupportInfo support) {
         static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c) {
             Set<String> permissions = new java.util.TreeSet<>();
             Authorities.of(u).forEach(a -> permissions.add(a.getAuthority()));
+            return of(u, c, permissions, null);
+        }
+
+        static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c, Set<String> permissions, SupportInfo support) {
             CompanyInfo company = c == null ? null : new CompanyInfo(c.companyId(), c.companyName(), c.mode().name(),
-                    c.planName(), c.modules(), c.maxEmployees(), c.employees(), c.locked(), c.notices());
+                    c.planName(), c.modules(), c.maxEmployees(), c.employees(), c.locked(), c.readOnly(), c.notices());
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
-                    permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company);
+                    permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company, support);
         }
     }
 
@@ -147,6 +156,20 @@ public class AuthController {
         Long id = CurrentUser.id();
         if (id == null) {
             throw new BusinessRuleException("Not signed in.");
+        }
+        cd.hrpay.platform.SupportAccess.Visit visit = cd.hrpay.platform.SupportAccess.current();
+        if (visit != null) {
+            // The visitor is a user of the provider's company, working in the visited one.
+            AppUser user = tenants.callAs(cd.hrpay.tenancy.TenantContext.providerCompany(), () -> {
+                AppUser u = userService.find(id);
+                u.roleCodes(); // loads the roles while the provider's rows are visible
+                return u;
+            });
+            Set<String> permissions = new java.util.TreeSet<>();
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().forEach(a -> permissions.add(a.getAuthority()));
+            return Me.of(user, entitlements.current(), permissions,
+                    new SupportInfo(visit.companyId(), visit.companyName(), visit.expiresAt()));
         }
         return Me.of(userService.find(id), entitlements.current());
     }

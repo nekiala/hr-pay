@@ -50,7 +50,10 @@ public class PlatformController {
 
     public record CompanyView(long id, String name, String countryCode, String planCode, String planName,
                               Integer maxEmployees, List<String> modules, String status, int employees,
-                              OffsetDateTime createdAt, boolean provider) {}
+                              OffsetDateTime createdAt, boolean provider, String suspendedReason,
+                              String subscriptionStatus, String cycle, java.time.LocalDate trialEnds,
+                              java.time.LocalDate nextInvoiceOn, int openInvoices, int overdueInvoices,
+                              OffsetDateTime lastSignIn, boolean supportOpen) {}
 
     public record AdminInput(@NotBlank @Size(max = 100) String firstName, @NotBlank @Size(max = 100) String lastName,
                              @NotBlank @Email @Size(max = 320) String email, @NotBlank String phone) {}
@@ -77,10 +80,14 @@ public class PlatformController {
     private final AuditService audit;
     private final Licences licences;
     private final Entitlements entitlements;
+    private final cd.hrpay.billing.Billing billing;
+    private final java.time.Clock clock;
 
     public PlatformController(JdbcClient jdbc, Tenants tenants, TransactionTemplate tx, CountryPacks packs,
                               UserService users, OrgStructure org, AuditService audit, Licences licences,
-                              Entitlements entitlements) {
+                              Entitlements entitlements, cd.hrpay.billing.Billing billing, java.time.Clock clock) {
+        this.billing = billing;
+        this.clock = clock;
         this.jdbc = jdbc;
         this.tenants = tenants;
         this.tx = tx;
@@ -148,6 +155,9 @@ public class PlatformController {
                 audit.recordAs(by, "company.created", "company", companyId, Map.of("name", body.name().trim(),
                         "plan", plan, "admin", email));
             });
+            if (entitlements.mode() == Entitlements.Mode.SAAS) {
+                billing.startTrial(companyId, java.time.LocalDate.now(clock));
+            }
             return companyId;
         });
         audit.record("company.created", "company", id, Map.of("name", body.name().trim(), "plan", plan,
@@ -167,8 +177,13 @@ public class PlatformController {
             throw new BusinessRuleException("The provider's own company cannot be suspended.");
         }
         find(id);
-        tenants.callAsPlatform(() -> jdbc.sql("update company set plan_code = ?, modules = ?, status = ? where id = ?")
-                .params(plan, modules, body.status(), id).update());
+        // A suspension by hand is the provider's; returning to active lifts any suspension, unpaid invoices included.
+        tenants.callAsPlatform(() -> jdbc.sql("""
+                update company set plan_code = ?, modules = ?,
+                       suspended_reason = case when ? = 'ACTIVE' then null when status = 'ACTIVE' then 'MANUAL' else suspended_reason end,
+                       suspended_at = case when ? = 'ACTIVE' then null when status = 'ACTIVE' then now() else suspended_at end,
+                       status = ? where id = ?""")
+                .params(plan, modules, body.status(), body.status(), body.status(), id).update());
         audit.record("company.plan_changed", "company", id, Map.of("plan", plan, "modules", List.of(modules),
                 "status", body.status()));
         return find(id);
@@ -194,15 +209,26 @@ public class PlatformController {
     private static final String SELECT = """
             select c.id, c.name, c.country_code, c.plan_code, p.name as plan_name, p.max_employees, c.modules, c.status,
                    (select count(*) from app_user u where u.company_id = c.id and u.status = 'ACTIVE') as employees,
-                   c.created_at
-            from company c join plan p on p.code = c.plan_code""";
+                   c.created_at, c.suspended_reason, s.status as subscription_status, s.cycle, s.trial_ends,
+                   s.next_invoice_on,
+                   (select count(*) from invoice i where i.company_id = c.id and i.status = 'OPEN') as open_invoices,
+                   (select count(*) from invoice i where i.company_id = c.id and i.status = 'OPEN'
+                      and i.due_on < current_date) as overdue_invoices,
+                   (select max(u.last_login_at) from app_user u where u.company_id = c.id) as last_sign_in,
+                   exists (select 1 from support_grant g where g.company_id = c.id and g.revoked_at is null
+                           and g.expires_at > now()) as support_open
+            from company c join plan p on p.code = c.plan_code left join subscription s on s.company_id = c.id""";
 
     private CompanyView view(java.sql.ResultSet rs, int i) throws java.sql.SQLException {
         long id = rs.getLong("id");
         return new CompanyView(id, rs.getString("name"), rs.getString("country_code"), rs.getString("plan_code"),
                 rs.getString("plan_name"), (Integer) rs.getObject("max_employees"),
                 List.of((String[]) rs.getArray("modules").getArray()), rs.getString("status"), rs.getInt("employees"),
-                rs.getObject("created_at", OffsetDateTime.class), TenantContext.isProvider(id));
+                rs.getObject("created_at", OffsetDateTime.class), TenantContext.isProvider(id), rs.getString("suspended_reason"),
+                rs.getString("subscription_status"), rs.getString("cycle"),
+                rs.getObject("trial_ends", java.time.LocalDate.class), rs.getObject("next_invoice_on", java.time.LocalDate.class),
+                rs.getInt("open_invoices"), rs.getInt("overdue_invoices"),
+                rs.getObject("last_sign_in", OffsetDateTime.class), rs.getBoolean("support_open"));
     }
 
     private CompanyView find(long id) {

@@ -45,6 +45,9 @@ import OrgSettingsPage from './pages/OrgSettingsPage'
 import CompanyPage from './pages/CompanyPage'
 import SystemPage from './pages/SystemPage'
 import CompaniesPage from './pages/CompaniesPage'
+import PlatformCompanyPage from './pages/PlatformCompanyPage'
+import PlatformBillingPage from './pages/PlatformBillingPage'
+import BillingPage from './pages/BillingPage'
 import LicencePage from './pages/LicencePage'
 import { useLocation } from 'react-router-dom'
 import { Shell } from './components/Shell'
@@ -150,6 +153,9 @@ export default function App() {
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/presence" element={<PresencePage />} />
           <Route path="/platform/companies" element={<Guard permission="platform.manage"><CompaniesPage /></Guard>} />
+          <Route path="/platform/companies/:id" element={<Guard permission="platform.manage"><PlatformCompanyPage /></Guard>} />
+          <Route path="/platform/billing" element={<Guard permission="platform.manage"><PlatformBillingPage /></Guard>} />
+          <Route path="/billing" element={<Guard permission="subscription.manage"><BillingPage /></Guard>} />
           <Route path="/platform/licence" element={<Guard permission="platform.manage"><LicencePage /></Guard>} />
           <Route path="/system" element={<Guard permission="system.monitor"><SystemPage /></Guard>} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />

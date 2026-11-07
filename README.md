@@ -168,6 +168,31 @@ The licence is checked offline. In the last 30 days the administrators are warne
 (30 days by default) keeps everything working; after it, changes in the modules stop until the renewal is installed,
 while sign-in, reading and exports keep working.
 
+## Billing and support (phase 11)
+
+On a SaaS installation (`LICENSING_MODE=saas`) each company has a subscription. It starts with a free trial (30 days by
+default); on its last day the first invoice is issued, in advance, for one month or one year. Each company's
+administrator picks monthly or yearly, and US dollars or Congolese francs, on **Billing**. An invoice in francs converts
+the plan's price at the BCC rate of the invoice's day. Invoices are numbered `HP-2026-00001`, carry the tax (TVA 16% by
+default; check it with your accountant), and are emailed to the company's administrators, with a PDF carrying the
+provider's name, logo and legal details from its **Company** page.
+
+The provider sets the prices per plan, the trial, the payment terms, the grace days, the tax, and the bank and mobile
+money details on **Invoices**. Payments are recorded by hand against an invoice: bank transfer, M-Pesa, Orange Money,
+Airtel Money, cash or other, with the transaction reference, which can only be recorded once. A payment gateway can
+later call the same recording step.
+
+An invoice still unpaid after its due date (15 days) and the grace days (15) makes the company **read-only**: everyone
+still signs in, reads and exports, including payslips, but no change is accepted. Changes come back when the payment is
+recorded. The provider can also suspend a company by hand, and lift either suspension, on **Companies**. A job runs every
+morning at 7:00 Kinshasa time (`app.billing.cron`) to issue the invoices that are due and suspend the unpaid ones.
+
+**Support access**: a company's administrator opens it on **Billing** for 1 to 14 days, and can close it at any time.
+While it is open, the provider's administrators can open the company from its page on **Companies** and see it as its
+users do, read-only. Every request they make is listed on the company's Billing page, and the start and the end are in
+both companies' audit logs. On premise there are no invoices; support access still works between companies of the
+installation.
+
 ## Configuration
 
 | Variable | Default | Purpose |

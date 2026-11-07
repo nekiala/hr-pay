@@ -79,8 +79,12 @@ export type Me = {
     maxEmployees: number | null
     employees: number
     locked: boolean
+    /** Set when the company is suspended: what everyone is told; reading and exports keep working. */
+    readOnly: string | null
     notices: { level: 'warn' | 'danger'; text: string }[]
   } | null
+  /** A provider administrator looking at another company, read-only, with its consent. */
+  support: { companyId: number; companyName: string; expiresAt: string } | null
 }
 
 export type Module = 'ATTENDANCE' | 'PAYROLL' | 'EVALUATIONS'
@@ -100,7 +104,106 @@ export type CompanySummary = {
   employees: number
   createdAt: string
   provider: boolean
+  suspendedReason: 'UNPAID' | 'MANUAL' | null
+  subscriptionStatus: 'TRIAL' | 'ACTIVE' | 'CANCELLED' | null
+  cycle: 'MONTHLY' | 'YEARLY' | null
+  trialEnds: string | null
+  nextInvoiceOn: string | null
+  openInvoices: number
+  overdueInvoices: number
+  lastSignIn: string | null
+  supportOpen: boolean
 }
+
+export type Subscription = {
+  companyId: number
+  status: 'TRIAL' | 'ACTIVE' | 'CANCELLED'
+  cycle: 'MONTHLY' | 'YEARLY'
+  currency: 'USD' | 'CDF'
+  trialEnds: string | null
+  nextInvoiceOn: string | null
+  autoSuspend: boolean
+  startedAt: string
+  cancelledAt: string | null
+}
+
+export type Invoice = {
+  id: number
+  companyId: number
+  number: string
+  issuedOn: string
+  dueOn: string
+  periodFrom: string
+  periodTo: string
+  planName: string
+  cycle: 'MONTHLY' | 'YEARLY'
+  currency: 'USD' | 'CDF'
+  usdCdf: number | null
+  priceUsd: number
+  subtotal: number
+  taxLabel: string
+  taxRate: number
+  tax: number
+  total: number
+  status: 'OPEN' | 'PAID' | 'VOID'
+  paid: number
+  overdue: boolean
+  paidAt: string | null
+  voidReason: string | null
+  customerName: string
+}
+
+export type InvoicePayment = {
+  id: number
+  invoiceId: number
+  invoiceNumber: string
+  method: PaymentMethod
+  reference: string
+  amount: number
+  currency: string
+  paidOn: string
+  note: string | null
+  recordedAt: string
+  recordedBy: string
+}
+
+export type PaymentMethod = 'BANK_TRANSFER' | 'MPESA' | 'ORANGE_MONEY' | 'AIRTEL_MONEY' | 'CASH' | 'OTHER'
+export const PAYMENT_METHODS: Record<PaymentMethod, string> = {
+  BANK_TRANSFER: 'Bank transfer', MPESA: 'M-Pesa', ORANGE_MONEY: 'Orange Money', AIRTEL_MONEY: 'Airtel Money', CASH: 'Cash', OTHER: 'Other',
+}
+
+export type SupportGrant = {
+  id: number
+  grantedBy: string
+  grantedAt: string
+  expiresAt: string
+  reason: string | null
+  revokedAt: string | null
+  revokedBy: string | null
+  active: boolean
+  requests: number
+  lastRequestAt: string | null
+}
+
+export type SupportRequest = { visitor: string; method: string; path: string; at: string }
+
+export type BillingSettings = {
+  trialDays: number
+  paymentDays: number
+  suspendAfterDays: number
+  taxLabel: string
+  taxRate: number
+  invoicePrefix: string
+  bankDetails: string | null
+  mobileMoney: string | null
+  invoiceNote: string | null
+}
+
+export type PlanPrice = { code: string; name: string; maxEmployees: number | null; monthlyPrice: number; yearlyPrice: number }
+
+/** Amounts with two decimals and thousands separators, as on the invoices. */
+export const amount = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+export const longDay = (d: string | null) => d ? new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
 export type LicenceStatus = {
   mode: 'SAAS' | 'ON_PREMISE'

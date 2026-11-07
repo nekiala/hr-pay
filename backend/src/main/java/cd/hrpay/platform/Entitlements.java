@@ -22,19 +22,29 @@ public class Entitlements {
 
     public record Current(long companyId, String companyName, Mode mode, String planCode, String planName,
                           Set<String> modules, Integer maxEmployees, int employees, boolean locked,
-                          List<Notice> notices) {
+                          String readOnly, List<Notice> notices) {
         public boolean has(String module) {
             return modules.contains(module);
+        }
+
+        /** Suspended: everyone reads and exports, nobody changes anything. */
+        public boolean isReadOnly() {
+            return readOnly != null;
         }
     }
 
     private final JdbcClient jdbc;
     private final Licences licences;
     private final Mode mode;
+    private final cd.hrpay.billing.Billing billing;
+    private final java.time.Clock clock;
 
-    public Entitlements(JdbcClient jdbc, Licences licences, @Value("${app.licensing.mode:saas}") String mode) {
+    public Entitlements(JdbcClient jdbc, Licences licences, @Value("${app.licensing.mode:saas}") String mode,
+                        @org.springframework.context.annotation.Lazy cd.hrpay.billing.Billing billing, java.time.Clock clock) {
         this.jdbc = jdbc;
         this.licences = licences;
+        this.billing = billing;
+        this.clock = clock;
         this.mode = "on-premise".equalsIgnoreCase(mode) || "on_premise".equalsIgnoreCase(mode) ? Mode.ON_PREMISE : Mode.SAAS;
     }
 
@@ -48,9 +58,11 @@ public class Entitlements {
         if (companyId == null) {
             return null;
         }
-        record Row(String name, String planCode, String planName, Integer maxEmployees, String modules) {}
+        record Row(String name, String planCode, String planName, Integer maxEmployees, String modules, String status,
+                   String suspendedReason) {}
         Row c = jdbc.sql("""
-                select c.name, c.plan_code, p.name as plan_name, p.max_employees, array_to_string(c.modules, ',') as modules
+                select c.name, c.plan_code, p.name as plan_name, p.max_employees, array_to_string(c.modules, ',') as modules,
+                       c.status, c.suspended_reason
                 from company c join plan p on p.code = c.plan_code where c.id = current_company_id()""")
                 .query(Row.class).optional().orElse(null);
         if (c == null) {
@@ -79,6 +91,12 @@ public class Entitlements {
                 notices.add(new Notice(locked ? "danger" : "warn", status.message()));
             }
         }
+        String readOnly = !"SUSPENDED".equals(c.status()) ? null : "UNPAID".equals(c.suspendedReason())
+                ? "HR Pay is read-only: an invoice is unpaid past its grace period. Everything can still be read and exported; changes come back as soon as the payment is recorded."
+                : "HR Pay is read-only: the provider has suspended this company. Everything can still be read and exported.";
+        if (mode == Mode.SAAS && !TenantContext.isProvider(companyId)) {
+            billingNotices(companyId, readOnly != null, notices);
+        }
         if (max != null && employees > max) {
             notices.add(new Notice("warn", mode == Mode.SAAS
                     ? "%d active employees: your plan (%s) covers up to %d. Move to the next plan; nothing is blocked meanwhile."
@@ -86,6 +104,34 @@ public class Entitlements {
                     : "%d active employees: the licence covers up to %d. Ask your provider for a larger licence; nothing is blocked meanwhile."
                             .formatted(employees, max)));
         }
-        return new Current(companyId, c.name(), mode, c.planCode(), c.planName(), modules, max, employees, locked, notices);
+        return new Current(companyId, c.name(), mode, c.planCode(), c.planName(), modules, max, employees, locked,
+                readOnly, notices);
+    }
+
+    private void billingNotices(long companyId, boolean readOnly, List<Notice> notices) {
+        java.time.LocalDate today = java.time.LocalDate.now(clock);
+        cd.hrpay.billing.Billing.Standing s = billing.standing(companyId, today);
+        if (s == null) {
+            return;
+        }
+        var sub = s.subscription();
+        if ("TRIAL".equals(sub.status()) && sub.trialEnds() != null && !sub.trialEnds().isAfter(today.plusDays(7))) {
+            notices.add(new Notice("warn", "The free trial ends on %s. The first invoice follows; see Billing."
+                    .formatted(cd.hrpay.billing.Billing.day(sub.trialEnds()))));
+        }
+        if (readOnly) {
+            return;
+        }
+        for (var i : s.open()) {
+            if (i.dueOn().isBefore(today)) {
+                String until = s.readOnlyFrom() == null ? "" : " HR Pay becomes read-only on %s if it is still unpaid."
+                        .formatted(cd.hrpay.billing.Billing.day(s.readOnlyFrom()));
+                notices.add(new Notice("danger", "Invoice %s (%s %s) was due on %s.%s".formatted(i.number(),
+                        cd.hrpay.billing.Billing.amount(i.balance()), i.currency(), cd.hrpay.billing.Billing.day(i.dueOn()), until)));
+            } else if (!i.dueOn().isAfter(today.plusDays(7))) {
+                notices.add(new Notice("warn", "Invoice %s (%s %s) is due on %s.".formatted(i.number(),
+                        cd.hrpay.billing.Billing.amount(i.balance()), i.currency(), cd.hrpay.billing.Billing.day(i.dueOn()))));
+            }
+        }
     }
 }
