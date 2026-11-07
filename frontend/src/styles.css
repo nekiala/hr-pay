@@ -138,6 +138,15 @@
 .brand-company { font-size: 12px; line-height: 14px; color: var(--side-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 .plan-notices { margin-bottom: 16px; }
 .plan-notices p { margin: 0 0 8px; }
+.support-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px;
+  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--warn-border); background: var(--warn-soft); color: var(--warn); }
+.support-bar strong { color: inherit; }
+.support-bar > span svg { display: inline; vertical-align: -3px; margin-right: 4px; }
+.cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.cards2 > .card { margin-bottom: 0; }
+.cards2 + .card { margin-top: 16px; }
+@media (max-width: 860px) { .cards2 { grid-template-columns: 1fr; } }
+.pre { white-space: pre-line; }
 .module-list { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 6px; }
 .module-list label { margin-bottom: 0; }
 .icon-button.sidebar-close { margin-left: auto; display: none; }
@@ -479,3 +488,9 @@ a.todo-item:hover .todo-text strong { color: var(--link); }
   .org-scroll { overflow: visible; }
   .org-box { break-inside: avoid; border-color: #888; }
 }
+
+/* Billing */
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2, var(--field)); }
+.segmented button { padding: 5px 11px; font: inherit; font-size: 13px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
+.segmented button.on { border-color: var(--border-strong); background: var(--surface, #fff); color: var(--text); }
+input.num-input { width: 110px; margin: 0 0 0 auto; text-align: right; padding: 6px 8px; }

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
 } from 'lucide-react'
 import { useAuth } from '../auth'
-import type { Module } from '../api'
+import { api, longDay, type Module } from '../api'
 
 type Icon = ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 type Item = { to: string; label: string; icon: Icon; end?: boolean; show: boolean }
@@ -64,6 +64,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: 'Settings',
       items: [
         { to: '/company', label: 'Company', icon: Building2, show: can('company.manage') },
+        { to: '/billing', label: 'Billing', icon: CreditCard, show: can('subscription.manage') && !can('platform.manage') },
         { to: '/payroll/settings', label: 'Grades', icon: Layers, show: can('masterdata.manage') },
         { to: '/payroll/elements', label: 'Pay elements', icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/rates', label: 'Rates', icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
@@ -75,6 +76,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: 'System',
       items: [
         { to: '/platform/companies', label: 'Companies', icon: Building, show: can('platform.manage') },
+        { to: '/platform/billing', label: 'Invoices', icon: CreditCard, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
         { to: '/platform/licence', label: 'Licence', icon: BadgeCheck, show: can('platform.manage') && me?.company?.mode === 'ON_PREMISE' },
         { to: '/system', label: 'System', icon: Activity, show: can('system.monitor') },
         { to: '/audit', label: 'Audit log', icon: ScrollText, show: can('audit.read') },
@@ -98,9 +100,16 @@ export function applyTheme(theme: Theme = readTheme()) {
 }
 
 export function Shell({ children }: { children: ReactNode }) {
-  const { me, signOut } = useAuth()
+  const { me, signOut, refresh } = useAuth()
   const groups = useNav()
   const location = useLocation()
+  const navigate = useNavigate()
+  const endSupport = async () => {
+    const company = me?.support?.companyId
+    await api('/api/support/end', { method: 'POST' }).catch(() => undefined)
+    await refresh()
+    navigate(company ? `/platform/companies/${company}` : '/')
+  }
   const [navOpen, setNavOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(readTheme)
@@ -189,6 +198,13 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main>
+          {me.support && (
+            <div className="support-bar no-print" role="status">
+              <span><LifeBuoy size={16} aria-hidden /> <strong>Support visit: {me.support.companyName}.</strong> You see what its users see, read-only, until {longDay(me.support.expiresAt)}. Every page you open is shown to the company.</span>
+              <button type="button" className="secondary" onClick={() => void endSupport()}>End the visit</button>
+            </div>
+          )}
+          {me.company?.readOnly && !me.support && <p className="error no-print">{me.company.readOnly}</p>}
           {notices.length > 0 && (
             <div className="plan-notices no-print">
               {notices.map((n) => <p key={n.text} className={n.level === 'danger' ? 'error' : 'notice'}>{n.text}</p>)}

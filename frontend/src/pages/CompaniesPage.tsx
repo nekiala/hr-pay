@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, MODULE_NAMES, type CompanySummary, type Module, type Plan } from '../api'
+import { Link } from 'react-router-dom'
+import { api, longDay, MODULE_NAMES, type CompanySummary, type Module, type Plan } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
@@ -22,6 +23,19 @@ function ModulePicker({ value, onChange }: { value: Module[]; onChange: (m: Modu
         ))}
       </div>
     </fieldset>
+  )
+}
+
+function Billing({ c }: { c: CompanySummary }) {
+  if (!c.subscriptionStatus) return <span className="muted">—</span>
+  if (c.subscriptionStatus === 'CANCELLED') return <span className="muted">Cancelled</span>
+  return (
+    <>
+      {c.subscriptionStatus === 'TRIAL' || (c.trialEnds && c.trialEnds >= new Date().toISOString().slice(0, 10)) ? `Trial until ${longDay(c.trialEnds)}` : `${c.cycle === 'YEARLY' ? 'Yearly' : 'Monthly'}, next ${longDay(c.nextInvoiceOn)}`}
+      {c.overdueInvoices > 0
+        ? <div><span className="badge off">{c.overdueInvoices} overdue</span></div>
+        : c.openInvoices > 0 && <div className="muted small">{c.openInvoices} to pay</div>}
+    </>
   )
 }
 
@@ -64,7 +78,9 @@ export default function CompaniesPage() {
     try {
       const result = await api<Created>('/api/platform/companies', { method: 'POST', body: { name, countryCode: country, planCode: plan, modules, admin } })
       setAdding(false)
-      setCreated(result)
+      // Open the next dialog only once the form's dialog is gone: Firefox's page crashed when one modal dialog
+      // closed and another opened in the same frame.
+      requestAnimationFrame(() => setCreated(result))
       await load()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not create the company.')
@@ -106,19 +122,28 @@ export default function CompaniesPage() {
       <ErrorText error={error} />
       <div className="table-wrap">
         <table>
-          <thead><tr><th>Company</th><th>Country</th><th>Plan</th><th className="num">Employees</th><th>Modules</th><th>Status</th><th /></tr></thead>
+          <thead><tr><th>Company</th><th>Country</th><th>Plan</th><th className="num">Employees</th><th>Modules</th><th>Billing</th><th>Status</th><th /></tr></thead>
           <tbody>
             {companies.map((c) => {
               const over = c.maxEmployees !== null && c.employees > c.maxEmployees
               return (
                 <tr key={c.id}>
-                  <td><strong>{c.name}</strong>{c.provider && <span className="muted small"> · your company</span>}</td>
+                  <td>
+                    {c.provider ? <strong>{c.name}</strong> : <Link to={`/platform/companies/${c.id}`}><strong>{c.name}</strong></Link>}
+                    {c.provider && <span className="muted small"> · your company</span>}
+                    {c.supportOpen && <span className="badge warn small">Support open</span>}
+                    <div className="muted small">{c.lastSignIn ? `Last sign-in ${longDay(c.lastSignIn)}` : 'No sign-in yet'}</div>
+                  </td>
                   <td>{countries[c.countryCode] ?? c.countryCode}</td>
                   <td>{c.planName}</td>
                   <td className="num">{over ? <span className="badge warn">{c.employees} / {c.maxEmployees}</span> : c.employees}</td>
                   <td>{c.modules.map((m) => MODULE_NAMES[m]).join(', ')}</td>
-                  <td><span className={`badge ${c.status === 'ACTIVE' ? 'ok' : 'off'}`}>{c.status === 'ACTIVE' ? 'Active' : 'Suspended'}</span></td>
-                  <td className="actions"><Button className="secondary" onClick={() => openEdit(c)}>Change plan</Button></td>
+                  <td><Billing c={c} /></td>
+                  <td><span className={`badge ${c.status === 'ACTIVE' ? 'ok' : 'off'}`}>{c.status === 'ACTIVE' ? 'Active' : c.suspendedReason === 'UNPAID' ? 'Read-only: unpaid' : 'Suspended'}</span></td>
+                  <td className="actions">
+                    <Button className="secondary" onClick={() => openEdit(c)}>Change plan</Button>
+                    {!c.provider && <Link className="button secondary" to={`/platform/companies/${c.id}`}>Open</Link>}
+                  </td>
                 </tr>
               )
             })}
@@ -177,7 +202,7 @@ export default function CompaniesPage() {
               <label>Status
                 <select value={editStatus} onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'SUSPENDED')}>
                   <option value="ACTIVE">Active</option>
-                  <option value="SUSPENDED">Suspended (scheduled jobs stop)</option>
+                  <option value="SUSPENDED">Suspended: read-only, scheduled jobs stop</option>
                 </select>
               </label>
             )}
