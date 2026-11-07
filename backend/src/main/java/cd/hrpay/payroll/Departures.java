@@ -10,13 +10,12 @@ import cd.hrpay.salary.SalaryService;
 import cd.hrpay.security.CurrentUser;
 import cd.hrpay.user.AppUser;
 import cd.hrpay.user.UserRepository;
-import com.lowagie.text.Document;
-import com.lowagie.text.Element;
-import com.lowagie.text.Font;
-import com.lowagie.text.Image;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfWriter;
+import org.openpdf.text.Document;
+import org.openpdf.text.Element;
+import org.openpdf.text.Font;
+import org.openpdf.text.PageSize;
+import org.openpdf.text.Paragraph;
+import org.openpdf.text.pdf.PdfWriter;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -72,12 +71,13 @@ public class Departures {
     private final Loans loans;
     private final cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth;
     private final Company company;
+    private final cd.hrpay.payment.Letterhead letterhead;
     private final AuditService audit;
     private final Clock clock;
 
     public Departures(JdbcClient jdbc, UserRepository users, SalaryService salaries, EmployeeFile files,
                       StatutoryRates statutory, Loans loans, cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth,
-                      Company company, AuditService audit, Clock clock) {
+                      Company company, cd.hrpay.payment.Letterhead letterhead, AuditService audit, Clock clock) {
         this.jdbc = jdbc;
         this.users = users;
         this.salaries = salaries;
@@ -86,6 +86,7 @@ public class Departures {
         this.loans = loans;
         this.thirteenthMonth = thirteenthMonth;
         this.company = company;
+        this.letterhead = letterhead;
         this.audit = audit;
         this.clock = clock;
     }
@@ -421,28 +422,13 @@ public class Departures {
                 .max(java.util.Comparator.comparing(EmployeeFile.Contract::startDate)).orElse(null);
         LocalDate from = hired(u);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 60, 60, 50, 50);
-        PdfWriter.getInstance(doc, bytes);
+        cd.hrpay.payment.Letterhead.Head head = letterhead.read();
+        Document doc = new Document(PageSize.A4, 60, 60, 40, cd.hrpay.payment.Letterhead.Head.bottomMargin());
+        head.footer(PdfWriter.getInstance(doc, bytes));
         doc.addTitle(Texts.t("Certificate of employment"));
         doc.addCreator("HR Pay");
         doc.open();
-        company.logo().ifPresent(logo -> {
-            try {
-                Image image = Image.getInstance(logo.data());
-                image.scaleToFit(140, 55);
-                doc.add(image);
-            } catch (Exception ignored) {
-                // a broken logo never stops the certificate
-            }
-        });
-        doc.add(new Paragraph(employer.name(), BOLD));
-        for (String line : new String[] {employer.address(), employer.rccm() == null ? null : "RCCM " + employer.rccm(),
-                employer.nationalId() == null ? null : Texts.t("Nat. ID %s", employer.nationalId()),
-                employer.taxNumber() == null ? null : Texts.t("Tax no. %s", employer.taxNumber())}) {
-            if (line != null && !line.isBlank()) {
-                doc.add(new Paragraph(line, SMALL));
-            }
-        }
+        head.draw(doc);
         Paragraph title = new Paragraph(Texts.t("CERTIFICATE OF EMPLOYMENT"), TITLE);
         title.setAlignment(Element.ALIGN_CENTER);
         title.setSpacingBefore(40);

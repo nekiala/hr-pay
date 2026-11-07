@@ -4,18 +4,18 @@ import cd.hrpay.i18n.Texts;
 
 import cd.hrpay.payment.Company;
 import cd.hrpay.payment.YearSummaries;
-import com.lowagie.text.Chunk;
-import com.lowagie.text.Document;
-import com.lowagie.text.Element;
-import com.lowagie.text.Font;
-import com.lowagie.text.Image;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.Phrase;
-import com.lowagie.text.Rectangle;
-import com.lowagie.text.pdf.PdfPCell;
-import com.lowagie.text.pdf.PdfPTable;
-import com.lowagie.text.pdf.PdfWriter;
+import org.openpdf.text.Chunk;
+import org.openpdf.text.Document;
+import org.openpdf.text.Element;
+import org.openpdf.text.Font;
+import org.openpdf.text.Image;
+import org.openpdf.text.PageSize;
+import org.openpdf.text.Paragraph;
+import org.openpdf.text.Phrase;
+import org.openpdf.text.Rectangle;
+import org.openpdf.text.pdf.PdfPCell;
+import org.openpdf.text.pdf.PdfPTable;
+import org.openpdf.text.pdf.PdfWriter;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
@@ -443,7 +443,7 @@ public class PayslipPdf {
         }
         for (int i = facts.size() % perRow; i > 0 && i < perRow; i++) {
             PdfPCell empty = new PdfPCell();
-            empty.setBorder(com.lowagie.text.Rectangle.TOP);
+            empty.setBorder(org.openpdf.text.Rectangle.TOP);
             empty.setBorderColor(RULE);
             empty.setBorderWidth(0.4f);
             grid.addCell(empty);

@@ -1,17 +1,16 @@
 package cd.hrpay.lifecycle;
 
 import cd.hrpay.i18n.Texts;
-import cd.hrpay.payment.Company;
-import com.lowagie.text.Document;
-import com.lowagie.text.Element;
-import com.lowagie.text.Font;
-import com.lowagie.text.Image;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.pdf.PdfCopy;
-import com.lowagie.text.pdf.PdfImportedPage;
-import com.lowagie.text.pdf.PdfReader;
-import com.lowagie.text.pdf.PdfWriter;
+import cd.hrpay.payment.Letterhead;
+import org.openpdf.text.Document;
+import org.openpdf.text.Element;
+import org.openpdf.text.Font;
+import org.openpdf.text.PageSize;
+import org.openpdf.text.Paragraph;
+import org.openpdf.text.pdf.PdfCopy;
+import org.openpdf.text.pdf.PdfImportedPage;
+import org.openpdf.text.pdf.PdfReader;
+import org.openpdf.text.pdf.PdfWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -32,10 +31,10 @@ public class LifecyclePdf {
     /** A line of a signature page: a label and its value. */
     public record Line(String label, String value) {}
 
-    private final Company company;
+    private final Letterhead letterhead;
 
-    public LifecyclePdf(Company company) {
-        this.company = company;
+    public LifecyclePdf(Letterhead letterhead) {
+        this.letterhead = letterhead;
     }
 
     /**
@@ -44,12 +43,13 @@ public class LifecyclePdf {
      */
     public byte[] letter(String title, String number, String body, String placeAndDate, List<Signature> signatures) {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-        Document doc = new Document(PageSize.A4, 60, 60, 50, 50);
-        PdfWriter.getInstance(doc, bytes);
+        Letterhead.Head head = letterhead.read();
+        Document doc = new Document(PageSize.A4, 60, 60, 40, Letterhead.Head.bottomMargin());
+        head.footer(PdfWriter.getInstance(doc, bytes));
         doc.addTitle(title);
         doc.addCreator("HR Pay");
         doc.open();
-        heading(doc);
+        head.draw(doc);
         Paragraph t = new Paragraph(title, TITLE);
         t.setAlignment(Element.ALIGN_CENTER);
         t.setSpacingBefore(28);
@@ -88,12 +88,12 @@ public class LifecyclePdf {
             doc.add(d);
         }
         if (!signatures.isEmpty()) {
-            com.lowagie.text.pdf.PdfPTable table = new com.lowagie.text.pdf.PdfPTable(signatures.size());
+            org.openpdf.text.pdf.PdfPTable table = new org.openpdf.text.pdf.PdfPTable(signatures.size());
             table.setWidthPercentage(100);
             table.setSpacingBefore(26);
             for (Signature s : signatures) {
-                com.lowagie.text.pdf.PdfPCell cell = new com.lowagie.text.pdf.PdfPCell();
-                cell.setBorder(com.lowagie.text.Rectangle.NO_BORDER);
+                org.openpdf.text.pdf.PdfPCell cell = new org.openpdf.text.pdf.PdfPCell();
+                cell.setBorder(org.openpdf.text.Rectangle.NO_BORDER);
                 cell.addElement(new Paragraph(s.role(), BOLD));
                 cell.addElement(new Paragraph(s.name() == null ? " " : s.name(), NORMAL));
                 cell.setMinimumHeight(70);
@@ -150,27 +150,6 @@ public class LifecyclePdf {
             return out.toByteArray();
         } catch (java.io.IOException e) {
             throw new IllegalStateException("The signed document cannot be put together", e);
-        }
-    }
-
-    private void heading(Document doc) {
-        Company.Details employer = company.get();
-        company.logo().ifPresent(logo -> {
-            try {
-                Image image = Image.getInstance(logo.data());
-                image.scaleToFit(140, 55);
-                doc.add(image);
-            } catch (Exception ignored) {
-                // a broken logo never stops the document
-            }
-        });
-        doc.add(new Paragraph(employer.name() == null ? "" : employer.name(), BOLD));
-        for (String line : new String[] {employer.address(), employer.rccm() == null ? null : "RCCM " + employer.rccm(),
-                employer.nationalId() == null ? null : Texts.t("Nat. ID %s", employer.nationalId()),
-                employer.taxNumber() == null ? null : Texts.t("Tax no. %s", employer.taxNumber())}) {
-            if (line != null && !line.isBlank()) {
-                doc.add(new Paragraph(line, SMALL));
-            }
         }
     }
 }
