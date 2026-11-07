@@ -41,16 +41,30 @@ public class HolidayService {
     /** Creates any missing occurrences for the year (observed = official date), then returns the year. */
     @Transactional
     public List<HolidayOccurrence> year(String country, int year) {
-        for (HolidayDefinition d : definitions.findByCountryCodeOrderByUsualMonthAscUsualDayAsc(country)) {
-            if (d.isActive() && occurrences.findByDefinitionIdAndYear(d.getId(), year).isEmpty()) {
-                try {
-                    occurrences.save(new HolidayOccurrence(d, year, LocalDate.of(year, d.getUsualMonth(), d.getUsualDay())));
-                } catch (DateTimeException e) {
-                    // 29 February in a non-leap year: no occurrence that year.
-                }
-            }
+        boolean missing = definitions.findByCountryCodeOrderByUsualMonthAscUsualDayAsc(country).stream()
+                .anyMatch(d -> d.isActive() && occurrences.findByDefinitionIdAndYear(d.getId(), year).isEmpty());
+        if (missing) {
+            // In a transaction of its own: the caller may only be reading, and two first views may race.
+            create.executeWithoutResult(s -> jdbc.sql("""
+                    insert into holiday_occurrence (definition_id, year, official_date, observed_date)
+                    select id, :year, make_date(:year, usual_month, usual_day), make_date(:year, usual_month, usual_day)
+                    from holiday_definition
+                    where country_code = :country and active
+                      and (usual_month <> 2 or usual_day <> 29 or (:year % 4 = 0 and (:year % 100 <> 0 or :year % 400 = 0)))
+                    on conflict do nothing""").param("year", year).param("country", country).update());
         }
         return occurrences.findByCountryAndYear(country, year);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.jdbc.core.simple.JdbcClient jdbc;
+
+    private org.springframework.transaction.support.TransactionTemplate create;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setTransactions(org.springframework.transaction.PlatformTransactionManager manager) {
+        create = new org.springframework.transaction.support.TransactionTemplate(manager);
+        create.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /** Observed holiday dates between two dates (inclusive), creating occurrences for the years involved. */

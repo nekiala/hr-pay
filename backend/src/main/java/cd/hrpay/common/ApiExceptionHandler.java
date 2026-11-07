@@ -35,6 +35,11 @@ public class ApiExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "You do not have permission to do this.");
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    ProblemDetail status(org.springframework.web.server.ResponseStatusException e) {
+        return ProblemDetail.forStatusAndDetail(e.getStatusCode(), e.getReason());
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     ProblemDetail integrity(DataIntegrityViolationException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "The change conflicts with existing data.");

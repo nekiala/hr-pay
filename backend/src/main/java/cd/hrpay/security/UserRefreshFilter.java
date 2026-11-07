@@ -1,5 +1,6 @@
 package cd.hrpay.security;
 
+import cd.hrpay.tenancy.Tenants;
 import cd.hrpay.user.AppUser;
 import cd.hrpay.user.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -22,13 +23,59 @@ import org.springframework.web.filter.OncePerRequestFilter;
 class UserRefreshFilter extends OncePerRequestFilter {
 
     private final UserRepository users;
+    private final Tenants tenants;
 
-    UserRefreshFilter(UserRepository users) {
+    UserRefreshFilter(UserRepository users, Tenants tenants) {
         this.users = users;
+        this.tenants = tenants;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
+        // The rest of the request works for the signed-in user's company only.
+        Long company = companyOf(SecurityContextHolder.getContext().getAuthentication());
+        if (company == null) {
+            refreshAndContinue(request, response, chain);
+            return;
+        }
+        try {
+            tenants.callAs(company, () -> {
+                try {
+                    refreshAndContinue(request, response, chain);
+                    return null;
+                } catch (IOException | ServletException e) {
+                    throw new Wrapped(e);
+                }
+            });
+        } catch (Wrapped w) {
+            if (w.getCause() instanceof IOException io) {
+                throw io;
+            }
+            throw (ServletException) w.getCause();
+        }
+    }
+
+    private static final class Wrapped extends RuntimeException {
+        Wrapped(Exception cause) {
+            super(cause);
+        }
+    }
+
+    private Long companyOf(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        if (auth.getPrincipal() instanceof AuthenticatedUser principal) {
+            return principal.companyId();
+        }
+        if (auth.getPrincipal() instanceof OidcUser oidc) {
+            return tenants.companyOfEmail(oidc.getEmail());
+        }
+        return null;
+    }
+
+    private void refreshAndContinue(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()) {

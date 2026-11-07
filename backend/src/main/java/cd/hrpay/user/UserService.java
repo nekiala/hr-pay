@@ -46,6 +46,9 @@ public class UserService {
         this.audit = audit;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.tenancy.Tenants tenants;
+
     @Transactional
     public AppUser create(UserData data, List<String> roleCodes, String initialPassword) {
         UserData clean = normalize(data);
@@ -215,6 +218,11 @@ public class UserService {
         users.findByEmailIgnoreCase(data.email()).filter(u -> !u.getId().equals(selfId)).ifPresent(u -> {
             throw new ConflictException("This email address is already used.");
         });
+        // An email signs in to one company only, so it is unique across all companies too.
+        Long owner = tenants.companyOfEmail(data.email());
+        if (owner != null && !owner.equals(cd.hrpay.tenancy.TenantContext.companyId())) {
+            throw new ConflictException("This email address is already used.");
+        }
         users.findByRegistrationNoIgnoreCase(data.registrationNo()).filter(u -> !u.getId().equals(selfId))
                 .ifPresent(u -> {
                     throw new ConflictException("This registration number is already used.");

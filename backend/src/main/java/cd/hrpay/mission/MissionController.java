@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@cd.hrpay.platform.RequiresModule("ATTENDANCE")
 @RequestMapping("/api/missions")
 public class MissionController {
 

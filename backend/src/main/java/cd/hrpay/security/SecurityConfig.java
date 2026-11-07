@@ -2,6 +2,7 @@ package cd.hrpay.security;
 
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.AppProperties;
+import cd.hrpay.tenancy.Tenants;
 import cd.hrpay.user.AppUser;
 import cd.hrpay.user.UserRepository;
 import org.springframework.beans.factory.ObjectProvider;
@@ -34,7 +35,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain api(HttpSecurity http, UserRepository users, AuditService audit,
+    SecurityFilterChain api(HttpSecurity http, UserRepository users, AuditService audit, Tenants tenants,
                             ObjectProvider<ClientRegistrationRepository> googleClients,
                             SecurityContextRepository contextRepository) throws Exception {
         http
@@ -54,11 +55,11 @@ public class SecurityConfig {
                 .httpBasic(b -> b.disable())
                 .logout(l -> l.logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((req, res, a) -> res.setStatus(HttpStatus.NO_CONTENT.value())))
-                .addFilterBefore(new UserRefreshFilter(users), AuthorizationFilter.class);
+                .addFilterBefore(new UserRefreshFilter(users, tenants), AuthorizationFilter.class);
 
         if (googleClients.getIfAvailable() != null) {
             http.oauth2Login(o -> o
-                    .userInfoEndpoint(u -> u.oidcUserService(new GoogleOidcUserService(users, audit)))
+                    .userInfoEndpoint(u -> u.oidcUserService(new GoogleOidcUserService(users, audit, tenants)))
                     .defaultSuccessUrl("/", true)
                     .failureHandler((req, res, ex) -> res.sendRedirect("/login?error=google")));
         }

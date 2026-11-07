@@ -29,6 +29,9 @@ public class AppUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    /** Filled by the database from the connection's company. */
+    @Column(name = "company_id", insertable = false, updatable = false)
+    private Long companyId;
     private String email;
     private String registrationNo;
     @Column(name = "phone_e164")
@@ -79,6 +82,7 @@ public class AppUser {
     public boolean isActive() { return status == UserStatus.ACTIVE; }
 
     public Long getId() { return id; }
+    public Long getCompanyId() { return companyId != null ? companyId : cd.hrpay.tenancy.TenantContext.companyId(); }
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
     public String getRegistrationNo() { return registrationNo; }

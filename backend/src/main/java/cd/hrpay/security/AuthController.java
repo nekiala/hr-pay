@@ -2,7 +2,9 @@ package cd.hrpay.security;
 
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
+import cd.hrpay.tenancy.Tenants;
 import cd.hrpay.user.AppUser;
+import org.springframework.transaction.support.TransactionTemplate;
 import cd.hrpay.user.UserRepository;
 import cd.hrpay.user.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,11 +43,18 @@ public class AuthController {
 
     public record ChangePassword(@NotBlank String currentPassword, @NotBlank String newPassword) {}
 
+    public record CompanyInfo(long id, String name, String mode, String plan, Set<String> modules, Integer maxEmployees,
+                              int employees, boolean locked, java.util.List<cd.hrpay.platform.Entitlements.Notice> notices) {}
+
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
-                     Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted) {
-        static Me of(AppUser u) {
+                     Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company) {
+        static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c) {
+            Set<String> permissions = new java.util.TreeSet<>();
+            Authorities.of(u).forEach(a -> permissions.add(a.getAuthority()));
+            CompanyInfo company = c == null ? null : new CompanyInfo(c.companyId(), c.companyName(), c.mode().name(),
+                    c.planName(), c.modules(), c.maxEmployees(), c.employees(), c.locked(), c.notices());
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
-                    u.permissionCodes(), u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null);
+                    permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company);
         }
     }
 
@@ -58,10 +67,17 @@ public class AuthController {
     private final LoginAttempts attempts;
     private final AuditService audit;
     private final ObjectProvider<ClientRegistrationRepository> googleClients;
+    private final Tenants tenants;
+    private final TransactionTemplate tx;
+    private final cd.hrpay.platform.Entitlements entitlements;
 
     public AuthController(AuthenticationManager authenticationManager, SecurityContextRepository contextRepository,
                           UserRepository users, UserService userService, LoginAttempts attempts,
-                          AuditService audit, ObjectProvider<ClientRegistrationRepository> googleClients) {
+                          AuditService audit, ObjectProvider<ClientRegistrationRepository> googleClients,
+                          Tenants tenants, TransactionTemplate tx, cd.hrpay.platform.Entitlements entitlements) {
+        this.tenants = tenants;
+        this.tx = tx;
+        this.entitlements = entitlements;
         this.authenticationManager = authenticationManager;
         this.contextRepository = contextRepository;
         this.users = users;
@@ -83,10 +99,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Transactional
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest body, HttpServletRequest request,
                                    HttpServletResponse response) {
         String email = body.email().trim().toLowerCase();
+        // The email finds the company; everything after works within it. An unknown email belongs to none.
+        Long company = tenants.companyOfEmail(email);
+        java.util.function.Supplier<ResponseEntity<?>> work = () -> tx.execute(s -> signIn(email, body, request, response));
+        return company == null ? tenants.callAsPlatform(work) : tenants.callAs(company, work);
+    }
+
+    private ResponseEntity<?> signIn(String email, LoginRequest body, HttpServletRequest request,
+                                     HttpServletResponse response) {
         if (attempts.isBlocked(email)) {
             audit.recordAs(email, "auth.login_blocked", "user", null, Map.of("method", "password"));
             return problem(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
@@ -115,7 +138,7 @@ public class AuthController {
         SecurityContextHolder.setContext(context);
         contextRepository.saveContext(context, request, response);
         audit.recordAs(user.getEmail(), "auth.login", "user", user.getId(), Map.of("method", "password"));
-        return ResponseEntity.ok(Me.of(user));
+        return ResponseEntity.ok(Me.of(user, entitlements.current()));
     }
 
     @GetMapping("/me")
@@ -125,7 +148,7 @@ public class AuthController {
         if (id == null) {
             throw new BusinessRuleException("Not signed in.");
         }
-        return Me.of(userService.find(id));
+        return Me.of(userService.find(id), entitlements.current());
     }
 
     @PostMapping("/password")

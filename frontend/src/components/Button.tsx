@@ -8,7 +8,7 @@ const VERBS: Record<string, string> = {
   add: 'Adding', apply: 'Applying', approve: 'Approving', assign: 'Assigning', calculate: 'Calculating', cancel: 'Cancelling',
   change: 'Changing', check: 'Checking', choose: 'Saving', close: 'Closing', confirm: 'Confirming', create: 'Creating',
   deactivate: 'Deactivating', delete: 'Deleting', disable: 'Disabling', enable: 'Enabling', end: 'Ending', enter: 'Saving',
-  generate: 'Generating', grant: 'Granting', import: 'Importing', move: 'Moving', propose: 'Sending', record: 'Recording',
+  generate: 'Generating', grant: 'Granting', import: 'Importing', install: 'Installing', move: 'Moving', propose: 'Sending', record: 'Recording',
   refresh: 'Refreshing', refuse: 'Refusing', register: 'Registering', reject: 'Rejecting', remove: 'Removing',
   reopen: 'Reopening', save: 'Saving', send: 'Sending', set: 'Saving', sign: 'Signing in', skip: 'Saving',
   start: 'Starting', submit: 'Sending', void: 'Voiding', work: 'Working it out', accept: 'Accepting', acknowledge: 'Sending',

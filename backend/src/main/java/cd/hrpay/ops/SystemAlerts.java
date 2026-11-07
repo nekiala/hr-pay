@@ -25,6 +25,16 @@ public class SystemAlerts {
     private final UserRepository users;
     private final NotificationService notifications;
 
+    private cd.hrpay.tenancy.Tenants tenants;
+    private Long providerCompany;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setTenants(cd.hrpay.tenancy.Tenants tenants,
+                    @org.springframework.beans.factory.annotation.Value("${app.tenancy.provider-company:1}") Long providerCompany) {
+        this.tenants = tenants;
+        this.providerCompany = providerCompany;
+    }
+
     public SystemAlerts(JdbcClient jdbc, UserRepository users, NotificationService notifications) {
         this.jdbc = jdbc;
         this.users = users;
@@ -44,11 +54,14 @@ public class SystemAlerts {
                     .query(Boolean.class).single();
             if (Boolean.TRUE.equals(notify)) {
                 jdbc.sql("update system_alert set notified_at = now() where kind = ? and fingerprint = ?").param(kind).param(fp).update();
-                for (AppUser admin : recipients()) {
-                    notifications.sendEmail(admin, "HR Pay alert: " + cut(summary, 120), summary
-                            + "\n\n" + (detail == null ? "" : cut(detail, 3000))
-                            + "\n\nSee the System page in HR Pay. You get at most one email an hour for the same problem.");
-                }
+                // Alerts are about the installation: they go to the provider company's administrators.
+                tenants.runAs(providerCompany, () -> {
+                    for (AppUser admin : recipients()) {
+                        notifications.sendEmail(admin, "HR Pay alert: " + cut(summary, 120), summary
+                                + "\n\n" + (detail == null ? "" : cut(detail, 3000))
+                                + "\n\nSee the System page in HR Pay. You get at most one email an hour for the same problem.");
+                    }
+                });
             }
         } catch (RuntimeException e) {
             log.error("Could not record the alert '{}': {}", summary, e.getMessage());

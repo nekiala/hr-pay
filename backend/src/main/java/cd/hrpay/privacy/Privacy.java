@@ -65,7 +65,7 @@ public class Privacy {
     public Map<String, Object> save(@Valid @RequestBody Settings b) {
         jdbc.sql("""
                 insert into payroll_setting (key, value) values ('GPS_RETENTION_DAYS', ?)
-                on conflict (key) do update set value = excluded.value""").param(String.valueOf(b.gpsRetentionDays())).update();
+                on conflict (company_id, key) do update set value = excluded.value""").param(String.valueOf(b.gpsRetentionDays())).update();
         audit.record("privacy.gps_retention_changed", "payroll_setting", null, Map.of("days", b.gpsRetentionDays()));
         return Map.of("gpsRetentionDays", b.gpsRetentionDays(), "erased", erase());
     }
@@ -97,7 +97,7 @@ public class Privacy {
 
     @Scheduled(cron = "${app.privacy.cron:0 45 2 * * *}", zone = "Africa/Kinshasa")
     public void nightly() {
-        locks.run("gps-erase", java.time.Duration.ofMinutes(30), () -> {
+        locks.runForEachCompany("gps-erase", java.time.Duration.ofMinutes(30), () -> {
             int erased = erase();
             if (erased > 0) {
                 log.info("Erased the GPS position of {} check-in(s) older than the retention.", erased);
