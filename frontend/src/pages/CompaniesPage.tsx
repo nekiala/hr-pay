@@ -78,7 +78,9 @@ export default function CompaniesPage() {
     try {
       const result = await api<Created>('/api/platform/companies', { method: 'POST', body: { name, countryCode: country, planCode: plan, modules, admin } })
       setAdding(false)
-      setCreated(result)
+      // Open the next dialog only once the form's dialog is gone: Firefox's page crashed when one modal dialog
+      // closed and another opened in the same frame.
+      requestAnimationFrame(() => setCreated(result))
       await load()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Could not create the company.')
