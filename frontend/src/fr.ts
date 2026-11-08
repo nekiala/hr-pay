@@ -2561,6 +2561,19 @@ const fr: Record<string, string> = {
   "Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.": "Deux demi-heures payées par jour pendant l'allaitement (Code du travail art. 132) : une heure de moins au travail n'est pas retenue.",
   "SMIG coefficient": "Coefficient SMIG",
   "Coefficient on the SMIG for the legal minimum of the grade (DRC Décret 25/22, 100 for the lowest)": "Coefficient appliqué au SMIG pour le minimum légal du grade (RDC Décret 25/22, 100 pour le plus bas)",
+  "Grade": "Grade",
+  "Complement": "Complément",
+  "Coefficient": "Coefficient",
+  "Legal minimum": "Minimum légal",
+  "Base now": "Base actuelle",
+  "New base": "Nouvelle base",
+  "Working it out…": "Calcul en cours…",
+  "Raise grades to the legal minimum…": "Relever les grades au minimum légal…",
+  "Raise grades to the legal minimum": "Relever les grades au minimum légal",
+  "Each grade base below SMIG x coefficient x 26 days (Décret 25/22) is raised. Each person on a raised grade keeps the same net: the basic becomes the new base and the complement shrinks; when the net is too low for the new base, the person moves to the nearest grade below whose base fits, with a complement for the rest.": "Chaque base de grade inférieure au SMIG x coefficient x 26 jours (Décret 25/22) est relevée. Chaque personne d'un grade relevé garde le même net : le salaire de base devient la nouvelle base et le complément diminue ; si le net est trop bas pour la nouvelle base, la personne passe au grade inférieur le plus proche dont la base convient, avec un complément pour le reste.",
+  "Applied from {a}.": "Appliqué à partir du {a}.",
+  "SMIG {a} FC a day; {b} FC to the dollar ({c}).": "SMIG {a} FC par jour ; {b} FC pour un dollar ({c}).",
+  "Every grade is at or above its legal minimum.": "Tous les grades sont au minimum légal ou au-dessus.",
 }
 
 export default fr

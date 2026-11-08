@@ -1217,5 +1217,14 @@
  "Family event leave is limited to %s working days a year; %s are already taken or requested in %s.": "Les congés de circonstance sont limités à %s jours ouvrables par an ; %s sont déjà pris ou demandés en %s.",
  "Annual leave must be paid in the DR Congo (Code du travail art. 142).": "Le congé annuel doit être payé en RD Congo (Code du travail art. 142).",
  "%s: %s of work planned, more than the legal 8 hours a day; the time above is overtime.": "%s : %s de travail prévues, plus que les 8 heures légales par jour ; le temps au-delà est en heures supplémentaires.",
- "Paid on %s, more than %s days after the end of the month (Code du travail art. 99: at the latest %s).": "Payé le %s, plus de %s jours après la fin du mois (Code du travail art. 99 : au plus tard le %s)."
+ "Paid on %s, more than %s days after the end of the month (Code du travail art. 99: at the latest %s).": "Payé le %s, plus de %s jours après la fin du mois (Code du travail art. 99 : au plus tard le %s).",
+ "The payroll of %s or later is already approved: choose a later month.": "La paie de %s ou d'un mois suivant est déjà approuvée : choisissez un mois plus tard.",
+ "Choose the first day of a month.": "Choisissez le premier jour d'un mois.",
+ "Grade minimums from the SMIG apply to the DR Congo only.": "Les minimums de grade tirés du SMIG ne s'appliquent qu'en RD Congo.",
+ "No grade has a base low enough for this net.": "Aucun grade n'a une base assez basse pour ce net.",
+ "A salary already starts on %s: change it on the employee file.": "Un salaire commence déjà le %s : modifiez-le dans le dossier de l'employé.",
+ "A contract already starts on %s: change its grade on the employee file.": "Un contrat commence déjà le %s : modifiez son grade dans le dossier de l'employé.",
+ "You cannot change your own contract.": "Vous ne pouvez pas modifier votre propre contrat.",
+ "Legal minimum of grade %s (SMIG %s FC x %s x 26 days)": "Minimum légal du grade %s (SMIG %s FC x %s x 26 jours)",
+ "Grade %s to %s, same net pay": "Grade %s vers %s, même salaire net"
 }
