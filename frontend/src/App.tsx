@@ -33,13 +33,17 @@ import PayElementsPage from './pages/PayElementsPage'
 import PayEntriesPage from './pages/PayEntriesPage'
 import QuinzaineSettingsPage from './pages/QuinzaineSettingsPage'
 import StatutoryRatesPage from './pages/StatutoryRatesPage'
-import PayrollRunsPage from './pages/PayrollRunsPage'
+import PayRunsPage from './pages/PayRunsPage'
+import NewPayRunPage from './pages/NewPayRunPage'
+import MonthlyRunPage from './pages/MonthlyRunPage'
+import ThirteenthRunPage from './pages/ThirteenthRunPage'
+import ThirteenthSettingsPage from './pages/ThirteenthSettingsPage'
 import PayslipPage from './pages/PayslipPage'
 import LoansPage from './pages/LoansPage'
 import MyPayslipsPage from './pages/MyPayslipsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
-import LeavePayPage from './pages/LeavePayPage'
-import QuinzainePage from './pages/QuinzainePage'
+import LeavePayRunPage from './pages/LeavePayRunPage'
+import QuinzaineRunPage from './pages/QuinzaineRunPage'
 import PayrollReportsPage from './pages/PayrollReportsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import CorrectionsPage from './pages/CorrectionsPage'
@@ -95,20 +99,20 @@ function PayrollStaff({ children }: { children: ReactNode }) {
     : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
-function PayElementsRoute({ page }: { page?: 'rates' }) {
+function PayElementsRoute({ page }: { page?: 'rates' | 'thirteenth' }) {
   const { can } = useAuth()
   return can('salary.read') || can('masterdata.manage')
-    ? (page === 'rates' ? <StatutoryRatesPage /> : <PayElementsPage />)
+    ? (page === 'rates' ? <StatutoryRatesPage /> : page === 'thirteenth' ? <ThirteenthSettingsPage /> : <PayElementsPage />)
     : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
-function PayrollRoute({ page }: { page?: 'loans' }) {
+function PayrollRoute({ page }: { page?: 'loans' | 'monthly' | 'thirteenth' }) {
   const { can } = useAuth()
   if (page === 'loans') {
     return can('loan.manage') || can('payslip.read.all') ? <LoansPage /> : <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return can('payroll.run') || can('payroll.approve') || can('payslip.read.all')
-    ? <PayrollRunsPage />
+    ? (page === 'monthly' ? <MonthlyRunPage /> : page === 'thirteenth' ? <ThirteenthRunPage /> : <PayRunsPage />)
     : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
@@ -213,11 +217,15 @@ export default function App() {
           <Route path="/payroll/loans" element={<PayrollRoute page="loans" />} />
           <Route path="/payslips/:id" element={<PayslipPage />} />
           <Route path="/payslips/:id/correct" element={<Guard permission="payroll.run"><CorrectPayslipPage /></Guard>} />
-          <Route path="/payroll/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
-          <Route path="/payroll/quinzaine" element={<PayrollStaff><QuinzainePage /></PayrollStaff>} />
+          <Route path="/payroll/new" element={<PayrollStaff><NewPayRunPage /></PayrollStaff>} />
+          <Route path="/payroll/runs/monthly/:month" element={<PayrollRoute page="monthly" />} />
+          <Route path="/payroll/runs/quinzaine/:id" element={<PayrollStaff><QuinzaineRunPage /></PayrollStaff>} />
+          <Route path="/payroll/runs/leave-pay/:month" element={<PayrollStaff><LeavePayRunPage /></PayrollStaff>} />
+          <Route path="/payroll/runs/thirteenth/:id" element={<PayrollRoute page="thirteenth" />} />
+          <Route path="/payroll/runs/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
+          <Route path="/payroll/thirteenth-month/settings" element={<PayElementsRoute page="thirteenth" />} />
           <Route path="/payroll/quinzaine/settings" element={<PayrollStaff><QuinzaineSettingsPage /></PayrollStaff>} />
           <Route path="/payroll/entries" element={<Guard permission="salary.read"><PayEntriesPage /></Guard>} />
-          <Route path="/payroll/leave-pay" element={<PayrollStaff><LeavePayPage /></PayrollStaff>} />
           <Route path="/payroll/compare" element={<PayrollStaff><ComparePage /></PayrollStaff>} />
           <Route path="/payroll/accounting" element={<Guard permission="accounting.export"><AccountingPage /></Guard>} />
           <Route path="/my/payslips" element={<Guard permission="payslip.read.own"><MyPayslipsPage /></Guard>} />

@@ -46,7 +46,7 @@ export default function CorrectPayslipPage() {
   const submit = async () => {
     setError(null)
     const c = await api<Correction>(`/api/payslips/${id}/corrections`, { method: 'POST', body: { mode, reason, extra: mode === 'REVERSAL' ? [] : extras() } })
-    navigate(c.complementaryId ? `/payslips/${c.complementaryId}` : '/payroll/corrections')
+    navigate(c.complementaryId ? `/payslips/${c.complementaryId}` : '/payroll/runs/corrections')
   }
 
   const cur = preview?.currency ?? 'USD'
@@ -57,7 +57,7 @@ export default function CorrectPayslipPage() {
       <h2>{t('Correct a closed payslip')}{preview ? ` · ${preview.name}, ${monthName(preview.month)}` : ''}</h2>
       <p className="muted">{t('A closed payslip is never changed. It is worked out again with today\'s data (salary, attendance, the month\'s entries and the lines you add below), and the difference is settled the way you choose.')}</p>
       <ErrorText error={error} />
-      {preview?.pending && <p className="notice">{t('A complementary payslip for this payslip waits for approval: approve or discard it first.')} <Link to="/payroll/corrections">{t('Open the corrections')}</Link></p>}
+      {preview?.pending && <p className="notice">{t('A complementary payslip for this payslip waits for approval: approve or discard it first.')} <Link to="/payroll/runs/corrections">{t('Open the corrections')}</Link></p>}
 
       <div className="card">
         <h3>{t('Lines to add for the correction')}</h3>

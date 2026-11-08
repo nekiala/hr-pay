@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ApiError, api, downloadJob, money, type PayrollRun, type RunView } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
-import { ThirteenthMonthCard } from '../components/ThirteenthMonthCard'
 import { useAsk } from '../components/Dialogs'
 import { Button } from '../components/Button'
 import { t, locale } from '../i18n'
@@ -15,11 +14,15 @@ const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale(
 
 type HolidayAdjustment = { id: number; userId: number; userName: string; payslipId: number; closedMonth: string; amount: number; currency: string; targetMonth: string; note: string; createdBy: string }
 
-export default function PayrollRunsPage() {
+/** One month-end payroll: calculate, approve, close, its payslips and totals. */
+export default function MonthlyRunPage() {
+  const navigate = useNavigate()
+  const { month: routeMonth } = useParams()
   const ask = useAsk()
   const { can } = useAuth()
   const [runs, setRuns] = useState<PayrollRun[]>([])
-  const [month, setMonth] = useState(lastMonth())
+  const month = routeMonth ?? lastMonth()
+  const setMonth = (m: string) => navigate(`/payroll/runs/monthly/${m}`)
   const [view, setView] = useState<RunView | null>(null)
   const [busy, setBusy] = useState(false)
   const [raises, setRaises] = useState<Raise[]>([])
@@ -70,7 +73,8 @@ export default function PayrollRunsPage() {
   const pending = adjustments.filter((a) => a.targetMonth.slice(0, 7) >= month)
   return (
     <section>
-      <h2>{t('Payroll')}</h2>
+      <h2>{t('Month-end payroll')}</h2>
+      <p className="muted small"><Link to={`/payroll?month=${month}`}>{t('Pay runs')}</Link></p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {pending.length > 0 && (
@@ -100,7 +104,6 @@ export default function PayrollRunsPage() {
             ))}</span>
           )}
           <span className="muted small">
-            <Link to="/payroll/corrections">{t('Corrections and back pay')}</Link>{' · '}
             <Link to="/payroll/compare">{t('Compare with the old payroll')}</Link>
           </span>
         </div>
@@ -263,7 +266,6 @@ export default function PayrollRunsPage() {
           )}
         </div>
       )}
-      {can('salary.read') && <ThirteenthMonthCard />}
     </section>
   )
 }

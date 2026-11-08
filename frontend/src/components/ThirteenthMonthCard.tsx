@@ -54,7 +54,7 @@ export function ThirteenthMonthCard() {
       {message && <p className="success">{message}</p>}
       {form && (
         <>
-          <p className="hint">{t('Amount = base × the year\'s evaluation score (approved evaluations, weighted by the months each covers), or the fallback % for someone with no approved evaluation')}{form.prorate ? t(', × months under contract ÷ 12') : ''}{t('. It is added to the payslip of the pay month.')}</p>
+          <p className="hint">{t('Amount = base × the year\'s evaluation score (approved evaluations, weighted by the months each covers), or the fallback % for someone with no approved evaluation')}{form.prorate ? t(', × months under contract ÷ 12') : ''}{t('. Run it from New pay run; the payroll of the month you choose pays it.')}</p>
           <div className="grid3">
             <label className="check"><input type="checkbox" disabled={!editable} checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />{' '}{t('Pay a 13th month')}</label>
             <label>{t('Base')}<select disabled={!editable} value={form.base} onChange={(e) => setForm({ ...form, base: e.target.value as Settings['base'] })}>
@@ -62,7 +62,7 @@ export function ThirteenthMonthCard() {
                 <option value="LAST_BASIC">{t('Last basic of the year')}</option>
               </select>
             </label>
-            <label>{t('Paid with the payroll of')}<select disabled={!editable} value={form.payMonth} onChange={(e) => setForm({ ...form, payMonth: Number(e.target.value) })}>
+            <label>{t('Default pay month')}<select disabled={!editable} value={form.payMonth} onChange={(e) => setForm({ ...form, payMonth: Number(e.target.value) })}>
                 {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
               </select>
             </label>

@@ -65,7 +65,11 @@ public class ThirteenthMonth {
 
     /** The 13th month of one employee for a year, or empty if they have no contract or salary in it. */
     public Optional<Row> forEmployee(long userId, String name, int year) {
-        Settings s = settings();
+        return forEmployee(userId, name, year, settings());
+    }
+
+    /** The same, with the rules a 13th month run was worked out with. */
+    public Optional<Row> forEmployee(long userId, String name, int year, Settings s) {
         List<YearMonth> worked = new ArrayList<>();
         for (int m = 1; m <= 12; m++) {
             YearMonth ym = YearMonth.of(year, m);

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, Gift, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
-  ChartNoAxesCombined, CircleHelp, ListChecks, Palmtree, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
+  ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -64,16 +64,13 @@ function useNav(): { title: string; items: Item[] }[] {
     {
       title: t('Payroll'),
       items: [
-        { to: '/payroll', label: t('Payroll'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
+        { to: '/payroll', label: t('Pay runs'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
         { to: '/payroll/reports', label: t('Payroll reports'), icon: FileSpreadsheet, show: pay && can('payroll.report') },
         { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
         { to: '/payroll/entries', label: t('Bonuses and deductions'), icon: Coins, show: pay && can('salary.read') },
         { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
-        { to: '/payroll/quinzaine', label: t('Quinzaine'), icon: CalendarRange, end: true, show: pay && any('payroll.run', 'payroll.approve') },
-        { to: '/payroll/leave-pay', label: t('Leave pay'), icon: Palmtree, show: pay && any('payroll.run', 'payroll.approve') },
-        { to: '/payroll/corrections', label: t('Corrections and back pay'), icon: FilePenLine, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/payroll/accounting', label: t('Accounting'), icon: BookOpenCheck, show: pay && can('accounting.export') },
         { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
       ],
@@ -89,6 +86,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/overtime', label: t('Overtime rules'), icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/leave/settings', label: t('Leave settings'), icon: CalendarDays, show: can('leave.manage') },
         { to: '/payroll/quinzaine/settings', label: t('Quinzaine settings'), icon: CalendarRange, show: pay && can('masterdata.manage') },
+        { to: '/payroll/thirteenth-month/settings', label: t('13th month settings'), icon: Gift, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/evaluations/settings', label: t('Criteria and templates'), icon: Star, show: has('EVALUATIONS') && can('evaluation.manage') },
         { to: '/lifecycle/settings', label: t('Hiring and departure settings'), icon: ClipboardList, show: can('lifecycle.manage') },
         { to: '/roles', label: t('Roles'), icon: KeyRound, show: can('role.read') },

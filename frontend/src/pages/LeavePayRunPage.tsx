@@ -1,11 +1,11 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { ApiError, api, days, longDay, money, type LeaveAllowance, type LeavePayDue } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button } from '../components/Button'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 
 const STATUS: Record<LeaveAllowance['status'], string> = {
   CALCULATED: t('Calculated, waiting for Finance'), APPROVED: t('Approved, to pay'), PAID: t('Paid'), CANCELLED: t('Cancelled'),
@@ -15,25 +15,25 @@ const period = (a: { startDate: string; endDate: string }) =>
   a.startDate === a.endDate ? longDay(a.startDate) : t('{a} to {b}', { a: longDay(a.startDate), b: longDay(a.endDate) })
 
 /**
- * The leave pay run: the allowance (allocation de congé) of approved annual leave. HR works it out on request,
- * Finance approves it, and it is paid by the last working day before the leave; the payslip of the leave month
- * then adds the allocation as an earning and takes back the net paid in advance.
+ * Leave pay (allocation de congé) due in one month: HR works it out from New pay run, Finance approves it, and it is
+ * paid by the last working day before the leave; the payslip of the leave month then adds the allocation as an
+ * earning and takes back the net paid in advance.
  */
-export default function LeavePayPage() {
-  const { can, me } = useAuth()
+export default function LeavePayRunPage() {
+  const { month } = useParams()
+  const { can } = useAuth()
   const ask = useAsk()
-  const [paid, setPaid] = useState(true)
   const [due, setDue] = useState<LeavePayDue[]>([])
-  const [allowances, setAllowances] = useState<LeaveAllowance[]>([])
-  const [chosen, setChosen] = useState<number[]>([])
+  const [all, setAll] = useState<LeaveAllowance[]>([])
   const [open, setOpen] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  const [skipped, setSkipped] = useState<string[]>([])
 
   const load = () => api<{ annualPaid: boolean; due: LeavePayDue[]; allowances: LeaveAllowance[] }>('/api/leave-pay')
-    .then((o) => { setPaid(o.annualPaid); setDue(o.due); setAllowances(o.allowances) }).catch((e: Error) => setError(e.message))
+    .then((o) => { setDue(o.due); setAll(o.allowances) }).catch((e: Error) => setError(e.message))
   useEffect(() => { void load() }, [])
+  const allowances = all.filter((a) => a.payBy.slice(0, 7) === month)
+  const title = month ? new Date(month + '-01T00:00:00').toLocaleDateString(locale(), { month: 'long', year: 'numeric' }) : ''
 
   const run = async (action: () => Promise<unknown>, done: string) => {
     setError(null)
@@ -47,56 +47,15 @@ export default function LeavePayPage() {
     }
   }
 
-  const calculate = () => run(async () => {
-    const r = await api<{ calculated: LeaveAllowance[]; skipped: string[] }>('/api/leave-pay/calculate', {
-      method: 'POST', body: { leaveRequestIds: chosen },
-    })
-    setChosen([])
-    setSkipped(r.skipped)
-  }, t('Leave pay worked out. Finance approves it next.'))
-
-  const late = (d: string) => d < new Date().toISOString().slice(0, 10)
-
-  return (
+    return (
     <section>
-      <h2>{t('Leave pay')}</h2>
-      <p className="muted">{t('The allowance for approved annual leave, with its own payslip, paid by the last working day before the leave.')}</p>
+      <h2>{t('Leave pay of {a}', { a: title })}</h2>
+      <p className="muted small"><Link to={`/payroll?month=${month}`}>{t('Pay runs')}</Link></p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
-      {skipped.length > 0 && <ul className="warnings">{skipped.map((s) => <li key={s}>{s}</li>)}</ul>}
-      {!paid && (
-        <p className="notice">{t('Annual leave is not paid in this company.')}{' '}<Link to="/leave/settings">{t('Leave settings')}</Link></p>
-      )}
-
-      {paid && (
-        <div className="card">
-          <div className="row space">
-            <h3>{t('Approved annual leave waiting for its pay')}</h3>
-            {can('payroll.run') && due.length > 0 && (
-              <Button onClick={calculate}>{chosen.length === 0 ? t('Work out leave pay for all') : t('Work out leave pay for {a}', { a: chosen.length })}</Button>
-            )}
-          </div>
-          {due.length === 0 && <p className="muted">{t('Nothing waiting.')}</p>}
-          {due.length > 0 && (
-            <div className="table-wrap">
-              <table>
-                <thead><tr>{can('payroll.run') && <th></th>}<th>{t('Employee')}</th><th>{t('Leave')}</th><th>{t('Days')}</th><th>{t('Pay by')}</th></tr></thead>
-                <tbody>
-                  {due.map((d) => (
-                    <tr key={d.leaveRequestId}>
-                      {can('payroll.run') && <td><input type="checkbox" checked={chosen.includes(d.leaveRequestId)} disabled={d.userId === me?.id}
-                        onChange={(e) => setChosen(e.target.checked ? [...chosen, d.leaveRequestId] : chosen.filter((x) => x !== d.leaveRequestId))} /></td>}
-                      <td>{d.employeeName} <span className="muted">{d.registrationNo}</span></td>
-                      <td>{period(d)}</td>
-                      <td>{days(d.workingDays)}</td>
-                      <td className={late(d.payBy) ? 'danger-text' : undefined}>{longDay(d.payBy)}{late(d.payBy) ? ` · ${t('late')}` : ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {due.length > 0 && can('payroll.run') && (
+        <p className="notice">{t('{a} approved annual leave(s) wait for their leave pay.', { a: due.length })}{' '}
+          <Link to="/payroll/new?type=LEAVE_PAY">{t('Work it out')}</Link></p>
       )}
 
       <div className="card">

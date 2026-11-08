@@ -159,8 +159,12 @@ A unit's head approves for their whole team, sub-units included; their deputy on
 - **Import data**: Excel templates for employees, contracts, salaries, leave balances and year-to-date totals. Nothing is saved before the check.` },
   },
   {
-    id: 'payroll', audience: 'payroll', routes: ['/payroll', '/payslips', '/payroll/corrections', '/payroll/compare'],
-    fr: { title: 'La paie du mois, du calcul à la clôture', body: `
+    id: 'payroll', audience: 'payroll', routes: ['/payroll', '/payslips', '/payroll/runs/monthly', '/payroll/runs/corrections', '/payroll/new', '/payroll/compare'],
+    fr: { title: 'Les paies, du calcul à la clôture', body: `
+Toutes les paies se lancent depuis **Paies** > **Nouvelle paie** : choisissez le type (paie de fin de mois, quinzaine, allocation de congé, 13e mois, corrections, décompte final), remplissez ses conditions, puis lancez-la. La page Paies montre les paies du mois par date de paiement et ce qui les bloque (quinzaine ouverte, 13e mois non approuvé, allocation de congé en retard).
+
+La quinzaine et l'allocation de congé versent de l'argent avant la fin du mois ; la CNSS et l'IPR se calculent sur le bulletin de fin de mois, qui les reprend. Le 13e mois approuvé est payé par la paie du mois choisi.
+
 1. **Calculer** (RH) : HR Pay prend les pointages, congés, heures supplémentaires approuvées, primes et prêts du mois, au taux BCC du jour.
 2. **Vérifier** : les alertes signalent un salaire manquant, un compte de paiement absent, une forte variation. Comparez avec le mois précédent.
 3. **Approuver** (Finance).
@@ -168,7 +172,11 @@ A unit's head approves for their whole team, sub-units included; their deputy on
 5. **Payer et déclarer** : fichiers de paiement et déclarations CNSS, IPR, INPP, ONEM.
 
 Après clôture, une correction se fait par bulletin complémentaire ou rappel de salaire, jamais en modifiant le bulletin.` },
-    en: { title: "The month's payroll, from calculation to closing", body: `
+    en: { title: 'Pay runs, from calculation to closing', body: `
+Every pay run starts from **Pay runs** > **New pay run**: pick the type (month-end payroll, quinzaine, leave pay, 13th month, corrections, final settlement), fill in its conditions, then run it. The Pay runs page shows the month's runs by pay date and what holds them up (an open quinzaine, a 13th month not approved, leave pay paid late).
+
+The quinzaine and leave pay pay money before the month ends; CNSS and income tax are worked out on the month-end payslip, which takes them back. An approved 13th month is paid by the payroll of the month chosen.
+
 1. **Calculate** (HR): HR Pay takes the month's check-ins, leave, approved overtime, bonuses and loans, at the day's BCC rate.
 2. **Check**: warnings point out a missing salary, a missing payment account, a large change. Compare with the previous month.
 3. **Approve** (Finance).
@@ -240,7 +248,7 @@ After closing, a correction is made with a complementary payslip or back pay, ne
 **Reports** exports the detailed data to Excel or CSV.` },
   },
   {
-    id: 'quinzaine', audience: 'payroll', routes: ['/payroll/quinzaine'],
+    id: 'quinzaine', audience: 'payroll', routes: ['/payroll/runs/quinzaine', '/payroll/quinzaine/settings'],
     fr: { title: 'La quinzaine (acompte de mi-mois)', body: `
 Une avance sur la paie du mois, versée vers le milieu du mois. Elle se calcule comme la paie de fin de mois, se paie par les fichiers de paiement, et le bulletin du mois la reprend en totalité sur le net.
 
@@ -294,7 +302,7 @@ Click a row to see the employees behind it (needs the right to read all payslips
 **The law.** DRC: the Labour Code (art. 213) requires a livre de paie; ministerial order 12/CAB.MIN/ETPS/042 of 8 August 2008 sets its model (33 mentions) for 10 workers or more, on paper or as a computer file, never changed once written. No retention period was found: HR Pay never deletes a closed payroll. Republic of the Congo: to confirm with your payroll expert. The branch of activity printed at the top comes from the Company page.` },
   },
   {
-    id: 'annual-leave', audience: 'hr', routes: ['/payroll/leave-pay', '/leave/settings'],
+    id: 'annual-leave', audience: 'hr', routes: ['/payroll/runs/leave-pay', '/leave/settings'],
     fr: { title: 'Congé annuel : acquisition, report et allocation', body: `
 - **Acquisition** : chaque paie mensuelle clôturée crédite les jours de la catégorie de la personne ÷ 12, jamais sous le minimum légal (RDC art. 141 : 1 jour ouvrable par mois complet, 1,5 avant 18 ans), plus les jours d'ancienneté, au prorata du mois en service. Le congé sans solde et l'absence injustifiée ne comptent pas. Le bulletin montre les jours acquis et le solde.
 - **Ancienneté** : comptée depuis la date d'embauche ; mettez 0 an pour n'en donner aucun.

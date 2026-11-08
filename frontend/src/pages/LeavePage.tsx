@@ -147,12 +147,12 @@ export default function LeavePage() {
           {canRequest && <Button onClick={() => setRequesting(true)}>{t('Request leave')}</Button>}
         </div>
         <div className="row">
-          {leavePay && <Link className="button secondary" to="/payroll/leave-pay">{t('Leave pay')}{leavePayDue > 0 ? ` (${leavePayDue})` : ''}</Link>}
+          {leavePay && <Link className="button secondary" to="/payroll/new?type=LEAVE_PAY">{t('Leave pay')}{leavePayDue > 0 ? ` (${leavePayDue})` : ''}</Link>}
           {isHr && <SettingsLink to="/leave/settings" />}
         </div>
       </div>
       {leavePay && leavePayDue > 0 && (
-        <p className="notice">{t('{a} approved annual leave(s) wait for their leave pay.', { a: leavePayDue })}{' '}<Link to="/payroll/leave-pay">{t('Work it out')}</Link></p>
+        <p className="notice">{t('{a} approved annual leave(s) wait for their leave pay.', { a: leavePayDue })}{' '}<Link to="/payroll/new?type=LEAVE_PAY">{t('Work it out')}</Link></p>
       )}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

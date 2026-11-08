@@ -87,7 +87,7 @@ public class PayrollRuns {
     private final StatutoryRates statutory;
     private final ExchangeRates exchange;
     private final Loans loans;
-    private final cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth;
+    private final Thirteenths thirteenths;
     private final AuditService audit;
     private final Clock clock;
     private final JsonMapper json = JsonMapper.builder().build();
@@ -122,8 +122,8 @@ public class PayrollRuns {
 
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
-                       cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
-        this.thirteenthMonth = thirteenthMonth;
+                       Thirteenths thirteenths, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
+        this.thirteenths = thirteenths;
         this.jdbc = jdbc;
         this.crypto = crypto;
         this.users = users;
@@ -214,15 +214,14 @@ public class PayrollRuns {
 
     /** What working out the payslips of one month needs, gathered once. */
     record MonthContext(YearMonth month, LocalDate first, LocalDate last, LocalDate today, PayslipCalculator.Rates rates,
-                        BigDecimal usdLocal, List<PayElements.Element> elements, boolean payThirteenth,
+                        BigDecimal usdLocal, List<PayElements.Element> elements, Map<Long, Thirteenths.Due> thirteenth,
                         Map<Long, cd.hrpay.org.OrgStructure.Placement> placements,
                         Map<Long, cd.hrpay.org.OrgStructure.Placement> nowPlaced) {}
 
     MonthContext context(YearMonth month, PayslipCalculator.Rates rates, BigDecimal usdLocal) {
         LocalDate today = LocalDate.now(clock);
-        var t13 = thirteenthMonth.settings();
         return new MonthContext(month, month.atDay(1), month.atEndOfMonth(), today, rates, usdLocal, pay.elements(),
-                t13.enabled() && month.getMonthValue() == t13.payMonth(), org.placementsOn(month.atEndOfMonth()),
+                thirteenths.dueIn(month), org.placementsOn(month.atEndOfMonth()),
                 org.placementsOn(today));
     }
 
@@ -291,7 +290,8 @@ public class PayrollRuns {
         List<EmployeeFile.Dependant> dependants = files.dependants(userId);
         int children = (int) dependants.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
         int inCharge = (int) dependants.stream().filter(EmployeeFile.Dependant::inCharge).count();
-        var thirteenth = ctx.payThirteenth() ? thirteenthMonth.forEmployee(userId, name, month.getYear()).orElse(null) : null;
+        // The 13th month comes from its own approved run for this payroll month.
+        Thirteenths.Due thirteenth = ctx.thirteenth().get(userId);
         List<PayslipCalculator.LoanDue> loansDue = !withLoans ? List.of() : leaves == null ? loans.dueFor(userId, month)
                 // On the last payslip, what is left of each loan is due.
                 : loans.dueFor(userId, month).stream().map(l -> new PayslipCalculator.LoanDue(l.loanId(), l.kind(),
@@ -312,7 +312,7 @@ public class PayrollRuns {
                 salary.grossMonthly(), summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
                 summary.overtimeApprovedMinutes(), thirteenth == null ? null
                         : ExchangeRates.convert(thirteenth.amount(), thirteenth.currency(), salary.currency(), usdLocal),
-                thirteenth == null ? null : thirteenthNote(thirteenth), children, inCharge, contract.expatriate(), ctx.elements(),
+                thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(), ctx.elements(),
                 pay.standingFor(userId, month),
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
                 allocatedMinutes));
@@ -573,12 +573,6 @@ public class PayrollRuns {
         });
     }
 
-    private static String thirteenthNote(cd.hrpay.evaluation.ThirteenthMonth.Row r) {
-        String score = r.scorePercent().stripTrailingZeros().toPlainString() + "%";
-        return (r.scoreSource().equals("EVALUATIONS") ? "evaluations " + score : "no evaluation, " + score)
-                + (r.monthsWorked() < 12 ? ", " + r.monthsWorked() + "/12 months" : "");
-    }
-
     // ---- approve, send back, close ---------------------------------------------------------------------------------
 
     @Transactional
@@ -619,6 +613,7 @@ public class PayrollRuns {
             throw new BusinessRuleException("Only an approved payroll can be closed.");
         }
         Quinzaines.requireSettled(jdbc, month);
+        Thirteenths.requireSettled(jdbc, month, run.calculatedAt());
         List<Long> slips = jdbc.sql("""
                 select p.id from payslip p join app_user u on u.id = p.user_id where p.run_id = ? and p.kind = 'REGULAR'
                 order by u.last_name, u.first_name, p.id""").param(run.id()).query(Long.class).list();
@@ -652,6 +647,7 @@ public class PayrollRuns {
                     return null;
                 }).list();
         carryQuinzaine(run, month);
+        Thirteenths.markPaid(jdbc, month);
         jdbc.sql("update payroll_run set status = 'CLOSED', closed_by = ?, closed_at = now() where id = ?")
                 .params(CurrentUser.email(), run.id()).update();
         audit.record("payroll.closed", "payroll_run", run.id(), Map.of("month", month.toString(), "payslips", n));
