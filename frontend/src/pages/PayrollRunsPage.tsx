@@ -212,7 +212,7 @@ export default function PayrollRunsPage() {
       {can('salary.read') && (
         <div className="card">
           <h3>{t('Anniversary raises')}</h3>
-          <p className="hint">{t('Applied automatically each morning for permanent staff; the rate and start month are set per grade category under Grades. HR gets one email on the 1st of each month.')}</p>
+          <p className="hint">{t('Applied automatically to permanent staff. The rates are set per grade category under Grades.')}</p>
           {raises.length === 0 ? <p className="muted">{t('No raises applied yet.')}</p> : (
             <div className="table-wrap">
               <table>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError, api, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
@@ -26,10 +26,6 @@ const KIND: Record<Kind, { name: string; to: string }> = {
   IERE: { name: t('IERE (expatriates)'), to: 'DGI' },
   TUS: { name: t('TUS (single tax on salaries)'), to: t('Tax office') },
 }
-const EMPLOYER_FIELDS: [keyof Employer, string][] = [
-  ['name', t('Name')], ['address', t('Address')], ['cnssNumber', t('CNSS employer number')], ['taxNumber', 'NIF'], ['nationalId', t('Id. Nat.')],
-  ['rccm', 'RCCM'], ['inppNumber', t('INPP number')], ['onemNumber', t('ONEM number')], ['bankName', t('Bank')], ['bankAccount', t('Account salaries are paid from')],
-]
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const cdf = (n: number) => money(n, localCurrency())
 
@@ -65,7 +61,6 @@ export default function DeclarationsPage() {
   const kind = (params.get('kind') ?? 'CNSS') as Kind
   const [summary, setSummary] = useState<Summary[] | null>(null)
   const [employer, setEmployer] = useState<Employer | null>(null)
-  const [editEmployer, setEditEmployer] = useState<Employer | null>(null)
   const [decl, setDecl] = useState<Declaration | null>(null)
   const [filing, setFiling] = useState<{ filedOn: string; reference: string; note: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -99,7 +94,10 @@ export default function DeclarationsPage() {
 
   return (
     <section>
-      <h2 className="no-print">{t('Declarations')}</h2>
+      <div className="row space no-print">
+        <h2>{t('Declarations')}</h2>
+        {can('company.manage') && <Link className="button secondary" to="/company">{t('Employer details')}</Link>}
+      </div>
       <label className="month-pick no-print">{t('Month')}{' '}<input type="month" value={month} onChange={(e) => e.target.value && setParams({ month: e.target.value, kind })} /></label>
       <ErrorText error={error} />
       {message && <p className="success no-print">{message}</p>}
@@ -170,26 +168,6 @@ export default function DeclarationsPage() {
         </div>
       )}
 
-      {employer && (
-        <div className="card no-print">
-          <h3>{t('Employer details')}</h3>
-          <p className="hint">{t('Printed on declarations and payment files.')}</p>
-          <dl className="facts">{EMPLOYER_FIELDS.map(([k, label]) => <div key={k}><dt>{label}</dt><dd>{employer[k] || '—'}</dd></div>)}</dl>
-          {can('company.manage') && <Button className="secondary" onClick={() => setEditEmployer(employer)}>{t('Edit')}</Button>}
-          {editEmployer && (
-            <Modal title={t('Employer details')} size="lg" onClose={() => setEditEmployer(null)}>
-              <Form onSubmit={() => run(async () => { await api('/api/company', { method: 'PUT', body: editEmployer }); setEditEmployer(null) }, t('Employer details saved.'))}>
-                <div className="grid2">
-                  {EMPLOYER_FIELDS.map(([k, label]) => (
-                    <label key={k}>{label}<input value={editEmployer[k] ?? ''} required={k === 'name'} onChange={(e) => setEditEmployer({ ...editEmployer, [k]: e.target.value })} /></label>
-                  ))}
-                </div>
-                <div className="modal-foot"><Button className="secondary" onClick={() => setEditEmployer(null)}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
-              </Form>
-            </Modal>
-          )}
-        </div>
-      )}
     </section>
   )
 }

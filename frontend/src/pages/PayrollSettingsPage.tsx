@@ -54,7 +54,7 @@ export default function PayrollSettingsPage() {
 
       <div className="card">
         <h3>{t('Anniversary raise by grade category')}</h3>
-        <p className="hint">{t('Each year on a permanent employee\'s contract anniversary, the basic salary rises by this percentage of their grade\'s base salary. The raise is applied automatically each morning, and HR gets one email on the 1st of each month listing the raises.')}</p>
+        <p className="hint">{t('Added each contract anniversary for permanent staff, as a percentage of the grade\'s base salary. HR gets a monthly email listing the raises.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Category')}</th><th>{t('Raise (%)')}</th><th>{t('Starts')}</th><th></th></tr></thead>
@@ -80,7 +80,7 @@ export default function PayrollSettingsPage() {
 
       <div className="card">
         <h3>{t('Notice period by grade category')}</h3>
-        <p className="hint">{t('The notice the employer owes: a base, plus days for each full year of service. Working days leave out Sundays and public holidays. A person who resigns owes the share given here. DR Congo: categories 1 to 5, 14 working days + 7 per year (Labour Code art. 64); agents de maîtrise, 1 month + 9 working days per year; cadres, 3 months + 16 working days per year (arrêté of 26 October 2005); the employee owes half. A collective agreement can only give more.')}</p>
+        <p className="hint">{t('A base plus days per full year of service; a person who resigns owes the share given here. DRC: Labour Code art. 64 and arrêté of 26 October 2005. A collective agreement can only give more.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Category')}</th><th>{t('Base')}</th><th>{t('Per year of service')}</th><th>{t('Days counted')}</th><th>{t('Owed on resignation')}</th><th></th></tr></thead>

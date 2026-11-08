@@ -38,7 +38,7 @@ export default function OvertimeApprovalsPage() {
   return (
     <section>
       <h2>{t('Overtime to approve')}</h2>
-      <p className="muted">{t('Overtime from the last 31 days that nobody has decided on yet. Only approved overtime is paid. You can approve fewer minutes than were worked.')}</p>
+      <p className="muted">{t('Overtime of the last 31 days. Only approved overtime is paid; you can approve fewer minutes.')}</p>
       {units.select && <div className="row inline-filter">{units.select}</div>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

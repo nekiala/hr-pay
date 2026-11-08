@@ -38,7 +38,7 @@ export default function ComparePage() {
     <section>
       <p><Link to="/payroll">{t('← Payroll')}</Link></p>
       <h2>{t('Compare with the old payroll')}</h2>
-      <p className="muted">{t('Run both payrolls side by side for two months before relying on HR Pay. Save the old payroll\'s figures as CSV (from the old software or a spreadsheet): one row per person with the registration number, and the gross, CNSS, tax and net you have.')}
+      <p className="muted">{t('Compare with your old payroll for two months. Upload a CSV with one row per person: registration number, gross, CNSS, tax and net.')}
         {' '}<a href="/api/payroll/compare-template.csv">{t('Download a template')}</a></p>
       <Form className="card" onSubmit={compare}>
         <div className="row">

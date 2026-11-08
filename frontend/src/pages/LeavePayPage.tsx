@@ -60,7 +60,7 @@ export default function LeavePayPage() {
   return (
     <section>
       <h2>{t('Leave pay')}</h2>
-      <p className="muted">{t('The leave allowance (allocation de congé) of approved annual leave, with its own payslip: the remuneration for the leave days (basic and salary complement; housing, transport and family allowances are not remuneration, Labour Code art. 7) plus the average of bonuses, commissions and overtime of the 12 months before. It is paid by the last working day before the leave (art. 142 and 145). The payslip of each month the leave covers adds it as an earning, so CNSS and income tax are worked out on the whole month, and takes back the net paid in advance.')}</p>
+      <p className="muted">{t('The allowance for approved annual leave, with its own payslip, paid by the last working day before the leave.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {skipped.length > 0 && <ul className="warnings">{skipped.map((s) => <li key={s}>{s}</li>)}</ul>}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ApiError, api, days, type GradeCategory, type LeaveLapse, type LeaveType } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
@@ -50,6 +51,7 @@ export default function LeaveSettingsPage() {
 
   return (
     <section>
+      <p className="small muted"><Link to="/leave">{t('Leave')}</Link></p>
       <h2>{t('Leave settings')}</h2>
       <p className="muted">{t('Sample values to start with. Check them against the Labour Code and your collective agreement.')}</p>
       <ErrorText error={error} />
@@ -86,7 +88,7 @@ export default function LeaveSettingsPage() {
             </tbody>
           </table>
         </div>
-        <p className="hint">{t('Annual leave is earned month by month: each closed monthly payroll credits the days of the person\'s category ÷ 12, never below the legal floor (DRC art. 141: 1 working day per full month, 1.5 under 18), plus the seniority days below, for the share of the month in service (unpaid leave and unjustified absence do not count). The payslip shows the days earned and the balance. Unused days carry over within the limits below.')}</p>
+        <p className="hint">{t('Earned month by month as each payroll closes, never below the legal minimum (DRC art. 141). Unused days carry over within the limits below.')}</p>
       </div>
 
       <div className="card">
@@ -99,7 +101,7 @@ export default function LeaveSettingsPage() {
           <span>{t('full years of service on 1 January')}</span>
           <Button className="secondary" onClick={() => run(() => api('/api/leave/settings', { method: 'PUT', body: { ...seniority, ...pay } }), t('Seniority rule saved. It applies to the next grant.'))}>{t('Save')}</Button>
         </div>
-        <p className="hint">{t('Counted from the hire date. Set the years to 0 to give no seniority days. Sample rule to check against the Labour Code and your collective agreement.')}</p>
+        <p className="hint">{t('Counted from the hire date. Set the years to 0 to give no seniority days.')}</p>
       </div>
 
       <div className="card">
@@ -116,7 +118,7 @@ export default function LeaveSettingsPage() {
             onChange={(e) => setPay({ ...pay, carryYears: Number(e.target.value) })} /></label>
           <Button className="secondary" onClick={() => run(() => api('/api/leave/settings', { method: 'PUT', body: { ...seniority, ...pay } }), t('Annual leave settings saved.'))}>{t('Save')}</Button>
         </div>
-        <p className="hint">{t('DRC (art. 140): only half of the leave can be carried, over two years: 50% for 1 year. Republic of the Congo (art. 120): the right lapses after 3 years: 100% for 3 years. To confirm with your payroll expert.')}</p>
+        <p className="hint">{t('DRC: 50% for 1 year (art. 140). Republic of the Congo: 100% for 3 years (art. 120). To confirm with your payroll expert.')}</p>
         <div className="row grant">
           <label>{t('Leave year')}<input type="number" className="narrow-input" value={closing} onChange={(e) => { setClosing(Number(e.target.value)); setLapses(null) }} /></label>
           <Button className="secondary" onClick={() => run(async () => setLapses(await api<LeaveLapse[]>(`/api/leave/close-year?year=${closing}`)), t('Here is what would lapse.'))}>{t('Show what lapses')}</Button>
@@ -170,7 +172,7 @@ export default function LeaveSettingsPage() {
             </tbody>
           </table>
         </div>
-        <p className="hint">{t('100% keeps the full day\'s pay, 0% makes the leave unpaid. A kind that needs a document is approved by the manager, then counts only once HR has checked the document.')}</p>
+        <p className="hint">{t('0% makes the leave unpaid. A kind that needs a document counts only once HR has checked it.')}</p>
       </div>
     </section>
   )

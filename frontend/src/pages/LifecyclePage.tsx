@@ -8,24 +8,34 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
+import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
 
-type Tab = 'overview' | 'types' | 'steps' | 'templates'
+type Tab = 'types' | 'steps' | 'templates'
 
 /** Hiring and departures: open checklists, documents about to expire, certificates asked for, letters waiting. */
 export default function LifecyclePage() {
-  const [tab, setTab] = useState<Tab>('overview')
-  const tabs: Record<Tab, string> = { overview: t('To do'), types: t('Document types'), steps: t('Checklist steps'), templates: t('Contracts and letters') }
   return (
     <section>
-      <h2>{t('Hiring and departures')}</h2>
-      <p className="muted">{t('Checklists for each hiring and departure, the documents kept for each person, letters and contracts signed with a code, and certificates.')}</p>
+      <PageTitle title={t('Hiring and departures')}><SettingsLink to="/lifecycle/settings" /></PageTitle>
+      <Overview />
+    </section>
+  )
+}
+
+/** What hiring and departures are made of: document types, checklist steps, and contract and letter templates. */
+export function LifecycleSettingsPage() {
+  const [tab, setTab] = useState<Tab>('types')
+  const tabs: Record<Tab, string> = { types: t('Document types'), steps: t('Checklist steps'), templates: t('Contracts and letters') }
+  return (
+    <section>
+      <p className="small muted"><Link to="/lifecycle">{t('Hiring and departures')}</Link></p>
+      <h2>{t('Hiring and departure settings')}</h2>
       <div className="segmented" role="tablist">
         {(Object.keys(tabs) as Tab[]).map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{tabs[k]}</button>
         ))}
       </div>
-      {tab === 'overview' && <Overview />}
       {tab === 'types' && <DocumentTypes />}
       {tab === 'steps' && <Steps />}
       {tab === 'templates' && <Templates />}

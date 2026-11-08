@@ -30,6 +30,8 @@ import ReportsPage from './pages/ReportsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
 import PayElementsPage from './pages/PayElementsPage'
+import PayEntriesPage from './pages/PayEntriesPage'
+import QuinzaineSettingsPage from './pages/QuinzaineSettingsPage'
 import StatutoryRatesPage from './pages/StatutoryRatesPage'
 import PayrollRunsPage from './pages/PayrollRunsPage'
 import PayslipPage from './pages/PayslipPage'
@@ -69,7 +71,7 @@ import ImportPage from './pages/ImportPage'
 import IntegrationsPage from './pages/IntegrationsPage'
 import TimeClocksPage from './pages/TimeClocksPage'
 import ExportLayoutsPage from './pages/ExportLayoutsPage'
-import LifecyclePage from './pages/LifecyclePage'
+import LifecyclePage, { LifecycleSettingsPage } from './pages/LifecyclePage'
 import PersonLifecyclePage from './pages/PersonLifecyclePage'
 import MyDocumentsPage from './pages/MyDocumentsPage'
 import { Shell } from './components/Shell'
@@ -179,6 +181,7 @@ export default function App() {
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
           <Route path="/users/:id/lifecycle" element={<Guard permission="lifecycle.manage"><PersonLifecyclePage /></Guard>} />
           <Route path="/lifecycle" element={<Guard permission="lifecycle.manage"><LifecyclePage /></Guard>} />
+          <Route path="/lifecycle/settings" element={<Guard permission="lifecycle.manage"><LifecycleSettingsPage /></Guard>} />
           <Route path="/my/documents" element={<MyDocumentsPage />} />
           <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />
           <Route path="/departures" element={<PayrollStaff><DeparturesPage /></PayrollStaff>} />
@@ -209,6 +212,8 @@ export default function App() {
           <Route path="/payslips/:id/correct" element={<Guard permission="payroll.run"><CorrectPayslipPage /></Guard>} />
           <Route path="/payroll/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
           <Route path="/payroll/quinzaine" element={<PayrollStaff><QuinzainePage /></PayrollStaff>} />
+          <Route path="/payroll/quinzaine/settings" element={<PayrollStaff><QuinzaineSettingsPage /></PayrollStaff>} />
+          <Route path="/payroll/entries" element={<Guard permission="salary.read"><PayEntriesPage /></Guard>} />
           <Route path="/payroll/leave-pay" element={<PayrollStaff><LeavePayPage /></PayrollStaff>} />
           <Route path="/payroll/compare" element={<PayrollStaff><ComparePage /></PayrollStaff>} />
           <Route path="/payroll/accounting" element={<Guard permission="accounting.export"><AccountingPage /></Guard>} />

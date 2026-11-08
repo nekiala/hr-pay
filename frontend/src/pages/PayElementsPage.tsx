@@ -1,13 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, PAY_KINDS, PAY_METHODS, api, money, type Page, type PayElement, type PayEntry, type PayMethod, type User } from '../api'
+import { Link } from 'react-router-dom'
+import { ApiError, PAY_KINDS, PAY_METHODS, api, money, type PayElement, type PayMethod } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
-import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
-
-const thisMonth = () => new Date().toISOString().slice(0, 7)
 
 const describe = (e: PayElement) => {
   switch (e.method) {
@@ -25,32 +23,15 @@ const blankElement = {
 }
 
 export default function PayElementsPage() {
-  const ask = useAsk()
   const { can } = useAuth()
   const manage = can('masterdata.manage')
-  const writePay = can('salary.write')
-  const readPay = can('salary.read')
   const [elements, setElements] = useState<PayElement[]>([])
-  const [month, setMonth] = useState(thisMonth())
-  const [entries, setEntries] = useState<PayEntry[]>([])
   const [edit, setEdit] = useState<typeof blankElement & { id?: number; system?: boolean; active?: boolean } | null>(null)
-  const [entry, setEntry] = useState({ userQuery: '', userId: '', elementId: '', amount: '', currency: 'USD', note: '' })
-  const [people, setPeople] = useState<User[]>([])
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const loadElements = () => api<PayElement[]>('/api/pay-elements').then(setElements).catch((e: Error) => setError(e.message))
-  const loadEntries = () => readPay ? api<PayEntry[]>(`/api/pay-entries?month=${month}`).then(setEntries).catch((e: Error) => setError(e.message)) : Promise.resolve()
   useEffect(() => { void loadElements() }, [])
-  useEffect(() => { void loadEntries() }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!writePay || entry.userQuery.trim().length < 2) return
-    const handle = setTimeout(() => {
-      api<Page<User>>(`/api/users?${new URLSearchParams({ q: entry.userQuery.trim(), size: '10' })}`).then((p) => setPeople(p.items)).catch(() => undefined)
-    }, 250)
-    return () => clearTimeout(handle)
-  }, [entry.userQuery, writePay])
 
   const run = async (action: () => Promise<unknown>, done: string) => {
     setError(null)
@@ -58,7 +39,7 @@ export default function PayElementsPage() {
     try {
       await action()
       setMessage(done)
-      await Promise.all([loadElements(), loadEntries()])
+      await loadElements()
       return true
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.'))
@@ -89,19 +70,6 @@ export default function PayElementsPage() {
     defaultForAll: e.defaultForAll, displayOrder: e.displayOrder,
   })
 
-  const addEntry = (ev: FormEvent) => {
-    ev.preventDefault()
-    return run(async () => {
-      await api('/api/pay-entries', {
-        method: 'POST',
-        body: { userId: Number(entry.userId), elementId: Number(entry.elementId), month, amount: Number(entry.amount), currency: entry.currency, note: entry.note || null },
-      })
-      setEntry({ userQuery: '', userId: '', elementId: '', amount: '', currency: entry.currency, note: '' })
-      setPeople([])
-    }, t('Entry added.'))
-  }
-
-  const manual = elements.filter((e) => e.active && e.method !== 'COMPUTED' && e.kind !== 'EMPLOYER_CHARGE')
   const needsAmount = edit && ['FIXED', 'PER_DAY_WORKED', 'PER_CHILD'].includes(edit.method)
 
   return (
@@ -110,61 +78,11 @@ export default function PayElementsPage() {
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
-      {readPay && (
-        <div className="card">
-          <h3>{t('Bonuses and deductions for a month')}</h3>
-          <p className="hint">{t('One-off lines for this month only, such as a performance bonus. Standing items such as a different transport amount are set on the employee\'s Contract and family page.')}</p>
-          <label className="month-pick">{t('Month')}{' '}<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
-          {entries.length === 0 ? <p className="muted">{t('Nothing entered for')}{' '}{month}.</p> : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>{t('Employee')}</th><th>{t('Element')}</th><th>{t('Amount')}</th><th>{t('Note')}</th><th>{t('By')}</th><th></th></tr></thead>
-                <tbody>
-                  {entries.map((x) => (
-                    <tr key={x.id}>
-                      <td>{x.userName}</td>
-                      <td>{x.elementName}</td>
-                      <td>{x.kind === 'DEDUCTION' ? '−' : ''}{money(x.amount, x.currency)}</td>
-                      <td>{x.note}</td>
-                      <td className="muted">{x.createdBy}</td>
-                      <td>{writePay && <Button className="secondary" onClick={() => ask({ title: t('Remove {a} for {b}?', { a: x.elementName, b: x.userName }), confirmLabel: t('Remove'), danger: true, onConfirm: () => run(() => api(`/api/pay-entries/${x.id}`, { method: 'DELETE' }), t('Removed.')) })}>{t('Remove')}</Button>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {writePay && (
-            <Form onSubmit={addEntry}>
-              <div className="grid3">
-                <label>{t('Employee')}<input list="pay-people" placeholder={t('Type a name or number')} value={entry.userQuery} required
-                    onChange={(e) => {
-                      const match = people.find((p) => `${p.firstName} ${p.lastName} (${p.registrationNo ?? p.email})` === e.target.value)
-                      setEntry({ ...entry, userQuery: e.target.value, userId: match ? String(match.id) : '' })
-                    }} />
-                  <datalist id="pay-people">
-                    {people.map((p) => <option key={p.id} value={`${p.firstName} ${p.lastName} (${p.registrationNo ?? p.email})`} />)}
-                  </datalist>
-                </label>
-                <label>{t('Element')}<select value={entry.elementId} required onChange={(e) => setEntry({ ...entry, elementId: e.target.value })}>
-                    <option value="">{t('Choose')}</option>
-                    {manual.map((e) => <option key={e.id} value={e.id}>{e.name}{e.kind === 'DEDUCTION' ? t(' (deduction)') : ''}</option>)}
-                  </select>
-                </label>
-                <label>{t('Amount')}<input type="number" min={0.01} step={0.01} value={entry.amount} required onChange={(e) => setEntry({ ...entry, amount: e.target.value })} /></label>
-                <label>{t('Currency')}<select value={entry.currency} onChange={(e) => setEntry({ ...entry, currency: e.target.value })}><option>{t('USD')}</option><option>{t('CDF')}</option></select></label>
-                <label>{t('Note')}<input value={entry.note} maxLength={300} onChange={(e) => setEntry({ ...entry, note: e.target.value })} /></label>
-              </div>
-              {entry.userQuery && !entry.userId && <p className="hint">{t('Pick the employee from the list.')}</p>}
-              <Button type="submit" disabled={!entry.userId}>{t('Add for')}{' '}{month}</Button>
-            </Form>
-          )}
-        </div>
-      )}
+      <p className="muted">{t('Bonuses and deductions for one month are entered under')}{' '}<Link to="/payroll/entries">{t('Bonuses and deductions')}</Link>.</p>
 
       <div className="card">
         <h3>{t('Catalogue')}</h3>
-        <p className="hint">{t('Sample treatment and amounts: a DRC payroll specialist must confirm which elements are subject to CNSS and IPR before go-live. Elements "calculated by payroll" are built in; you can only rename them.')}</p>
+        <p className="hint">{t('Sample values: have a payroll specialist confirm CNSS and IPR before go-live. Built-in elements can only be renamed.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Type')}</th><th>{t('Rule')}</th><th>{t('CNSS')}</th><th>{t('IPR')}</th><th>{t('Everyone')}</th><th>{t('Active')}</th><th></th></tr></thead>

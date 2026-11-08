@@ -157,7 +157,7 @@ export default function EmployeeFilePage() {
                 <label>{t('Note')}<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
               </div>
               <label className="check"><input type="checkbox" checked={contract.expatriate} onChange={(e) => setContract({ ...contract, expatriate: e.target.checked })} />{t('Expatriate (employer pays IERE)')}</label>
-              <p className="hint">{t('The previous contract ends the day before. The basic salary is the grade\'s. With an agreed net, HR Pay works out the gross and pays the difference above the basic as a salary complement.')}</p>
+              <p className="hint">{t('The previous contract ends the day before. With an agreed net, what is above the grade\'s basic is paid as a salary complement.')}</p>
               <ErrorText error={error} />
             <div className="modal-foot"><Button className="secondary" onClick={() => setContracting(false)}>{t('Cancel')}</Button><Button type="submit">{t('Save contract')}</Button></div>
             </Form>

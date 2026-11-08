@@ -342,7 +342,7 @@ function SalaryCard({ userId }: { userId: number }) {
           <Button onClick={save}>{t('Save this salary')}</Button>
         </div>
       )}
-      <p className="hint">{t('Enter the net agreed with the person. The basic is the grade\'s; HR Pay works out the complement so that a normal month (housing, transport, CNSS and IPR included) pays that net.')}</p>
+      <p className="hint">{t('The net agreed with the person. HR Pay works out the salary complement so that a normal month pays it.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -385,7 +385,7 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
       <h3>{t('Manager set by hand')}</h3>
       <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">{t('None: the head of the unit is used')}</span>}
         {editable && manager && <> <Button className="secondary void" onClick={() => save(null)}>{t('Remove')}</Button></>}</p>
-      <p className="hint">{t('Normally people report to the head of their unit (or the nearest head above), who approves their missions, overtime and leave and scores their evaluations. Set a manager here only for an exception; heads above still see this person in their branch.')}</p>
+      <p className="hint">{t('Leave empty and the unit head approves and evaluates. Set a manager only for an exception.')}</p>
       {editable && (
         <>
           <input placeholder={t('Search by name or registration number')} value={query} onChange={(e) => setQuery(e.target.value)} />

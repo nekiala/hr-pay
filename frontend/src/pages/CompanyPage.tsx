@@ -53,7 +53,7 @@ function LanguageCard() {
           <option value="en" lang="en">English</option>
         </select>
       </label>
-      <p className="hint">{t('Payslips, declarations, invoices, emails and WhatsApp messages are written in it, and people who have not chosen their own language see the app in it.')}</p>
+      <p className="hint">{t('Used for payslips, declarations, emails and messages, and for people who have not chosen a language.')}</p>
       {saved && <p className="success">{t('Saved.')}</p>}
       <ErrorText error={error} />
     </div>

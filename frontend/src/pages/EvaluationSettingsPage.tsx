@@ -78,14 +78,14 @@ export default function EvaluationSettingsPage() {
 
   return (
     <section>
-      <p><Link to="/evaluations">{t('← Evaluations')}</Link></p>
+      <p className="small muted"><Link to="/evaluations">{t('Evaluations')}</Link></p>
       <h2>{t('Evaluation criteria and templates')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
       <div className="card">
         <h3>{t('Templates')}</h3>
-        <p className="hint">{t('A template says how often people are evaluated and how much each criterion weighs. Weights must add up to 100. One active template per grade category and unit. The most specific applies: the person\'s unit (or the nearest unit above with a template), then their grade category, then “Everyone”.')}</p>
+        <p className="hint">{t('Weights must add up to 100. The most specific template applies: the person\'s unit, then their grade category, then “Everyone”.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Name')}</th><th>{t('How often')}</th><th>{t('For')}</th><th>{t('Unit')}</th><th>{t('Criteria')}</th><th>{t('Active')}</th><th></th></tr></thead>
@@ -150,7 +150,7 @@ export default function EvaluationSettingsPage() {
 
       <div className="card">
         <h3>{t('Criteria')}</h3>
-        <p className="hint">{t('The manager scores each criterion from 0 to 100. A criterion “from attendance” is scored by the app: 100, minus 5 per late day and 10 per absent day in the period.')}</p>
+        <p className="hint">{t('Scored from 0 to 100 by the manager. A criterion “from attendance” is scored by the app.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Scored by')}</th><th>{t('Active')}</th><th></th></tr></thead>

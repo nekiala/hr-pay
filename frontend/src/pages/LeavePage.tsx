@@ -6,6 +6,7 @@ import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { SettingsLink } from '../components/SettingsLink'
 import { AnnualLeavePlanning } from '../components/AnnualLeavePlanning'
 import { t, locale } from '../i18n'
 
@@ -147,7 +148,7 @@ export default function LeavePage() {
         </div>
         <div className="row">
           {leavePay && <Link className="button secondary" to="/payroll/leave-pay">{t('Leave pay')}{leavePayDue > 0 ? ` (${leavePayDue})` : ''}</Link>}
-          {isHr && <Link className="button secondary" to="/leave/settings">{t('Leave settings')}</Link>}
+          {isHr && <SettingsLink to="/leave/settings" />}
         </div>
       </div>
       {leavePay && leavePayDue > 0 && (

@@ -99,7 +99,7 @@ export default function BillingPage() {
                   </label>
                   <Button type="submit" className="secondary" disabled={cycle === s.cycle && currency === s.currency}>{t('Save')}</Button>
                 </div>
-                <p className="hint">{t('Applies from the next invoice. The price in US dollars stays the same; in francs it is converted at the BCC rate of the invoice\'s day.')}</p>
+                <p className="hint">{t('Applies from the next invoice. Francs are converted at the BCC rate of the invoice\'s day.')}</p>
               </Form>
             )}
           </div>
