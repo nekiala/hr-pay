@@ -619,7 +619,7 @@ export type QuinzaineRun = {
 export type QuinzaineSettings = { enabled: boolean; base: 'NET' | 'BASIC'; day: number; maxDebtMonths: number }
 export type QuinzaineCategory = { id: number; code: string; name: string; quinzainePercent: number | null }
 export type QuinzaineEmployee = {
-  userId: number; employeeName: string; registrationNo: string; category: string; percent: number | null
+  userId: number; employeeName: string; registrationNo: string; category: string | null; percent: number | null
   refused: boolean; reason: string | null; recordedBy: string | null; recordedAt: string | null
 }
 export type QuinzaineExclusion = { id: number; month: string; userId: number; employeeName: string; reason: string; recordedBy: string; recordedAt: string }
