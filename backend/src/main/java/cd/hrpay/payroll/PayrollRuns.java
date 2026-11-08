@@ -100,6 +100,13 @@ public class PayrollRuns {
         this.org = org;
     }
 
+    private cd.hrpay.leave.LeaveService leave;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLeave(cd.hrpay.leave.LeaveService leave) {
+        this.leave = leave;
+    }
+
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
                        cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
@@ -331,6 +338,26 @@ public class PayrollRuns {
         LocalDate hired = user.getHireDate() != null ? user.getHireDate() : contract.startDate();
         snapshot.put("hireDate", hired == null ? null : hired.toString());
         snapshot.put("dependantsInCharge", inCharge);
+        // Annual leave earned this month (DRC art. 141), credited when the payroll is closed: the scheduled days in
+        // employment, less unpaid leave and unjustified absence, which are not service.
+        String unpaidType = leave.unpaidTypeName();
+        LocalDate serviceFrom = hired != null && hired.isAfter(first) ? hired : first;
+        LocalDate serviceTo = leaves != null && leaves.isBefore(last) ? leaves : last;
+        List<DayCalculator.DayResult> scheduled = summary.days().stream().filter(d -> d.scheduledMinutes() > 0).toList();
+        int serviceDays = (int) scheduled.stream()
+                .filter(d -> !d.date().isBefore(serviceFrom) && !d.date().isAfter(serviceTo))
+                .filter(d -> !(d.status() == DayCalculator.Status.ABSENT && !d.date().isAfter(summary.asOf())))
+                .filter(d -> !(d.status() == DayCalculator.Status.LEAVE && unpaidType != null && unpaidType.equals(d.leaveType())))
+                .count();
+        leave.earned(userId, month, scheduled.size(), serviceDays).ifPresent(e -> {
+            snapshot.put("leaveEarned", e.days());
+            boolean credited = jdbc.sql("""
+                    select count(*) from leave_ledger l join leave_type t on t.id = l.leave_type_id
+                    where l.user_id = ? and t.code = 'ANNUAL' and l.kind = 'EARNED' and l.entry_date = ?""")
+                    .params(userId, month.atEndOfMonth()).query(Integer.class).single() > 0;
+            snapshot.put("leaveBalance", leave.annualBalance(userId).add(credited ? BigDecimal.ZERO : e.days()));
+        });
+
         if (leaves != null) {
             snapshot.put("lastDay", leaves.toString());
         }
@@ -506,6 +533,15 @@ public class PayrollRuns {
                     BigDecimal amount = ExchangeRates.convert(rs.getBigDecimal("amount"), rs.getString("currency"),
                             rs.getString("loan_currency"), run.usdCdf());
                     loans.recordRepayment(rs.getLong("loan_id"), run.id(), amount);
+                    return null;
+                }).list();
+        // Annual leave earned this month, as the payslip shows it.
+        jdbc.sql("""
+                select p.user_id, (p.snapshot ->> 'leaveEarned')::numeric as days from payslip p
+                where p.run_id = ? and p.kind = 'REGULAR' and p.snapshot ->> 'leaveEarned' is not null""")
+                .param(run.id())
+                .query((rs, i) -> {
+                    leave.credit(rs.getLong(1), month, rs.getBigDecimal(2));
                     return null;
                 }).list();
         jdbc.sql("update payroll_run set status = 'CLOSED', closed_by = ?, closed_at = now() where id = ?")

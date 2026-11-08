@@ -964,5 +964,7 @@
  "Leave allowance payslip": "Bulletin d'allocation de congé",
  "DRAFT: this leave allowance waits for Finance's approval.": "BROUILLON : cette allocation de congé attend l'approbation des Finances.",
  "Paid before the leave (Labour Code art. 145). CNSS and income tax are settled on the payslips of the months the leave covers.": "Payée avant le congé (Code du travail art. 145). La CNSS et l'IPR sont régularisés sur les bulletins des mois couverts par le congé.",
- "Choose a period of at most a year.": "Choisissez une période d'un an au plus."
+ "Choose a period of at most a year.": "Choisissez une période d'un an au plus.",
+ "Annual leave": "Congé annuel",
+ "%s days earned this month · balance %s days": "%s jours acquis ce mois · solde %s jours"
 }

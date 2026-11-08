@@ -42,6 +42,7 @@ class LeavePayIT extends IntegrationTest {
     @Test
     void leaveAllowanceIsWorkedOutApprovedPaidAndTakenBackOnThePayslip() throws Exception {
         MockHttpSession me = login(EMPLOYEE);
+        usdRate("2026-05-29", 2250);
         MockHttpSession hr = login(HR);
         MockHttpSession finance = login(FINANCE);
         mvc.perform(get("/api/leave/mine").session(me))

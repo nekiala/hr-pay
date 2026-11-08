@@ -2331,6 +2331,8 @@ const fr: Record<string, string> = {
   "on leave now": "en congé",
   "{a} leave allowance payslips": "{a} bulletins d'allocation de congé",
   "{a}: {c} added as an earning, {b} taken back": "{a} : {c} ajouté comme gain, {b} repris",
+  "Annual leave: {a} earned this month, balance {b}": "Congé annuel : {a} acquis ce mois, solde {b}",
+  "Annual leave is earned month by month: each closed monthly payroll credits the days of the person's category ÷ 12, never below the legal floor (DRC art. 141: 1 working day per full month, 1.5 under 18), plus the seniority days below, for the share of the month in service (unpaid leave and unjustified absence do not count). The payslip shows the days earned and the balance. Unused days carry over within the limits below.": "Le congé annuel s'acquiert mois par mois : chaque paie mensuelle clôturée crédite les jours de la catégorie de la personne ÷ 12, jamais moins que le minimum légal (RDC art. 141 : 1 jour ouvrable par mois entier, 1,5 avant 18 ans), plus les jours d'ancienneté ci-dessous, pour la part du mois en service (le congé sans solde et l'absence injustifiée ne comptent pas). Le bulletin indique les jours acquis et le solde. Les jours non pris se reportent dans les limites ci-dessous.",
 }
 
 export default fr

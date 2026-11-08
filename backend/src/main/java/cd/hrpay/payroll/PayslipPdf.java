@@ -442,6 +442,10 @@ public class PayslipPdf {
         facts.add(new String[] {"NIF", dash(s.get("taxNumber"))});
         facts.add(new String[] {Texts.t("Hours paid"), Texts.t("%s of %s", hours(c.p().paidMinutes()), hours(c.p().scheduledMinutes()))});
         facts.add(new String[] {Texts.t("Days worked"), String.valueOf(c.p().daysWorked())});
+        if (s.get("leaveEarned") != null) {
+            facts.add(new String[] {Texts.t("Annual leave"), Texts.t("%s days earned this month · balance %s days",
+                    days(s.get("leaveEarned")), days(s.get("leaveBalance")))});
+        }
         facts.add(new String[] {Texts.t("Monthly basic"), money(new BigDecimal(text(s.get("basicMonthly")).isEmpty() ? "0"
                 : text(s.get("basicMonthly"))), c.cur())});
         if (c.cur().equals("USD") && c.p().usdCdf() != null) {
@@ -610,6 +614,10 @@ public class PayslipPdf {
         if (value != null && !value.isBlank()) {
             out.add(label + " " + value);
         }
+    }
+
+    private static String days(Object v) {
+        return v == null ? "—" : new BigDecimal(v.toString()).stripTrailingZeros().toPlainString();
     }
 
     private static String text(Object v) {

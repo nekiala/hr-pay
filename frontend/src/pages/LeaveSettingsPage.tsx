@@ -11,7 +11,6 @@ export default function LeaveSettingsPage() {
   const [categories, setCategories] = useState<GradeCategory[]>([])
   const [types, setTypes] = useState<LeaveType[]>([])
   const [added, setAdded] = useState({ code: '', name: '', annualLeaveDays: 20, active: true })
-  const [year, setYear] = useState(new Date().getFullYear())
   const [seniority, setSeniority] = useState({ seniorityYears: 5, seniorityDays: 1 })
   const [pay, setPay] = useState({ annualPaid: true, carryPercent: 50, carryYears: 1 })
   const [closing, setClosing] = useState(new Date().getFullYear() - 1)
@@ -87,15 +86,7 @@ export default function LeaveSettingsPage() {
             </tbody>
           </table>
         </div>
-        <div className="row grant">
-          <label>{t('Year')}<input type="number" className="narrow-input" value={year} onChange={(e) => setYear(Number(e.target.value))} /></label>
-          <Button onClick={() => run(() => api<Record<string, number>>(`/api/leave/grant-annual?year=${year}`, { method: 'POST' }),
-            (r) => {
-              const x = r as Record<string, number>
-              return t('Annual leave {a}: granted to {b}, already granted to {c}, {d} without a grade category.', { a: year, b: x.granted, c: x.alreadyGranted, d: x.withoutCategory })
-            })}>{t('Grant annual leave for')}{' '}{year}</Button>
-        </div>
-        <p className="hint">{t('Gives each active employee the days of their category, plus the seniority days below, prorated for people hired during the year. Running it again skips those already granted. Unused days carry over within the limits below.')}</p>
+        <p className="hint">{t('Annual leave is earned month by month: each closed monthly payroll credits the days of the person\'s category ÷ 12, never below the legal floor (DRC art. 141: 1 working day per full month, 1.5 under 18), plus the seniority days below, for the share of the month in service (unpaid leave and unjustified absence do not count). The payslip shows the days earned and the balance. Unused days carry over within the limits below.')}</p>
       </div>
 
       <div className="card">

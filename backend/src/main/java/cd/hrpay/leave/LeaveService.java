@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
@@ -336,7 +337,7 @@ public class LeaveService {
         java.util.TreeMap<Integer, BigDecimal[]> years = new java.util.TreeMap<>();
         BigDecimal used = BigDecimal.ZERO;
         for (LedgerRow r : rows) {
-            boolean grant = r.kind().equals("GRANT") || (r.kind().equals("ADJUSTMENT") && r.days().signum() > 0);
+            boolean grant = r.kind().equals("GRANT") || r.kind().equals("EARNED") || (r.kind().equals("ADJUSTMENT") && r.days().signum() > 0);
             if (grant) {
                 int y = r.year() != null ? r.year() : r.entryDate().getYear();
                 BigDecimal[] b = years.computeIfAbsent(y, k -> new BigDecimal[] {BigDecimal.ZERO, BigDecimal.ZERO});
@@ -348,7 +349,7 @@ public class LeaveService {
             if (r.kind().equals("EXPIRED") && r.year() != null && years.containsKey(r.year())) {
                 BigDecimal[] b = years.get(r.year());
                 b[1] = b[1].add(r.days());
-            } else if (!r.kind().equals("GRANT") && !(r.kind().equals("ADJUSTMENT") && r.days().signum() > 0)
+            } else if (!r.kind().equals("GRANT") && !r.kind().equals("EARNED") && !(r.kind().equals("ADJUSTMENT") && r.days().signum() > 0)
                     && (asOf == null || !r.entryDate().isAfter(asOf))) {
                 used = used.subtract(r.days());
             }
@@ -362,6 +363,83 @@ public class LeaveService {
             used = used.subtract(take);
         }
         return years;
+    }
+
+    // ---- Annual leave earned month by month ------------------------------------------------------------------------
+
+    /** The annual leave a person earns in a month: the monthly rate, the share of the month in service, the days. */
+    public record Earned(BigDecimal perMonth, BigDecimal serviceShare, BigDecimal days, boolean minor) {}
+
+    /**
+     * Annual leave earns month by month (DRC art. 141): the grade category's days a year ÷ 12, never below the legal
+     * floor (one working day a month, one and a half under 18), plus the seniority days (one day per five years) ÷ 12,
+     * for the share of the month in service. {@code serviceDays} are the scheduled days of the month in employment
+     * that count as service (not unpaid leave or unjustified absence), out of {@code scheduledDays}.
+     * Empty when that year's leave was granted in one go at its start.
+     */
+    public java.util.Optional<Earned> earned(long userId, YearMonth month, int scheduledDays, int serviceDays) {
+        long typeId = annualTypeId();
+        boolean granted = jdbc.sql("select count(*) from leave_ledger where user_id = ? and leave_type_id = ? and kind = 'GRANT' and year = ?")
+                .params(userId, typeId, month.getYear()).query(Integer.class).single() > 0;
+        if (granted) {
+            return java.util.Optional.empty();
+        }
+        BigDecimal perMonth = perMonth(userId, month.atDay(1));
+        boolean minor = isMinor(userId, month.atDay(1));
+        BigDecimal share = scheduledDays <= 0 ? BigDecimal.ZERO
+                : BigDecimal.valueOf(Math.max(0, Math.min(serviceDays, scheduledDays)))
+                        .divide(BigDecimal.valueOf(scheduledDays), 4, RoundingMode.HALF_UP);
+        BigDecimal days = perMonth.multiply(share).setScale(2, RoundingMode.HALF_UP);
+        return java.util.Optional.of(new Earned(perMonth, share, days, minor));
+    }
+
+    /** Days of annual leave a full month of service earns on that date. */
+    public BigDecimal perMonth(long userId, LocalDate on) {
+        AppUser u = users.find(userId);
+        BigDecimal yearDays = u.getGradeCategoryId() == null ? BigDecimal.ZERO
+                : jdbc.sql("select annual_leave_days from grade_category where id = ?").param(u.getGradeCategoryId())
+                        .query(BigDecimal.class).single();
+        BigDecimal month = yearDays.divide(BigDecimal.valueOf(12), 4, RoundingMode.HALF_UP);
+        BigDecimal floor = new BigDecimal(setting(isMinor(userId, on) ? "LEAVE_MIN_DAYS_MONTH_MINOR" : "LEAVE_MIN_DAYS_MONTH", "0"));
+        month = month.max(floor);
+        int every = Integer.parseInt(setting("LEAVE_SENIORITY_YEARS", "0"));
+        LocalDate hired = u.getHireDate();
+        if (hired != null && every > 0) {
+            long years = ChronoUnit.YEARS.between(hired, on);
+            if (years >= every) {
+                month = month.add(new BigDecimal(setting("LEAVE_SENIORITY_DAYS", "0")).multiply(BigDecimal.valueOf(years / every))
+                        .divide(BigDecimal.valueOf(12), 4, RoundingMode.HALF_UP));
+            }
+        }
+        return month;
+    }
+
+    private boolean isMinor(long userId, LocalDate on) {
+        LocalDate born = jdbc.sql("select birth_date from employee_profile where user_id = ?").param(userId)
+                .query(LocalDate.class).optional().orElse(null);
+        return born != null && born.plusYears(18).isAfter(on);
+    }
+
+    /** Credits a month's earned days (once: a second credit for the same month is ignored). */
+    public void credit(long userId, YearMonth month, BigDecimal days) {
+        if (days == null || days.signum() <= 0) {
+            return;
+        }
+        jdbc.sql("""
+                insert into leave_ledger (user_id, leave_type_id, entry_date, days, kind, year, note, created_by)
+                values (?, ?, ?, ?, 'EARNED', ?, ?, ?) on conflict do nothing""")
+                .params(userId, annualTypeId(), month.atEndOfMonth(), days, month.getYear(),
+                        "Annual leave earned in " + month, CurrentUser.email()).update();
+    }
+
+    /** Annual leave days on the ledger (earned, granted, taken...). */
+    public BigDecimal annualBalance(long userId) {
+        return available(userId, annualTypeId());
+    }
+
+    /** The name of the unpaid leave type, whose days are not service. */
+    public String unpaidTypeName() {
+        return jdbc.sql("select name from leave_type where code = 'UNPAID'").query(String.class).optional().orElse(null);
     }
 
     public AnnualSummary annualSummary(long userId) {
@@ -401,11 +479,22 @@ public class LeaveService {
         BigDecimal grantedThisYear = buckets.containsKey(year) ? buckets.get(year)[0] : BigDecimal.ZERO;
         AppUser user = users.find(userId);
         LocalDate hired = user.getHireDate();
-        LocalDate from = hired != null && hired.getYear() == year ? hired.withDayOfMonth(1) : LocalDate.of(year, 1, 1);
-        long periodMonths = ChronoUnit.MONTHS.between(from, LocalDate.of(year + 1, 1, 1));
-        long months = Math.max(0, ChronoUnit.MONTHS.between(from, today.plusDays(1)));
-        BigDecimal earned = periodMonths <= 0 ? BigDecimal.ZERO : grantedThisYear.multiply(BigDecimal.valueOf(Math.min(months, periodMonths)))
-                .divide(BigDecimal.valueOf(periodMonths), 2, RoundingMode.HALF_UP);
+        boolean grantedUpfront = jdbc.sql("select count(*) from leave_ledger where user_id = ? and leave_type_id = ? and kind = 'GRANT' and year = ?")
+                .params(userId, typeId, year).query(Integer.class).single() > 0;
+        BigDecimal earned;
+        if (grantedUpfront) {
+            LocalDate from = hired != null && hired.getYear() == year ? hired.withDayOfMonth(1) : LocalDate.of(year, 1, 1);
+            long periodMonths = ChronoUnit.MONTHS.between(from, LocalDate.of(year + 1, 1, 1));
+            long months = Math.max(0, ChronoUnit.MONTHS.between(from, today.plusDays(1)));
+            earned = periodMonths <= 0 ? BigDecimal.ZERO : grantedThisYear.multiply(BigDecimal.valueOf(Math.min(months, periodMonths)))
+                    .divide(BigDecimal.valueOf(periodMonths), 2, RoundingMode.HALF_UP);
+        } else {
+            // Earned month by month with each closed payroll: what is on the ledger, out of a full year's days.
+            earned = grantedThisYear;
+            LocalDate from = hired != null && hired.getYear() == year ? hired : LocalDate.of(year, 1, 1);
+            long monthsInYear = from.isAfter(LocalDate.of(year, 12, 31)) ? 0 : 12 - from.getMonthValue() + 1;
+            grantedThisYear = perMonth(userId, today).multiply(BigDecimal.valueOf(monthsInYear)).setScale(2, RoundingMode.HALF_UP);
+        }
         BigDecimal taken = jdbc.sql("""
                 select coalesce(-sum(days), 0) from leave_ledger where user_id = ? and leave_type_id = ?
                 and kind in ('TAKEN', 'RETURNED') and extract(year from entry_date) = ?""")

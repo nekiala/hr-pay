@@ -1596,6 +1596,14 @@
      "value": "1"
     },
     {
+     "key": "LEAVE_MIN_DAYS_MONTH",
+     "value": "1"
+    },
+    {
+     "key": "LEAVE_MIN_DAYS_MONTH_MINOR",
+     "value": "1.5"
+    },
+    {
      "key": "GPS_RETENTION_DAYS",
      "value": "90"
     },
