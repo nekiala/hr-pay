@@ -175,7 +175,7 @@ public class AuthController {
 
     private TwoStepNeeded needed(TwoStep.Pending p, AppUser user) {
         java.util.List<String> sentTo = p.method() == TwoStep.Method.CODE ? java.util.List.of(mask(user.getEmail())) : java.util.List.of();
-        return new TwoStepNeeded(p.method() == null ? null : p.method().name(), p.setup(), twoStep.codesAvailable(), sentTo);
+        return new TwoStepNeeded(p.method() == null ? null : p.method().name(), p.setup(), twoStep.codesAvailable(user.getCompanyId()), sentTo);
     }
 
     private static String mask(String email) {

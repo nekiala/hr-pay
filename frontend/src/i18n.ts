@@ -73,4 +73,5 @@ export function plural(one: string, many: string, n: number, vars?: Record<strin
 /** Translates a message from the server that arrived in English (older copies, or a text the server misses). */
 export const tr = (text: string) => (current === 'fr' ? dictionary[text] ?? text : text)
 
-document.documentElement.lang = current
+// Unit tests run without a page.
+if (typeof document !== 'undefined') document.documentElement.lang = current

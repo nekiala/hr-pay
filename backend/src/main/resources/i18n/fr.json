@@ -1195,5 +1195,21 @@
  "13th month %s": "13e mois %s",
  "Corrections and back pay": "Corrections et rappels",
  "Final settlement: %s": "Décompte final : %s",
- "13th month calculation, %s": "Calcul du 13e mois, %s"
+ "13th month calculation, %s": "Calcul du 13e mois, %s",
+ "Your email server failed": "Votre serveur d'e-mail est en échec",
+ "Emails cannot leave through your email server: %s": "Les e-mails ne peuvent pas partir par votre serveur d'e-mail : %s",
+ "Choose SMTP or SMTPS.": "Choisissez SMTP ou SMTPS.",
+ "Choose no encryption, STARTTLS or SSL/TLS.": "Choisissez aucun chiffrement, STARTTLS ou SSL/TLS.",
+ "Enter the server's name, for example smtp.company.cd.": "Saisissez le nom du serveur, par exemple smtp.societe.cd.",
+ "The port is a number from 1 to 65535.": "Le port est un nombre de 1 à 65535.",
+ "Enter the sender's email address.": "Saisissez l'adresse e-mail de l'expéditeur.",
+ "Enter the sender's name (at most 120 characters).": "Saisissez le nom de l'expéditeur (120 caractères au plus).",
+ "The hidden copy (BCC) is not a valid email address.": "La copie cachée (BCC) n'est pas une adresse e-mail valide.",
+ "The EHLO domain is a server name, for example mail.company.cd.": "Le domaine EHLO est un nom de serveur, par exemple mail.societe.cd.",
+ "The server refused the connection: %s": "Le serveur a refusé la connexion : %s",
+ "The test email could not be sent: %s": "L'e-mail de test n'a pas pu être envoyé : %s",
+ "Connected to %s.": "Connexion réussie à %s.",
+ "A test email was sent to %s.": "Un e-mail de test a été envoyé à %s.",
+ "HR Pay test email": "E-mail de test HR Pay",
+ "This email shows that HR Pay can send emails through this server.": "Cet e-mail montre que HR Pay peut envoyer des e-mails par ce serveur."
 }

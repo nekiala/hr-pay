@@ -110,12 +110,12 @@ public class PasswordResets {
         String link = properties.publicUrl().replaceAll("/+$", "") + "/reset-password?token=" + token;
         audit.recordAs(by, "auth.password_reset_sent", "user", user.getId(), Map.of("reason", reason.name()));
         if (reason == Reason.WELCOME) {
-            return messages.email(user, () -> Texts.t("Your HR Pay trial is ready"), () ->
+            return messages.securityEmail(user, () -> Texts.t("Your HR Pay trial is ready"), () ->
                     Texts.t("Hello %s,\n\nYour HR Pay trial is ready. Open this link to choose your password and sign in:", user.getFirstName())
                     + "\n\n" + link + "\n\n"
                     + Texts.t("The link works once, for 7 days. Your email address is your sign-in name. The set-up guide on the home page takes you through the first steps."));
         }
-        return messages.email(user, () -> Texts.t("Choose a new HR Pay password"), () -> (reason == Reason.PROVIDER
+        return messages.securityEmail(user, () -> Texts.t("Choose a new HR Pay password"), () -> (reason == Reason.PROVIDER
                 ? Texts.t("Hello %s,\n\nYour HR Pay provider's support sent you this link to choose a new password, at your company's request.", user.getFirstName())
                 : Texts.t("Hello %s,\n\nSomeone asked to choose a new password for your HR Pay account. If it was you, open this link:", user.getFirstName()))
                 + "\n\n" + link + "\n\n"

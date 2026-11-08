@@ -132,6 +132,14 @@ it leaves the jobs to the worker. A server that stops in the middle of a job han
 again after 2 minutes (at most 3 tries). Files made by jobs are kept 7 days. The System page shows the queue;
 administrators are alerted when a job fails or waits more than 10 minutes.
 
+## Email
+
+Emails (check-in and sign-in codes, password links, raises, alerts) leave through the first server that is set and
+turned on: the company's own (its **Company > Email server** page), then the platform's (**Email server** in the
+provider menu, which takes over from `.env`), then `SMTP_*` in `.env`. With none, they are only written on the
+**Messages** page. The pages store the password encrypted with `HRPAY_DATA_KEY`, so set that key first. On an
+on-premise installation either the company page or `.env` is enough.
+
 ## Settings
 
 All settings are in `.env`; `.env.example` explains each one. Never commit `.env`: it holds the passwords.

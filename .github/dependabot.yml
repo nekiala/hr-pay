@@ -22,6 +22,10 @@ updates:
     directories: [/, /deploy/backup]
     schedule:
       interval: weekly
+    # A new Java version is a change to build.gradle.kts (toolchain) as well: done by hand, never by a bot.
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

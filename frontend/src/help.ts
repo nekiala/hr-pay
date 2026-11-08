@@ -360,6 +360,37 @@ Click a row to see the employees behind it (needs the right to read all payslips
 - A company administrator sees all the company's requests.
 - If the app stops answering, look at the [status page](/status).` },
   },
+  {
+    id: 'email-server', audience: 'admin', routes: ['/company/email', '/platform/email', '/outbox'],
+    fr: { title: 'Configurer le serveur d’e-mail', body: `
+HR Pay envoie par e-mail les codes de pointage et de connexion, les liens de mot de passe, les augmentations et les alertes. Pour chaque e-mail, il prend le premier serveur défini et activé :
+
+1. **Le serveur de votre entreprise** (Entreprise, puis Serveur d'e-mail) : les e-mails partent de votre domaine.
+2. **Le serveur de HR Pay**, défini par le fournisseur : l'expéditeur affiche « Votre entreprise via HR Pay ».
+3. **Le fichier .env** du serveur (installations sur site).
+4. **Aucun** : les e-mails ne partent pas ; ils sont seulement inscrits sur la page **Messages** (« LOGGED »).
+
+Les réglages : protocole (SMTP, ou SMTPS dès la connexion), hôte, port (587 pour STARTTLS, 465 pour SSL/TLS), chiffrement, adresse et nom de l'expéditeur, et en option la copie cachée (BCC), l'identifiant et le mot de passe, et le domaine EHLO (exigé par certains relais, comme smtp-relay.gmail.com).
+
+- **Tester la connexion** vérifie l'hôte, le port et le mot de passe sans rien envoyer ; **M'envoyer un e-mail de test** vous en envoie un.
+- Le mot de passe est enregistré chiffré et n'est plus jamais affiché ; laissez le champ vide pour le garder.
+- La copie cachée ne reçoit jamais les codes de connexion ni les liens de mot de passe.
+- Si votre serveur est en échec, les e-mails ne partent pas par un autre serveur : ils apparaissent « FAILED » sur la page Messages, et les personnes qui gèrent l'entreprise sont prévenues dans l'application (au plus une fois par heure).` },
+    en: { title: 'Setting up the email server', body: `
+HR Pay emails check-in and sign-in codes, password links, raises and alerts. For each email it takes the first server that is set and turned on:
+
+1. **Your company's server** (Company, then Email server): emails leave from your own domain.
+2. **HR Pay's server**, set by the provider: the sender shows "Your company via HR Pay".
+3. **The server's .env file** (on-premise installations).
+4. **None**: emails do not leave; they are only written on the **Messages** page ("LOGGED").
+
+The settings: protocol (SMTP, or SMTPS from the first byte), host, port (587 for STARTTLS, 465 for SSL/TLS), encryption, sender address and name, and optionally the hidden copy (BCC), username and password, and the EHLO domain (some relays, such as smtp-relay.gmail.com, ask for it).
+
+- **Test the connection** checks the host, port and password without sending anything; **Send me a test email** sends you one.
+- The password is stored encrypted and never shown again; leave the field empty to keep it.
+- The hidden copy never gets sign-in codes or password links.
+- When your server fails, emails are not sent another way: they show as "FAILED" on the Messages page, and the people who manage the company are told in the app (at most once an hour).` },
+  },
 ]
 
 export const articleText = (a: Article) => (language() === 'fr' ? a.fr : a.en)
