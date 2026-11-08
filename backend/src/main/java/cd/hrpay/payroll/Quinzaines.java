@@ -179,17 +179,17 @@ public class Quinzaines {
                 .single() > 0;
     }
 
-    /** Active employees under contract, with their category's rate and whether they asked not to receive it. */
+    /** Only the employees who asked not to receive it (a company may have thousands who do), with their current category. */
     public List<Employee> employees() {
         return jdbc.sql("""
                 select u.id as user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
                        k.code as category, k.quinzaine_percent as percent,
-                       r.id is not null as refused, r.reason, r.recorded_by, r.recorded_at
-                from app_user u
-                join lateral (select c.grade_id from employee_contract c where c.user_id = u.id and c.start_date <= current_date
+                       true as refused, r.reason, r.recorded_by, r.recorded_at
+                from quinzaine_refusal r
+                join app_user u on u.id = r.user_id
+                left join lateral (select c.grade_id from employee_contract c where c.user_id = u.id and c.start_date <= current_date
                               and (c.end_date is null or c.end_date >= current_date) order by c.start_date desc limit 1) c on true
-                join grade g on g.id = c.grade_id join grade_category k on k.id = g.category_id
-                left join quinzaine_refusal r on r.user_id = u.id
+                left join grade g on g.id = c.grade_id left join grade_category k on k.id = g.category_id
                 where u.status = 'ACTIVE'
                 order by u.last_name, u.first_name, u.id""").query(Employee.class).list();
     }

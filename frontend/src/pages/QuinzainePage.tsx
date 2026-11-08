@@ -84,7 +84,6 @@ export default function QuinzainePage() {
   }, t('Quinzaine worked out. Finance approves it next.'))
 
   const shown = people.filter((p) => !filter || `${p.employeeName} ${p.registrationNo}`.toLowerCase().includes(filter.toLowerCase()))
-  const requests = people.filter((p) => p.refused).length
 
   return (
     <section>
@@ -247,22 +246,24 @@ export default function QuinzainePage() {
           <h3>{t('Requests not to receive it')}</h3>
           <input type="search" placeholder={t('Search')} value={filter} onChange={(e) => setFilter(e.target.value)} />
         </div>
-        <p className="muted">{t('{a} of {b} employees asked not to receive the quinzaine. Employees make or withdraw the request themselves on their payslips page; it applies from the next quinzaine not yet approved. A quinzaine already approved or paid stays.', { a: requests, b: people.length })}</p>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>{t('Employee')}</th><th>{t('Category')}</th><th>{t('Quinzaine')}</th><th>{t('Reason')}</th></tr></thead>
-            <tbody>
-              {shown.map((p) => (
-                <tr key={p.userId}>
-                  <td>{p.employeeName} <span className="muted">{p.registrationNo}</span></td>
-                  <td>{p.category}{p.percent != null ? ` · ${Number(p.percent)}%` : ` · ${t('no rate')}`}</td>
-                  <td>{p.refused ? t('Asked not to receive it') : t('Takes it')}</td>
-                  <td>{p.refused ? <>{p.reason ?? '—'}<br /><span className="muted">{p.recordedAt ? longDay(p.recordedAt) : ''}</span></> : null}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <p className="muted">{t('{n} employees asked not to receive the quinzaine. Employees make or withdraw the request themselves on their payslips page; it applies from the next quinzaine not yet approved. A quinzaine already approved or paid stays.', { n: people.length })}</p>
+        {people.length === 0 ? <p className="muted">{t('Everyone receives it.')}</p> : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('Employee')}</th><th>{t('Category')}</th><th>{t('Reason')}</th><th>{t('Asked on')}</th></tr></thead>
+              <tbody>
+                {shown.map((p) => (
+                  <tr key={p.userId}>
+                    <td>{p.employeeName} <span className="muted">{p.registrationNo}</span></td>
+                    <td>{p.category ?? '—'}{p.category == null ? '' : p.percent != null ? ` · ${Number(p.percent)}%` : ` · ${t('no rate')}`}</td>
+                    <td>{p.reason ?? '—'}</td>
+                    <td>{p.recordedAt ? longDay(p.recordedAt) : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </section>
   )

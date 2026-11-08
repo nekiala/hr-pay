@@ -89,6 +89,11 @@ class QuinzaineIT extends IntegrationTest {
             // Employee 2 asks not to receive it; HR leaves employee 3 out of March; the manager owes a large loan.
             mvc.perform(json(put("/api/quinzaine/mine").session(other), "{\"refused\":true,\"reason\":\"One payment\"}"))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.refused").value(true));
+            // HR's list shows only the people who asked not to receive it, not every employee.
+            mvc.perform(get("/api/quinzaine/employees").session(hr)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].userId").value(userId(EMPLOYEE2)))
+                    .andExpect(jsonPath("$[0].reason").value("One payment"));
             mvc.perform(json(post("/api/quinzaine/exclusions").session(hr),
                             "{\"month\":\"2028-03\",\"userId\":%d,\"reason\":\"Disciplinary file\"}".formatted(userId(EMPLOYEE3))))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
