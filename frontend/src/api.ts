@@ -1012,3 +1012,18 @@ export const payRunLink = (r: { type: PayRunType; key: string }) => ({
   MONTHLY: `/payroll/runs/monthly/${r.key}`, QUINZAINE: `/payroll/runs/quinzaine/${r.key}`, LEAVE_PAY: `/payroll/runs/leave-pay/${r.key}`,
   THIRTEENTH: `/payroll/runs/thirteenth/${r.key}`, CORRECTION: '/payroll/runs/corrections', SETTLEMENT: `/users/${r.key}/departure`,
 }[r.type])
+
+export type AdvanceSettings = { enabled: boolean; approval: 'AUTO' | 'HR'; maxPerMonth: number; closingDays: number; minServiceDays: number; maxDebtMonths: number }
+export type AdvanceCategory = { id: number; code: string; name: string; advancePercent: number | null }
+export type AdvanceAvailability = {
+  open: boolean; reason: string | null; month: string; currency: string | null; normalNet: number | null; earnedNet: number | null
+  percent: number | null; quinzaine: number | null; taken: number | null; available: number; requestsLeft: number; explanation: string[]
+}
+export type SalaryAdvance = {
+  id: number; userId: number; employeeName: string; registrationNo: string | null; month: string; number: string | null
+  amount: number; currency: string; available: number; earnedNet: number; percent: number
+  status: 'REQUESTED' | 'APPROVED' | 'PAID' | 'REJECTED' | 'CANCELLED'; signedName: string; signedAt: string; signedChannels: string | null
+  sha256: string; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null; createdAt: string; paid: boolean
+}
+export type MyAdvances = { settings: AdvanceSettings; availability: AdvanceAvailability; advances: SalaryAdvance[] }
+export type AdvanceCodeSent = { challengeId: string; channels: string[]; expiresAt: string; receipt: string }

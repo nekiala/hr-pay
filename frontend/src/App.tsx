@@ -41,6 +41,8 @@ import ThirteenthSettingsPage from './pages/ThirteenthSettingsPage'
 import PayslipPage from './pages/PayslipPage'
 import LoansPage from './pages/LoansPage'
 import MyPayslipsPage from './pages/MyPayslipsPage'
+import MyAdvancePage from './pages/MyAdvancePage'
+import AdvancesPage from './pages/AdvancesPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import LeavePayRunPage from './pages/LeavePayRunPage'
 import QuinzaineRunPage from './pages/QuinzaineRunPage'
@@ -91,6 +93,13 @@ function Guard({ permission, children }: { permission?: string; children: ReactN
     return <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return <>{children}</>
+}
+
+function AdvancesRoute() {
+  const { can } = useAuth()
+  return can('advance.manage') || can('payroll.pay')
+    ? <AdvancesPage />
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
 }
 
 function PayrollStaff({ children }: { children: ReactNode }) {
@@ -191,6 +200,8 @@ export default function App() {
           <Route path="/lifecycle" element={<Guard permission="lifecycle.manage"><LifecyclePage /></Guard>} />
           <Route path="/lifecycle/settings" element={<Guard permission="lifecycle.manage"><LifecycleSettingsPage /></Guard>} />
           <Route path="/my/documents" element={<MyDocumentsPage />} />
+          <Route path="/my/advance" element={<MyAdvancePage />} />
+          <Route path="/payroll/advances" element={<AdvancesRoute />} />
           <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />
           <Route path="/departures" element={<PayrollStaff><DeparturesPage /></PayrollStaff>} />
           <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />

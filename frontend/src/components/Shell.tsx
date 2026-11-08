@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, Gift, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
+  Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, Gift, Banknote, PiggyBank, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
@@ -26,6 +26,12 @@ function useNav(): { title: string; items: Item[] }[] {
   const has = (m: Module) => !me?.company || me.company.modules.includes(m)
   const att = has('ATTENDANCE')
   const pay = has('PAYROLL')
+  // "My salary advance" shows only where the company offers advances.
+  const [advances, setAdvances] = useState(false)
+  useEffect(() => {
+    if (!pay || !me) return
+    api<boolean>('/api/advances/offered').then(setAdvances).catch(() => setAdvances(false))
+  }, [pay, me?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return [
     {
       title: t('My work'),
@@ -36,6 +42,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/missions', label: t('Missions'), icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
         { to: '/corrections', label: t('Corrections'), icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
         { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
+        { to: '/my/advance', label: t('My salary advance'), icon: PiggyBank, show: pay && advances },
         { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
         { to: '/jobs', label: t('My jobs'), icon: ListChecks, show: true },
       ],
@@ -70,6 +77,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
         { to: '/payroll/entries', label: t('Bonuses and deductions'), icon: Coins, show: pay && can('salary.read') },
+        { to: '/payroll/advances', label: t('Salary advances'), icon: PiggyBank, show: pay && any('advance.manage', 'payroll.pay') },
         { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
         { to: '/payroll/accounting', label: t('Accounting'), icon: BookOpenCheck, show: pay && can('accounting.export') },
         { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },

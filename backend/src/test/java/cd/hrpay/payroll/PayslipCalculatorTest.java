@@ -73,9 +73,11 @@ class PayslipCalculatorTest {
         assertThat(r.taxableBaseCdf()).isEqualByComparingTo("2280000");
         // 27,360,000 a year: 120,000 + 4,992,000 = 5,112,000 / 12 = 426,000; less 6% for 3 dependants = 400,440 CDF.
         assertThat(line(r, "IPR")).isEqualByComparingTo("200.22");
-        // Net before loans 1,303.78; at most 30% (391.13) goes to the loan.
-        assertThat(line(r, "LOAN")).isEqualByComparingTo("391.13");
-        assertThat(r.net()).isEqualByComparingTo("912.65");
+        // Net before loans 1,303.78; 30% would be 391.13, but Code du travail art. 114 allows less: 1/5 up to five
+        // monthly SMIG of the category and 1/3 above (308.92).
+        assertThat(line(r, "LOAN")).isEqualByComparingTo("308.92");
+        assertThat(r.net()).isEqualByComparingTo("994.86");
+        assertThat(r.warnings()).anyMatch(w -> w.contains("art. 114"));
         assertThat(r.warnings()).anyMatch(w -> w.startsWith("Loan #7"));
         assertThat(line(r, "CNSS_EMPLOYER")).isEqualByComparingTo("156");
         assertThat(line(r, "INPP")).isEqualByComparingTo("15.64");
@@ -112,9 +114,10 @@ class PayslipCalculatorTest {
         var loan = new PayslipCalculator.LoanDue(7, "LOAN", d("500"), d("2000"), "USD");
         var r = PayslipCalculator.calculate(input(10560, List.of(), List.of(quinzaine("400")), List.of(loan), false));
         assertThat(line(r, "QUINZAINE")).isEqualByComparingTo("400");
-        // The loan's room is 30% of what is left after the quinzaine.
+        // The loan's room is worked out on what is left after the quinzaine: here art. 114 (149.90) is below 30%.
         BigDecimal beforeLoans = r.gross().subtract(line(r, "CNSS_EMPLOYEE")).subtract(line(r, "IPR")).subtract(d("400"));
-        assertThat(line(r, "LOAN")).isEqualByComparingTo(beforeLoans.multiply(d("0.30")).setScale(2, java.math.RoundingMode.HALF_UP));
+        assertThat(line(r, "LOAN")).isEqualByComparingTo("149.90")
+                .isLessThan(beforeLoans.multiply(d("0.30")).setScale(2, java.math.RoundingMode.HALF_UP));
         assertThat(r.net()).isPositive();
     }
 
