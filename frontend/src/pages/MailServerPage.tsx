@@ -161,7 +161,7 @@ export function CompanyMailServerPage() {
             {view.inUse === 'NONE' && <p className="hint">{t('See them on the Messages page.')} <Link to="/outbox">{t('Messages')}</Link></p>}
           </div>
           <MailServerForm base="/api/company/mail-server" settings={view.settings} onSaved={load}
-            intro={t("Optional. Set your company's own server so emails leave from your domain. When it is turned off, HR Pay's server sends them. If your server fails, emails are not sent another way: they show as failed on the Messages page and administrators are told.")} />
+            intro={t("Optional. Set your company's own server so emails leave from your domain. When it is turned off, HR Pay's server sends them. If your server fails, emails are not sent another way: they show as failed on the Messages page and the people who manage the company are told.")} />
         </>
       )}
     </section>
