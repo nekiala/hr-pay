@@ -132,6 +132,9 @@ app:
   backups:
     expected: ${BACKUPS_EXPECTED:false}
   # BCC exchange rates (CDF per unit). Fetched at start-up and twice a day; HR can enter one by hand.
+  # The website's salary calculator: the countries it answers for (their pack rates must be signed off first).
+  public-calculator:
+    countries: ${APP_PUBLIC_CALCULATOR_COUNTRIES:CD,CG}
   exchange-rates:
     url: ${EXCHANGE_RATES_URL:https://exchange-api.ntoprog.org/api/v1/exchange-rates/current}
     fetch-enabled: ${EXCHANGE_RATES_FETCH:true}

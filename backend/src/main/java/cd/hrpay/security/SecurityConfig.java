@@ -56,6 +56,27 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * The website's public tools (the salary calculator): anyone, from any site, without a session or a cookie, so
+     * no CSRF token either. Each answer is limited per address by the controller.
+     */
+    @Bean
+    @org.springframework.core.annotation.Order(3)
+    SecurityFilterChain websiteToolsChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/public/**")
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .sessionManagement(s -> s.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
+                .securityContext(c -> c.securityContextRepository(new org.springframework.security.web.context.RequestAttributeSecurityContextRepository()))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                .formLogin(f -> f.disable())
+                .httpBasic(b -> b.disable())
+                .logout(l -> l.disable())
+                .requestCache(r -> r.disable());
+        return http.build();
+    }
+
     /** Biometric time clocks: known by their serial number, they cannot sign in or carry a CSRF token. */
     @Bean
     @org.springframework.core.annotation.Order(2)
@@ -150,6 +171,14 @@ public class SecurityConfig {
         config.addAllowedHeader("*");
         config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // The website's tools answer any site, without cookies; registered first, so it wins over "/api/**".
+        CorsConfiguration website = new CorsConfiguration();
+        website.addAllowedOriginPattern("*");
+        website.addAllowedMethod("GET");
+        website.addAllowedMethod("POST");
+        website.addAllowedHeader("Content-Type");
+        website.setAllowCredentials(false);
+        source.registerCorsConfiguration("/api/public/**", website);
         source.registerCorsConfiguration("/api/**", config);
         return source;
     }

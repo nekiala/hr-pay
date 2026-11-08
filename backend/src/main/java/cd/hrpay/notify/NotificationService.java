@@ -124,6 +124,34 @@ public class NotificationService {
         }
     }
 
+    /**
+     * An email to someone who has no account (a website visitor), sent and recorded as the provider's company.
+     * Run inside the provider's company.
+     */
+    public Delivery emailAddress(String to, String subject, String body) {
+        MailServers.Resolved server = servers.resolve(cd.hrpay.tenancy.TenantContext.providerCompany(), false);
+        if (server.level() == MailServers.Level.NONE) {
+            record(null, Channel.EMAIL, to, subject, body, "LOGGED", null, server.level());
+            return new Delivery(Channel.EMAIL, "LOGGED");
+        }
+        try {
+            MimeMessage message = server.sender().createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(server.from());
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body);
+            server.sender().send(message);
+            record(null, Channel.EMAIL, to, subject, body, "SENT", null, server.level());
+            return new Delivery(Channel.EMAIL, "SENT");
+        } catch (MessagingException | RuntimeException e) {
+            String error = MailServers.rootMessage(e);
+            log.warn("Email to {} failed ({}): {}", to, server.level(), error);
+            record(null, Channel.EMAIL, to, subject, body, "FAILED", error, server.level());
+            return new Delivery(Channel.EMAIL, "FAILED");
+        }
+    }
+
     private Delivery sendWhatsapp(AppUser user, String code, String text, String language) {
         String to = user.getPhone().replace("+", "");
         Map<String, Object> payload = Map.of(
@@ -157,7 +185,7 @@ public class NotificationService {
                 insert into outbox_message (user_id, channel, recipient, subject, body, status, error, via)
                 values (:user, :channel, :recipient, :subject, :body, :status, :error, :via)""")
                 .param("via", via == null ? null : via.name())
-                .param("user", user.getId()).param("channel", channel.name()).param("recipient", recipient)
+                .param("user", user == null ? null : user.getId()).param("channel", channel.name()).param("recipient", recipient)
                 .param("subject", subject).param("body", body).param("status", status).param("error", truncate(error))
                 .update();
     }

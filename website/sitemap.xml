@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Replace https://www.example.com with the website's address before publishing. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.example.com/</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/calculateur-salaire-rdc.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/calculateur-salaire-congo.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/cout-employeur.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/articles/index.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/articles/smig-2026-rdc.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/articles/irpp-2026-rdc.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/articles/cnss-rdc.html</loc><lastmod>2026-11-08</lastmod></url>
+  <url><loc>https://www.example.com/articles/its-2026-congo.html</loc><lastmod>2026-11-08</lastmod></url>
+</urlset>

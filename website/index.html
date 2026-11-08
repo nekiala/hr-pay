@@ -6,38 +6,7 @@
 <title>HR Pay · Pointage, congés et paie pour la RDC et le Congo</title>
 <meta name="description" content="Pointage, congés, évaluations et paie conforme pour les entreprises de la RDC et de la République du Congo. Essai gratuit de 30 jours.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<style>
-:root { --bg:#f7f8fa; --surface:#fff; --ink:#111827; --muted:#5b6472; --border:#e3e6ea; --accent:#0f766e; --accent-ink:#fff; --soft:#e6f4f2; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0f1316; --surface:#171c20; --ink:#eef1f3; --muted:#a2acb6; --border:#2a3238; --accent:#2bb3a3; --accent-ink:#06201d; --soft:#123330; } }
-* { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-a { color:var(--accent); }
-.wrap { max-width:1080px; margin:0 auto; padding:0 20px; }
-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 0; }
-.brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:19px; color:var(--ink); text-decoration:none; }
-.brand img { width:30px; height:30px; }
-nav { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.btn { display:inline-block; padding:10px 18px; border-radius:8px; font-weight:600; text-decoration:none; border:1px solid var(--border); color:var(--ink); background:var(--surface); }
-.btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
-.lang { background:none; border:0; color:var(--muted); cursor:pointer; font:inherit; padding:8px; }
-.hero { padding:56px 0 40px; display:grid; gap:20px; }
-.hero h1 { font-size:clamp(30px, 5vw, 48px); line-height:1.15; letter-spacing:-.02em; margin:0; max-width:18ch; }
-.hero p { font-size:18px; color:var(--muted); max-width:60ch; margin:0; }
-.hero .actions { display:flex; gap:10px; flex-wrap:wrap; }
-.grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
-.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; }
-.card h3 { margin:0 0 6px; font-size:17px; }
-.card p { margin:0; color:var(--muted); font-size:15px; }
-section { padding:36px 0; }
-section > h2 { font-size:26px; margin:0 0 18px; letter-spacing:-.01em; }
-.band { background:var(--soft); border-radius:16px; padding:28px; display:grid; gap:12px; }
-.band h2 { margin:0; }
-ul.ticks { padding:0; margin:0; list-style:none; display:grid; gap:8px; }
-ul.ticks li::before { content:"✓"; color:var(--accent); font-weight:700; margin-right:8px; }
-footer { border-top:1px solid var(--border); margin-top:40px; padding:24px 0 40px; color:var(--muted); font-size:14px; display:flex; gap:16px; flex-wrap:wrap; justify-content:space-between; }
-footer a { color:var(--muted); margin-right:14px; }
-[hidden] { display:none !important; }
-</style>
+<link rel="stylesheet" href="site.css">
 </head>
 <!-- Set the two addresses once: the app (sign-in, trial form, status, terms) and the demo server. -->
 <body data-app="https://app.example.com" data-demo="https://demo.example.com">
@@ -46,6 +15,7 @@ footer a { color:var(--muted); margin-right:14px; }
 <header>
   <a class="brand" href="#"><img src="favicon.svg" alt="">HR Pay</a>
   <nav>
+    <span class="links"><a href="calculateur-salaire-rdc.html"><span lang="fr">Calculateurs</span><span lang="en" hidden>Calculators</span></a><a href="articles/index.html">Articles</a></span>
     <button class="lang" type="button" data-switch>English</button>
     <a class="btn" data-app-path="/login"><span lang="fr">Se connecter</span><span lang="en" hidden>Sign in</span></a>
     <a class="btn primary" data-app-path="/trial"><span lang="fr">Essai gratuit</span><span lang="en" hidden>Free trial</span></a>
@@ -72,6 +42,15 @@ footer a { color:var(--muted); margin-right:14px; }
       <div class="card"><h3>Évaluations</h3><p>Critères pondérés, note du responsable, validation RH et contestation par l'employé.</p></div>
       <div class="card"><h3>Dossier de l'employé</h3><p>Embauches et départs guidés, documents, contrats signés par code, attestations.</p></div>
       <div class="card"><h3>Tableaux de bord</h3><p>Effectif, rotation, absence et coût de la paie par direction, mois par mois.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Outils gratuits</h2>
+    <div class="grid">
+      <a class="card" href="calculateur-salaire-rdc.html" style="text-decoration:none;color:inherit"><h3>Salaire net en RDC</h3><p>Du brut au net ou du net au brut : CNSS, IPR 2026, INPP, ONEM, en CDF ou en USD.</p></a>
+      <a class="card" href="calculateur-salaire-congo.html" style="text-decoration:none;color:inherit"><h3>Salaire net au Congo</h3><p>CNSS avec plafonds, ITS 2026 au quotient familial et TUS, en FCFA.</p></a>
+      <a class="card" href="cout-employeur.html" style="text-decoration:none;color:inherit"><h3>Coût employeur</h3><p>Ce qu'un salarié coûte vraiment, charges patronales comprises.</p></a>
     </div>
   </section>
 
@@ -121,6 +100,15 @@ footer a { color:var(--muted); margin-right:14px; }
   </section>
 
   <section>
+    <h2>Free tools</h2>
+    <div class="grid">
+      <a class="card" href="calculateur-salaire-rdc.html?lang=en" style="text-decoration:none;color:inherit"><h3>DR Congo net salary</h3><p>Gross to net or net to gross: CNSS, 2026 IPR, INPP, ONEM, in CDF or USD.</p></a>
+      <a class="card" href="calculateur-salaire-congo.html?lang=en" style="text-decoration:none;color:inherit"><h3>Congo net salary</h3><p>CNSS with ceilings, 2026 ITS with family parts and TUS, in CFA francs.</p></a>
+      <a class="card" href="cout-employeur.html?lang=en" style="text-decoration:none;color:inherit"><h3>Employer cost</h3><p>What an employee really costs, employer charges included.</p></a>
+    </div>
+  </section>
+
+  <section>
     <div class="band">
       <h2>Online or on your own servers</h2>
       <ul class="ticks">
@@ -154,24 +142,6 @@ footer a { color:var(--muted); margin-right:14px; }
 </footer>
 </div>
 
-<script>
-(function () {
-  var app = document.body.dataset.app, demo = document.body.dataset.demo;
-  var lang = /(^|[?&])lang=en/.test(location.search) ? 'en'
-    : /(^|[?&])lang=fr/.test(location.search) ? 'fr'
-    : ((navigator.language || 'fr').slice(0, 2) === 'en' ? 'en' : 'fr');
-  function apply() {
-    document.documentElement.lang = lang;
-    document.querySelectorAll('[lang]:not(html)').forEach(function (el) { el.hidden = el.getAttribute('lang') !== lang; });
-    document.querySelectorAll('[data-app-path]').forEach(function (a) {
-      a.href = app + a.dataset.appPath;
-    });
-    document.querySelectorAll('[data-demo-path]').forEach(function (a) { a.href = demo + a.dataset.demoPath; });
-    document.querySelector('[data-switch]').textContent = lang === 'fr' ? 'English' : 'Français';
-  }
-  document.querySelector('[data-switch]').addEventListener('click', function () { lang = lang === 'fr' ? 'en' : 'fr'; apply(); });
-  apply();
-})();
-</script>
+<script src="site.js"></script>
 </body>
 </html>

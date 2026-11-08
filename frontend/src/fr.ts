@@ -1,5 +1,11 @@
 // French texts of the interface, by their English text. Generated from the t() calls, then edited by hand.
 const fr: Record<string, string> = {
+  "Salary calculator leads": "Contacts du calculateur de salaire",
+  "Visitors of the website’s salary calculator who asked for their result by email. They received it; contact them to offer a trial.": "Visiteurs du calculateur de salaire du site qui ont demandé leur résultat par email. Ils l'ont reçu ; contactez-les pour proposer un essai.",
+  "No lead yet.": "Aucun contact pour l'instant.",
+  "Contacted": "Contacté",
+  "See the calculation": "Voir le calcul",
+  "Mark contacted": "Marquer comme contacté",
   "Declared": "Déclarée",
   "Calculated": "Calculée",
   " (closed automatically)": " (clôturé automatiquement)",

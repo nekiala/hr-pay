@@ -123,7 +123,9 @@ export function StatusPage() {
 
 /** The website's trial request: the provider reads it and creates the company. */
 export function TrialPage() {
-  const [form, setForm] = useState({ companyName: '', countryCode: 'CD', employees: '51-300', firstName: '', lastName: '', email: '', phone: '+243', message: '', website: '' })
+  // The website's calculator opens the form with the visitor's country (?country=CG).
+  const startCountry = new URLSearchParams(window.location.search).get('country') === 'CG' ? 'CG' : 'CD'
+  const [form, setForm] = useState({ companyName: '', countryCode: startCountry, employees: '51-300', firstName: '', lastName: '', email: '', phone: startCountry === 'CG' ? '+242' : '+243', message: '', website: '' })
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value })

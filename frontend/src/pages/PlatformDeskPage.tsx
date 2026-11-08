@@ -106,7 +106,57 @@ export function TrialsPage() {
           </Form>
         </Modal>
       )}
+      <CalculatorLeads />
     </section>
+  )
+}
+
+type Lead = { id: number; email: string; companyName: string | null; phone: string | null; countryCode: string; employees: string | null; language: string; summary: string; status: 'NEW' | 'CONTACTED'; contactedBy: string | null; contactedAt: string | null; createdAt: string }
+
+/** Visitors of the website's salary calculator who asked for their result by email. */
+function CalculatorLeads() {
+  const [rows, setRows] = useState<Lead[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState<Lead | null>(null)
+  const load = () => api<Lead[]>('/api/platform/calculator-leads').then(setRows).catch((e: Error) => setError(e.message))
+  useEffect(() => { void load() }, [])
+  const contacted = async (r: Lead) => {
+    setError(null)
+    try { await api(`/api/platform/calculator-leads/${r.id}/contacted`, { method: 'POST' }); await load() } catch (e) { setError((e as Error).message) }
+  }
+  return (
+    <>
+      <h2>{t('Salary calculator leads')}</h2>
+      <p className="hint">{t('Visitors of the website’s salary calculator who asked for their result by email. They received it; contact them to offer a trial.')}</p>
+      <ErrorText error={error} />
+      <div className="card">
+        {rows && rows.length === 0 && <p className="muted">{t('No lead yet.')}</p>}
+        {rows && rows.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>{t('Received')}</th><th>{t('Contact')}</th><th>{t('Country')}</th><th>{t('Employees')}</th><th>{t('Status')}</th><th></th></tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="small">{new Date(r.createdAt).toLocaleString(locale())}</td>
+                    <td className="small">{r.companyName && <>{r.companyName}<br /></>}<a href={`mailto:${r.email}`}>{r.email}</a>{r.phone && <> · {r.phone}</>}</td>
+                    <td>{r.countryCode}</td>
+                    <td>{r.employees ?? '—'}</td>
+                    <td>{r.status === 'NEW' ? <span className="badge warn">{t('New')}</span> : <span className="badge ok" title={r.contactedBy ?? ''}>{t('Contacted')}</span>}</td>
+                    <td className="num"><div className="row"><Button className="secondary" onClick={() => setOpen(r)}>{t('See the calculation')}</Button>{r.status === 'NEW' && <Button onClick={() => contacted(r)}>{t('Mark contacted')}</Button>}</div></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      {open && (
+        <Modal title={open.companyName ?? open.email} onClose={() => setOpen(null)}>
+          <pre className="small" style={{ whiteSpace: 'pre-wrap' }}>{open.summary}</pre>
+        </Modal>
+      )}
+    </>
   )
 }
 
