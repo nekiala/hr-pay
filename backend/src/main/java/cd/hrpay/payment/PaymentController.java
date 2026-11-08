@@ -42,7 +42,8 @@ public class PaymentController {
     public record PayslipSettingsInput(@Size(max = 40) String phone, @Size(max = 150) String email,
                                        @Size(max = 150) String website, @Size(max = 200) String legalForm,
                                        @Size(max = 300) String footer,
-                                       @NotNull @Pattern(regexp = "CLASSIC|COMPACT|LEDGER") String template) {}
+                                       @NotNull @Pattern(regexp = "CLASSIC|COMPACT|LEDGER") String template,
+                                       @Size(max = 150) String activity) {}
 
     public record LogoInput(@NotBlank String contentType, @NotBlank @Size(max = 800_000) String base64) {}
 
@@ -107,7 +108,7 @@ public class PaymentController {
     @PreAuthorize("hasAuthority('company.manage')")
     public Company.PayslipSettings savePayslipSettings(@Valid @RequestBody PayslipSettingsInput b) {
         return company.savePayslipSettings(new Company.PayslipSettings(b.phone(), b.email(), b.website(), b.legalForm(),
-                b.footer(), b.template(), false));
+                b.footer(), b.template(), false, b.activity()));
     }
 
     /** A made-up payslip in one of the layouts, with the company's real header, to compare the layouts. */

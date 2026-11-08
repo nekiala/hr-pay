@@ -16,7 +16,7 @@ public class Company {
 
     /** How payslips look: contact details and legal mentions next to the logo, the footer, and the layout. */
     public record PayslipSettings(String phone, String email, String website, String legalForm, String footer,
-                                  String template, boolean hasLogo) {}
+                                  String template, boolean hasLogo, String activity) {}
 
     public record Logo(String contentType, byte[] data) {}
 
@@ -68,16 +68,16 @@ public class Company {
     public PayslipSettings payslipSettings() {
         return jdbc.sql("""
                 select phone, email, website, legal_form, payslip_footer as footer, payslip_template as template,
-                       logo is not null as has_logo from company where id = current_company_id()""").query(PayslipSettings.class).single();
+                       logo is not null as has_logo, activity from company where id = current_company_id()""").query(PayslipSettings.class).single();
     }
 
     @Transactional
     public PayslipSettings savePayslipSettings(PayslipSettings s) {
         jdbc.sql("""
                 update company set phone = ?, email = ?, website = ?, legal_form = ?, payslip_footer = ?, payslip_template = ?,
-                       updated_by = ?, updated_at = now() where id = current_company_id()""")
+                       activity = ?, updated_by = ?, updated_at = now() where id = current_company_id()""")
                 .params(blank(s.phone()), blank(s.email()), blank(s.website()), blank(s.legalForm()), blank(s.footer()),
-                        s.template(), CurrentUser.email()).update();
+                        s.template(), blank(s.activity()), CurrentUser.email()).update();
         audit.record("company.payslip_settings_updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("template", s.template()));
         return payslipSettings();
     }

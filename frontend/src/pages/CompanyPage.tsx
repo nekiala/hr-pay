@@ -147,6 +147,8 @@ export default function CompanyPage() {
         <div className="grid3">
           <label>{t('Legal form and capital')}<input value={settings.legalForm ?? ''} maxLength={200} placeholder={t('SARL au capital de 10 000 USD')}
             onChange={(e) => set('legalForm', e.target.value)} /></label>
+          <label>{t('Branch of activity')}<input value={settings.activity ?? ''} maxLength={150} placeholder={t('Telecommunications')}
+            onChange={(e) => set('activity', e.target.value)} /></label>
           <label>{t('Phone')}<input value={settings.phone ?? ''} maxLength={40} onChange={(e) => set('phone', e.target.value)} /></label>
           <label>{t('Email')}<input type="email" value={settings.email ?? ''} maxLength={150} onChange={(e) => set('email', e.target.value)} /></label>
           <label>{t('Website')}<input value={settings.website ?? ''} maxLength={150} onChange={(e) => set('website', e.target.value)} /></label>

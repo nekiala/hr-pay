@@ -130,6 +130,9 @@ export default function PayrollRunsPage() {
               onConfirm: ([reason]) => act('send-back', t('Sent back for changes.'), { reason }),
             })}>{t('Send back')}</Button>
           )}
+          {run && can('payroll.report') && (
+            <Link className="button secondary" to={`/payroll/reports?month=${month}`}>{t('Reports')}</Link>
+          )}
           {can('payroll.close') && run?.status === 'APPROVED' && (
             <Button disabled={busy} onClick={() => ask({ title: t('Close {a}?', { a: month }), message: t('Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.'), confirmLabel: t('Close the month'), danger: true, onConfirm: () => act('close', t('Month closed. Employees can now see their payslips.')) })}>{t('Close the month')}</Button>
           )}

@@ -838,7 +838,7 @@ export type EvalTemplate = {
 export const FREQUENCY = { MONTHLY: t('Monthly'), QUARTERLY: t('Quarterly'), SEMI_ANNUAL: t('Every six months') }
 
 export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
-export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean }
+export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean; activity: string | null }
 
 /** The countries a company may be in, by their code. */
 export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }
