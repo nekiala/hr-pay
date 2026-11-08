@@ -231,7 +231,7 @@ public class ExportLayouts {
             r.put("account", line.account());
             r.put("amount", line.amount());
             r.put("currency", line.currency());
-            r.put("narration", Texts.t("Salary %s", v.month()));
+            r.put("narration", Payments.QUINZAINE.equals(v.kind()) ? Texts.t("Quinzaine %s", v.month()) : Texts.t("Salary %s", v.month()));
             r.put("month", v.month());
             r.put("date", b.paidOn() != null ? b.paidOn() : LocalDate.now());
             r.put("ordering_account", ordering);
@@ -240,7 +240,7 @@ public class ExportLayouts {
             rows.add(r);
         }
         audit.record("payment.file_downloaded", "payment_batch", batchId, Map.of("lines", v.lines().size(), "layout", l.name()));
-        return write(l, rows, "salaries-" + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase() + "-" + b.id());
+        return write(l, rows, (Payments.QUINZAINE.equals(v.kind()) ? "quinzaine-" : "salaries-") + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase() + "-" + b.id());
     }
 
     File write(Layout l, List<Map<String, Object>> rows, String baseName) {

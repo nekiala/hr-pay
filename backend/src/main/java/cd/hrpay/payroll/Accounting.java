@@ -42,7 +42,7 @@ public class Accounting {
     /** Default debt accounts by element. */
     static final Map<String, String> LIABILITY = Map.ofEntries(
             Map.entry("CNSS_EMPLOYEE", "4310"), Map.entry("IPR", "4472"), Map.entry("LOAN", "4211"),
-            Map.entry("ADVANCE", "4212"), Map.entry("LEAVE_ADVANCE", "4212"), Map.entry("OTHER_DEDUCTION", "4230"), Map.entry("CNSS_EMPLOYER", "4310"),
+            Map.entry("ADVANCE", "4212"), Map.entry("LEAVE_ADVANCE", "4212"), Map.entry("QUINZAINE", "4212"), Map.entry("OTHER_DEDUCTION", "4230"), Map.entry("CNSS_EMPLOYER", "4310"),
             Map.entry("CNSS_EMPLOYER_FAMILY", "4310"), Map.entry("CNSS_EMPLOYER_ACCIDENT", "4310"),
             Map.entry("INPP", "4478"), Map.entry("ONEM", "4478"), Map.entry("IERE", "4478"), Map.entry("TUS", "4478"));
 

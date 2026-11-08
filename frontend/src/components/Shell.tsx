@@ -4,7 +4,7 @@ import {
   Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
-  ChartNoAxesCombined, CircleHelp, Palmtree, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
+  ChartNoAxesCombined, CircleHelp, Palmtree, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -67,6 +67,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
         { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
+        { to: '/payroll/quinzaine', label: t('Quinzaine'), icon: CalendarRange, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/payroll/leave-pay', label: t('Leave pay'), icon: Palmtree, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/payroll/corrections', label: t('Corrections and back pay'), icon: FilePenLine, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/payroll/accounting', label: t('Accounting'), icon: BookOpenCheck, show: pay && can('accounting.export') },

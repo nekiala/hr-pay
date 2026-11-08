@@ -31,6 +31,7 @@ class PayslipCalculatorTest {
             el(10, "IPR", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 120),
             el(11, "LOAN", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 130),
             el(12, "ADVANCE", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 140),
+            el(19, "QUINZAINE", "DEDUCTION", "COMPUTED", null, null, false, false, false, false, 143),
             el(14, "CNSS_EMPLOYER", "EMPLOYER_CHARGE", "COMPUTED", null, null, false, false, false, false, 210),
             el(15, "INPP", "EMPLOYER_CHARGE", "COMPUTED", null, null, false, false, false, false, 220),
             el(16, "ONEM", "EMPLOYER_CHARGE", "COMPUTED", null, null, false, false, false, false, 230),
@@ -99,6 +100,31 @@ class PayslipCalculatorTest {
         // Without an allocation, unpaid days reduce housing too.
         var unpaid = PayslipCalculator.calculate(in);
         assertThat(line(unpaid, "HOUSING")).isEqualByComparingTo("231.82");
+    }
+
+    static PayElements.Entry quinzaine(String amount) {
+        return new PayElements.Entry(2, 1, "A B", 19, "QUINZAINE", "QUINZAINE", "DEDUCTION", null, d(amount), "USD",
+                null, "hr", null);
+    }
+
+    @Test
+    void theQuinzaineIsTakenBackBeforeLoans() {
+        var loan = new PayslipCalculator.LoanDue(7, "LOAN", d("500"), d("2000"), "USD");
+        var r = PayslipCalculator.calculate(input(10560, List.of(), List.of(quinzaine("400")), List.of(loan), false));
+        assertThat(line(r, "QUINZAINE")).isEqualByComparingTo("400");
+        // The loan's room is 30% of what is left after the quinzaine.
+        BigDecimal beforeLoans = r.gross().subtract(line(r, "CNSS_EMPLOYEE")).subtract(line(r, "IPR")).subtract(d("400"));
+        assertThat(line(r, "LOAN")).isEqualByComparingTo(beforeLoans.multiply(d("0.30")).setScale(2, java.math.RoundingMode.HALF_UP));
+        assertThat(r.net()).isPositive();
+    }
+
+    @Test
+    void aQuinzaineTheNetCannotCoverIsOnlyPartlyTakenAndTheRestCarried() {
+        // Two days paid in the month: the net cannot take back the whole quinzaine.
+        var r = PayslipCalculator.calculate(input(960, List.of(), List.of(quinzaine("400")), List.of(), false));
+        assertThat(line(r, "QUINZAINE")).isLessThan(d("400")).isPositive();
+        assertThat(r.net()).isEqualByComparingTo("0");
+        assertThat(r.warnings()).anyMatch(w -> w.startsWith("Quinzaine: only"));
     }
 
     @Test

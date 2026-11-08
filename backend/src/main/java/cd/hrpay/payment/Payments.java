@@ -49,7 +49,11 @@ public class Payments {
     public record Overview(String month, String runStatus, List<Group> toPay, List<Payee> problems,
                            List<Batch> batches, int payslips, int paid) {}
 
-    public record BatchView(Batch batch, String month, List<Line> lines) {}
+    /** kind: PAYROLL (the month-end net pay) or QUINZAINE (the mid-month advance). */
+    public record BatchView(Batch batch, String month, String kind, List<Line> lines) {}
+
+    public static final String PAYROLL = "PAYROLL";
+    public static final String QUINZAINE = "QUINZAINE";
 
     private static final String BATCH_SELECT = """
             select id, method, provider, trim(currency) as currency, line_count, total, status, created_by, created_at,
@@ -101,9 +105,33 @@ public class Payments {
                 .orElseThrow(() -> new NotFoundException("No payroll for " + month + " yet."));
     }
 
-    /** Payslips of the month not yet in a live payment file, with how each one would be paid today. */
-    private List<Payee> unpaid(long runId) {
-        return jdbc.sql("""
+    private RunRow run(YearMonth month, String kind) {
+        if (!QUINZAINE.equals(kind)) {
+            return run(month);
+        }
+        return jdbc.sql("select id, status from quinzaine_run where month = ? and status <> 'CANCELLED'").param(month.atDay(1))
+                .query(RunRow.class).optional()
+                .orElseThrow(() -> new NotFoundException("No quinzaine for " + month + " yet."));
+    }
+
+    private static String runColumn(String kind) {
+        return QUINZAINE.equals(kind) ? "quinzaine_run_id" : "run_id";
+    }
+
+    /**
+     * Payslips of the month (or quinzaine receipts) not yet in a live payment file, with how each one would be paid
+     * today.
+     */
+    private List<Payee> unpaid(long runId, String kind) {
+        String sql = QUINZAINE.equals(kind) ? """
+                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                       trim(p.currency) as currency, p.amount as net,
+                       coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
+                       f.mobile_money_operator, f.mobile_money_number
+                from quinzaine_line p join app_user u on u.id = p.user_id
+                left join employee_profile f on f.user_id = p.user_id
+                where p.run_id = ? and p.number is not null and not exists (select 1 from payment_line l where l.quinzaine_line_id = p.id)
+                order by u.last_name, u.first_name""" : """
                 select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
                        trim(p.currency) as currency, p.net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
@@ -111,7 +139,8 @@ public class Payments {
                 from payslip p join app_user u on u.id = p.user_id
                 left join employee_profile f on f.user_id = p.user_id
                 where p.run_id = ? and p.net > 0 and p.number is not null and not exists (select 1 from payment_line l where l.payslip_id = p.id)
-                order by u.last_name, u.first_name""").param(runId)
+                order by u.last_name, u.first_name""";
+        return jdbc.sql(sql).param(runId)
                 .query((rs, i) -> {
                     String method = rs.getString("method");
                     String provider;
@@ -146,8 +175,12 @@ public class Payments {
     }
 
     public Overview overview(YearMonth month) {
-        RunRow run = run(month);
-        List<Payee> unpaid = unpaid(run.id());
+        return overview(month, PAYROLL);
+    }
+
+    public Overview overview(YearMonth month, String kind) {
+        RunRow run = run(month, kind);
+        List<Payee> unpaid = unpaid(run.id(), kind);
         Map<String, Group> groups = new LinkedHashMap<>();
         List<Payee> problems = new ArrayList<>();
         for (Payee p : unpaid) {
@@ -163,24 +196,34 @@ public class Payments {
         List<Group> toPay = groups.values().stream()
                 .sorted(java.util.Comparator.comparing(Group::method).thenComparing(Group::provider).thenComparing(Group::currency))
                 .toList();
-        int payslips = jdbc.sql("select count(*) from payslip where run_id = ? and net > 0 and (kind = 'REGULAR' or number is not null)").param(run.id()).query(Integer.class).single();
+        int payslips = QUINZAINE.equals(kind)
+                ? jdbc.sql("select count(*) from quinzaine_line where run_id = ?").param(run.id()).query(Integer.class).single()
+                : jdbc.sql("select count(*) from payslip where run_id = ? and net > 0 and (kind = 'REGULAR' or number is not null)").param(run.id()).query(Integer.class).single();
         int paid = jdbc.sql("""
                 select count(*) from payment_line l join payment_batch b on b.id = l.batch_id
-                where b.run_id = ? and b.status = 'PAID'""").param(run.id()).query(Integer.class).single();
+                where b.%s = ? and b.status = 'PAID'""".formatted(runColumn(kind))).param(run.id()).query(Integer.class).single();
         return new Overview(month.toString(), run.status(), toPay, problems,
-                jdbc.sql(BATCH_SELECT + " where run_id = ? order by id desc").param(run.id()).query(Batch.class).list(),
+                jdbc.sql(BATCH_SELECT + " where " + runColumn(kind) + " = ? order by id desc").param(run.id()).query(Batch.class).list(),
                 payslips, paid);
     }
 
     /** Makes the payment file for one group of a closed month. Employees whose details are incomplete are left out. */
     @Transactional
     public BatchView prepare(YearMonth month, String method, String provider, String currency) {
-        RunRow run = run(month);
+        return prepare(month, PAYROLL, method, provider, currency);
+    }
+
+    @Transactional
+    public BatchView prepare(YearMonth month, String kind, String method, String provider, String currency) {
+        boolean quinzaine = QUINZAINE.equals(kind);
+        RunRow run = run(month, kind);
         if (!run.status().equals("CLOSED")) {
-            throw new BusinessRuleException("Close the " + month + " payroll before making payment files.");
+            throw new BusinessRuleException(quinzaine ? "Close the quinzaine of " + month + " before making payment files."
+                    : "Close the " + month + " payroll before making payment files.");
         }
-        jdbc.sql("select id from payroll_run where id = ? for update").param(run.id()).query(Long.class).single();
-        List<Payee> payees = unpaid(run.id()).stream()
+        jdbc.sql("select id from " + (quinzaine ? "quinzaine_run" : "payroll_run") + " where id = ? for update")
+                .param(run.id()).query(Long.class).single();
+        List<Payee> payees = unpaid(run.id(), kind).stream()
                 .filter(p -> p.problem() == null && p.method().equals(method) && p.provider().equals(provider)
                         && p.currency().equals(currency))
                 .toList();
@@ -189,35 +232,40 @@ public class Payments {
         }
         BigDecimal total = payees.stream().map(Payee::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
         long id = jdbc.sql("""
-                insert into payment_batch (run_id, method, provider, currency, line_count, total, status, created_by)
-                values (?, ?, ?, ?, ?, ?, 'PREPARED', ?) returning id""")
+                insert into payment_batch (%s, method, provider, currency, line_count, total, status, created_by)
+                values (?, ?, ?, ?, ?, ?, 'PREPARED', ?) returning id""".formatted(runColumn(kind)))
                 .params(run.id(), method, provider, currency, payees.size(), total, CurrentUser.email())
                 .query(Long.class).single();
         for (Payee p : payees) {
             jdbc.sql("""
-                    insert into payment_line (batch_id, payslip_id, user_id, beneficiary, registration_no, account, amount, currency)
-                    values (?, ?, ?, ?, ?, ?, ?, ?)""")
+                    insert into payment_line (batch_id, %s, user_id, beneficiary, registration_no, account, amount, currency)
+                    values (?, ?, ?, ?, ?, ?, ?, ?)""".formatted(quinzaine ? "quinzaine_line_id" : "payslip_id"))
                     .params(id, p.payslipId(), p.userId(), p.name(), p.registrationNo(), p.account(), p.amount(), currency)
                     .update();
         }
         audit.record("payment.prepared", "payment_batch", id, Map.of("month", month.toString(), "method", method,
-                "provider", provider, "currency", currency, "count", payees.size(), "total", total));
+                "provider", provider, "currency", currency, "count", payees.size(), "total", total, "kind", quinzaine ? QUINZAINE : PAYROLL));
         return batch(id);
     }
 
     public BatchView batch(long id) {
         Batch b = jdbc.sql(BATCH_SELECT + " where id = ?").param(id).query(Batch.class).optional()
                 .orElseThrow(() -> new NotFoundException("Payment file not found."));
-        String month = jdbc.sql("select to_char(r.month, 'YYYY-MM') from payroll_run r join payment_batch b on b.run_id = r.id where b.id = ?")
-                .param(id).query(String.class).single();
+        record Source(String month, boolean quinzaine) {}
+        Source src = jdbc.sql("""
+                select to_char(coalesce(r.month, q.month), 'YYYY-MM') as month, b.quinzaine_run_id is not null as quinzaine
+                from payment_batch b left join payroll_run r on r.id = b.run_id left join quinzaine_run q on q.id = b.quinzaine_run_id
+                where b.id = ?""").param(id).query(Source.class).single();
         List<Line> lines = jdbc.sql("""
-                select l.payslip_id, l.user_id, l.beneficiary, l.registration_no, l.account, l.amount, trim(l.currency) as currency,
-                       p.unit_id, null as direction_name, null as unit_name
-                from payment_line l join payslip p on p.id = l.payslip_id where l.batch_id = ? order by l.beneficiary""")
+                select coalesce(l.payslip_id, l.quinzaine_line_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
+                       l.account, l.amount, trim(l.currency) as currency,
+                       coalesce(p.unit_id, q.unit_id) as unit_id, null as direction_name, null as unit_name
+                from payment_line l left join payslip p on p.id = l.payslip_id left join quinzaine_line q on q.id = l.quinzaine_line_id
+                where l.batch_id = ? order by l.beneficiary""")
                 .param(id).query(Line.class).list();
         var units = org.placementsOfUnits();
         lines = lines.stream().map(l -> l.placed(units)).toList();
-        return new BatchView(b, month, lines);
+        return new BatchView(b, src.month(), src.quinzaine() ? QUINZAINE : PAYROLL, lines);
     }
 
     @Transactional
@@ -238,6 +286,13 @@ public class Payments {
                 CurrentUser.email(), id).update();
         audit.record("payment.paid", "payment_batch", id, Map.of("paidOn", paidOn.toString(),
                 "reference", reference == null ? "" : reference.trim(), "total", b.total()));
+        // A quinzaine is paid once every receipt is in a paid file.
+        jdbc.sql("""
+                update quinzaine_run q set status = 'PAID'
+                from payment_batch b where b.id = ? and q.id = b.quinzaine_run_id and q.status = 'CLOSED'
+                  and not exists (select 1 from quinzaine_line l where l.run_id = q.id and not exists (
+                      select 1 from payment_line p join payment_batch pb on pb.id = p.batch_id
+                      where p.quinzaine_line_id = l.id and pb.status = 'PAID'))""").param(id).update();
         return batch(id);
     }
 
