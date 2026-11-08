@@ -48,6 +48,21 @@ public abstract class IntegrationTest {
     @Autowired
     protected MockMvc mvc;
 
+    @Autowired
+    private cd.hrpay.tenancy.Tenants tenantsForRates;
+
+    @Autowired
+    private org.springframework.jdbc.core.simple.JdbcClient jdbcForRates;
+
+    /** A BCC dollar rate on that day, when a test needs one whatever ran before it. */
+    protected void usdRate(String day, int cdf) {
+        tenantsForRates.callAsPlatform(() -> jdbcForRates.sql("""
+                insert into exchange_rate (currency, rate_date, cdf_per_unit, source, entered_by)
+                select 'USD', cast(? as date), ?, 'test', 'test'
+                where not exists (select 1 from exchange_rate where currency = 'USD' and rate_date = cast(? as date))""")
+                .params(day, cdf, day).update());
+    }
+
     private static int sequence;
 
     protected MockHttpSession login(String email) throws Exception {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, money, type Employer, type Payslip, type PayslipLine, type PayslipSettings } from '../api'
+import { api, days, money, type Employer, type Payslip, type PayslipLine, type PayslipSettings } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
@@ -101,6 +101,7 @@ export default function PayslipPage() {
           <div>{t('Children (family allowances):')}{' '}{String(s.childrenInCharge ?? 0)}</div>
           <div>{t('Hours paid:')}{' '}{hours(slip.paidMinutes)}{' '}{t('of')}{' '}{hours(slip.scheduledMinutes)}</div>
           <div>{t('Days worked:')}{' '}{slip.daysWorked}</div>
+          {s.leaveEarned != null && <div>{t('Annual leave: {a} earned this month, balance {b}', { a: days(Number(s.leaveEarned)), b: days(Number(s.leaveBalance)) })}</div>}
           <div>{t('Monthly basic:')}{' '}{money(Number(s.basicMonthly), cur)}</div>
         </div>
 
