@@ -2318,6 +2318,19 @@ const fr: Record<string, string> = {
   "Nothing lapses.": "Rien n'est perdu.",
   "Lapses": "Perdus",
   "Kept": "Gardés",
+  "Annual leave planning": "Planning des congés annuels",
+  "CNSS and income tax": "CNSS et IPR",
+  "Leave allowance payslips": "Bulletins d'allocation de congé",
+  "Leave pay (USD)": "Allocations de congé (USD)",
+  "Leave pay over the period": "Allocations de congé sur la période",
+  "Leave pay: gross of the leave allowance payslips approved in the month. The payroll cost of the months the leave covers already includes it.": "Allocations de congé : brut des bulletins d'allocation de congé approuvés dans le mois. Le coût de la paie des mois couverts par le congé l'inclut déjà.",
+  "Net to pay now": "Net à payer maintenant",
+  "No annual leave in this period.": "Aucun congé annuel sur cette période.",
+  "Not worked out yet": "Pas encore calculée",
+  "The leave allowance (allocation de congé) of approved annual leave, with its own payslip: the remuneration for the leave days (basic and salary complement; housing, transport and family allowances are not remuneration, Labour Code art. 7) plus the average of bonuses, commissions and overtime of the 12 months before. It is paid by the last working day before the leave (art. 142 and 145). The payslip of each month the leave covers adds it as an earning, so CNSS and income tax are worked out on the whole month, and takes back the net paid in advance.": "L'allocation de congé des congés annuels approuvés, avec son propre bulletin : la rémunération des jours de congé (salaire de base et complément de salaire ; le logement, le transport et les allocations familiales ne sont pas de la rémunération, Code du travail art. 7) plus la moyenne des primes, commissions et heures supplémentaires des 12 mois précédents. Elle est payée au plus tard le dernier jour ouvrable avant le congé (art. 142 et 145). Le bulletin de chaque mois couvert par le congé l'ajoute comme gain, pour calculer la CNSS et l'IPR sur le mois entier, et reprend le net payé d'avance.",
+  "on leave now": "en congé",
+  "{a} leave allowance payslips": "{a} bulletins d'allocation de congé",
+  "{a}: {c} added as an earning, {b} taken back": "{a} : {c} ajouté comme gain, {b} repris",
 }
 
 export default fr

@@ -26,7 +26,7 @@ public class Dashboards {
 
     /** absenceRate: share of scheduled time not paid (unpaid absence, lateness), from the month's payslips; null without payroll. */
     public record Month(String month, int headcount, int hires, int departures, BigDecimal turnover, BigDecimal absenceRate,
-                        BigDecimal cost, boolean payrollFinal) {}
+                        BigDecimal cost, boolean payrollFinal, BigDecimal leavePay, int leavePayslips) {}
 
     public record Cost(String month, String direction, BigDecimal cost) {}
 
@@ -120,7 +120,25 @@ public class Dashboards {
                     costs.add(new Cost(ym.toString(), e.getKey(), e.getValue().setScale(2, RoundingMode.HALF_UP)));
                 }
             }
-            rows.add(new Month(ym.toString(), headcount, hires, departures, turnover, absence, cost, fin));
+            // Allocations de congé approved in the month (their own payslips), in US dollars at their rate.
+            BigDecimal[] leave = {BigDecimal.ZERO};
+            int[] leaveSlips = {0};
+            jdbc.sql("""
+                    select trim(currency) as currency, gross, usd_cdf from leave_allowance
+                    where status in ('APPROVED', 'PAID') and approved_at >= ? and approved_at < ?""")
+                    .params(start.atStartOfDay(java.time.ZoneOffset.UTC).toOffsetDateTime(),
+                            ym.plusMonths(1).atDay(1).atStartOfDay(java.time.ZoneOffset.UTC).toOffsetDateTime())
+                    .query(rs -> {
+                        BigDecimal g = rs.getBigDecimal("gross");
+                        BigDecimal r = rs.getBigDecimal("usd_cdf");
+                        if (!"USD".equals(rs.getString("currency")) && r != null && r.signum() > 0) {
+                            g = g.divide(r, 2, RoundingMode.HALF_UP);
+                        }
+                        leave[0] = leave[0].add(g);
+                        leaveSlips[0]++;
+                    });
+            rows.add(new Month(ym.toString(), headcount, hires, departures, turnover, absence, cost, fin,
+                    leave[0].setScale(2, RoundingMode.HALF_UP), leaveSlips[0]));
         }
         Map<String, Integer> now = new LinkedHashMap<>();
         jdbc.sql(STAFF_AT).param("d", LocalDate.now()).query(rs -> {

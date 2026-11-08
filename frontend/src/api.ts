@@ -603,7 +603,8 @@ export type LeaveAllowance = {
   variable12m: number; monthsCounted: number; variablePart: number; gross: number; netShare: number; advance: number; payBy: string
   status: 'CALCULATED' | 'APPROVED' | 'PAID' | 'CANCELLED'; explanation: string[]; calculatedBy: string; calculatedAt: string
   approvedBy: string | null; approvedAt: string | null; paidBy: string | null; paidOn: string | null; paymentReference: string | null
-  cancelNote: string | null; months: { month: string; days: number; variableAmount: number; advanceAmount: number }[]
+  cancelNote: string | null; months: { month: string; days: number; grossAmount: number; advanceAmount: number }[]
+  number: string | null; employeeDeductions: number | null; net: number | null; lines: PayslipLine[]
 }
 export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
 export type LeaveRequest = {

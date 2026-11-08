@@ -4,7 +4,7 @@ import { api } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { locale, t } from '../i18n'
 
-type Month = { month: string; headcount: number; hires: number; departures: number; turnover: number; absenceRate: number | null; cost: number | null; payrollFinal: boolean }
+type Month = { month: string; headcount: number; hires: number; departures: number; turnover: number; absenceRate: number | null; cost: number | null; payrollFinal: boolean; leavePay: number; leavePayslips: number }
 type Board = { months: Month[]; costByDirection: { month: string; direction: string; cost: number }[]; directions: { name: string; headcount: number }[]; currency: string }
 
 /** Categorical slots in fixed order (validated for colour-blind separation); the rest folds into "Other". */
@@ -98,6 +98,8 @@ export default function DashboardsPage() {
   const turnover = avg > 0 ? (100 * departures) / avg : 0
   const lastAbsence = [...ms].reverse().find((m) => m.absenceRate !== null)
   const lastCost = [...ms].reverse().find((m) => m.cost !== null)
+  const leavePay = ms.reduce((n, m) => n + m.leavePay, 0)
+  const leaveSlips = ms.reduce((n, m) => n + m.leavePayslips, 0)
   const otherName = t('Other')
   const directionOf = (name: string) => colours.has(name) ? name : otherName
   const costKeys = [...colours.keys(), ...(board.costByDirection.some((c) => !colours.has(c.direction)) ? [otherName] : [])]
@@ -130,18 +132,20 @@ export default function DashboardsPage() {
         <div className="tile"><span>{t('Turnover over the period')}</span><strong>{num(turnover, 1)} %</strong><small>{t('{a} departures', { a: departures })}</small></div>
         <div className="tile"><span>{t('Unpaid absence')}</span><strong>{lastAbsence ? `${num(lastAbsence.absenceRate!, 1)} %` : '—'}</strong><small>{lastAbsence ? monthLabel(lastAbsence.month, true) : t('After the first payroll')}</small></div>
         <div className="tile accent"><span>{t('Payroll cost')}</span><strong>{lastCost ? usd(lastCost.cost!) : '—'}</strong><small>{lastCost ? `${monthLabel(lastCost.month, true)} · ${t('gross and employer charges')}` : t('After the first payroll')}</small></div>
+        <div className="tile"><span>{t('Leave pay over the period')}</span><strong>{usd(leavePay)}</strong><small>{t('{a} leave allowance payslips', { a: leaveSlips })}</small></div>
       </div>
 
       {table ? (
         <div className="card">
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{t('Month')}</th><th className="num">{t('Headcount')}</th><th className="num">{t('Hired')}</th><th className="num">{t('Departures')}</th><th className="num">{t('Turnover')}</th><th className="num">{t('Unpaid absence')}</th><th className="num">{t('Payroll cost (USD)')}</th></tr></thead>
+              <thead><tr><th>{t('Month')}</th><th className="num">{t('Headcount')}</th><th className="num">{t('Hired')}</th><th className="num">{t('Departures')}</th><th className="num">{t('Turnover')}</th><th className="num">{t('Unpaid absence')}</th><th className="num">{t('Payroll cost (USD)')}</th><th className="num">{t('Leave pay (USD)')}</th></tr></thead>
               <tbody>
                 {ms.map((m) => (
                   <tr key={m.month}><td>{monthLabel(m.month, true)}</td><td className="num">{m.headcount}</td><td className="num">{m.hires}</td><td className="num">{m.departures}</td>
                     <td className="num">{num(m.turnover, 1)} %</td><td className="num">{m.absenceRate === null ? '—' : `${num(m.absenceRate, 1)} %`}</td>
-                    <td className="num">{m.cost === null ? '—' : usd(m.cost)}{m.cost !== null && !m.payrollFinal && ' *'}</td></tr>
+                    <td className="num">{m.cost === null ? '—' : usd(m.cost)}{m.cost !== null && !m.payrollFinal && ' *'}</td>
+                    <td className="num">{m.leavePayslips === 0 ? '—' : `${usd(m.leavePay)} (${m.leavePayslips})`}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -158,6 +162,7 @@ export default function DashboardsPage() {
             </>
           )}
           <p className="small muted">{t('* Payroll calculated, not approved yet.')}</p>
+          <p className="small muted">{t('Leave pay: gross of the leave allowance payslips approved in the month. The payroll cost of the months the leave covers already includes it.')}</p>
         </div>
       ) : (
         <>

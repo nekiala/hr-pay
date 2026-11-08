@@ -73,6 +73,24 @@ class LeavePayIT extends IntegrationTest {
         assertThat(salaryPart).isPositive();
         assertThat(gross).isGreaterThanOrEqualTo(salaryPart);
         assertThat(advance).isPositive().isLessThanOrEqualTo(gross);
+        assertThat(new BigDecimal(JsonPath.read(run, "$.calculated[0].net").toString())).isEqualByComparingTo(advance);
+        // The remuneration of art. 7 only: housing and transport are not part of the allocation.
+        assertThat(JsonPath.<List<String>>read(run, "$.calculated[0].lines[*].elementCode"))
+                .contains("BASIC", "CNSS_EMPLOYEE").doesNotContain("HOUSING", "TRANSPORT");
+        assertThat(JsonPath.<List<Number>>read(run, "$.calculated[0].months[*].grossAmount").stream()
+                .map(n -> new BigDecimal(n.toString())).reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo(gross);
+        assertThat(JsonPath.<Object>read(run, "$.calculated[0].number")).isNull();
+        // The draft payslip: payroll staff see it, the employee only once Finance approved it.
+        mvc.perform(get("/api/leave-pay/" + id + ".pdf").session(hr)).andExpect(status().isOk());
+        mvc.perform(get("/api/leave-pay/" + id + ".pdf").session(me)).andExpect(status().isForbidden());
+        // Who is on annual leave and when: HR and the manager see it, an employee does not.
+        String planning = mvc.perform(get("/api/leave/annual-planning").param("from", "2027-08-01").param("to", "2027-09-30").session(hr))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<String>>read(planning, "$[?(@.id==" + leave + ")].allowanceStatus")).containsExactly("CALCULATED");
+        mvc.perform(get("/api/leave/annual-planning").param("from", "2027-08-01").param("to", "2027-09-30").session(login(MANAGER)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/leave/annual-planning").param("from", "2027-08-01").param("to", "2027-09-30").session(me))
+                .andExpect(status().isForbidden());
         // Not due any more once worked out.
         String after = mvc.perform(get("/api/leave-pay").session(hr)).andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<List<Number>>read(after, "$.due[*].leaveRequestId")).extracting(Number::longValue).doesNotContain(leave);
@@ -80,7 +98,18 @@ class LeavePayIT extends IntegrationTest {
         // HR worked it out: Finance approves, and the payslips of August and September take the advance back.
         mvc.perform(post("/api/leave-pay/" + id + "/approve").session(hr).with(csrf())).andExpect(status().isForbidden());
         mvc.perform(post("/api/leave-pay/" + id + "/approve").session(finance).with(csrf()))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.number").value(org.hamcrest.Matchers.startsWith("AC-")));
+        mvc.perform(get("/api/leave-pay/" + id + ".pdf").session(me)).andExpect(status().isOk());
+        // The monthly payslips add the allocation as an earning (CNSS and income tax on the whole month).
+        assertThat(jdbc.sql("""
+                select coalesce(sum(p.amount), 0) from pay_entry p join pay_element e on e.id = p.element_id join app_user u on u.id = p.user_id
+                where e.code = 'LEAVE_ALLOWANCE' and u.email = ? and p.month in ('2027-08-01', '2027-09-01')""")
+                .param(EMPLOYEE).query(BigDecimal.class).single()).isEqualByComparingTo(gross);
+        // The leave days are not paid again by the monthly payslip.
+        mvc.perform(get("/api/attendance/month").param("month", "2027-08").session(me))
+                .andExpect(jsonPath("$.days[29].date").value("2027-08-30"))
+                .andExpect(jsonPath("$.days[29].payableMinutes").value(0));
         BigDecimal takenBack = jdbc.sql("""
                 select coalesce(sum(p.amount), 0) from pay_entry p join pay_element e on e.id = p.element_id join app_user u on u.id = p.user_id
                 where e.code = 'LEAVE_ADVANCE' and u.email = ? and p.month in ('2027-08-01', '2027-09-01')""")
@@ -101,8 +130,11 @@ class LeavePayIT extends IntegrationTest {
         mvc.perform(json(post("/api/leave/requests/" + leave + "/cancel").session(hr), "{\"note\":\"Called back\"}"))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/leave-pay/mine").session(me))
-                .andExpect(jsonPath("$[0].status").value("PAID"))
-                .andExpect(jsonPath("$[0].variablePart").value(0));
+                .andExpect(jsonPath("$[0].status").value("PAID"));
+        assertThat(jdbc.sql("""
+                select coalesce(sum(p.amount), 0) from pay_entry p join pay_element e on e.id = p.element_id join app_user u on u.id = p.user_id
+                where e.code = 'LEAVE_ALLOWANCE' and u.email = ?""").param(EMPLOYEE).query(BigDecimal.class).single())
+                .isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(jdbc.sql("""
                 select coalesce(sum(p.amount), 0) from pay_entry p join pay_element e on e.id = p.element_id join app_user u on u.id = p.user_id
                 where e.code = 'LEAVE_ADVANCE' and u.email = ?""").param(EMPLOYEE).query(BigDecimal.class).single())

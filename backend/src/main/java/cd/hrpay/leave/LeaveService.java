@@ -558,6 +558,38 @@ public class LeaveService {
         return List.of();
     }
 
+    /** One annual leave in the planning list: who is away and when, and where its leave pay stands. */
+    public record Planned(long id, long userId, String employeeName, String registrationNo, LocalDate startDate,
+                          LocalDate endDate, BigDecimal workingDays, String status, String allowanceStatus,
+                          String allowanceNumber) {}
+
+    /**
+     * The annual leave approved or waiting for a decision that overlaps the period. HR and payroll see everyone; a
+     * manager who approves leave for a team sees the people of their branch.
+     */
+    public List<Planned> annualPlanning(LocalDate from, LocalDate to) {
+        List<Planned> all = jdbc.sql("""
+                select r.id, r.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+                       r.start_date, r.end_date, r.working_days, r.status,
+                       (select a.status from leave_allowance a where a.leave_request_id = r.id and a.status <> 'CANCELLED'
+                        order by a.id desc limit 1) as allowance_status,
+                       (select a.number from leave_allowance a where a.leave_request_id = r.id and a.status <> 'CANCELLED'
+                        order by a.id desc limit 1) as allowance_number
+                from leave_request r join app_user u on u.id = r.user_id join leave_type t on t.id = r.leave_type_id
+                where t.code = 'ANNUAL' and r.status in ('APPROVED', 'PENDING', 'AWAITING_HR')
+                  and r.start_date <= ? and r.end_date >= ?
+                order by r.start_date, employee_name""").params(to, from).query(Planned.class).list();
+        if (CurrentUser.has("leave.manage") || CurrentUser.has("payroll.run") || CurrentUser.has("payroll.approve")) {
+            return all;
+        }
+        if (CurrentUser.has("leave.approve.team")) {
+            Long me = CurrentUser.id();
+            java.util.Set<Long> team = org.teamOf(me);
+            return all.stream().filter(r -> team.contains(r.userId()) || r.userId() == me).toList();
+        }
+        return List.of();
+    }
+
     private boolean canDecide(LeaveRequest r) {
         if (java.util.Objects.equals(r.userId(), CurrentUser.id())) {
             return false;
@@ -738,11 +770,16 @@ public class LeaveService {
                 .params(status, CurrentUser.email(), note == null || note.isBlank() ? null : note.trim(), id).update();
     }
 
-    /** Approved leave by date, for attendance: those days are not absences. */
+    /**
+     * Approved leave by date, for attendance: those days are not absences. Annual leave whose allocation de congé is
+     * approved pays nothing here: its own payslip pays it.
+     */
     public Map<LocalDate, LeaveDay> approvedDays(long userId, LocalDate from, LocalDate to) {
         Map<LocalDate, LeaveDay> days = new HashMap<>();
         jdbc.sql("""
-                select r.start_date, r.end_date, t.name, case when t.code = 'ANNUAL' and not ? then 0 else t.pay_percent end,
+                select r.start_date, r.end_date, t.name,
+                       case when t.code = 'ANNUAL' and (not ? or exists (select 1 from leave_allowance a where a.leave_request_id = r.id
+                                 and a.status in ('APPROVED', 'PAID'))) then 0 else t.pay_percent end,
                        r.half_day from leave_request r join leave_type t on t.id = r.leave_type_id
                 where r.user_id = ? and r.status = 'APPROVED' and r.start_date <= ? and r.end_date >= ?""")
                 .params(annualPaid(), userId, to, from)

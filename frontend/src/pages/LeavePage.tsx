@@ -6,6 +6,7 @@ import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { AnnualLeavePlanning } from '../components/AnnualLeavePlanning'
 import { t, locale } from '../i18n'
 
 const STATUS: Record<LeaveRequest['status'], string> = {
@@ -272,6 +273,7 @@ export default function LeavePage() {
           </table>
         </div>
       )}
+      {(canDecide || leavePay) && <AnnualLeavePlanning showPay={leavePay} />}
     </section>
   )
 }

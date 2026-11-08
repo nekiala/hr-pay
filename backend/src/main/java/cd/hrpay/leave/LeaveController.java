@@ -132,6 +132,18 @@ public class LeaveController {
         return leave.request(users.find(CurrentUser.id()), b.leaveTypeId(), b.startDate(), b.endDate(), b.halfDay(), b.reason());
     }
 
+    /** Who takes annual leave and when, for HR, payroll and managers (their own branch). At most a year at a time. */
+    @GetMapping("/annual-planning")
+    @PreAuthorize("hasAnyAuthority('leave.manage', 'leave.approve.team', 'payroll.run', 'payroll.approve')")
+    public List<LeaveService.Planned> annualPlanning(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (to.isBefore(from) || to.isAfter(from.plusYears(1))) {
+            throw new cd.hrpay.common.BusinessRuleException("Choose a period of at most a year.");
+        }
+        return leave.annualPlanning(from, to);
+    }
+
     @GetMapping("/requests/to-decide")
     @PreAuthorize("hasAnyAuthority('leave.manage', 'leave.approve.team')")
     public List<LeaveService.LeaveRequest> toDecide() {

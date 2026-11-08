@@ -17,7 +17,7 @@ const period = (a: { startDate: string; endDate: string }) =>
 /**
  * The leave pay run: the allowance (allocation de congé) of approved annual leave. HR works it out on request,
  * Finance approves it, and it is paid by the last working day before the leave; the payslip of the leave month
- * then takes the advance back and adds the average of bonuses and overtime.
+ * then adds the allocation as an earning and takes back the net paid in advance.
  */
 export default function LeavePayPage() {
   const { can, me } = useAuth()
@@ -60,7 +60,7 @@ export default function LeavePayPage() {
   return (
     <section>
       <h2>{t('Leave pay')}</h2>
-      <p className="muted">{t('The leave allowance (allocation de congé) of approved annual leave: the salary for the leave days plus the average of bonuses, commissions and overtime of the 12 months before. The law asks for it to be paid by the last working day before the leave (DRC Labour Code art. 142 and 145). The payslip of the leave month takes back what was paid in advance.')}</p>
+      <p className="muted">{t('The leave allowance (allocation de congé) of approved annual leave, with its own payslip: the remuneration for the leave days (basic and salary complement; housing, transport and family allowances are not remuneration, Labour Code art. 7) plus the average of bonuses, commissions and overtime of the 12 months before. It is paid by the last working day before the leave (art. 142 and 145). The payslip of each month the leave covers adds it as an earning, so CNSS and income tax are worked out on the whole month, and takes back the net paid in advance.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       {skipped.length > 0 && <ul className="warnings">{skipped.map((s) => <li key={s}>{s}</li>)}</ul>}
@@ -105,20 +105,23 @@ export default function LeavePayPage() {
         {allowances.length > 0 && (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{t('Employee')}</th><th>{t('Leave')}</th><th>{t('Gross')}</th><th>{t('To pay now')}</th><th>{t('Pay by')}</th><th>{t('Status')}</th><th></th></tr></thead>
+              <thead><tr><th>{t('Employee')}</th><th>{t('Leave')}</th><th>{t('Payslip')}</th><th>{t('Gross')}</th><th>{t('CNSS and income tax')}</th><th>{t('Net to pay now')}</th><th>{t('Pay by')}</th><th>{t('Status')}</th><th></th></tr></thead>
               <tbody>
                 {allowances.map((a) => (
                   <Fragment key={a.id}>
                     <tr>
                       <td>{a.employeeName} <span className="muted">{a.registrationNo}</span></td>
                       <td>{period(a)} · {days(a.days)}</td>
+                      <td>{a.number ?? <span className="muted">{t('Draft')}</span>}</td>
                       <td>{money(a.gross, a.currency)}</td>
+                      <td>{a.employeeDeductions === null ? '—' : money(a.employeeDeductions, a.currency)}</td>
                       <td><strong>{money(a.advance, a.currency)}</strong></td>
                       <td>{longDay(a.payBy)}</td>
                       <td>{STATUS[a.status]}{a.paidOn ? <><br /><span className="muted">{longDay(a.paidOn)}{a.paymentReference ? ` · ${a.paymentReference}` : ''}</span></> : null}
                         {a.cancelNote && <><br /><span className="muted">{a.cancelNote}</span></>}</td>
                       <td className="row">
                         <Button className="secondary" onClick={() => setOpen(open === a.id ? null : a.id)}>{open === a.id ? t('Hide') : t('Details')}</Button>
+                        {a.status !== 'CANCELLED' && <a className="button secondary" href={`/api/leave-pay/${a.id}.pdf`} target="_blank" rel="noreferrer">{t('PDF')}</a>}
                         {a.status === 'CALCULATED' && can('payroll.approve') && (
                           <Button onClick={() => run(() => api(`/api/leave-pay/${a.id}/approve`, { method: 'POST' }), t('Leave pay approved: it is now on the payslips.'))}>{t('Approve')}</Button>
                         )}
@@ -143,10 +146,10 @@ export default function LeavePayPage() {
                     </tr>
                     {open === a.id && (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={9}>
                           <ul>{a.explanation.map((x) => <li key={x}>{x}</li>)}</ul>
-                          <p className="muted">{t('On the payslips:')}{' '}{a.months.map((m) => t('{a}: {b} taken back, {c} added', {
-                            a: m.month.slice(0, 7), b: money(m.advanceAmount, a.currency), c: money(m.variableAmount, a.currency),
+                          <p className="muted">{t('On the payslips:')}{' '}{a.months.map((m) => t('{a}: {c} added as an earning, {b} taken back', {
+                            a: m.month.slice(0, 7), b: money(m.advanceAmount, a.currency), c: money(m.grossAmount, a.currency),
                           })).join(' · ')}</p>
                           <p className="muted">{t('Worked out by {a}', { a: a.calculatedBy })}{a.approvedBy ? ` · ${t('approved by {a}', { a: a.approvedBy })}` : ''}{a.paidBy ? ` · ${t('paid, recorded by {a}', { a: a.paidBy })}` : ''}</p>
                         </td>

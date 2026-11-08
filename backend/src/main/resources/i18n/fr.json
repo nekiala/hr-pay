@@ -950,5 +950,19 @@
  "leave pay": "allocation de congé",
  "A leave year can be closed once it has started, usually after 31 December.": "Une année de congé se clôture une fois commencée, en général après le 31 décembre.",
  "Not taken by the end of %s": "Non pris à la fin de %s",
- "Annual leave is not paid in this company (Leave settings): the days left are not paid out.": "Les congés annuels ne sont pas payés dans cette entreprise (Réglages des congés) : les jours restants ne sont pas payés."
+ "Annual leave is not paid in this company (Leave settings): the days left are not paid out.": "Les congés annuels ne sont pas payés dans cette entreprise (Réglages des congés) : les jours restants ne sont pas payés.",
+ "Remuneration kept during leave (Labour Code art. 7 and 142): %s = %s %s.": "Rémunération maintenue pendant le congé (Code du travail art. 7 et 142) : %s = %s %s.",
+ "Housing, transport and family allowances are not part of the remuneration (art. 7): housing and family allowances stay on the monthly payslip for the leave days, transport is not paid for them.": "Le logement, le transport et les allocations familiales ne font pas partie de la rémunération (art. 7) : le logement et les allocations familiales restent sur le bulletin mensuel pour les jours de congé, le transport n'est pas payé pour ces jours.",
+ "Daily rate: %s ÷ %s days = %s; for %s days: %s.": "Taux journalier : %s ÷ %s jours = %s ; pour %s jours : %s.",
+ "%s days, %s to %s": "%s jours, du %s au %s",
+ "average of bonuses and overtime": "moyenne des primes et heures supplémentaires",
+ "CNSS and income tax withheld on this payslip: %s; net paid: %s. The payslip of each month the leave covers works them out again on the whole month's pay.": "CNSS et IPR retenus sur ce bulletin : %s ; net payé : %s. Le bulletin de chaque mois couvert par le congé les recalcule sur la paie du mois entier.",
+ "You cannot see this payslip.": "Vous ne pouvez pas voir ce bulletin.",
+ "This leave allowance is cancelled.": "Cette allocation de congé est annulée.",
+ "leave from %s to %s, %s days": "congé du %s au %s, %s jours",
+ "Leave cancelled after payment: the payslip takes back the net paid and pays the days worked.": "Congé annulé après paiement : le bulletin reprend le net payé et paie les jours travaillés.",
+ "Leave allowance payslip": "Bulletin d'allocation de congé",
+ "DRAFT: this leave allowance waits for Finance's approval.": "BROUILLON : cette allocation de congé attend l'approbation des Finances.",
+ "Paid before the leave (Labour Code art. 145). CNSS and income tax are settled on the payslips of the months the leave covers.": "Payée avant le congé (Code du travail art. 145). La CNSS et l'IPR sont régularisés sur les bulletins des mois couverts par le congé.",
+ "Choose a period of at most a year.": "Choisissez une période d'un an au plus."
 }

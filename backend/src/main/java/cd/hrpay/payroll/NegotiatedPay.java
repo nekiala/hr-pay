@@ -251,6 +251,36 @@ public class NegotiatedPay {
         return new Month(rates, usd, pay.elements(), standing, complement, minutes, days, worked, children, inCharge, b);
     }
 
+    /**
+     * A normal month of the person's pay as it stands on a date (their basic salary and standing items, the salary
+     * complement included): every scheduled day worked, no overtime or one-off entries.
+     */
+    public PayslipCalculator.Result normalMonth(long userId, LocalDate on) {
+        var salary = salaries.on(userId, on).orElseThrow(() -> new BusinessRuleException("No basic salary recorded."));
+        YearMonth ym = YearMonth.from(on);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate last = ym.atEndOfMonth();
+        ExchangeRates.Rate usd = exchange.local(runs.localCurrency(), last.isAfter(today) ? today : last);
+        PayslipCalculator.Rates rates = runs.rates(last, usd.cdfPerUnit());
+        var summary = attendance.month(users.findById(userId).orElseThrow(), ym, false);
+        int minutes = summary.scheduledMinutesMonth();
+        int days = (int) summary.days().stream().filter(d -> d.scheduledMinutes() > 0).count();
+        int worked = (int) summary.days().stream()
+                .filter(d -> d.scheduledMinutes() > 0 && d.status() != DayCalculator.Status.HOLIDAY).count();
+        if (minutes <= 0 || days == 0) {
+            minutes = 22 * 8 * 60;
+            days = 22;
+            worked = 22;
+        }
+        List<EmployeeFile.Dependant> deps = files.dependants(userId);
+        int children = (int) deps.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
+        int inCharge = (int) deps.stream().filter(EmployeeFile.Dependant::inCharge).count();
+        boolean expatriate = files.contractOn(userId, on).map(EmployeeFile.Contract::expatriate).orElse(false);
+        return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), salary.grossMonthly(), minutes,
+                minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, pay.elements(),
+                pay.standingFor(userId, ym), List.of(), List.of(), rates));
+    }
+
     private Plan plan(long userId, LocalDate from, Basis b, Month m, BigDecimal complement, BigDecimal target) {
         PayslipCalculator.Result r = m.result(complement);
         BigDecimal cnss = line(r, "CNSS_EMPLOYEE");

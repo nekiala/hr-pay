@@ -30,10 +30,12 @@ public class LeaveAllowanceController {
 
     private final LeaveAllowances allowances;
     private final cd.hrpay.leave.LeaveService leave;
+    private final PayslipPdf pdf;
 
-    public LeaveAllowanceController(LeaveAllowances allowances, cd.hrpay.leave.LeaveService leave) {
+    public LeaveAllowanceController(LeaveAllowances allowances, cd.hrpay.leave.LeaveService leave, PayslipPdf pdf) {
         this.allowances = allowances;
         this.leave = leave;
+        this.pdf = pdf;
     }
 
     @GetMapping
@@ -46,6 +48,17 @@ public class LeaveAllowanceController {
     @PreAuthorize("hasAuthority('leave.request')")
     public List<LeaveAllowances.Allowance> mine() {
         return allowances.forUser(CurrentUser.id());
+    }
+
+    @GetMapping("/{id}.pdf")
+    @PreAuthorize("isAuthenticated()")
+    public org.springframework.http.ResponseEntity<byte[]> pdf(@PathVariable long id) {
+        PayrollRuns.Payslip p = allowances.payslip(id);
+        String name = ("allocation-conge-" + (p.number() == null ? "draft-" + id : p.number())).replaceAll("[^A-Za-z0-9_-]", "") + ".pdf";
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", org.springframework.http.ContentDisposition.inline().filename(name).build().toString())
+                .body(pdf.render(p));
     }
 
     @PostMapping("/calculate")

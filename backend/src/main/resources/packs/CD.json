@@ -1161,7 +1161,7 @@
     {
      "id": 27,
      "code": "LEAVE_ALLOWANCE",
-     "name": "Leave allowance (average of bonuses and overtime)",
+     "name": "Leave allowance",
      "kind": "EARNING",
      "method": "COMPUTED",
      "default_amount": null,
