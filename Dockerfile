@@ -1,5 +1,5 @@
 # HR Pay: one image with the API and the web app. Build from the repository root:
-#   docker build -t hr-pay:0.9.0 .
+#   docker build -t hr-pay .
 # See deploy/README.md for running it in production.
 
 FROM node:25-alpine AS web
@@ -9,7 +9,8 @@ RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-FROM eclipse-temurin:27-jdk AS api
+# The backend compiles with Java 26 (build.gradle.kts toolchain): keep the same major version here.
+FROM eclipse-temurin:26-jdk AS api
 WORKDIR /src
 COPY backend/gradlew backend/settings.gradle.kts backend/build.gradle.kts ./
 COPY backend/gradle gradle
@@ -19,7 +20,7 @@ COPY backend/src src
 COPY --from=web /web/dist src/main/resources/static
 RUN ./gradlew --no-daemon -q bootJar
 
-FROM eclipse-temurin:27-jre
+FROM eclipse-temurin:26-jre
 RUN groupadd --system hrpay && useradd --system --gid hrpay --home-dir /app --shell /usr/sbin/nologin hrpay \
     && mkdir -p /app && chown hrpay:hrpay /app
 WORKDIR /app
