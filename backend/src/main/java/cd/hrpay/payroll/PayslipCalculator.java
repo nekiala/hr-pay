@@ -240,6 +240,23 @@ public final class PayslipCalculator {
         BigDecimal deductions = lines.stream().filter(l -> l.kind().equals("DEDUCTION")).map(Line::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal netBeforeLoans = gross.subtract(deductions);
+        // The quinzaine is an advance on this month's pay: taken back before loans. What the net cannot cover is
+        // carried to the next month as an advance when the month closes.
+        if (netBeforeLoans.signum() < 0) {
+            for (int i = 0; i < lines.size() && netBeforeLoans.signum() < 0; i++) {
+                Line l = lines.get(i);
+                if (!l.code().equals("QUINZAINE")) {
+                    continue;
+                }
+                BigDecimal keep = l.amount().add(netBeforeLoans).max(BigDecimal.ZERO);
+                BigDecimal left = l.amount().subtract(keep);
+                lines.set(i, new Line(l.code(), l.label(), l.kind(), l.base(), l.rate(), keep, l.order(), l.loanId()));
+                deductions = deductions.subtract(left);
+                netBeforeLoans = netBeforeLoans.add(left);
+                warnings.add("Quinzaine: only " + keep.toPlainString() + " of " + l.amount().toPlainString() + " " + cur
+                        + " could be taken back; the rest is carried to next month as an advance when the month closes.");
+            }
+        }
         BigDecimal room = money(netBeforeLoans.max(BigDecimal.ZERO).multiply(r.debtMaxShare()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
         for (LoanDue loan : in.loans().stream().sorted(Comparator.comparingLong(LoanDue::loanId)).toList()) {
             BigDecimal due = convert(loan.installment().min(loan.balance()), loan.currency(), cur, r.usdCdf());

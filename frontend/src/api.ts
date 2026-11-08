@@ -606,6 +606,27 @@ export type LeaveAllowance = {
   cancelNote: string | null; months: { month: string; days: number; grossAmount: number; advanceAmount: number }[]
   number: string | null; employeeDeductions: number | null; net: number | null; lines: PayslipLine[]
 }
+export type QuinzaineLine = {
+  id: number; userId: number; employeeName: string; registrationNo: string; number: string | null; currency: string; category: string
+  percent: number; baseAmount: number; normalNet: number; workedShare: number; earnedNet: number; amount: number; explanation: string[]; paid: boolean
+}
+export type QuinzaineRun = {
+  id: number; month: string; payDate: string; base: 'NET' | 'BASIC'; status: 'CALCULATED' | 'APPROVED' | 'CLOSED' | 'PAID' | 'CANCELLED'
+  skipped: string[]; calculatedBy: string; calculatedAt: string; approvedBy: string | null; approvedAt: string | null
+  closedBy: string | null; closedAt: string | null; cancelNote: string | null
+  totals: { currency: string; amount: number; employees: number }[]; lines: QuinzaineLine[]
+}
+export type QuinzaineSettings = { enabled: boolean; base: 'NET' | 'BASIC'; day: number; maxDebtMonths: number }
+export type QuinzaineCategory = { id: number; code: string; name: string; quinzainePercent: number | null }
+export type QuinzaineEmployee = {
+  userId: number; employeeName: string; registrationNo: string; category: string; percent: number | null
+  refused: boolean; reason: string | null; recordedBy: string | null; recordedAt: string | null
+}
+export type QuinzaineExclusion = { id: number; month: string; userId: number; employeeName: string; reason: string; recordedBy: string; recordedAt: string }
+export type MyQuinzaine = {
+  enabled: boolean; day: number; refused: boolean
+  payments: { id: number; month: string; payDate: string; status: string; number: string | null; currency: string; amount: number }[]
+}
 export type LeaveBalance = { leaveTypeId: number; leaveType: string; granted: number; taken: number; pending: number; available: number }
 export type LeaveRequest = {
   id: number; userId: number; employeeName: string; registrationNo: string; leaveTypeId: number; leaveType: string

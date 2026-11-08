@@ -514,6 +514,7 @@ public class PayrollRuns {
         if (!run.status().equals("APPROVED")) {
             throw new BusinessRuleException("Only an approved payroll can be closed.");
         }
+        Quinzaines.requireSettled(jdbc, month);
         List<Long> slips = jdbc.sql("""
                 select p.id from payslip p join app_user u on u.id = p.user_id where p.run_id = ? and p.kind = 'REGULAR'
                 order by u.last_name, u.first_name, p.id""").param(run.id()).query(Long.class).list();
@@ -544,10 +545,41 @@ public class PayrollRuns {
                     leave.credit(rs.getLong(1), month, rs.getBigDecimal(2));
                     return null;
                 }).list();
+        carryQuinzaine(run, month);
         jdbc.sql("update payroll_run set status = 'CLOSED', closed_by = ?, closed_at = now() where id = ?")
                 .params(CurrentUser.email(), run.id()).update();
         audit.record("payroll.closed", "payroll_run", run.id(), Map.of("month", month.toString(), "payslips", n));
         return view(month, List.of());
+    }
+
+    /**
+     * A quinzaine the payslip could not take back in full (the month's net was too small) becomes an advance repaid
+     * from the next month, so the whole quinzaine is always taken back.
+     */
+    private void carryQuinzaine(Run run, YearMonth month) {
+        record Shortfall(long userId, String currency, BigDecimal entry, String entryCurrency, BigDecimal taken) {}
+        List<Shortfall> rows = jdbc.sql("""
+                select p.user_id, trim(p.currency) as currency, e.amount as entry, trim(e.currency) as entry_currency,
+                       coalesce((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = 'QUINZAINE'), 0) as taken
+                from payslip p join pay_entry e on e.user_id = p.user_id and e.month = ?
+                join pay_element x on x.id = e.element_id and x.code = 'QUINZAINE'
+                where p.run_id = ? and p.kind = 'REGULAR'""").params(month.atDay(1), run.id()).query(Shortfall.class).list();
+        for (Shortfall r : rows) {
+            BigDecimal due = ExchangeRates.convert(r.entry(), r.entryCurrency(), r.currency(), run.usdCdf())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal left = due.subtract(r.taken());
+            if (left.signum() <= 0) {
+                continue;
+            }
+            long id = jdbc.sql("""
+                    insert into loan (user_id, kind, principal, currency, installment, start_month, granted_on, note, created_by)
+                    values (?, 'ADVANCE', ?, ?, ?, ?, ?, ?, ?) returning id""")
+                    .params(r.userId(), left, r.currency(), left, month.plusMonths(1).atDay(1), month.atEndOfMonth(),
+                            cd.hrpay.i18n.Texts.t("Quinzaine of %s not fully taken back", month.toString()), CurrentUser.email())
+                    .query(Long.class).single();
+            audit.record("quinzaine.carried", "user", r.userId(), Map.of("loan", id, "amount", left.toPlainString(),
+                    "month", month.toString()));
+        }
     }
 
     /** The identifiers a payslip keeps are stored encrypted: read back as they were entered. */

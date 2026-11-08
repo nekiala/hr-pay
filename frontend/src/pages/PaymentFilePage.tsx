@@ -11,7 +11,7 @@ import { LayoutDownload } from './ExportLayoutsPage'
 type Line = { payslipId: number; userId: number; beneficiary: string; registrationNo: string | null; account: string | null; amount: number; currency: string
   unitId: number | null; directionName: string | null; unitName: string | null }
 type View = {
-  month: string
+  month: string; kind: 'PAYROLL' | 'QUINZAINE'
   batch: { id: number; method: PayMethodKind; provider: string; currency: string; total: number; status: string; paidOn: string | null; reference: string | null }
   lines: Line[]
 }
@@ -47,7 +47,7 @@ export default function PaymentFilePage() {
   const cash = b.method === 'CASH'
   return (
     <section>
-      <p className="no-print"><Link to={`/payroll/payments?month=${view.month}`}>{t('← Payments')}{' '}{view.month}</Link>
+      <p className="no-print"><Link to={`/payroll/payments?month=${view.month}${view.kind === 'QUINZAINE' ? '&kind=QUINZAINE' : ''}`}>{t('← Payments')}{' '}{view.month}</Link>
         {' · '}<Button className="link" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
         {can('payroll.pay') && <>{' '}<LayoutDownload target={view.batch.method as LayoutTarget} path={(l) => `/api/payment-batches/${view.batch.id}/layout/${l}`} /></>}
         {directions.length > 1 && <>{' · '}
@@ -57,7 +57,7 @@ export default function PaymentFilePage() {
           </select></>}
       </p>
       <div className="card payslip">
-        <h2>{cash ? t('Cash pay list') : t('Payment file')}{' '}{t('· salaries')}{' '}{view.month}</h2>
+        <h2>{cash ? t('Cash pay list') : t('Payment file')}{' '}{view.kind === 'QUINZAINE' ? t('· quinzaine') : t('· salaries')}{' '}{view.month}</h2>
         <p>{employer?.name}{employer?.address && <> · {employer.address}</>}</p>
         {direction && <p><strong>{direction}</strong>{' '}{t('only:')}{' '}{lines.length}{' '}{t('of')}{' '}{view.lines.length}{' '}{t('people. The file sent to the provider holds everyone.')}</p>}
         <p className="muted">{t('File #')}{b.id} · {METHOD[b.method]}{!cash && <> · {b.provider}</>} · {b.status === 'PAID' ? t('paid on {a}{b}', { a: b.paidOn, b: b.reference ? `, ref. ${b.reference}` : '' }) : b.status.toLowerCase()}</p>

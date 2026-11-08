@@ -160,14 +160,16 @@ public class PaymentController {
 
     @GetMapping("/payments/{month}")
     @PreAuthorize("hasAuthority('payroll.pay') or hasAuthority('payslip.read.all')")
-    public Payments.Overview payments(@PathVariable YearMonth month) {
-        return payments.overview(month);
+    public Payments.Overview payments(@PathVariable YearMonth month,
+                                      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "PAYROLL") String kind) {
+        return payments.overview(month, kind.toUpperCase(java.util.Locale.ROOT));
     }
 
     @PostMapping("/payments/{month}/batches")
     @PreAuthorize("hasAuthority('payroll.pay')")
-    public Payments.BatchView prepare(@PathVariable YearMonth month, @Valid @RequestBody PrepareInput b) {
-        return payments.prepare(month, b.method(), b.provider(), b.currency());
+    public Payments.BatchView prepare(@PathVariable YearMonth month, @Valid @RequestBody PrepareInput b,
+                                      @org.springframework.web.bind.annotation.RequestParam(defaultValue = "PAYROLL") String kind) {
+        return payments.prepare(month, kind.toUpperCase(java.util.Locale.ROOT), b.method(), b.provider(), b.currency());
     }
 
     @GetMapping("/payment-batches/{id}")
@@ -181,10 +183,11 @@ public class PaymentController {
     public void batchFile(@PathVariable long id, HttpServletResponse response) throws IOException {
         Payments.BatchView v = payments.batch(id);
         Payments.Batch b = v.batch();
-        String name = "salaries-" + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase()
+        boolean quinzaine = Payments.QUINZAINE.equals(v.kind());
+        String name = (quinzaine ? "quinzaine-" : "salaries-") + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase()
                 + "-" + b.currency().toLowerCase() + "-" + b.id() + ".csv";
         PrintWriter out = Csv.start(response, name);
-        String narration = "Salary " + v.month();
+        String narration = (quinzaine ? "Quinzaine " : "Salary ") + v.month();
         int n = 0;
         switch (b.method()) {
             case "BANK" -> {

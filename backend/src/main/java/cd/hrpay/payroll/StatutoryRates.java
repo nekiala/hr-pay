@@ -173,12 +173,18 @@ public class StatutoryRates {
             case "THIRTEENTH_BASE" -> List.of("AVERAGE_BASIC", "LAST_BASIC").contains(value);
             case "THIRTEENTH_FALLBACK_PERCENT" -> value.matches("\\d{1,3}(\\.\\d{1,2})?") && new BigDecimal(value).compareTo(BigDecimal.valueOf(100)) <= 0;
             case "THIRTEENTH_PAY_MONTH" -> value.matches("[1-9]|1[0-2]");
+            case "QUINZAINE_ENABLED" -> List.of("true", "false").contains(value);
+            case "QUINZAINE_BASE" -> List.of("NET", "BASIC").contains(value);
+            case "QUINZAINE_MAX_DEBT_MONTHS" -> value.matches("\\d{1,2}(\\.\\d{1,2})?");
+            case "QUINZAINE_DAY" -> value.matches("[1-9]|1\\d|2[0-8]");
             default -> throw new NotFoundException("Unknown setting " + key + ".");
         };
         if (!valid) {
             throw new BusinessRuleException("Invalid value for " + key + ".");
         }
-        jdbc.sql("update payroll_setting set value = ? where key = ?").params(value, key).update();
+        jdbc.sql("""
+                insert into payroll_setting (key, value) values (?, ?)
+                on conflict (company_id, key) do update set value = excluded.value""").params(key, value).update();
         audit.record("payroll_setting.changed", "payroll_setting", null, Map.of("key", key, "value", value));
     }
 
