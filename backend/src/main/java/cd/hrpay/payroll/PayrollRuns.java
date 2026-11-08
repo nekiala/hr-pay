@@ -330,6 +330,15 @@ public class PayrollRuns {
         snapshot.put("contractType", contract.contractType());
         snapshot.put("contractStart", contract.startDate().toString());
         snapshot.put("grade", contract.gradeCode() + " · " + contract.gradeName());
+        // Kept for the payroll reports: grouping by grade, grade category and site as the month was paid.
+        snapshot.put("gradeId", contract.gradeId());
+        snapshot.put("categoryId", contract.categoryId());
+        snapshot.put("siteId", user.getSite() == null ? null : user.getSite().getId());
+        snapshot.put("scheduledDays", scheduledDays);
+        Map<String, Integer> leaveDays = new java.util.TreeMap<>();
+        summary.days().stream().filter(d -> d.status() == DayCalculator.Status.LEAVE && d.leaveType() != null)
+                .forEach(d -> leaveDays.merge(d.leaveType(), 1, Integer::sum));
+        snapshot.put("leaveDays", leaveDays);
         snapshot.put("occupation", contract.occupationName());
         snapshot.put("expatriate", contract.expatriate());
         snapshot.put("basicMonthly", salary.grossMonthly());
@@ -386,12 +395,13 @@ public class PayrollRuns {
         long slipId = jdbc.sql("""
                 insert into payslip (run_id, user_id, currency, gross, cnss_base, taxable_base, taxable_base_cdf,
                     employee_deductions, net, employer_charges, scheduled_minutes, paid_minutes, days_worked,
-                    snapshot, warnings, unit_id, kind, corrects_id, reason, created_by)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?, ?, ?, ?) returning id""")
+                    snapshot, warnings, unit_id, kind, corrects_id, reason, created_by, site_id, category_id, grade_id)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                 .params(runId, c.userId(), r.currency(), r.gross(), r.cnssBase(), r.taxableBase(), r.taxableBaseCdf(),
                         r.employeeDeductions(), r.net(), r.employerCharges(), c.scheduledMinutes(), c.paidMinutes(),
                         c.daysWorked(), json.writeValueAsString(c.snapshot()), json.writeValueAsString(c.warnings()),
-                        c.unitId(), kind, correctsId, reason, CurrentUser.email())
+                        c.unitId(), kind, correctsId, reason, CurrentUser.email(), id(c.snapshot().get("siteId")),
+                        id(c.snapshot().get("categoryId")), id(c.snapshot().get("gradeId")))
                 .query(Long.class).single();
         for (PayslipCalculator.Line l : r.lines()) {
             jdbc.sql("""
@@ -401,6 +411,10 @@ public class PayrollRuns {
                     .update();
         }
         return slipId;
+    }
+
+    private static Long id(Object v) {
+        return v instanceof Number n ? n.longValue() : null;
     }
 
     @Transactional

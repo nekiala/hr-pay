@@ -63,6 +63,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: t('Payroll'),
       items: [
         { to: '/payroll', label: t('Payroll'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
+        { to: '/payroll/reports', label: t('Payroll reports'), icon: FileSpreadsheet, show: pay && can('payroll.report') },
         { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },

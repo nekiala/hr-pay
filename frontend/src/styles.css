@@ -303,6 +303,14 @@ td.actions button + button { margin-left: 6px; }
 tr.absent td:nth-child(2) { color: var(--danger); }
 tr.muted td { color: inherit; opacity: .6; }
 tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--primary-soft); }
+/* Payroll reports: totals stand out, wide tables scroll inside their card. */
+table.report { font-size: 13px; }
+table.report th { white-space: normal; vertical-align: bottom; }
+table.report td:first-child { min-width: 11rem; }
+table.report tr.total td, table.report tr.subtotal td, table.report tr.group td { font-weight: 600; }
+table.report tr.total td { border-top: 2px solid var(--border); }
+.report-table + .report-table { margin-top: 18px; }
 tr.selected td { background: var(--primary-soft); }
 .pager { margin-top: 12px; }
 

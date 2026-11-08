@@ -242,6 +242,37 @@ An advance on the month's pay, paid around the middle of the month. It is worked
 **The law.** DRC (Labour Code art. 99): pay at least once a month, within six days after it; advances may be taken back on the pay (art. 112). Republic of the Congo (art. 88 and 89): pay within eight days after the month; where day or hour workers are paid monthly, the acompte each fortnight must be at least a third of the previous month's pay. To confirm with your payroll expert.` },
   },
   {
+    id: 'payroll-reports', audience: 'payroll', routes: ['/payroll/reports'],
+    fr: { title: 'Les états généraux de la paie', body: `
+Les états d'un mois de paie, à l'écran, en PDF ou en Excel. Tous les montants viennent des bulletins enregistrés : un état est toujours égal à ce qui a été payé.
+
+- **Récapitulatif général** : effectif, brut, bases CNSS et imposable, retenues, net, charges patronales et coût total, puis le détail par élément de paie.
+- **Totaux par regroupement** : par catégorie, grade, site, unité (au niveau choisi : direction, département, service...), centre de coût, fonction, type de contrat, nationaux et expatriés, devise ou mode de paiement, avec un second regroupement et des sous-totaux.
+- **Structure** : chaque unité avec le total de toute sa branche. **Par élément de paie** et **éléments par regroupement** (tableau croisé).
+- **Mode de paiement** : banque par banque, mobile money par opérateur, espèces ; les numéros de compte restent masqués.
+- **Écarts avec le mois précédent** : arrivées, départs, et nets qui changent de plus de 10 % (réglable) avec les éléments qui ont le plus bougé.
+- **Quinzaine** : montants par catégorie, site, unité et mode de paiement, puis ce que le bulletin du mois a repris.
+- **Livre de paie** : une ligne par bulletin avec les 33 mentions du modèle officiel, totaux par page et report, en monnaie locale. Seulement pour un mois clôturé.
+
+Cliquez sur une ligne pour voir les employés concernés (droit de lire tous les bulletins). Avant la clôture, les états portent la mention PROVISOIRE. Chaque téléchargement est inscrit au journal d'audit.
+
+**Le droit.** RDC : le Code du travail (art. 213) impose un livre de paie ; l'arrêté ministériel 12/CAB.MIN/ETPS/042 du 8 août 2008 en fixe le modèle (33 mentions) pour 10 travailleurs ou plus, sur papier ou fichier informatique, sans modification après inscription. Aucune durée de conservation n'a été trouvée : HR Pay ne supprime jamais une paie clôturée. République du Congo : à confirmer avec votre expert paie. La branche d'activité imprimée en tête vient de la page Entreprise.` },
+    en: { title: 'Payroll general reports', body: `
+The statements of a payroll month, on screen, in PDF or in Excel. Every amount comes from the stored payslips, so a report always equals what was paid.
+
+- **General summary**: headcount, gross, CNSS and taxable bases, deductions, net, employer charges and total cost, then the detail by pay element.
+- **Totals by grouping**: by grade category, grade, site, unit (at the level you choose: direction, department, service...), cost centre, occupation, contract type, nationals and expatriates, currency or payment method, with a second grouping and subtotals.
+- **Organisational structure**: each unit with the total of its whole branch. **By pay element** and **pay elements by grouping** (a cross table).
+- **Payment method**: bank by bank, mobile money by operator, cash; account numbers stay masked.
+- **Differences with last month**: arrivals, departures, and nets that change by more than 10% (adjustable) with the elements that moved most.
+- **Quinzaine**: amounts by category, site, unit and payment method, then what the month's payslip took back.
+- **Livre de paie**: one line per payslip with the 33 mentions of the official model, page totals carried forward, in the local currency. Closed months only.
+
+Click a row to see the employees behind it (needs the right to read all payslips). Before closing, reports are marked PROVISIONAL. Every download is written to the audit log.
+
+**The law.** DRC: the Labour Code (art. 213) requires a livre de paie; ministerial order 12/CAB.MIN/ETPS/042 of 8 August 2008 sets its model (33 mentions) for 10 workers or more, on paper or as a computer file, never changed once written. No retention period was found: HR Pay never deletes a closed payroll. Republic of the Congo: to confirm with your payroll expert. The branch of activity printed at the top comes from the Company page.` },
+  },
+  {
     id: 'annual-leave', audience: 'hr', routes: ['/payroll/leave-pay', '/leave/settings'],
     fr: { title: 'Congé annuel : acquisition, report et allocation', body: `
 - **Acquisition** : chaque paie mensuelle clôturée crédite les jours de la catégorie de la personne ÷ 12, jamais sous le minimum légal (RDC art. 141 : 1 jour ouvrable par mois complet, 1,5 avant 18 ans), plus les jours d'ancienneté, au prorata du mois en service. Le congé sans solde et l'absence injustifiée ne comptent pas. Le bulletin montre les jours acquis et le solde.
