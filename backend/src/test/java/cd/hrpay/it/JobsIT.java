@@ -52,9 +52,9 @@ class JobsIT extends IntegrationTest {
 
     @Test
     void aLongJobAnswers202AndIsFollowedToItsResult() throws Exception {
-        usdRate("2026-02-27", 2300);
+        usdRate("2025-05-30", 2800);
         MockHttpSession hr = login(HR);
-        String started = mvc.perform(post("/api/payroll/runs/2026-02/calculate").session(hr).with(csrf())
+        String started = mvc.perform(post("/api/payroll/runs/2025-05/calculate").session(hr).with(csrf())
                         .header("Prefer", "respond-async"))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.job.type").value("payroll.calculate"))
@@ -74,17 +74,17 @@ class JobsIT extends IntegrationTest {
         mvc.perform(get("/api/jobs/" + job).session(employee)).andExpect(status().isNotFound());
 
         // Every payslip of the month in one zip: only for those who may see all payslips; the download is audited.
-        String zip = mvc.perform(post("/api/payroll/runs/2026-02/payslips.zip").session(hr).with(csrf()))
+        String zip = mvc.perform(post("/api/payroll/runs/2025-05/payslips.zip").session(hr).with(csrf()))
                 .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
         long zipJob = JsonPath.<Number>read(zip, "$.job.id").longValue();
         String zipDone = await(hr, zipJob);
         assertThat(JsonPath.<String>read(zipDone, "$.status")).isEqualTo("DONE");
-        assertThat(JsonPath.<String>read(zipDone, "$.fileName")).isEqualTo("payslips-2026-02.zip");
+        assertThat(JsonPath.<String>read(zipDone, "$.fileName")).isEqualTo("payslips-2025-05.zip");
         byte[] file = mvc.perform(get("/api/jobs/" + zipJob + "/file").session(hr)).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsByteArray();
         assertThat(new String(file, 0, 2)).isEqualTo("PK");
         mvc.perform(get("/api/jobs/" + zipJob + "/file").session(employee)).andExpect(status().isNotFound());
-        mvc.perform(post("/api/payroll/runs/2026-02/payslips.zip").session(employee).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(post("/api/payroll/runs/2025-05/payslips.zip").session(employee).with(csrf())).andExpect(status().isForbidden());
         // Finance may see all payslips too, so may download the file HR made.
         mvc.perform(get("/api/jobs/" + zipJob + "/file").session(login(FINANCE))).andExpect(status().isOk());
         int audited = jdbc.sql("select count(*) from audit_log where action = 'job.file_downloaded' and entity_id = ?")

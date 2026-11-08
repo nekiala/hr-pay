@@ -251,6 +251,11 @@ export default function StatutoryRatesPage() {
             <option value="RUN_DATE">{t('BCC rate on the day of the run')}</option>
           </select>
         </label>
+        <label>{t('Differences report: list nets that change by more than (%)')}<select value={data?.settings.REPORT_VARIANCE_PERCENT ?? '10'} disabled={!editable}
+            onChange={(e) => void run(() => api('/api/statutory/settings/REPORT_VARIANCE_PERCENT', { method: 'PUT', body: { value: e.target.value } }), t('Saved.'))}>
+            {['0', '5', '10', '15', '20', '25', '50'].map((v) => <option key={v} value={v}>{v}%</option>)}
+          </select>
+        </label>
       </div>
     </section>
   )

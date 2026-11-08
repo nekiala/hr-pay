@@ -40,6 +40,7 @@ import MyPayslipsPage from './pages/MyPayslipsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
 import LeavePayPage from './pages/LeavePayPage'
 import QuinzainePage from './pages/QuinzainePage'
+import PayrollReportsPage from './pages/PayrollReportsPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import CorrectionsPage from './pages/CorrectionsPage'
 import PresencePage from './pages/PresencePage'
@@ -202,6 +203,7 @@ export default function App() {
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payroll" element={<PayrollRoute />} />
+          <Route path="/payroll/reports" element={<Guard permission="payroll.report"><PayrollReportsPage /></Guard>} />
           <Route path="/payroll/payments" element={<PaymentsRoute />} />
           <Route path="/payroll/payments/files/:id" element={<PaymentsRoute file />} />
           <Route path="/payroll/declarations" element={<Guard permission="declaration.manage"><DeclarationsPage /></Guard>} />
