@@ -55,7 +55,7 @@ export default function SitesPage() {
         </table>
       </div>
       {retention !== null && (
-        <div className="card narrow" style={{ marginTop: 16 }}>
+        <div className="card" style={{ marginTop: 16 }}>
           <h3>{t('GPS positions')}</h3>
           <p className="hint">{t('The position a phone shares at check-in is erased after this many days; the check-in itself (time, site, method) stays. 0 keeps positions. Everyone sees this period in the')}{' '}<Link to="/privacy">{t('privacy notice')}</Link>.</p>
           {message && <p className="success">{message}</p>}

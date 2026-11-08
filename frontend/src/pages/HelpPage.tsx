@@ -129,10 +129,10 @@ export function ArticlePage() {
   const a = ARTICLES.find((x) => x.id === id)
   const [reporting, setReporting] = useState(false)
   const navigate = useNavigate()
-  if (!a) return <section className="narrow"><p className="notice">{t('Page not found.')}</p><Link to="/help">{t('Help')}</Link></section>
+  if (!a) return <section><p className="notice">{t('Page not found.')}</p><Link to="/help">{t('Help')}</Link></section>
   const x = articleText(a)
   return (
-    <section className="narrow">
+    <section>
       <p className="muted small"><Link to="/help">{t('Help')}</Link></p>
       <div className="card">
         <h2>{x.title}</h2>
@@ -191,7 +191,7 @@ export function TicketPage({ provider = false }: { provider?: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const load = () => api<TicketThread>(base).then(setThread).catch((e: Error) => setError(e.message))
   useEffect(() => { void load() }, [id])
-  if (!thread) return <section className="narrow"><ErrorText error={error} /></section>
+  if (!thread) return <section><ErrorText error={error} /></section>
   const tk = thread.ticket
   const send = async () => {
     setError(null)
@@ -202,7 +202,7 @@ export function TicketPage({ provider = false }: { provider?: boolean }) {
     try { await api(`${base}/close`, { method: 'POST' }); await load() } catch (e) { setError((e as Error).message) }
   }
   return (
-    <section className="narrow">
+    <section>
       <p className="muted small"><Link to={provider ? '/platform/support' : '/help'}>{provider ? t('Support desk') : t('Help')}</Link></p>
       <div className="row between">
         <h2>{tk.subject}</h2>
@@ -235,7 +235,7 @@ export function TicketPage({ provider = false }: { provider?: boolean }) {
 export function WhatsNewPage() {
   useEffect(() => { try { localStorage.setItem('hrpay.seenVersion', RELEASES[0].version) } catch { /* private window */ } }, [])
   return (
-    <section className="narrow">
+    <section>
       <p className="muted small"><Link to="/help">{t('Help')}</Link></p>
       <h2>{t('What’s new')}</h2>
       {RELEASES.map((r) => (

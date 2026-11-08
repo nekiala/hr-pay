@@ -131,7 +131,7 @@ export default function CheckInPage() {
   )
   if (offline && (!status || !online)) {
     return (
-      <section className="narrow">
+      <section>
         <div className="card checkin">
           <p className="notice">{t('No connection.')}</p>
           {offline.siteName && <p className="muted">{offline.siteName}</p>}
@@ -160,7 +160,7 @@ export default function CheckInPage() {
   if (!status.site) return <p className="notice">{t('You are not assigned to a site yet. Contact HR.')}</p>
 
   return (
-    <section className="narrow">
+    <section>
       <div className="card checkin">
         <p className="muted">{status.site.name}{status.trustedDevice ? t(' · office computer: {a}', { a: status.trustedDeviceName }) : ''}</p>
         <h2>{status.checkedIn ? t('Checked in since {a}', { a: time(status.since!, status?.site?.timeZone) }) : t('Not checked in')}</h2>

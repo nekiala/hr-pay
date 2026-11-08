@@ -14,7 +14,7 @@ export default function MyPayslipsPage() {
   }, [])
 
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('My payslips')}</h2>
       <p><Link to="/my/year">{t('Annual pay statement')}</Link></p>
       <ErrorText error={error} />

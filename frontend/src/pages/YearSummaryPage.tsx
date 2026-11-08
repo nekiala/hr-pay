@@ -69,7 +69,7 @@ export function AnnualStatementPage() {
   useEffect(() => { api<typeof employer>('/api/company').then(setEmployer).catch(() => undefined) }, [])
 
   return (
-    <section className="narrow">
+    <section>
       <p className="no-print">
         {userId ? <Link to={`/payroll/year?year=${year}`}>{t('← Year summary')}</Link> : <Link to="/my/payslips">{t('← My payslips')}</Link>}
         {' · '}<Button className="link" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>

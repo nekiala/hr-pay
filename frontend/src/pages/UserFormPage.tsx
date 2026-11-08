@@ -137,7 +137,7 @@ export default function UserFormPage() {
   )
 
   return (
-    <section className="narrow">
+    <section>
       <h2>{isNew ? t('New user') : `${form.firstName} ${form.lastName}`}</h2>
       {user && (
         <p className="muted">

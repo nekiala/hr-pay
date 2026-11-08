@@ -72,7 +72,7 @@ export function SetupGuideCard({ home = false }: { home?: boolean }) {
 
 export default function SetupPage() {
   return (
-    <section className="narrow">
+    <section>
       <p className="muted small"><Link to="/help/first-steps">{t('How it works')}</Link></p>
       <h2>{t('Set-up guide')}</h2>
       <SetupGuideCard />

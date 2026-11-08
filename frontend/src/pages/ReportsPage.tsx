@@ -22,7 +22,7 @@ export default function ReportsPage() {
   useEffect(() => { api<OrgUnit[]>('/api/org/units').then(setUnits).catch(() => undefined) }, [])
   const q = `month=${month}${unit ? `&unitId=${unit}` : ''}`
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('Reports')}</h2>
       <p className="muted">{t('Spreadsheets as Excel workbooks or CSV files. The current month runs to today. Each download is recorded in the audit log.')}</p>
       <div className="grid2">

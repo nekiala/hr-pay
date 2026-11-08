@@ -40,7 +40,7 @@ export default function OvertimePage() {
   if (!draft) return <ErrorText error={error} />
 
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('Overtime rules (DR Congo)')}</h2>
       <p className="muted">{t('Overtime is time worked beyond the schedule. Rates apply to the hourly value of the basic salary.')}</p>
       <div className="card">

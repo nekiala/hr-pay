@@ -52,7 +52,7 @@ export default function CorrectPayslipPage() {
   const cur = preview?.currency ?? 'USD'
   const changed = preview?.lines.filter((l) => Math.abs(l.change) >= 0.01) ?? []
   return (
-    <section className="narrow">
+    <section>
       <p><Link to={`/payslips/${id}`}>{t('← Back to the payslip')}</Link></p>
       <h2>{t('Correct a closed payslip')}{preview ? ` · ${preview.name}, ${monthName(preview.month)}` : ''}</h2>
       <p className="muted">{t('A closed payslip is never changed. It is worked out again with today\'s data (salary, attendance, the month\'s entries and the lines you add below), and the difference is settled the way you choose.')}</p>

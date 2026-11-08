@@ -51,7 +51,7 @@ export default function PayslipPage() {
   )
 
   return (
-    <section className="narrow payslip">
+    <section className="payslip">
       <p className="no-print">
         {staff ? <Link to="/payroll">{t('← Payroll')}</Link> : <Link to="/my/payslips">{t('← My payslips')}</Link>}
         {' · '}<a href={`/api/payslips/${id}.pdf`} target="_blank" rel="noreferrer">{t('Download PDF')}</a>

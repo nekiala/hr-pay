@@ -187,7 +187,6 @@ main { padding: 24px; width: 100%; max-width: 1280px; min-width: 0; margin: 0 au
 main > *, .card, .grid2 > *, .grid3 > *, .split > * { min-width: 0; max-width: 100%; }
 select { max-width: 100%; text-overflow: ellipsis; }
 .table-wrap, .scroll-x { max-width: 100%; overflow-x: auto; }
-.narrow { max-width: 760px; }
 @media (max-width: 960px) {
   .sidebar { transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 0 40px rgba(0, 0, 0, .4); }
   .sidebar.open { transform: none; }
@@ -482,7 +481,6 @@ a.todo-item:hover .todo-text strong { color: var(--link); }
   body { background: #fff; color: #000; }
   .card { border: none; box-shadow: none; padding: 0; }
   th { background: none; }
-  section.narrow { max-width: none; }
   details { display: block; }
   .print-only { display: block; }
   .org-scroll { overflow: visible; }
