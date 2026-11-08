@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
+import { PageTitle, SettingsLink } from '../components/SettingsLink'
 
 type ToDo = { userId: number; name: string; template?: string; periodStart?: string; periodEnd?: string; evaluationId?: number | null; problem?: string }
 
@@ -69,7 +70,7 @@ export default function EvaluationsPage() {
 
   return (
     <section>
-      <h2>{t('Evaluations')}</h2>
+      <PageTitle title={t('Evaluations')}>{can('evaluation.manage') && <SettingsLink to="/evaluations/settings" />}</PageTitle>
       <ErrorText error={error} />
       {waiting.length > 0 && (
         <p className="notice">{t('Your manager has scored you for')}{' '}{waiting.map((e) => t('{a} to {b}', { a: e.periodStart, b: e.periodEnd })).join(', ')}. <Link to={`/evaluations/${waiting[0].id}`}>{t('Read and answer')}</Link>.</p>
@@ -113,7 +114,6 @@ export default function EvaluationsPage() {
         <h3>{t('My evaluations')}</h3>
         <Table rows={mine} showEmployee={false} />
       </div>
-      {can('evaluation.manage') && <p><Link to="/evaluations/settings">{t('Criteria and templates')}</Link></p>}
     </section>
   )
 }

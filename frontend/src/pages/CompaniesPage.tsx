@@ -119,7 +119,7 @@ export default function CompaniesPage() {
         <h2>{t('Companies')}</h2>
         <Button onClick={openNew}>{t('New company')}</Button>
       </div>
-      <p className="muted">{t('Each company has its own people, structure, payroll and settings, and never sees another company\'s data. A new company starts with its country\'s grades, rates, holidays and roles.')}</p>
+      <p className="muted">{t('Each company\'s data is kept apart. A new company starts with its country\'s grades, rates, holidays and roles.')}</p>
       <ErrorText error={error} />
       <div className="table-wrap">
         <table>

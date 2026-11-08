@@ -123,7 +123,7 @@ A unit's head approves for their whole team, sub-units included; their deputy on
 - **Evaluations**: you score, HR approves, the employee can contest.` },
   },
   {
-    id: 'people', audience: 'hr', routes: ['/users', '/roles', '/lifecycle', '/departures', '/imports'],
+    id: 'people', audience: 'hr', routes: ['/users', '/roles', '/departures', '/imports'],
     fr: { title: 'RH : employés, rôles, embauches et départs', body: `
 - **Utilisateurs** : créez la fiche, l'unité, le contrat et le salaire. Un mot de passe provisoire est changé à la première connexion.
 - **Rôles** : chaque rôle est une liste de permissions. Les rôles sensibles (Administrateur, RH, Finance) demandent une deuxième étape à la connexion.
@@ -161,11 +161,11 @@ After closing, a correction is made with a complementary payslip or back pay, ne
     fr: { title: 'Paiements, déclarations et comptabilité', body: `
 - **Paiements** : un fichier par banque ou opérateur de mobile money, dans la mise en page choisie (Mises en page des fichiers).
 - **Déclarations** : les montants de chaque déclaration du mois, en CDF ; notez la date de dépôt.
-- **Comptabilité** : les écritures du mois au plan SYSCOHADA, en fichier pour votre logiciel comptable.` },
+- **Comptabilité** : les écritures du mois au plan SYSCOHADA, en fichier pour votre logiciel comptable. Un compte laissé vide prend le compte SYSCOHADA par défaut ; la paie des expatriés va en 662x et leur CNSS en 6642.` },
     en: { title: 'Payments, declarations and accounting', body: `
 - **Payments**: one file per bank or mobile money operator, in the layout chosen (File layouts).
 - **Declarations**: the amounts of each of the month's declarations, in CDF; record the filing date.
-- **Accounting**: the month's entries in the SYSCOHADA chart, as a file for your accounting software.` },
+- **Accounting**: the month's entries in the SYSCOHADA chart, as a file for your accounting software. An empty account takes the default SYSCOHADA one; expatriates' pay goes to 662x and their CNSS to 6642.` },
   },
   {
     id: 'settings', audience: 'admin', routes: ['/payroll/settings', '/payroll/rates', '/payroll/elements', '/schedules', '/holidays', '/sites', '/org/manage', '/overtime'],
@@ -174,13 +174,19 @@ After closing, a correction is made with a complementary payslip or back pay, ne
 - **Taux** : CNSS, IPR, INPP, ONEM et les autres taux légaux, avec leur date d'effet. Les taux fournis sont à vérifier par votre comptable.
 - **Horaires** : les heures prévues par jour ; elles servent au calcul du salaire et des retards.
 - **Jours fériés** : ceux du pays, avec la date réellement observée quand le gouvernement la déplace.
-- **Sites** : zone GPS, adresses IP, et la règle des pointages hors connexion.` },
+- **Sites** : zone GPS, adresses IP, et la règle des pointages hors connexion.
+- **Augmentation d'ancienneté** : à chaque anniversaire du contrat d'un permanent, le salaire de base augmente du pourcentage de sa catégorie appliqué au salaire de base du grade. Elle s'applique seule chaque matin ; les RH reçoivent le 1er du mois un e-mail qui liste les augmentations.
+- **Préavis** : une base plus des jours par année de service complète ; les jours ouvrables excluent les dimanches et jours fériés. En RDC : catégories 1 à 5, 14 jours ouvrables + 7 par année (Code du travail art. 64) ; agents de maîtrise, 1 mois + 9 jours ouvrables par année ; cadres, 3 mois + 16 jours ouvrables par année (arrêté du 26 octobre 2005) ; l'employé qui démissionne en doit la moitié. Une convention collective ne peut que donner plus.
+- **Éléments de paie** : les traitements CNSS et IPR fournis sont des exemples, à faire confirmer avant la mise en service. Les éléments « calculés par la paie » sont intégrés : on peut seulement les renommer.` },
     en: { title: 'Settings: grades, rates, schedules, holidays, sites', body: `
 - **Grades**: the basic salary per grade; a negotiated salary can differ per employee.
 - **Rates**: CNSS, IPR, INPP, ONEM and the other statutory rates, with their effective date. The rates provided are to be checked by your accountant.
 - **Schedules**: the hours planned per day; they drive the salary and lateness calculations.
 - **Holidays**: the country's, with the date actually observed when the government moves it.
-- **Sites**: GPS area, IP addresses, and the rule for check-ins made offline.` },
+- **Sites**: GPS area, IP addresses, and the rule for check-ins made offline.
+- **Anniversary raise**: on a permanent employee's contract anniversary, the basic salary rises by their category's percentage of the grade's base salary. It is applied by itself each morning; HR gets an email on the 1st of the month listing the raises.
+- **Notice**: a base plus days for each full year of service; working days leave out Sundays and public holidays. DRC: categories 1 to 5, 14 working days + 7 per year (Labour Code art. 64); agents de maîtrise, 1 month + 9 working days per year; cadres, 3 months + 16 working days per year (arrêté of 26 October 2005); an employee who resigns owes half. A collective agreement can only give more.
+- **Pay elements**: the CNSS and IPR treatments provided are samples, to be confirmed before go-live. Elements "calculated by payroll" are built in: you can only rename them.` },
   },
   {
     id: 'sign-in', audience: 'everyone', routes: ['/account'],
@@ -211,6 +217,75 @@ After closing, a correction is made with a complementary payslip or back pay, ne
 - A month's cost shows once payroll is calculated; it is final after approval.
 
 **Reports** exports the detailed data to Excel or CSV.` },
+  },
+  {
+    id: 'quinzaine', audience: 'payroll', routes: ['/payroll/quinzaine'],
+    fr: { title: 'La quinzaine (acompte de mi-mois)', body: `
+Une avance sur la paie du mois, versée vers le milieu du mois. Elle se calcule comme la paie de fin de mois, se paie par les fichiers de paiement, et le bulletin du mois la reprend en totalité sur le net.
+
+- **Réglages** (bouton Paramètres) : l'entreprise l'active, choisit la base (net d'un mois normal ou salaire de base), le jour de paie et la limite de dette ; un taux de 10 à 50 % par catégorie de grade. Une catégorie sans taux ne la reçoit pas.
+- **Jour de paie** : un week-end ou un jour férié, elle est payée le jour ouvrable précédent.
+- **Qui la reçoit** : toute personne sous contrat le jour de paie, sauf celles qui ont demandé à ne pas la recevoir (depuis leur page de bulletins, à partir de la prochaine quinzaine pas encore approuvée), celles que vous écartez, un congé sans solde le jour de paie, un départ dans le mois et une dette au-dessus de la limite.
+- **Montant** : jamais plus que le net déjà acquis le jour de paie, pour que le bulletin du mois puisse toujours la reprendre. Tant que la Finance ne l'a pas approuvée, un nouveau calcul la remplace.
+- **Étapes** : les RH calculent, la Finance approuve, les RH clôturent (les reçus sont numérotés), puis Paiements.
+
+**Le droit.** RDC (Code du travail art. 99) : payer au moins une fois par mois, au plus tard six jours après ; les avances peuvent être reprises sur la paie (art. 112). République du Congo (art. 88 et 89) : payer au plus tard huit jours après le mois ; quand des travailleurs à la journée ou à l'heure sont payés au mois, l'acompte de chaque quinzaine vaut au moins un tiers de la paie du mois précédent. À confirmer avec votre expert paie.` },
+    en: { title: 'The quinzaine (mid-month advance)', body: `
+An advance on the month's pay, paid around the middle of the month. It is worked out like the month-end payroll, paid through the payment files, and the month's payslip takes it back in full from the net pay.
+
+- **Settings** (Settings button): the company turns it on and chooses the base (net pay of a normal month, or basic salary), the pay day and the debt limit; a rate of 10 to 50% per grade category. A category without a rate does not get it.
+- **Pay day**: on a weekend or public holiday, it is paid the working day before.
+- **Who gets it**: everyone under contract on the pay day, except those who asked not to (from their payslips page, from the next quinzaine not yet approved), those you leave out, unpaid leave on the pay day, a departure in the month, and debts above the limit.
+- **Amount**: never more than the net already earned on the pay day, so the month's payslip can always take it back. Until Finance approves it, calculating again replaces it.
+- **Steps**: HR calculates, Finance approves, HR closes (receipts get their numbers), then Payments.
+
+**The law.** DRC (Labour Code art. 99): pay at least once a month, within six days after it; advances may be taken back on the pay (art. 112). Republic of the Congo (art. 88 and 89): pay within eight days after the month; where day or hour workers are paid monthly, the acompte each fortnight must be at least a third of the previous month's pay. To confirm with your payroll expert.` },
+  },
+  {
+    id: 'annual-leave', audience: 'hr', routes: ['/payroll/leave-pay', '/leave/settings'],
+    fr: { title: 'Congé annuel : acquisition, report et allocation', body: `
+- **Acquisition** : chaque paie mensuelle clôturée crédite les jours de la catégorie de la personne ÷ 12, jamais sous le minimum légal (RDC art. 141 : 1 jour ouvrable par mois complet, 1,5 avant 18 ans), plus les jours d'ancienneté, au prorata du mois en service. Le congé sans solde et l'absence injustifiée ne comptent pas. Le bulletin montre les jours acquis et le solde.
+- **Ancienneté** : comptée depuis la date d'embauche ; mettez 0 an pour n'en donner aucun.
+- **Report** : RDC (art. 140) : seule la moitié du congé peut être reportée, sur deux ans (50 % pendant 1 an). République du Congo (art. 120) : le droit se perd après 3 ans (100 % pendant 3 ans).
+- **Types de congé** : 100 % garde le salaire du jour, 0 % rend le congé non payé. Un type qui exige un justificatif est approuvé par le responsable, puis ne compte qu'une fois le document vérifié par les RH.
+- **Allocation de congé** : la rémunération des jours de congé (base et complément de salaire ; le logement, le transport et les allocations familiales ne sont pas de la rémunération, Code du travail art. 7) plus la moyenne des primes, commissions et heures supplémentaires des 12 mois précédents. Elle est payée au plus tard le dernier jour ouvrable avant le congé (art. 142 et 145), avec son propre bulletin. Le bulletin de chaque mois couvert l'ajoute comme gain, pour calculer la CNSS et l'impôt sur le mois entier, et reprend le net payé d'avance.` },
+    en: { title: 'Annual leave: earning, carry-over and allowance', body: `
+- **Earning**: each closed monthly payroll credits the days of the person's category ÷ 12, never below the legal floor (DRC art. 141: 1 working day per full month, 1.5 under 18), plus the seniority days, for the share of the month in service. Unpaid leave and unjustified absence do not count. The payslip shows the days earned and the balance.
+- **Seniority**: counted from the hire date; set the years to 0 to give none.
+- **Carry-over**: DRC (art. 140): only half of the leave can be carried, over two years (50% for 1 year). Republic of the Congo (art. 120): the right lapses after 3 years (100% for 3 years).
+- **Kinds of leave**: 100% keeps the day's pay, 0% makes the leave unpaid. A kind that needs a document is approved by the manager, then counts only once HR has checked the document.
+- **Leave allowance**: the remuneration for the leave days (basic and salary complement; housing, transport and family allowances are not remuneration, Labour Code art. 7) plus the average of bonuses, commissions and overtime of the 12 months before. It is paid by the last working day before the leave (art. 142 and 145), with its own payslip. The payslip of each month the leave covers adds it as an earning, so CNSS and income tax are worked out on the whole month, and takes back the net paid in advance.` },
+  },
+  {
+    id: 'evaluation-setup', audience: 'hr', routes: ['/evaluations/settings'],
+    fr: { title: "Critères et modèles d'évaluation", body: `
+- **Modèle** : la fréquence des évaluations et le poids de chaque critère ; les poids totalisent 100. Un seul modèle actif par catégorie de grade et unité.
+- **Lequel s'applique** : le plus précis, d'abord l'unité de la personne (ou l'unité la plus proche au-dessus qui a un modèle), puis sa catégorie de grade, puis « Tout le monde ».
+- **Critères** : le responsable note chacun de 0 à 100. Un critère « d'après les présences » est noté par l'application : 100, moins 5 par jour de retard et 10 par jour d'absence sur la période.` },
+    en: { title: 'Evaluation criteria and templates', body: `
+- **Template**: how often people are evaluated and how much each criterion weighs; weights add up to 100. One active template per grade category and unit.
+- **Which one applies**: the most specific, first the person's unit (or the nearest unit above with a template), then their grade category, then "Everyone".
+- **Criteria**: the manager scores each from 0 to 100. A criterion "from attendance" is scored by the app: 100, minus 5 per late day and 10 per absent day in the period.` },
+  },
+  {
+    id: 'loans-entries', audience: 'payroll', routes: ['/payroll/loans', '/payroll/entries'],
+    fr: { title: 'Prêts, avances, primes et retenues du mois', body: `
+- **Primes et retenues** : des lignes ponctuelles pour un seul mois, comme une prime de performance. Un élément permanent, comme un montant de transport différent, se règle dans le dossier de l'employé (Contrat et famille). Le catalogue des éléments est dans Paramètres › Éléments de paie.
+- **Prêts et avances** : chaque mois, les échéances prennent au plus la part du net fixée dans Taux ; le reste attend le mois suivant.` },
+    en: { title: "Loans, advances, and the month's bonuses and deductions", body: `
+- **Bonuses and deductions**: one-off lines for one month only, such as a performance bonus. A standing item, such as a different transport amount, is set in the employee's file (Contract and family). The catalogue of elements is under Settings › Pay elements.
+- **Loans and advances**: each month the installments take at most the share of net pay set under Rates; the rest waits for the next month.` },
+  },
+  {
+    id: 'hiring', audience: 'hr', routes: ['/lifecycle'],
+    fr: { title: 'Embauches et départs', body: `
+- **À faire** : les listes de contrôle ouvertes, les certificats demandés, les lettres en attente de signature, les documents qui expirent et le matériel encore chez les partants.
+- Une liste de départ démarre seule quand un départ est confirmé ; une liste d'embauche se démarre depuis la page de la personne.
+- **Réglages** (bouton Paramètres) : les types de documents gardés pour chaque personne, les étapes de chaque liste, et les modèles de contrats et de lettres signés par code. Les textes de départ sont des brouillons : faites-les relire par votre avocat.` },
+    en: { title: 'Hiring and departures', body: `
+- **To do**: open checklists, certificates asked for, letters waiting for a signature, documents about to expire and equipment still out with people leaving.
+- A departure checklist starts by itself when a departure is confirmed; start a hiring checklist from the person's page.
+- **Settings** (Settings button): the document types kept for each person, the steps of each checklist, and the contract and letter templates signed with a code. The starting texts are drafts: have them checked by your lawyer.` },
   },
   {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],

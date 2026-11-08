@@ -119,7 +119,7 @@ export default function ExportLayoutsPage() {
   return (
     <section>
       <h2>{t('File layouts')}</h2>
-      <p className="muted">{t('Lay out the accounting entries and the payment files the way your accounting software, bank or mobile money operator expects them. Then choose the layout when you download the file.')}</p>
+      <p className="muted">{t('Shape the files the way your accounting software, bank or operator expects, then pick the layout when you download.')}</p>
       <ErrorText error={error} />
       <div className="card">
         <div className="row between">

@@ -161,7 +161,7 @@ export default function DeparturePage() {
             </div>
             <p className="small muted">{t('Daily rate {a} · service {b} years · basic salary {c}', { a: money(shown.dailyRate, cur), b: shown.serviceYears, c: money(shown.basicMonthly, cur) })}</p>
             {shown.explanation.length > 0 && <ul className="small">{shown.explanation.map((x) => <li key={x} className={x.startsWith(t('Warning:')) ? 'warn-text' : undefined}>{x}</li>)}</ul>}
-            <p className="hint">{t('The last payslip adds the days worked in the month, the settlement and what is left of loans; CNSS and tax apply as set on each pay element. The notice comes from the person’s grade category (Payroll settings), the other rules from the Rates page; check them with your payroll expert.')}</p>
+            <p className="hint">{t('The last payslip adds the days worked, the settlement and what is left of loans. Check the rules with your payroll expert.')}</p>
           </>
         )}
         <label>{t('Note (optional)')}<textarea value={draft.note} onChange={set('note')} maxLength={500} disabled={confirmed || !edit} /></label>

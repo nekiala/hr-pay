@@ -206,7 +206,7 @@ function MyDataCard() {
           <Button className="secondary" onClick={() => setAsking(true)}>{t('Ask for a correction')}</Button>
         </div>
       </div>
-      <p className="muted">{t('The download holds everything HR Pay keeps about you: your file, contracts, salaries, attendance, leave, payslips, evaluations and the audit entries about you. Ask HR to correct anything wrong. For a check-in, use Corrections.')}</p>
+      <p className="muted">{t('Everything HR Pay keeps about you, in one download. Ask HR to correct anything wrong.')}</p>
       {requests.length > 0 && (
         <table>
           <thead><tr><th>{t('Asked')}</th><th>{t('What')}</th><th>{t('Correct value')}</th><th>{t('Status')}</th><th>{t('Answer')}</th></tr></thead>

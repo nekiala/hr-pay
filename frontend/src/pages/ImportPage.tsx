@@ -45,7 +45,7 @@ export default function ImportPage() {
   return (
     <section>
       <h2>{t('Import data')}</h2>
-      <p className="muted">{t('Bring in the data you already have from Excel. Download the template, fill one row per person, then check the file: nothing is saved until every row is right.')}</p>
+      <p className="muted">{t('Download the template, fill one row per person, then check the file. Nothing is saved until every row is right.')}</p>
       <div className="row" role="group" aria-label={t('What to import')}>
         {(Object.keys(IMPORT_KINDS) as ImportKind[]).map((k) => (
           <Button key={k} aria-pressed={k === kind} className={k === kind ? undefined : 'secondary'} onClick={() => choose(k)}>{IMPORT_KINDS[k]}</Button>

@@ -101,7 +101,7 @@ export default function CorrectionsPage() {
         <h2>{t('Attendance corrections')}</h2>
         {(canAsk || team.length > 0) && <Button onClick={() => setRequesting(true)}>{team.length > 0 ? t('Ask or propose a correction') : t('Ask for a correction')}</Button>}
       </div>
-      <p className="muted">{t('Ask for a forgotten check-in or check-out to be added, or a wrong one removed, up to two months back. A head of the unit proposes it and HR applies it; the change then shows on the day with its reason.')}</p>
+      <p className="muted">{t('Ask for a missing or wrong check-in to be fixed, up to two months back. The unit head proposes it and HR applies it.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 

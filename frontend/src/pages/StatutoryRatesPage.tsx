@@ -89,7 +89,7 @@ export default function StatutoryRatesPage() {
           <p><strong>$1 = {new Intl.NumberFormat(locale(), { maximumFractionDigits: 6 }).format(fx.latest.cdfPerUnit)}{' '}{t('CDF')}</strong>{' '}{t('on')}{' '}{fx.latest.rateDate} · {fx.latest.enteredBy ? t('entered by {a}', { a: fx.latest.enteredBy }) : fx.latest.source}</p>
         ) : <p className="muted">{t('No rate stored yet.')}</p>}
         {fx?.stale && <p className="notice">{t('The latest rate is more than 4 days old. Fetch it again, or enter today\'s BCC rate by hand.')}</p>}
-        <p className="hint">{t('Fetched automatically at start-up and twice a day. Payroll uses the rate set in Settings below, and each run records the rate it used.')}</p>
+        <p className="hint">{t('Fetched twice a day. Each payroll run records the rate it used (see Settings below).')}</p>
         {fxEditable && (
           <div className="row">
             <Button className="secondary" onClick={() => run(async () => {

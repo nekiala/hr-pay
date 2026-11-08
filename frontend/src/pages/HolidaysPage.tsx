@@ -91,7 +91,7 @@ export default function HolidaysPage() {
           <Form onSubmit={saveMove}>
             <label>{t('Observed date')}<input type="date" value={observed} onChange={(e) => setObserved(e.target.value)} required /></label>
             <label>{t('Government announcement (reference)')}<input value={announcement} onChange={(e) => setAnnouncement(e.target.value)} placeholder={t('e.g. Communiqué du Ministère, 25 June')} /></label>
-            <p className="hint">{t('If the old or new date falls in a month whose payroll is closed, the pay difference is worked out and added to the next payroll that is not approved yet (Payroll › Holiday changes).')}</p>
+            <p className="hint">{t('A change in a closed month is settled on the next payroll not yet approved.')}</p>
             <ErrorText error={error} />
             <div className="modal-foot"><Button type="button" className="secondary" onClick={() => setEditing(null)}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
           </Form>

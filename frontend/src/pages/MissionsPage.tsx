@@ -61,7 +61,7 @@ export default function MissionsPage() {
         <h2>{t('Missions')}</h2>
         {canRequest && <Button onClick={() => setRequesting(true)}>{t('Request a mission')}</Button>}
       </div>
-      <p className="muted">{t('A mission is work away from the office. Once approved, you can end your day where the mission is, and a day left open is closed at the mission\'s end.')}</p>
+      <p className="muted">{t('Work away from the office. Once approved, you can end your day where the mission is.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 

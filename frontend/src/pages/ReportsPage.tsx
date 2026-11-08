@@ -24,7 +24,7 @@ export default function ReportsPage() {
   return (
     <section>
       <h2>{t('Reports')}</h2>
-      <p className="muted">{t('Spreadsheets as Excel workbooks or CSV files. The current month runs to today. Each download is recorded in the audit log.')}</p>
+      <p className="muted">{t('Excel or CSV. The current month runs to today. Each download is recorded in the audit log.')}</p>
       <div className="grid2">
         <label>{t('Month')}<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
         <label>{t('Unit (with the units below it)')}<UnitSelect units={units} value={unit} placeholder={t('Everyone')} onChange={setUnit} /></label>

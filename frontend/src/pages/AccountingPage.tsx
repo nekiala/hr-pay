@@ -70,7 +70,7 @@ export default function AccountingPage() {
 
       <div className="card">
         <h3>{t('Accounts of each pay element')}</h3>
-        <p className="muted small">{t('Empty: the default SYSCOHADA account shown in grey. Expatriates\' pay goes to 662x and their CNSS to 6642. Check every account with your accountant.')}</p>
+        <p className="muted small">{t('Leave empty to use the SYSCOHADA account shown in grey. Check every account with your accountant.')}</p>
         <div className="table-wrap">
           <table>
             <thead><tr><th>{t('Element')}</th><th>{t('Expense account')}</th><th>{t('Debt account')}</th><th /></tr></thead>

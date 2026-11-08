@@ -1,13 +1,14 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ApiError, api, longDay, money, type QuinzaineCategory, type QuinzaineEmployee, type QuinzaineExclusion, type QuinzaineRun,
+  ApiError, api, longDay, money, type QuinzaineEmployee, type QuinzaineExclusion, type QuinzaineRun,
   type QuinzaineSettings,
 } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button } from '../components/Button'
+import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { locale, t } from '../i18n'
 
 const STATUS: Record<QuinzaineRun['status'], string> = {
@@ -28,8 +29,6 @@ export default function QuinzainePage() {
   const ask = useAsk()
   const editable = can('masterdata.manage')
   const [settings, setSettings] = useState<QuinzaineSettings | null>(null)
-  const [form, setForm] = useState<QuinzaineSettings>({ enabled: false, base: 'NET', day: 15, maxDebtMonths: 3 })
-  const [categories, setCategories] = useState<QuinzaineCategory[]>([])
   const [runs, setRuns] = useState<QuinzaineRun[]>([])
   const [people, setPeople] = useState<QuinzaineEmployee[]>([])
   const [exclusions, setExclusions] = useState<QuinzaineExclusion[]>([])
@@ -41,10 +40,8 @@ export default function QuinzainePage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const load = async () => {
-    const o = await api<{ settings: QuinzaineSettings; categories: QuinzaineCategory[]; runs: QuinzaineRun[] }>('/api/quinzaine')
+    const o = await api<{ settings: QuinzaineSettings; runs: QuinzaineRun[] }>('/api/quinzaine')
     setSettings(o.settings)
-    setForm({ ...o.settings, maxDebtMonths: Number(o.settings.maxDebtMonths) })
-    setCategories(o.categories)
     setRuns(o.runs)
     setPeople(await api<QuinzaineEmployee[]>('/api/quinzaine/employees'))
   }
@@ -67,17 +64,6 @@ export default function QuinzainePage() {
     }
   }
 
-  const save = () => run(async () => {
-    const put = (key: string, value: string) => api(`/api/statutory/settings/${key}`, { method: 'PUT', body: { value } })
-    await put('QUINZAINE_BASE', form.base)
-    await put('QUINZAINE_DAY', String(form.day))
-    await put('QUINZAINE_MAX_DEBT_MONTHS', String(form.maxDebtMonths))
-    await put('QUINZAINE_ENABLED', String(form.enabled))
-  }, form.enabled ? t('Quinzaine turned on.') : t('Quinzaine settings saved.'))
-
-  const setRate = (c: QuinzaineCategory, value: string) => setCategories(categories.map((x) => (x.id === c.id
-    ? { ...x, quinzainePercent: value === '' ? null : Number(value) } : x)))
-
   const calculate = () => run(async () => {
     const r = await api<QuinzaineRun>('/api/quinzaine/calculate', { method: 'POST', body: { month } })
     setOpen(r.id)
@@ -87,49 +73,14 @@ export default function QuinzainePage() {
 
   return (
     <section>
-      <h2>{t('Quinzaine')}</h2>
-      <p className="muted">{t('An advance on the month\'s pay (acompte de quinzaine), paid around the middle of the month. It is worked out like the month-end payroll, paid through the payment files, and the payslip of the month takes it back in full from the net pay.')}</p>
+      <PageTitle title={t('Quinzaine')}><SettingsLink to="/payroll/quinzaine/settings" /></PageTitle>
+      <p className="muted">{t('An advance on the month\'s pay, taken back in full from the month\'s payslip.')}</p>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
-      {settings && (
-        <div className="card">
-          <h3>{t('Company setting')}</h3>
-          <label className="check"><input type="checkbox" checked={form.enabled} disabled={!editable}
-            onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />{t('The company pays a quinzaine')}</label>
-          <div className="row grant">
-            <label>{t('Rate applies to')}<select className="auto-width" value={form.base} disabled={!editable}
-              onChange={(e) => setForm({ ...form, base: e.target.value as QuinzaineSettings['base'] })}>
-              <option value="NET">{t('the net pay of a normal month')}</option>
-              <option value="BASIC">{t('the basic salary')}</option>
-            </select></label>
-            <label>{t('Paid on day')}<input type="number" min={1} max={28} className="narrow-input" value={form.day}
-              disabled={!editable} onChange={(e) => setForm({ ...form, day: Number(e.target.value) })} /></label>
-            <label>{t('No quinzaine above a debt of (months of net pay)')}<input type="number" min={0} max={99} step={0.5} className="narrow-input"
-              value={form.maxDebtMonths} disabled={!editable} onChange={(e) => setForm({ ...form, maxDebtMonths: Number(e.target.value) })} /></label>
-            {editable && <Button className="secondary" onClick={save}>{t('Save')}</Button>}
-          </div>
-          <p className="hint">{t('When the day is a weekend or a public holiday, it is paid on the working day before. DRC (Labour Code art. 99): pay at least once a month, within six days after it; advances may be taken back on the pay (art. 112). Republic of the Congo (art. 88 and 89): pay within eight days after the month; where day or hour workers are paid monthly, the acompte each fortnight must be at least a third of the previous month\'s pay. To confirm with your payroll expert.')}</p>
-
-          <h3>{t('Rate by grade category')}</h3>
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>{t('Category')}</th><th>{t('Rate (%)')}</th><th></th></tr></thead>
-              <tbody>
-                {categories.map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.name} <span className="muted">{c.code}</span></td>
-                    <td><input type="number" min={10} max={50} step={0.5} className="narrow-input" placeholder={t('none')} disabled={!editable}
-                      value={c.quinzainePercent ?? ''} onChange={(e) => setRate(c, e.target.value)} /></td>
-                    <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/quinzaine/categories/${c.id}`,
-                      { method: 'PUT', body: { percent: c.quinzainePercent } }), t('{a} saved.', { a: c.code }))}>{t('Save')}</Button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="hint">{t('From 10% to 50%. Leave it empty for a category that does not get the quinzaine.')}</p>
-        </div>
+      {settings && !settings.enabled && (
+        <p className="notice">{t('The company does not pay a quinzaine.')}{' '}
+          <Link to="/payroll/quinzaine/settings">{editable ? t('Turn it on in the settings') : t('Settings')}</Link></p>
       )}
 
       {settings?.enabled && can('payroll.run') && (
@@ -140,7 +91,7 @@ export default function QuinzainePage() {
             {payDate && <span>{t('Paid on {a}', { a: longDay(payDate) })}</span>}
             <Button onClick={calculate}>{t('Calculate the quinzaine')}</Button>
           </div>
-          <p className="hint">{t('For everyone under contract on the pay day. Left out: employees who asked not to receive it, those you leave out below, a category without a rate, unpaid leave on the pay day, a departure in the month, and debts above the limit. The amount is never more than the net already earned on the pay day, so the month\'s payslip can always take it back. While Finance has not approved it, calculating again replaces it.')}</p>
+          <p className="hint">{t('For everyone under contract on the pay day, never above the net already earned. Calculating again replaces it until Finance approves.')}</p>
           {exclusions.length > 0 && (
             <ul>{exclusions.map((x) => (
               <li key={x.id}>{t('{a} left out: {b}', { a: x.employeeName, b: x.reason })}{' '}
@@ -246,7 +197,7 @@ export default function QuinzainePage() {
           <h3>{t('Requests not to receive it')}</h3>
           <input type="search" placeholder={t('Search')} value={filter} onChange={(e) => setFilter(e.target.value)} />
         </div>
-        <p className="muted">{t('{n} employees asked not to receive the quinzaine. Employees make or withdraw the request themselves on their payslips page; it applies from the next quinzaine not yet approved. A quinzaine already approved or paid stays.', { n: people.length })}</p>
+        <p className="muted">{t('{n} employees asked not to receive it, from their payslips page.', { n: people.length })}</p>
         {people.length === 0 ? <p className="muted">{t('Everyone receives it.')}</p> : (
           <div className="table-wrap">
             <table>

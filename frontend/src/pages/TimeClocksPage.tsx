@@ -53,7 +53,7 @@ export default function TimeClocksPage() {
   return (
     <section>
       <h2>{t('Time clocks')}</h2>
-      <p className="muted">{t('Fingerprint and face clocks send each punch to HR Pay as it happens. A punch becomes a check-in or a check-out of the person whose clock number or registration number it carries.')}</p>
+      <p className="muted">{t('Each punch from a fingerprint or face clock becomes a check-in or check-out of the person with that clock or registration number.')}</p>
       <ErrorText error={error} />
       {info && <p className="notice">{info}</p>}
 
