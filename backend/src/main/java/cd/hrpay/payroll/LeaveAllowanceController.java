@@ -31,8 +31,11 @@ public class LeaveAllowanceController {
     private final LeaveAllowances allowances;
     private final cd.hrpay.leave.LeaveService leave;
     private final PayslipPdf pdf;
+    private final cd.hrpay.job.BackgroundJobs jobs;
 
-    public LeaveAllowanceController(LeaveAllowances allowances, cd.hrpay.leave.LeaveService leave, PayslipPdf pdf) {
+    public LeaveAllowanceController(LeaveAllowances allowances, cd.hrpay.leave.LeaveService leave, PayslipPdf pdf,
+                                    cd.hrpay.job.BackgroundJobs jobs) {
+        this.jobs = jobs;
         this.allowances = allowances;
         this.leave = leave;
         this.pdf = pdf;
@@ -63,8 +66,9 @@ public class LeaveAllowanceController {
 
     @PostMapping("/calculate")
     @PreAuthorize("hasAuthority('payroll.run')")
-    public LeaveAllowances.RunResult calculate(@RequestBody(required = false) CalculateInput b) {
-        return allowances.calculate(b == null ? null : b.leaveRequestIds());
+    public org.springframework.http.ResponseEntity<Object> calculate(@RequestBody(required = false) CalculateInput b) {
+        List<Long> ids = b == null || b.leaveRequestIds() == null ? List.of() : b.leaveRequestIds();
+        return jobs.answer(jobs.submit("leave-pay.calculate", "leave-pay", java.util.Map.of("leaveRequestIds", ids), null));
     }
 
     @PostMapping("/{id}/approve")

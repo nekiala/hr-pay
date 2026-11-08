@@ -47,8 +47,10 @@ public class QuinzaineController {
 
     private final Quinzaines quinzaines;
     private final QuinzaineReceipt receipt;
+    private final cd.hrpay.job.BackgroundJobs jobs;
 
-    public QuinzaineController(Quinzaines quinzaines, QuinzaineReceipt receipt) {
+    public QuinzaineController(Quinzaines quinzaines, QuinzaineReceipt receipt, cd.hrpay.job.BackgroundJobs jobs) {
+        this.jobs = jobs;
         this.quinzaines = quinzaines;
         this.receipt = receipt;
     }
@@ -111,8 +113,8 @@ public class QuinzaineController {
 
     @PostMapping("/calculate")
     @PreAuthorize("hasAuthority('payroll.run')")
-    public Quinzaines.Run calculate(@Valid @RequestBody MonthInput b) {
-        return quinzaines.calculate(b.month());
+    public org.springframework.http.ResponseEntity<Object> calculate(@Valid @RequestBody MonthInput b) {
+        return jobs.answer(jobs.submit("quinzaine.calculate", "quinzaine:" + b.month(), java.util.Map.of("month", b.month().toString()), null));
     }
 
     @PostMapping("/{id}/approve")

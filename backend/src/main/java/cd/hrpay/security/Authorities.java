@@ -6,7 +6,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-final class Authorities {
+public final class Authorities {
 
     private Authorities() {}
 
@@ -18,7 +18,7 @@ final class Authorities {
                 .<GrantedAuthority>map(SimpleGrantedAuthority::new).toList();
     }
 
-    static UsernamePasswordAuthenticationToken token(AppUser user) {
+    public static UsernamePasswordAuthenticationToken token(AppUser user) {
         AuthenticatedUser principal = new AuthenticatedUser(user.getId(), user.getEmail(),
                 user.getFirstName() + " " + user.getLastName(), user.getCompanyId());
         return UsernamePasswordAuthenticationToken.authenticated(principal, null, of(user));

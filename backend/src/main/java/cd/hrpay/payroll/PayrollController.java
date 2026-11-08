@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -44,8 +45,10 @@ public class PayrollController {
 
     private final PayrollRuns runs;
     private final Loans loans;
+    private final cd.hrpay.job.BackgroundJobs jobs;
 
-    public PayrollController(PayrollRuns runs, Loans loans) {
+    public PayrollController(PayrollRuns runs, Loans loans, cd.hrpay.job.BackgroundJobs jobs) {
+        this.jobs = jobs;
         this.runs = runs;
         this.loans = loans;
     }
@@ -66,26 +69,35 @@ public class PayrollController {
 
     @PostMapping("/payroll/runs/{month}/calculate")
     @PreAuthorize("hasAuthority('payroll.run')")
-    public PayrollRuns.RunView calculate(@PathVariable YearMonth month) {
-        return runs.calculate(month);
+    public org.springframework.http.ResponseEntity<Object> calculate(@PathVariable YearMonth month) {
+        return jobs.answer(jobs.submit("payroll.calculate", "payroll:" + month, Map.of("month", month.toString()), null));
     }
 
     @PostMapping("/payroll/runs/{month}/approve")
     @PreAuthorize("hasAuthority('payroll.approve')")
     public PayrollRuns.RunView approve(@PathVariable YearMonth month) {
+        jobs.requireIdle("payroll:" + month);
         return runs.approve(month);
     }
 
     @PostMapping("/payroll/runs/{month}/send-back")
     @PreAuthorize("hasAuthority('payroll.approve') or hasAuthority('payroll.run')")
     public PayrollRuns.RunView sendBack(@PathVariable YearMonth month, @Valid @RequestBody ReasonInput b) {
+        jobs.requireIdle("payroll:" + month);
         return runs.sendBack(month, b.reason());
     }
 
     @PostMapping("/payroll/runs/{month}/close")
     @PreAuthorize("hasAuthority('payroll.close')")
-    public PayrollRuns.RunView close(@PathVariable YearMonth month) {
-        return runs.close(month);
+    public org.springframework.http.ResponseEntity<Object> close(@PathVariable YearMonth month) {
+        return jobs.answer(jobs.submit("payroll.close", "payroll:" + month, Map.of("month", month.toString()), null));
+    }
+
+    /** Every payslip of the month as PDFs in one zip, made in the background (My jobs). */
+    @PostMapping("/payroll/runs/{month}/payslips.zip")
+    @PreAuthorize("hasAuthority('payslip.read.all')")
+    public org.springframework.http.ResponseEntity<Object> payslipsZip(@PathVariable YearMonth month) {
+        return jobs.answer(jobs.submit("payslips.zip", "payslips.zip:" + month, Map.of("month", month.toString()), null), true);
     }
 
     private PayslipPdf pdf;

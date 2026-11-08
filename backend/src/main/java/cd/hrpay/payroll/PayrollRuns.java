@@ -448,7 +448,11 @@ public class PayrollRuns {
                   and (u.status = 'ACTIVE' or exists (select 1 from departure d where d.user_id = u.id
                        and d.status = 'CONFIRMED' and d.last_day >= ?))
                 order by c.user_id""").params(last, first, first).query(Long.class).list();
+        int done = 0;
         for (long userId : employees) {
+            done++;
+            cd.hrpay.job.Progress.report(done - 1, employees.size(),
+                    cd.hrpay.i18n.Texts.t("Payslip %s of %s", done, employees.size()));
             Computed c = compute(ctx, userId, true);
             if (c.skipped() != null) {
                 skipped.add(c.skipped());
@@ -521,9 +525,11 @@ public class PayrollRuns {
         int n = 0;
         for (long id : slips) {
             n++;
+            cd.hrpay.job.Progress.report(n, slips.size() * 2L, cd.hrpay.i18n.Texts.t("Numbering payslip %s of %s", n, slips.size()));
             jdbc.sql("update payslip set number = ? where id = ?")
                     .params("PS-%s-%04d".formatted(month, n), id).update();
         }
+        cd.hrpay.job.Progress.report(slips.size() * 3L, slips.size() * 4L, cd.hrpay.i18n.Texts.t("Loan repayments and leave credits"));
         // Loan repayments, converted back to each loan's currency at the run's rate.
         jdbc.sql("""
                 select l.loan_id, sum(l.amount) as amount, trim(p.currency) as currency, trim(o.currency) as loan_currency
@@ -677,6 +683,13 @@ public class PayrollRuns {
     }
 
     /** An employee's own payslips: closed months only. */
+    /** The month's payslips (regular and corrections), in the order of the payroll: by name. */
+    public List<Long> payslipIds(YearMonth month) {
+        return jdbc.sql("""
+                select p.id from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id
+                where r.month = ? order by u.last_name, u.first_name, p.id""").param(month.atDay(1)).query(Long.class).list();
+    }
+
     public List<PayslipSummary> closedPayslipsOf(long userId) {
         return jdbc.sql("""
                 select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, u.registration_no, p.number,

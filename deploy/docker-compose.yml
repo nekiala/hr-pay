@@ -35,7 +35,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
+    environment: &app-env
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-hrpay}
       DB_USER: ${DB_USER:-hrpay}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -65,6 +65,25 @@ services:
       BACKUPS_EXPECTED: "true"
       LICENSING_MODE: ${LICENSING_MODE:-on-premise}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError}
+      # Background jobs (payroll calculation, closing, imports, zips) run here too unless a worker runs them:
+      # APP_ROLE=web leaves them to the worker below.
+      APP_ROLE: ${APP_ROLE:-all}
+      JOBS_WORKERS: ${JOBS_WORKERS:-2}
+    logging: *logging
+
+  # Optional, for large installations: a second container from the same image that only runs background jobs.
+  # Start it with: docker compose --profile worker up -d  (the queue is in PostgreSQL: nothing else to install).
+  worker:
+    image: ${APP_IMAGE:-hr-pay:latest}
+    profiles: [worker]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      APP_ROLE: worker
+      JOBS_WORKERS: ${WORKER_THREADS:-4}
     logging: *logging
 
   proxy:
