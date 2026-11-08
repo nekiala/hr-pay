@@ -36,6 +36,7 @@ import PayslipPage from './pages/PayslipPage'
 import LoansPage from './pages/LoansPage'
 import MyPayslipsPage from './pages/MyPayslipsPage'
 import LeaveSettingsPage from './pages/LeaveSettingsPage'
+import LeavePayPage from './pages/LeavePayPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import CorrectionsPage from './pages/CorrectionsPage'
 import PresencePage from './pages/PresencePage'
@@ -206,6 +207,7 @@ export default function App() {
           <Route path="/payslips/:id" element={<PayslipPage />} />
           <Route path="/payslips/:id/correct" element={<Guard permission="payroll.run"><CorrectPayslipPage /></Guard>} />
           <Route path="/payroll/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
+          <Route path="/payroll/leave-pay" element={<PayrollStaff><LeavePayPage /></PayrollStaff>} />
           <Route path="/payroll/compare" element={<PayrollStaff><ComparePage /></PayrollStaff>} />
           <Route path="/payroll/accounting" element={<Guard permission="accounting.export"><AccountingPage /></Guard>} />
           <Route path="/my/payslips" element={<Guard permission="payslip.read.own"><MyPayslipsPage /></Guard>} />

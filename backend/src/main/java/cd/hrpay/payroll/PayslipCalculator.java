@@ -59,7 +59,19 @@ public final class PayslipCalculator {
                         BigDecimal thirteenthMonth, String thirteenthMonthNote,
                         int childrenInCharge, int dependantsInCharge, boolean expatriate,
                         List<PayElements.Element> elements, List<PayElements.Assignment> standing,
-                        List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates) {}
+                        List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes) {
+
+        public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
+                     int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
+                     BigDecimal thirteenthMonth, String thirteenthMonthNote,
+                     int childrenInCharge, int dependantsInCharge, boolean expatriate,
+                     List<PayElements.Element> elements, List<PayElements.Assignment> standing,
+                     List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates) {
+            this(currency, basicMonthly, scheduledMinutes, paidMinutes, scheduledDays, daysWorked, overtimeAmount,
+                    overtimeMinutes, thirteenthMonth, thirteenthMonthNote, childrenInCharge, dependantsInCharge, expatriate,
+                    elements, standing, entries, loans, rates, 0);
+        }
+    }
 
     public record Line(String code, String label, String kind, BigDecimal base, BigDecimal rate, BigDecimal amount,
                        int order, Long loanId) {}
@@ -83,11 +95,17 @@ public final class PayslipCalculator {
         BigDecimal cnssBase = BigDecimal.ZERO;
         BigDecimal taxable = BigDecimal.ZERO;
 
-        BigDecimal share = in.scheduledMinutes() == 0 ? BigDecimal.ZERO
+        BigDecimal shareAll = in.scheduledMinutes() == 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(in.paidMinutes()).divide(BigDecimal.valueOf(in.scheduledMinutes()), 10, RoundingMode.HALF_UP);
 
+        // Annual leave days paid by an allocation de congé: the allocation pays the remuneration (Labour Code art. 7:
+        // the elements in the CNSS base). The allowances outside it (housing) keep running for those days (art. 138, 142).
+        BigDecimal keptShare = in.scheduledMinutes() == 0 ? BigDecimal.ZERO
+                : BigDecimal.valueOf(Math.min(in.scheduledMinutes(), in.paidMinutes() + in.allocatedLeaveMinutes()))
+                        .divide(BigDecimal.valueOf(in.scheduledMinutes()), 10, RoundingMode.HALF_UP);
+
         // 1. Basic salary, prorated by paid hours.
-        BigDecimal basic = money(in.basicMonthly().multiply(share));
+        BigDecimal basic = money(in.basicMonthly().multiply(shareAll));
         PayElements.Element basicEl = byCode.get("BASIC");
         BigDecimal hourly = in.scheduledMinutes() == 0 ? BigDecimal.ZERO
                 : in.basicMonthly().multiply(BigDecimal.valueOf(60)).divide(BigDecimal.valueOf(in.scheduledMinutes()), 6, RoundingMode.HALF_UP);
@@ -122,6 +140,8 @@ public final class PayslipCalculator {
             BigDecimal value;
             BigDecimal base = null;
             BigDecimal rate = null;
+            boolean keptOnLeave = !e.subjectToCnss() && in.allocatedLeaveMinutes() > 0;
+            BigDecimal share = keptOnLeave ? keptShare : shareAll;
             switch (e.method()) {
                 case "FIXED" -> {
                     value = convert(amount, amountCur, cur, r.usdCdf());
@@ -136,7 +156,7 @@ public final class PayslipCalculator {
                             value = value.multiply(share);
                         }
                     } else {
-                        base = e.prorated() ? basic : in.basicMonthly();
+                        base = !e.prorated() ? in.basicMonthly() : keptOnLeave ? money(in.basicMonthly().multiply(share)) : basic;
                         rate = percent;
                         value = base.multiply(percent).divide(HUNDRED, 10, RoundingMode.HALF_UP);
                     }

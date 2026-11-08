@@ -63,6 +63,11 @@ public class PayrollRuns {
         public boolean complementary() {
             return "COMPLEMENTARY".equals(kind);
         }
+
+        /** A leave allowance payslip (bulletin d'allocation de congé). */
+        public boolean leave() {
+            return "LEAVE".equals(kind);
+        }
     }
 
     public record RunView(Run run, List<Total> totals, List<PayslipSummary> payslips, List<String> skipped) {}
@@ -272,13 +277,25 @@ public class PayrollRuns {
                 : loans.dueFor(userId, month).stream().map(l -> new PayslipCalculator.LoanDue(l.loanId(), l.kind(),
                         l.balance(), l.balance(), l.currency())).toList();
 
+        // Annual leave paid by its own allocation payslip: the allocation pays the remuneration of those days, the
+        // allowances outside it (housing, family allowances) stay on this payslip, and the days count as paid time
+        // (for the absence rate), not as absence.
+        List<LocalDate[]> allocated = jdbc.sql("""
+                select r.start_date, r.end_date from leave_allowance a join leave_request r on r.id = a.leave_request_id
+                where a.user_id = ? and a.status in ('APPROVED', 'PAID') and r.start_date <= ? and r.end_date >= ?""")
+                .params(userId, last, first).query((rs, i) -> new LocalDate[] {rs.getObject(1, LocalDate.class), rs.getObject(2, LocalDate.class)})
+                .list();
+        int allocatedMinutes = summary.days().stream().filter(d -> d.status() == DayCalculator.Status.LEAVE
+                        && allocated.stream().anyMatch(x -> !d.date().isBefore(x[0]) && !d.date().isAfter(x[1])))
+                .mapToInt(d -> Math.max(0, d.scheduledMinutes() - d.payableMinutes())).sum();
         PayslipCalculator.Result r = PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(),
                 salary.grossMonthly(), summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
                 summary.overtimeApprovedMinutes(), thirteenth == null ? null
                         : ExchangeRates.convert(thirteenth.amount(), thirteenth.currency(), salary.currency(), usdLocal),
                 thirteenth == null ? null : thirteenthNote(thirteenth), children, inCharge, contract.expatriate(), ctx.elements(),
                 pay.standingFor(userId, month),
-                java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates()));
+                java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
+                allocatedMinutes));
         List<String> warnings = new ArrayList<>(r.warnings());
         if (summary.overtimePendingMinutes() > 0) {
             warnings.add(summary.overtimePendingMinutes() / 60 + " h " + summary.overtimePendingMinutes() % 60
@@ -331,7 +348,8 @@ public class PayrollRuns {
             snapshot.put("direction", place.directionName());
             snapshot.put("costCentre", place.costCentre());
         }
-        return new Computed(userId, name, r, snapshot, warnings, summary.scheduledMinutesMonth(), paid, daysWorked,
+        return new Computed(userId, name, r, snapshot, warnings, summary.scheduledMinutesMonth(),
+                Math.min(summary.scheduledMinutesMonth(), paid + allocatedMinutes), daysWorked,
                 place == null ? null : place.unitId(), null);
     }
 
@@ -509,6 +527,20 @@ public class PayrollRuns {
     }
 
     // ---- payslips ----------------------------------------------------------------------------------------------
+
+    /** A leave allowance payslip (bulletin d'allocation de congé) in the shape of a payslip, for its PDF. */
+    @SuppressWarnings("unchecked")
+    Payslip leaveSlip(long id, LocalDate month, boolean numbered, long userId, String number, String currency,
+                      BigDecimal gross, BigDecimal cnssBase, BigDecimal taxableBase, BigDecimal taxableBaseCdf,
+                      BigDecimal deductions, BigDecimal net, BigDecimal charges, BigDecimal usdCdf, LocalDate rateDate,
+                      String snapshot, List<Line> lines, String reason) {
+        Payslip head = new Payslip(id, 0, month, numbered ? "CLOSED" : "CALCULATED", userId, number, currency, gross,
+                cnssBase, taxableBase, taxableBaseCdf, deductions, net, charges, 0, 0, 0, usdCdf, rateDate, false,
+                readable(json.readValue(snapshot, Map.class)), List.of(), lines, "LEAVE", null, null, reason);
+        return new Payslip(head.id(), 0, month, head.runStatus(), userId, number, currency, gross, cnssBase, taxableBase,
+                taxableBaseCdf, deductions, net, charges, 0, 0, 0, usdCdf, rateDate, false, withSeniority(head), List.of(),
+                lines, "LEAVE", null, null, reason);
+    }
 
     @SuppressWarnings("unchecked")
     public Payslip payslip(long id) {

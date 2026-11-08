@@ -999,6 +999,42 @@
      "system": false,
      "display_order": 15,
      "active": true
+    },
+    {
+     "id": 30,
+     "code": "LEAVE_ALLOWANCE",
+     "name": "Leave allowance",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 81,
+     "active": true
+    },
+    {
+     "id": 31,
+     "code": "LEAVE_ADVANCE",
+     "name": "Leave allowance paid in advance",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 142,
+     "active": true
     }
    ]
   },
@@ -1317,6 +1353,18 @@
     {
      "key": "ACCOUNTING_JOURNAL",
      "value": "PAIE"
+    },
+    {
+     "key": "LEAVE_ANNUAL_PAID",
+     "value": "true"
+    },
+    {
+     "key": "LEAVE_CARRY_PERCENT",
+     "value": "100"
+    },
+    {
+     "key": "LEAVE_CARRY_YEARS",
+     "value": "3"
     }
    ]
   },

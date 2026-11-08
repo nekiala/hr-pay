@@ -84,6 +84,24 @@ class PayslipCalculatorTest {
     }
 
     @Test
+    void annualLeavePaidByAnAllocationKeepsHousingOnTheMonthlyPayslip() {
+        // 5 of 22 days on annual leave paid by an allocation de congé: the basic (remuneration, art. 7) is not paid
+        // again for them, but housing is owed during the leave (art. 138, 142).
+        int leave = 5 * 480;
+        var in = input(10560 - leave, List.of(), List.of(), List.of(), false);
+        var r = PayslipCalculator.calculate(new PayslipCalculator.Input(in.currency(), in.basicMonthly(), in.scheduledMinutes(),
+                in.paidMinutes(), in.scheduledDays(), 17, in.overtimeAmount(), in.overtimeMinutes(), null, null,
+                in.childrenInCharge(), in.dependantsInCharge(), false, in.elements(), in.standing(), in.entries(), in.loans(),
+                in.rates(), leave));
+        assertThat(line(r, "BASIC")).isEqualByComparingTo("772.73");
+        assertThat(line(r, "HOUSING")).isEqualByComparingTo("300");
+        assertThat(line(r, "TRANSPORT")).isEqualByComparingTo("34");        // 17 days worked
+        // Without an allocation, unpaid days reduce housing too.
+        var unpaid = PayslipCalculator.calculate(in);
+        assertThat(line(unpaid, "HOUSING")).isEqualByComparingTo("231.82");
+    }
+
+    @Test
     void halfTheHoursPaysHalfTheBasicAndProratedAllowances() {
         var r = PayslipCalculator.calculate(input(5280, List.of(), List.of(), List.of(), false));
         assertThat(line(r, "BASIC")).isEqualByComparingTo("500");

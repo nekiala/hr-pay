@@ -40,7 +40,10 @@ public class LeaveController {
                                 @NotBlank @Size(max = 7_000_000) String base64) {}
 
     public record SettingsInput(@Min(0) @Max(40) int seniorityYears,
-                                @NotNull @DecimalMin("0") @Digits(integer = 2, fraction = 2) BigDecimal seniorityDays) {}
+                                @NotNull @DecimalMin("0") @Digits(integer = 2, fraction = 2) BigDecimal seniorityDays,
+                                Boolean annualPaid,
+                                @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal carryPercent,
+                                @Min(0) @Max(10) Integer carryYears) {}
 
     public record DecisionInput(boolean approve, @Size(max = 300) String note) {}
 
@@ -61,7 +64,8 @@ public class LeaveController {
                               @NotNull @Digits(integer = 3, fraction = 2) BigDecimal days,
                               @NotBlank @Size(max = 300) String note) {}
 
-    public record Mine(List<LeaveService.Balance> balances, List<LeaveService.LeaveRequest> requests) {}
+    public record Mine(List<LeaveService.Balance> balances, List<LeaveService.LeaveRequest> requests,
+                       LeaveService.AnnualSummary annual) {}
 
     private final LeaveService leave;
     private final UserService users;
@@ -110,7 +114,7 @@ public class LeaveController {
     @GetMapping("/mine")
     @PreAuthorize("hasAuthority('leave.request')")
     public Mine mine() {
-        return new Mine(leave.balances(CurrentUser.id()), leave.forUser(CurrentUser.id()));
+        return new Mine(leave.balances(CurrentUser.id()), leave.forUser(CurrentUser.id()), leave.annualSummary(CurrentUser.id()));
     }
 
     @GetMapping("/working-days")
@@ -126,6 +130,18 @@ public class LeaveController {
     @PreAuthorize("hasAuthority('leave.request')")
     public LeaveService.LeaveRequest request(@Valid @RequestBody RequestInput b) {
         return leave.request(users.find(CurrentUser.id()), b.leaveTypeId(), b.startDate(), b.endDate(), b.halfDay(), b.reason());
+    }
+
+    /** Who takes annual leave and when, for HR, payroll and managers (their own branch). At most a year at a time. */
+    @GetMapping("/annual-planning")
+    @PreAuthorize("hasAnyAuthority('leave.manage', 'leave.approve.team', 'payroll.run', 'payroll.approve')")
+    public List<LeaveService.Planned> annualPlanning(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (to.isBefore(from) || to.isAfter(from.plusYears(1))) {
+            throw new cd.hrpay.common.BusinessRuleException("Choose a period of at most a year.");
+        }
+        return leave.annualPlanning(from, to);
     }
 
     @GetMapping("/requests/to-decide")
@@ -192,7 +208,20 @@ public class LeaveController {
     @PutMapping("/settings")
     @PreAuthorize("hasAuthority('leave.manage')")
     public java.util.Map<String, String> saveSettings(@Valid @RequestBody SettingsInput b) {
-        return leave.saveSettings(b.seniorityYears(), b.seniorityDays());
+        return leave.saveSettings(b.seniorityYears(), b.seniorityDays(), b.annualPaid(), b.carryPercent(), b.carryYears());
+    }
+
+    /** What closing a leave year would make lapse. */
+    @GetMapping("/close-year")
+    @PreAuthorize("hasAuthority('leave.manage')")
+    public List<LeaveService.Lapse> closeYearPreview(@RequestParam @Min(2000) @Max(2100) int year) {
+        return leave.closeYear(year, false);
+    }
+
+    @PostMapping("/close-year")
+    @PreAuthorize("hasAuthority('leave.manage')")
+    public List<LeaveService.Lapse> closeYear(@RequestParam @Min(2000) @Max(2100) int year) {
+        return leave.closeYear(year, true);
     }
 
     @GetMapping("/users/{userId}")
@@ -200,7 +229,7 @@ public class LeaveController {
     public Map<String, Object> forUser(@PathVariable long userId) {
         users.find(userId);
         return Map.of("balances", leave.balances(userId), "requests", leave.forUser(userId),
-                "ledger", leave.ledger(userId));
+                "ledger", leave.ledger(userId), "annual", leave.annualSummary(userId));
     }
 
     @PostMapping("/users/{userId}/adjustments")

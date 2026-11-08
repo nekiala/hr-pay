@@ -33,7 +33,7 @@ public class Accounting {
             Map.entry("BASIC", "6611"), Map.entry("OVERTIME", "6611"), Map.entry("HOLIDAY_ADJ", "6611"),
             Map.entry("HOLIDAY_ADJ_LESS", "6611"), Map.entry("BACK_PAY", "6611"), Map.entry("BACK_PAY_LESS", "6611"),
             Map.entry("PERF_BONUS", "6612"), Map.entry("OTHER_BONUS", "6612"), Map.entry("THIRTEENTH_MONTH", "6612"),
-            Map.entry("LEAVE_PAYOUT", "6613"), Map.entry("NOTICE_PAY", "6614"), Map.entry("SEVERANCE", "6614"),
+            Map.entry("LEAVE_PAYOUT", "6613"), Map.entry("LEAVE_ALLOWANCE", "6613"), Map.entry("NOTICE_PAY", "6614"), Map.entry("SEVERANCE", "6614"),
             Map.entry("FAMILY_ALLOWANCE", "6616"), Map.entry("HOUSING", "6631"), Map.entry("TRANSPORT", "6634"),
             Map.entry("CNSS_EMPLOYER", "6641"), Map.entry("CNSS_EMPLOYER_FAMILY", "6641"),
             Map.entry("CNSS_EMPLOYER_ACCIDENT", "6641"), Map.entry("INPP", "6413"), Map.entry("ONEM", "6413"),
@@ -42,7 +42,7 @@ public class Accounting {
     /** Default debt accounts by element. */
     static final Map<String, String> LIABILITY = Map.ofEntries(
             Map.entry("CNSS_EMPLOYEE", "4310"), Map.entry("IPR", "4472"), Map.entry("LOAN", "4211"),
-            Map.entry("ADVANCE", "4212"), Map.entry("OTHER_DEDUCTION", "4230"), Map.entry("CNSS_EMPLOYER", "4310"),
+            Map.entry("ADVANCE", "4212"), Map.entry("LEAVE_ADVANCE", "4212"), Map.entry("OTHER_DEDUCTION", "4230"), Map.entry("CNSS_EMPLOYER", "4310"),
             Map.entry("CNSS_EMPLOYER_FAMILY", "4310"), Map.entry("CNSS_EMPLOYER_ACCIDENT", "4310"),
             Map.entry("INPP", "4478"), Map.entry("ONEM", "4478"), Map.entry("IERE", "4478"), Map.entry("TUS", "4478"));
 

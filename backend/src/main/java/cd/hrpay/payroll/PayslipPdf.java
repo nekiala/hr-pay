@@ -103,6 +103,16 @@ public class PayslipPdf {
 
     /** The payslip in a given layout (CLASSIC, COMPACT or LEDGER), for previews. */
     public byte[] render(PayrollRuns.Payslip p, String template) {
+        if (p.leave()) {
+            // The months' payslips count the allocation; the year to date here is that of the months before.
+            PayrollRuns.Payslip none = new PayrollRuns.Payslip(p.id(), p.runId(), p.month(), p.runStatus(), p.userId(),
+                    p.number(), p.currency(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, 0, 0, p.usdCdf(), p.rateDate(), false,
+                    p.snapshot(), List.of(), List.of(), p.kind(), null, null, null);
+            YearToDate y = yearToDate(none);
+            return draw(p, template, new YearToDate(y.year(), Math.max(0, y.months() - 1), y.currency(), y.gross(),
+                    y.cnss(), y.ipr(), y.net(), y.otherCurrencies()));
+        }
         return draw(p, template, yearToDate(p));
     }
 
@@ -378,15 +388,23 @@ public class PayslipPdf {
     private Paragraph titleLine(Context c) {
         PayrollRuns.Payslip p = c.p();
         Paragraph title = new Paragraph();
-        title.add(new Chunk(p.complementary() ? Texts.t("Complementary payslip · %s", Texts.month(p.month()))
+        title.add(new Chunk(p.leave() ? Texts.t("Leave allowance payslip")
+                : p.complementary() ? Texts.t("Complementary payslip · %s", Texts.month(p.month()))
                 : Texts.t("Payslip · %s", Texts.month(p.month())), TITLE));
         title.add(new Chunk("    " + (p.number() == null ? Texts.t("not numbered yet") : Texts.t("No. %s", p.number()))
-                + Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth()))), SMALL));
+                + (p.leave() ? " · " + p.reason()
+                : Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth())))), SMALL));
         title.setSpacingBefore(8);
         return title;
     }
 
     private static void draftNotice(Document doc, Context c) {
+        if (c.p().leave()) {
+            doc.add(new Paragraph(c.p().number() == null
+                    ? Texts.t("DRAFT: this leave allowance waits for Finance's approval.")
+                    : Texts.t("Paid before the leave (Labour Code art. 145). CNSS and income tax are settled on the payslips of the months the leave covers."), NOTICE));
+            return;
+        }
         if (c.p().complementary()) {
             doc.add(new Paragraph(Texts.t("Corrects payslip No. %s: %s", text(c.p().correctsNumber()), text(c.p().reason())), NOTICE));
             if (c.p().number() == null) {
