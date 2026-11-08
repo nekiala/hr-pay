@@ -14,6 +14,7 @@ type View = {
   month: string; kind: 'PAYROLL' | 'QUINZAINE'
   batch: { id: number; method: PayMethodKind; provider: string; currency: string; total: number; status: string; paidOn: string | null; reference: string | null }
   lines: Line[]
+  warning?: string | null
 }
 type Employer = { name: string; address: string | null; bankName: string | null; bankAccount: string | null }
 
@@ -61,6 +62,7 @@ export default function PaymentFilePage() {
         <p>{employer?.name}{employer?.address && <> · {employer.address}</>}</p>
         {direction && <p><strong>{direction}</strong>{' '}{t('only:')}{' '}{lines.length}{' '}{t('of')}{' '}{view.lines.length}{' '}{t('people. The file sent to the provider holds everyone.')}</p>}
         <p className="muted">{t('File #')}{b.id} · {METHOD[b.method]}{!cash && <> · {b.provider}</>} · {b.status === 'PAID' ? t('paid on {a}{b}', { a: b.paidOn, b: b.reference ? `, ref. ${b.reference}` : '' }) : b.status.toLowerCase()}</p>
+        {view.warning && <p className="notice no-print">{view.warning}</p>}
         {!cash && b.method === 'BANK' && employer?.bankAccount && <p className="small">{t('Debit account:')}{' '}{employer.bankName} {employer.bankAccount}</p>}
         <table>
           <thead><tr><th>{t('No')}</th><th>{t('Employee')}</th><th>{cash ? t('Reg. no') : b.method === 'BANK' ? t('Account') : t('Number')}</th><th>{t('Amount')}</th>{cash && <th className="signature">{t('Signature')}</th>}</tr></thead>

@@ -189,6 +189,11 @@ export default function EmployeeFilePage() {
               <label>{t('Postnom')}<input value={p.postnom ?? ''} onChange={(e) => setP({ postnom: e.target.value })} maxLength={100} /></label>
               <label>{t('Commune or territory')}<input value={p.commune ?? ''} onChange={(e) => setP({ commune: e.target.value })} maxLength={100} placeholder={t('For the tax declaration')} /></label>
             </div>
+            {p.gender !== 'MALE' && (
+              <label>{t('Nursing breaks until')}<input type="date" value={p.nursingBreakUntil ?? ''} onChange={(e) => setP({ nursingBreakUntil: e.target.value || null })} />
+                <span className="muted small">{t('Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.')}</span>
+              </label>
+            )}
             <label>{t('Paid by')}<select value={p.paymentMethod} onChange={(e) => setP({ paymentMethod: e.target.value as Profile['paymentMethod'] })}>
                 <option value="BANK">{t('Bank transfer')}</option><option value="MOBILE_MONEY">{t('Mobile money')}</option><option value="CASH">{t('Cash')}</option>
               </select>

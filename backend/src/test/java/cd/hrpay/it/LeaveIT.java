@@ -8,12 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
 
 class LeaveIT extends IntegrationTest {
 
     static final String EMPLOYEE2 = "employee2@demo.hrpay.cd";
     static final String MANAGER = "manager@demo.hrpay.cd";
+
+    @Autowired
+    JdbcClient jdbc;
 
     long type(MockHttpSession s, String code) throws Exception {
         String types = mvc.perform(get("/api/leave/types").session(s)).andReturn().getResponse().getContentAsString();
@@ -81,5 +86,37 @@ class LeaveIT extends IntegrationTest {
         mvc.perform(post("/api/leave/grant-annual").param("year", "2026").session(me).with(
                         org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void familyEventLeaveIsCountedInWorkingDaysPerEventAndAtMost15DaysAYear() throws Exception {
+        MockHttpSession me = login(EMPLOYEE2);
+        long death = type(me, "FAMILY_DEATH_CLOSE");
+        String body = "{\"leaveTypeId\":%d,\"startDate\":\"%s\",\"endDate\":\"%s\"}";
+        try {
+            // Code du travail art. 146: 4 working days for the death of the spouse or a first-degree relative.
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(death, "2027-02-01", "2027-02-05")))
+                    .andExpect(status().is(422));
+            // Thursday to the next Tuesday, over the weekend: 4 working days.
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(death, "2027-02-04", "2027-02-09")))
+                    .andExpect(status().isCreated()).andExpect(jsonPath("$.workingDays").value(4.0));
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(death, "2027-03-01", "2027-03-04")))
+                    .andExpect(status().isCreated());
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(death, "2027-04-12", "2027-04-15")))
+                    .andExpect(status().isCreated());
+            long marriage = type(me, "FAMILY_MARRIAGE");
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(marriage, "2027-06-07", "2027-06-08")))
+                    .andExpect(status().isCreated());
+            // 14 days so far in 2027: two more would pass the yearly 15.
+            mvc.perform(json(post("/api/leave/requests").session(me), body.formatted(type(me, "FAMILY_BIRTH"), "2027-07-05", "2027-07-06")))
+                    .andExpect(status().is(422))
+                    .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("15 working days a year")));
+            mvc.perform(get("/api/leave/types").session(me))
+                    .andExpect(jsonPath("$[?(@.code=='CIRCUMSTANCE')].active").value(false));
+        } finally {
+            jdbc.sql("""
+                    delete from leave_request where leave_type_id in (select id from leave_type where circumstance)
+                    and user_id = (select id from app_user where email = ?)""").param(EMPLOYEE2).update();
+        }
     }
 }

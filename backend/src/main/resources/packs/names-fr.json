@@ -159,5 +159,16 @@
  "Salary complement (negotiated)": "Complément de salaire (négocié)",
  "Leave allowance paid in advance": "Allocation de congé versée d'avance",
  "Mid-month pay (quinzaine) paid in advance": "Acompte de quinzaine",
- "Leave allowance": "Allocation de congé"
+ "Leave allowance": "Allocation de congé",
+ "Family event: own marriage": "Circonstance : mariage du travailleur",
+ "Family event: spouse gives birth": "Circonstance : accouchement de l'épouse",
+ "Family event: death of spouse, parent or child": "Circonstance : décès du conjoint ou d'un parent au 1er degré",
+ "Family event: marriage of a child": "Circonstance : mariage d'un enfant",
+ "Family event: death of a brother, sister or grandparent": "Circonstance : décès d'un parent au 2e degré",
+ "IPR minimum per month": "IPR minimum par mois",
+ "The tax withheld is never less than this amount when tax is due.": "L'impôt retenu n'est jamais inférieur à ce montant quand il est dû.",
+ "ITS, flat amount of the first band, per part and year": "ITS, montant fixe de la première tranche, par part et par an",
+ "Tax per part on the first band of the yearly pay, whatever the amount in it (CGI art. 116 G).": "Impôt par part sur la première tranche du revenu annuel, quel qu'en soit le montant (CGI art. 116 G).",
+ "ITS minimum per year when the pay is below the SMIG": "ITS minimum par an quand le salaire est inférieur au SMIG",
+ "Tax a year, at least, of a person paid below the minimum wage (CGI art. 116 G).": "Impôt annuel minimum d'une personne payée en dessous du SMIG (CGI art. 116 G)."
 }

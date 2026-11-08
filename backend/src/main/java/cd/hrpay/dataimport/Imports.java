@@ -459,7 +459,8 @@ public class Imports {
         }
         employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, or(row.text("nationality"), p.nationality()),
                 marital == null ? "SINGLE" : marital, or(row.text("cnss_number"), p.cnssNumber()), or(row.text("tax_number"), p.taxNumber()),
-                method, bank, account, operator, number, or(row.text("postnom"), p.postnom()), or(row.text("commune"), p.commune())));
+                method, bank, account, operator, number, or(row.text("postnom"), p.postnom()), or(row.text("commune"), p.commune()),
+                p.nursingBreakUntil()));
     }
 
     private RowResult managerOf(Row row, RowResult r, Context ctx) {

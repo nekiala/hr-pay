@@ -124,7 +124,7 @@ export default function PayrollSettingsPage() {
         <h3>{t('Grades')}</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Category')}</th><th>{t('Base salary')}</th><th>{t('Currency')}</th><th>{t('Active')}</th><th></th></tr></thead>
+            <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Category')}</th><th>{t('Base salary')}</th><th>{t('Currency')}</th><th title={t('Coefficient on the SMIG for the legal minimum of the grade (DRC Décret 25/22, 100 for the lowest)')}>{t('SMIG coefficient')}</th><th>{t('Active')}</th><th></th></tr></thead>
             <tbody>
               {grades.map((g) => (
                 <tr key={g.id}>
@@ -141,6 +141,7 @@ export default function PayrollSettingsPage() {
                       <option>{t('USD')}</option><option>{t('CDF')}</option>
                     </select>
                   </td>
+                  <td><input type="number" min={1} step={1} className="narrow-input" disabled={!editable} value={g.smigCoefficient ?? ''} placeholder="—" onChange={(e) => setGrade(g.id, { smigCoefficient: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                   <td><input type="checkbox" checked={g.active} disabled={!editable} onChange={(e) => setGrade(g.id, { active: e.target.checked })} /></td>
                   <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grades/${g.id}`, { method: 'PUT', body: g }), t("{a} saved.", { a: g.code }))}>{t('Save')}</Button>}</td>
                 </tr>
@@ -159,6 +160,7 @@ export default function PayrollSettingsPage() {
                   <td>
                     <select value={newGrade.currency} onChange={(e) => setNewGrade({ ...newGrade, currency: e.target.value })}><option>{t('USD')}</option><option>{t('CDF')}</option></select>
                   </td>
+                  <td></td>
                   <td></td>
                   <td><Button onClick={() => run(async () => {
                     await api('/api/grades', { method: 'POST', body: { ...newGrade, categoryId: Number(newGrade.categoryId), baseSalary: Number(newGrade.baseSalary), active: true } })

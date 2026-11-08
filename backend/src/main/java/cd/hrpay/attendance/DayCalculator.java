@@ -166,7 +166,8 @@ public final class DayCalculator {
         long earlyLoss = lunch == null ? early : early - new Span(window.to() - early, window.to()).intersect(lunch).length();
 
         long payable = inWindow + (lateDeducted ? 0 : lateLoss) + (earlyDeducted ? 0 : earlyLoss);
-        payable = Math.min(payable, scheduledMinutes);
+        // Paid breaks the employee may take off the schedule (nursing breaks) are not lost time.
+        payable = Math.min(payable + plan.paidBreakMinutes(), scheduledMinutes);
         int overtime = round(worked - inWindow, roundingMinutes);
         return result(date, inProgress ? Status.IN_PROGRESS : Status.PRESENT, scheduledMinutes, worked, payable,
                 late, lateDeducted ? late : 0, early, earlyDeducted ? early : 0, overtime, overtime > 0 ? kind : null,

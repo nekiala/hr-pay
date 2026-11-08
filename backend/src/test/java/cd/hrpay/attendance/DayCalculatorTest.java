@@ -71,6 +71,15 @@ class DayCalculatorTest {
     }
 
     @Test
+    void aNursingMotherLeavingAnHourEarlyIsPaidTheFullDay() {
+        // Code du travail art. 132: two half-hour nursing breaks a day count as paid working time.
+        DayPlan plan = new DayPlan(MON, true, false, LocalTime.of(8, 0), LocalTime.of(17, 0), true,
+                LocalTime.of(12, 0), 60, false, 480, 10, true, true, 1L, 60);
+        assertThat(day(plan, LATER, "08:00", "16:00").payableMinutes()).isEqualTo(480);
+        assertThat(day(plan, LATER, "08:00", "15:00").payableMinutes()).isEqualTo(420);
+    }
+
+    @Test
     void lateNotDeductedWhenScheduleSaysSo() {
         DayPlan plan = new DayPlan(MON, true, false, LocalTime.of(8, 0), LocalTime.of(17, 0), true,
                 LocalTime.of(12, 0), 60, false, 480, 10, false, true, 1L);

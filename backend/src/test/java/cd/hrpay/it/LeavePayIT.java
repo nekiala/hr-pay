@@ -156,8 +156,9 @@ class LeavePayIT extends IntegrationTest {
         mvc.perform(post("/api/leave/close-year").param("year", "2027").session(hr).with(csrf())).andExpect(status().is(422));
 
         String settings = "{\"seniorityYears\":5,\"seniorityDays\":1,\"annualPaid\":%s,\"carryPercent\":50,\"carryYears\":1}";
-        mvc.perform(json(put("/api/leave/settings").session(hr), settings.formatted(false)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.LEAVE_ANNUAL_PAID").value("false"));
+        // The DRC Code du travail (art. 142) requires paid annual leave: the switch cannot be turned off there.
+        mvc.perform(json(put("/api/leave/settings").session(hr), settings.formatted(false))).andExpect(status().is(422));
+        jdbc.sql("update payroll_setting set value = 'false' where key = 'LEAVE_ANNUAL_PAID'").update();
         try {
             mvc.perform(get("/api/leave/mine").session(me)).andExpect(jsonPath("$.annual.paid").value(false));
             mvc.perform(get("/api/attendance/month").param("month", "2027-05").session(me))
@@ -167,7 +168,7 @@ class LeavePayIT extends IntegrationTest {
             assertThat(JsonPath.<List<Object>>read(overview, "$.due")).isEmpty();
             mvc.perform(json(post("/api/leave-pay/calculate").session(hr), "{}")).andExpect(status().is(422));
         } finally {
-            mvc.perform(json(put("/api/leave/settings").session(hr), settings.formatted(true))).andExpect(status().isOk());
+            jdbc.sql("update payroll_setting set value = 'true' where key = 'LEAVE_ANNUAL_PAID'").update();
             mvc.perform(json(post("/api/leave/requests/" + leave + "/cancel").session(hr), "{\"note\":\"Test over\"}"))
                     .andExpect(status().isOk());
         }

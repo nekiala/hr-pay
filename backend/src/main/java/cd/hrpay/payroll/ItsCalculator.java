@@ -9,8 +9,12 @@ import java.util.List;
  * annualise, take off the professional deduction, divide by the household's parts, apply the progressive bands to
  * one part, multiply back by the parts and bring back to a month.
  *
- * <p>Parts: 1 for the employee, 1 more for a spouse in charge, 0.5 per child in charge, up to a maximum. The bands,
- * the deduction and the parts are sample values from memory, to verify with a Congolese payroll accountant.
+ * <p>Parts (CGI art. 116 B, as rewritten by Loi n° 42-2025 du 31 décembre 2025, finance law for 2026): a single,
+ * divorced or widowed person without children in charge has 1 part; a married person 2; a married or widowed person
+ * with children 2 and a half part per child; a single or divorced parent 1.5 and a half part per child (2 parts with
+ * one child); at most {@code maxParts} (6.5). The net taxable income is rounded down to the thousand francs before it
+ * is divided (art. 116 A). Since 2026 the first band is a flat amount per part ({@code firstBandFlat}, 1 200 FCFA a
+ * year) rather than a percentage (art. 116 G).
  */
 public final class ItsCalculator {
 
@@ -19,25 +23,41 @@ public final class ItsCalculator {
     private static final BigDecimal TWELVE = BigDecimal.valueOf(12);
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final BigDecimal HALF = new BigDecimal("0.5");
+    private static final BigDecimal THOUSAND = BigDecimal.valueOf(1000);
 
     private ItsCalculator() {}
 
-    /** The household's parts from who is in charge. */
-    public static BigDecimal parts(boolean spouseInCharge, int childrenInCharge, BigDecimal maxParts) {
-        BigDecimal parts = BigDecimal.ONE.add(spouseInCharge ? BigDecimal.ONE : BigDecimal.ZERO)
-                .add(HALF.multiply(BigDecimal.valueOf(Math.max(0, childrenInCharge))));
+    /** The household's parts from the marital status and the children in charge (CGI art. 116 B). */
+    public static BigDecimal parts(String maritalStatus, boolean spouseInCharge, int childrenInCharge, BigDecimal maxParts) {
+        int children = Math.max(0, childrenInCharge);
+        BigDecimal perChildren = HALF.multiply(BigDecimal.valueOf(children));
+        BigDecimal parts;
+        if ("MARRIED".equals(maritalStatus) || maritalStatus == null && spouseInCharge
+                || "WIDOWED".equals(maritalStatus) && children > 0) {
+            parts = BigDecimal.TWO.add(perChildren);
+        } else if (children > 0) {
+            parts = new BigDecimal("1.5").add(perChildren);
+        } else {
+            parts = BigDecimal.ONE;
+        }
         return maxParts == null ? parts : parts.min(maxParts);
     }
 
     public static Result monthly(BigDecimal taxableMonthly, BigDecimal parts, List<IprCalculator.Bracket> brackets,
                                  BigDecimal professionalDeductionPercent) {
+        return monthly(taxableMonthly, parts, brackets, professionalDeductionPercent, BigDecimal.ZERO);
+    }
+
+    public static Result monthly(BigDecimal taxableMonthly, BigDecimal parts, List<IprCalculator.Bracket> brackets,
+                                 BigDecimal professionalDeductionPercent, BigDecimal firstBandFlat) {
         if (taxableMonthly.signum() <= 0) {
             return new Result(BigDecimal.ZERO, parts, BigDecimal.ZERO.setScale(2));
         }
         BigDecimal annual = taxableMonthly.multiply(TWELVE);
         BigDecimal net = annual.subtract(annual.multiply(professionalDeductionPercent).divide(HUNDRED, 6, RoundingMode.HALF_UP));
+        net = net.divide(THOUSAND, 0, RoundingMode.FLOOR).multiply(THOUSAND);
         BigDecimal perPart = net.divide(parts, 6, RoundingMode.HALF_UP);
-        BigDecimal taxPerPart = BigDecimal.ZERO;
+        BigDecimal taxPerPart = perPart.signum() > 0 && firstBandFlat != null ? firstBandFlat : BigDecimal.ZERO;
         for (IprCalculator.Bracket b : brackets) {
             if (perPart.compareTo(b.lowerBound()) <= 0) {
                 continue;

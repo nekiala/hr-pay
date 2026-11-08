@@ -59,7 +59,23 @@ public final class PayslipCalculator {
                         BigDecimal thirteenthMonth, String thirteenthMonthNote,
                         int childrenInCharge, int dependantsInCharge, boolean expatriate,
                         List<PayElements.Element> elements, List<PayElements.Assignment> standing,
-                        List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes) {
+                        List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes,
+                        BigDecimal smigCoefficient, String maritalStatus) {
+
+        /**
+         * Without the grade's minimum-wage coefficient (100 = the manœuvre ordinaire) or the marital status: the
+         * lowest minimum wage is checked and the Congo's family parts come from the spouse in charge.
+         */
+        public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
+                     int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
+                     BigDecimal thirteenthMonth, String thirteenthMonthNote,
+                     int childrenInCharge, int dependantsInCharge, boolean expatriate,
+                     List<PayElements.Element> elements, List<PayElements.Assignment> standing,
+                     List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes) {
+            this(currency, basicMonthly, scheduledMinutes, paidMinutes, scheduledDays, daysWorked, overtimeAmount,
+                    overtimeMinutes, thirteenthMonth, thirteenthMonthNote, childrenInCharge, dependantsInCharge, expatriate,
+                    elements, standing, entries, loans, rates, allocatedLeaveMinutes, null, null);
+        }
 
         public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
                      int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
@@ -69,7 +85,7 @@ public final class PayslipCalculator {
                      List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates) {
             this(currency, basicMonthly, scheduledMinutes, paidMinutes, scheduledDays, daysWorked, overtimeAmount,
                     overtimeMinutes, thirteenthMonth, thirteenthMonthNote, childrenInCharge, dependantsInCharge, expatriate,
-                    elements, standing, entries, loans, rates, 0);
+                    elements, standing, entries, loans, rates, 0, null, null);
         }
     }
 
@@ -226,11 +242,24 @@ public final class PayslipCalculator {
         BigDecimal taxLocal;
         if (r.congo()) {
             boolean spouse = in.dependantsInCharge() > in.childrenInCharge();
-            BigDecimal parts = ItsCalculator.parts(spouse, in.childrenInCharge(), r.more("ITS_MAX_PARTS"));
-            taxLocal = ItsCalculator.monthly(taxableCdf, parts, r.iprBrackets(), r.more("ITS_PROFESSIONAL_DEDUCTION")).tax();
+            BigDecimal parts = ItsCalculator.parts(in.maritalStatus(), spouse, in.childrenInCharge(), r.more("ITS_MAX_PARTS"));
+            taxLocal = ItsCalculator.monthly(taxableCdf, parts, r.iprBrackets(), r.more("ITS_PROFESSIONAL_DEDUCTION"),
+                    r.more().getOrDefault("ITS_FIRST_BAND_FLAT", BigDecimal.ZERO)).tax();
+            // CGI art. 116 G 2 (Loi 42-2025): a gross below the SMIG owes a minimum yearly tax.
+            BigDecimal minimumYear = r.more().getOrDefault("ITS_MINIMUM_YEARLY", BigDecimal.ZERO);
+            BigDecimal smig = r.more().get("SMIG_MONTHLY");
+            BigDecimal grossLocal = convert(gross, cur, local, r.usdCdf());
+            if (minimumYear.signum() > 0 && smig != null && grossLocal.signum() > 0 && grossLocal.compareTo(smig) < 0) {
+                taxLocal = taxLocal.max(minimumYear.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP));
+            }
         } else {
             taxLocal = IprCalculator.monthly(taxableCdf, in.dependantsInCharge(), r.iprBrackets(),
                     r.iprDependantReduction(), r.iprMaxDependants(), r.iprCap()).tax();
+            // DGI: the IPR due after family charges is never below a monthly minimum.
+            BigDecimal minimum = r.more().getOrDefault("IPR_MIN_MONTHLY", BigDecimal.ZERO);
+            if (taxLocal.signum() > 0 && taxLocal.compareTo(minimum) < 0) {
+                taxLocal = minimum.setScale(2, RoundingMode.HALF_UP);
+            }
         }
         BigDecimal iprAmount = convert(taxLocal, local, cur, r.usdCdf());
         lines.add(new Line("IPR", byCode.get("IPR").name(), "DEDUCTION", taxableBase, null, iprAmount,
@@ -303,10 +332,28 @@ public final class PayslipCalculator {
             if (smig != null && convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smig) < 0) {
                 warnings.add("The basic salary is below the monthly minimum wage (SMIG).");
             }
-        } else if (r.smigDailyCdf() != null && in.scheduledDays() > 0) {
-            BigDecimal smigMonth = r.smigDailyCdf().multiply(BigDecimal.valueOf(in.scheduledDays()));
-            if (convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smigMonth) < 0) {
-                warnings.add("The basic salary is below the minimum wage (SMIG) for " + in.scheduledDays() + " days.");
+        } else if (r.smigDailyCdf() != null) {
+            // Décret 25/22 art. 4 and 7: the grade's minimum is the SMIG times its coefficient, 26 days a month.
+            BigDecimal coefficient = in.smigCoefficient() == null ? HUNDRED : in.smigCoefficient();
+            BigDecimal minimum = minimumMonthly(r.smigDailyCdf(), coefficient);
+            BigDecimal basicLocal = convert(in.basicMonthly(), cur, local, r.usdCdf());
+            if (basicLocal.compareTo(minimum) < 0) {
+                warnings.add(String.format(java.util.Locale.UK,
+                        "The basic salary (%s %s) is below the legal minimum of the grade (SMIG %s x coefficient %s x 26 days = %s %s).",
+                        plain(basicLocal), local, plain(r.smigDailyCdf()), plain(coefficient), plain(minimum), local));
+            }
+            // Décret 25/22 art. 5: family allowances are at least 1/27 of the daily SMIG per child and day.
+            BigDecimal perChildMinimum = familyAllowanceMinimum(r.smigDailyCdf());
+            for (Line l : lines) {
+                if (!l.code().equals("FAMILY_ALLOWANCE") || l.base() == null || l.base().signum() <= 0) {
+                    continue;
+                }
+                BigDecimal perChild = convert(l.amount(), cur, local, r.usdCdf()).divide(l.base(), 2, RoundingMode.HALF_UP);
+                if (perChild.compareTo(perChildMinimum) < 0) {
+                    warnings.add(String.format(java.util.Locale.UK,
+                            "Family allowances (%s %s a child) are below the legal minimum (1/27 of the SMIG a day x 26 days = %s %s a child).",
+                            plain(perChild), local, plain(perChildMinimum), local));
+                }
             }
         }
         if (in.scheduledMinutes() == 0) {
@@ -316,6 +363,23 @@ public final class PayslipCalculator {
         lines.sort(Comparator.comparingInt(Line::order));
         return new Result(cur, List.copyOf(lines), gross, cnssBase, taxableBase, taxableCdf, deductions, net,
                 employer, List.copyOf(warnings));
+    }
+
+    /** Décret 25/22 art. 7: monthly values are 26 times the daily ones. */
+    static final BigDecimal SMIG_DAYS_PER_MONTH = BigDecimal.valueOf(26);
+
+    /** A grade's monthly minimum: the daily SMIG times its coefficient (100 = manœuvre ordinaire), 26 days. */
+    public static BigDecimal minimumMonthly(BigDecimal smigDaily, BigDecimal coefficient) {
+        return smigDaily.multiply(coefficient).multiply(SMIG_DAYS_PER_MONTH).divide(HUNDRED, 2, RoundingMode.HALF_UP);
+    }
+
+    /** The legal minimum family allowance for one child and one month: 1/27 of the daily SMIG, 26 days. */
+    public static BigDecimal familyAllowanceMinimum(BigDecimal smigDaily) {
+        return smigDaily.multiply(SMIG_DAYS_PER_MONTH).divide(BigDecimal.valueOf(27), 2, RoundingMode.HALF_UP);
+    }
+
+    private static String plain(BigDecimal v) {
+        return v.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
     }
 
     private static BigDecimal charge(List<Line> lines, Map<String, PayElements.Element> byCode, String code,

@@ -2,6 +2,7 @@ package cd.hrpay.payment;
 
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
+import cd.hrpay.i18n.Texts;
 import cd.hrpay.common.ConflictException;
 import cd.hrpay.common.NotFoundException;
 import cd.hrpay.security.CurrentUser;
@@ -50,7 +51,21 @@ public class Payments {
                            List<Batch> batches, int payslips, int paid) {}
 
     /** kind: PAYROLL (the month-end net pay) or QUINZAINE (the mid-month advance). */
-    public record BatchView(Batch batch, String month, String kind, List<Line> lines) {}
+    public record BatchView(Batch batch, String month, String kind, List<Line> lines, String warning) {}
+
+    /** DRC Code du travail art. 99: a monthly salary is paid at the latest 6 days after the end of the month. */
+    static final int PAY_DELAY_DAYS = 6;
+
+    static String lateWarning(String country, String kind, String month, LocalDate paidOn) {
+        if (!"CD".equals(country) || !PAYROLL.equals(kind) || paidOn == null || month == null) {
+            return null;
+        }
+        LocalDate due = java.time.YearMonth.parse(month).atEndOfMonth().plusDays(PAY_DELAY_DAYS);
+        return paidOn.isAfter(due)
+                ? Texts.t("Paid on %s, more than %s days after the end of the month (Code du travail art. 99: at the latest %s).",
+                        paidOn, PAY_DELAY_DAYS, due)
+                : null;
+    }
 
     public static final String PAYROLL = "PAYROLL";
     public static final String QUINZAINE = "QUINZAINE";
@@ -265,7 +280,10 @@ public class Payments {
                 .param(id).query(Line.class).list();
         var units = org.placementsOfUnits();
         lines = lines.stream().map(l -> l.placed(units)).toList();
-        return new BatchView(b, src.month(), src.quinzaine() ? QUINZAINE : PAYROLL, lines);
+        String kind = src.quinzaine() ? QUINZAINE : PAYROLL;
+        String country = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
+                .optional().orElse("CD");
+        return new BatchView(b, src.month(), kind, lines, lateWarning(country, kind, src.month(), b.paidOn()));
     }
 
     @Transactional

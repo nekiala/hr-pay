@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,19 +20,31 @@ public class WorkCalendar {
     public record DayPlan(LocalDate date, boolean workday, boolean holiday, LocalTime start, LocalTime end,
                           boolean lunchEnabled, LocalTime lunchStart, int lunchMinutes, boolean lunchPaid,
                           int scheduledMinutes, int graceMinutes, boolean deductLate, boolean deductEarly,
-                          Long scheduleId) {
+                          Long scheduleId, int paidBreakMinutes) {
+
+        public DayPlan(LocalDate date, boolean workday, boolean holiday, LocalTime start, LocalTime end,
+                       boolean lunchEnabled, LocalTime lunchStart, int lunchMinutes, boolean lunchPaid,
+                       int scheduledMinutes, int graceMinutes, boolean deductLate, boolean deductEarly, Long scheduleId) {
+            this(date, workday, holiday, start, end, lunchEnabled, lunchStart, lunchMinutes, lunchPaid, scheduledMinutes,
+                    graceMinutes, deductLate, deductEarly, scheduleId, 0);
+        }
 
         public boolean expectedAtWork() {
             return workday && !holiday;
         }
     }
 
+    /** Nursing breaks (DRC Code du travail art. 132): two half hours a day, paid as working time. */
+    public static final int NURSING_BREAK_MINUTES = 60;
+
     private final UserScheduleRepository assignments;
     private final HolidayService holidays;
+    private final JdbcClient jdbc;
 
-    public WorkCalendar(UserScheduleRepository assignments, HolidayService holidays) {
+    public WorkCalendar(UserScheduleRepository assignments, HolidayService holidays, JdbcClient jdbc) {
         this.assignments = assignments;
         this.holidays = holidays;
+        this.jdbc = jdbc;
     }
 
     public Optional<WorkSchedule> scheduleOn(Long userId, LocalDate date) {
@@ -50,6 +63,8 @@ public class WorkCalendar {
         Set<LocalDate> holidayDates = holidays.observedDates(country, from, to);
         // One query for the period, newest first: the schedule of a day is the first one in force by then.
         List<UserSchedule> history = assignments.findByUserIdOrderByEffectiveFromDesc(user.getId());
+        LocalDate nursingUntil = jdbc.sql("select nursing_break_until from employee_profile where user_id = ?")
+                .param(user.getId()).query(LocalDate.class).optional().orElse(null);
         List<DayPlan> result = new ArrayList<>();
         for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
             LocalDate day0 = d;
@@ -65,7 +80,8 @@ public class WorkCalendar {
             result.add(new DayPlan(d, day.isWorkday(), holiday, day.getStartTime(), day.getEndTime(),
                     day.isLunchEnabled(), day.getLunchStart(), day.getLunchMinutes() == null ? 0 : day.getLunchMinutes(),
                     day.isLunchPaid(), day.scheduledMinutes(), s.getGraceMinutes(), s.isDeductLateArrival(),
-                    s.isDeductEarlyDeparture(), s.getId()));
+                    s.isDeductEarlyDeparture(), s.getId(),
+                    nursingUntil != null && !d.isAfter(nursingUntil) && day.isWorkday() ? NURSING_BREAK_MINUTES : 0));
         }
         return result;
     }

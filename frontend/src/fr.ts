@@ -2557,6 +2557,10 @@ const fr: Record<string, string> = {
   "Codes and notifications sent by email and WhatsApp, newest first.": "Codes et notifications envoyés par e-mail et WhatsApp, les plus récents d'abord.",
   "No email server is set: emails are not sent, only kept here (\"LOGGED\"). Codes can be read here while testing.": "Aucun serveur d'e-mail n'est défini : les e-mails ne sont pas envoyés, seulement gardés ici (« LOGGED »). Les codes se lisent ici pendant les essais.",
   "Set up an email server": "Définir un serveur d'e-mail",
+  "Nursing breaks until": "Pauses d'allaitement jusqu'au",
+  "Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.": "Deux demi-heures payées par jour pendant l'allaitement (Code du travail art. 132) : une heure de moins au travail n'est pas retenue.",
+  "SMIG coefficient": "Coefficient SMIG",
+  "Coefficient on the SMIG for the legal minimum of the grade (DRC Décret 25/22, 100 for the lowest)": "Coefficient appliqué au SMIG pour le minimum légal du grade (RDC Décret 25/22, 100 pour le plus bas)",
 }
 
 export default fr

@@ -286,7 +286,6 @@
  "The Administrator role must keep role.manage and role.assign.": "Le rôle Administrateur doit garder role.manage et role.assign.",
  "The amount is more than the %s %s left to pay on %s.": "Le montant dépasse les %s %s restant à payer sur %s.",
  "The amount must be more than zero.": "Le montant doit être supérieur à zéro.",
- "The basic salary is below the minimum wage (SMIG) for %s days.": "Le salaire de base est inférieur au salaire minimum (SMIG) pour %s jours.",
  "The basic salary is below the monthly minimum wage (SMIG).": "Le salaire de base est inférieur au salaire minimum mensuel (SMIG).",
  "The change conflicts with existing data.": "La modification entre en conflit avec des données existantes.",
  "The code %s is already used.": "Le code %s est déjà utilisé.",
@@ -1211,5 +1210,12 @@
  "Connected to %s.": "Connexion réussie à %s.",
  "A test email was sent to %s.": "Un e-mail de test a été envoyé à %s.",
  "HR Pay test email": "E-mail de test HR Pay",
- "This email shows that HR Pay can send emails through this server.": "Cet e-mail montre que HR Pay peut envoyer des e-mails par ce serveur."
+ "This email shows that HR Pay can send emails through this server.": "Cet e-mail montre que HR Pay peut envoyer des e-mails par ce serveur.",
+ "The basic salary (%s %s) is below the legal minimum of the grade (SMIG %s x coefficient %s x 26 days = %s %s).": "Le salaire de base (%s %s) est inférieur au minimum légal du grade (SMIG %s x coefficient %s x 26 jours = %s %s).",
+ "Family allowances (%s %s a child) are below the legal minimum (1/27 of the SMIG a day x 26 days = %s %s a child).": "Les allocations familiales (%s %s par enfant) sont inférieures au minimum légal (1/27 du SMIG par jour x 26 jours = %s %s par enfant).",
+ "%s gives at most %s working days.": "%s donne au plus %s jours ouvrables.",
+ "Family event leave is limited to %s working days a year; %s are already taken or requested in %s.": "Les congés de circonstance sont limités à %s jours ouvrables par an ; %s sont déjà pris ou demandés en %s.",
+ "Annual leave must be paid in the DR Congo (Code du travail art. 142).": "Le congé annuel doit être payé en RD Congo (Code du travail art. 142).",
+ "%s: %s of work planned, more than the legal 8 hours a day; the time above is overtime.": "%s : %s de travail prévues, plus que les 8 heures légales par jour ; le temps au-delà est en heures supplémentaires.",
+ "Paid on %s, more than %s days after the end of the month (Code du travail art. 99: at the latest %s).": "Payé le %s, plus de %s jours après la fin du mois (Code du travail art. 99 : au plus tard le %s)."
 }

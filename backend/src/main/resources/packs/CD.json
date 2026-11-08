@@ -77,7 +77,8 @@
      "name": "Cat. 1, step 1 · Ordinary labourer",
      "base_salary": 200.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 100.0
     },
     {
      "id": 2,
@@ -86,7 +87,8 @@
      "name": "Cat. 1, step 2 · Heavy labourer",
      "base_salary": 232.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 116.0
     },
     {
      "id": 3,
@@ -95,52 +97,58 @@
      "name": "Cat. 2 · Specialised labourer",
      "base_salary": 266.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 133.0
     },
     {
      "id": 4,
      "category_id": 1,
      "code": "E3A",
      "name": "Cat. 3, step 1 · Semi-skilled worker",
-     "base_salary": 307.0,
+     "base_salary": 308.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 154.0
     },
     {
      "id": 5,
      "category_id": 1,
      "code": "E3B",
      "name": "Cat. 3, step 2 · Semi-skilled worker",
-     "base_salary": 355.0,
+     "base_salary": 356.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 178.0
     },
     {
      "id": 6,
      "category_id": 1,
      "code": "E3C",
      "name": "Cat. 3, step 3 · Semi-skilled worker",
-     "base_salary": 411.0,
+     "base_salary": 412.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 206.0
     },
     {
      "id": 7,
      "category_id": 1,
      "code": "E4A",
      "name": "Cat. 4, step 1 · Skilled worker",
-     "base_salary": 473.0,
+     "base_salary": 474.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 237.0
     },
     {
      "id": 8,
      "category_id": 1,
      "code": "E4B",
      "name": "Cat. 4, step 2 · Skilled worker",
-     "base_salary": 547.0,
+     "base_salary": 548.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 274.0
     },
     {
      "id": 9,
@@ -149,7 +157,8 @@
      "name": "Cat. 5 · Highly skilled worker",
      "base_salary": 633.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 317.0
     },
     {
      "id": 10,
@@ -158,25 +167,28 @@
      "name": "Supervisor, step 1",
      "base_salary": 731.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 366.0
     },
     {
      "id": 11,
      "category_id": 2,
      "code": "M2",
      "name": "Supervisor, step 2",
-     "base_salary": 842.0,
+     "base_salary": 843.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 422.0
     },
     {
      "id": 12,
      "category_id": 2,
      "code": "M3",
      "name": "Supervisor, step 3",
-     "base_salary": 974.0,
+     "base_salary": 975.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 488.0
     },
     {
      "id": 13,
@@ -185,7 +197,8 @@
      "name": "Supervisor, step 4",
      "base_salary": 1126.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 564.0
     },
     {
      "id": 14,
@@ -194,16 +207,18 @@
      "name": "Junior manager, step 1",
      "base_salary": 1300.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 651.0
     },
     {
      "id": 15,
      "category_id": 3,
      "code": "C2",
      "name": "Junior manager, step 2",
-     "base_salary": 1501.0,
+     "base_salary": 1502.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 752.0
     },
     {
      "id": 16,
@@ -212,16 +227,18 @@
      "name": "Junior manager, step 3",
      "base_salary": 1761.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 868.0
     },
     {
      "id": 17,
      "category_id": 3,
      "code": "C4",
      "name": "Junior manager, step 4",
-     "base_salary": 1996.0,
+     "base_salary": 1997.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": 1000.0
     },
     {
      "id": 18,
@@ -230,7 +247,8 @@
      "name": "Senior manager (pay negotiated)",
      "base_salary": 2500.0,
      "currency": "USD",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     }
    ]
   },
@@ -289,7 +307,8 @@
      "requires_document": false,
      "max_days": null,
      "active": true,
-     "pay_percent": 100.0
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 3,
@@ -300,7 +319,8 @@
      "requires_document": true,
      "max_days": 98,
      "active": true,
-     "pay_percent": 100.0
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 4,
@@ -310,8 +330,9 @@
      "uses_balance": false,
      "requires_document": true,
      "max_days": 5,
-     "active": true,
-     "pay_percent": 100.0
+     "active": false,
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 5,
@@ -322,7 +343,8 @@
      "requires_document": false,
      "max_days": null,
      "active": true,
-     "pay_percent": 0.0
+     "pay_percent": 0.0,
+     "circumstance": false
     },
     {
      "id": 2,
@@ -333,7 +355,68 @@
      "requires_document": true,
      "max_days": null,
      "active": true,
-     "pay_percent": 66.67
+     "pay_percent": 66.67,
+     "circumstance": false
+    },
+    {
+     "id": 6,
+     "code": "FAMILY_MARRIAGE",
+     "name": "Family event: own marriage",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 2,
+     "active": true,
+     "pay_percent": 100.0,
+     "circumstance": true
+    },
+    {
+     "id": 7,
+     "code": "FAMILY_BIRTH",
+     "name": "Family event: spouse gives birth",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 2,
+     "active": true,
+     "pay_percent": 100.0,
+     "circumstance": true
+    },
+    {
+     "id": 8,
+     "code": "FAMILY_DEATH_CLOSE",
+     "name": "Family event: death of spouse, parent or child",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 4,
+     "active": true,
+     "pay_percent": 100.0,
+     "circumstance": true
+    },
+    {
+     "id": 9,
+     "code": "FAMILY_CHILD_MARRIAGE",
+     "name": "Family event: marriage of a child",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 1,
+     "active": true,
+     "pay_percent": 100.0,
+     "circumstance": true
+    },
+    {
+     "id": 10,
+     "code": "FAMILY_DEATH_OTHER",
+     "name": "Family event: death of a brother, sister or grandparent",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": true,
+     "max_days": 2,
+     "active": true,
+     "pay_percent": 100.0,
+     "circumstance": true
     }
    ]
   },
@@ -1322,6 +1405,13 @@
      "unit": "COUNT",
      "description": "Paid days the person may take each week of the notice to look for a new job.",
      "display_order": 310
+    },
+    {
+     "code": "IPR_MIN_MONTHLY",
+     "name": "IPR minimum per month",
+     "unit": "CDF",
+     "description": "The tax withheld is never less than this amount when tax is due.",
+     "display_order": 55
     }
    ]
   },
@@ -1414,7 +1504,7 @@
      "code": "SMIG_DAILY",
      "effective_from": "2020-01-01",
      "value": 14500.0,
-     "note": "Sample, to verify",
+     "note": "Décret 25/22 art. 3 (before May 2025)",
      "created_by": "system"
     },
     {
@@ -1447,6 +1537,30 @@
      "effective_from": "2020-01-01",
      "value": 1.0,
      "note": "Code du travail art. 65",
+     "created_by": "system"
+    },
+    {
+     "id": 18,
+     "code": "SMIG_DAILY",
+     "effective_from": "2025-05-01",
+     "value": 14500.0,
+     "note": "Décret 25/22 art. 3",
+     "created_by": "system"
+    },
+    {
+     "id": 19,
+     "code": "SMIG_DAILY",
+     "effective_from": "2026-01-01",
+     "value": 21500.0,
+     "note": "Décret 25/22 art. 3",
+     "created_by": "system"
+    },
+    {
+     "id": 20,
+     "code": "IPR_MIN_MONTHLY",
+     "effective_from": "2026-01-01",
+     "value": 2500.0,
+     "note": "DGI, IRPP sur les revenus salariaux",
      "created_by": "system"
     }
    ]
@@ -1660,6 +1774,10 @@
     {
      "key": "QUINZAINE_MAX_DEBT_MONTHS",
      "value": "3"
+    },
+    {
+     "key": "LEAVE_CIRCUMSTANCE_YEAR_MAX",
+     "value": "15"
     }
    ]
   },
