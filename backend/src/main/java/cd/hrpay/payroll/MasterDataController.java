@@ -33,7 +33,8 @@ public class MasterDataController {
     public record GradeInput(@NotNull Long categoryId, @NotBlank @Pattern(regexp = CODE) String code,
                              @NotBlank @Size(max = 150) String name,
                              @NotNull @DecimalMin("0") @Digits(integer = 12, fraction = 2) BigDecimal baseSalary,
-                             @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency, boolean active) {}
+                             @NotNull @Pattern(regexp = "USD|CDF|XAF") String currency, boolean active,
+                             @DecimalMin("1") @Digits(integer = 4, fraction = 2) BigDecimal smigCoefficient) {}
 
     public record OccupationInput(@NotBlank @Pattern(regexp = CODE) String code, @NotBlank @Size(max = 150) String name,
                                   boolean active) {}
@@ -62,7 +63,8 @@ public class MasterDataController {
                                @Size(max = 100) String bankName, @Size(max = 60) String bankAccount,
                                @Size(max = 40) String mobileMoneyOperator,
                                @Pattern(regexp = "\\+?[0-9 ]{8,20}") String mobileMoneyNumber,
-                               @Size(max = 100) String postnom, @Size(max = 100) String commune) {}
+                               @Size(max = 100) String postnom, @Size(max = 100) String commune,
+                               LocalDate nursingBreakUntil) {}
 
     public record DependantInput(@NotBlank @Size(max = 150) String fullName,
                                  @NotNull @Pattern(regexp = "SPOUSE|CHILD") String relationship, LocalDate birthDate,
@@ -96,13 +98,15 @@ public class MasterDataController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('masterdata.manage')")
     public MasterData.Grade addGrade(@Valid @RequestBody GradeInput b) {
-        return masterData.saveGrade(null, b.categoryId(), b.code().trim(), b.name().trim(), b.baseSalary(), b.currency(), b.active());
+        return masterData.saveGrade(null, b.categoryId(), b.code().trim(), b.name().trim(), b.baseSalary(), b.currency(), b.active(),
+                b.smigCoefficient());
     }
 
     @PutMapping("/grades/{id}")
     @PreAuthorize("hasAuthority('masterdata.manage')")
     public MasterData.Grade updateGrade(@PathVariable long id, @Valid @RequestBody GradeInput b) {
-        return masterData.saveGrade(id, b.categoryId(), b.code().trim(), b.name().trim(), b.baseSalary(), b.currency(), b.active());
+        return masterData.saveGrade(id, b.categoryId(), b.code().trim(), b.name().trim(), b.baseSalary(), b.currency(), b.active(),
+                b.smigCoefficient());
     }
 
     @PutMapping("/grade-categories/{id}/raise")
@@ -159,7 +163,7 @@ public class MasterDataController {
     public EmployeeFile.Profile saveProfile(@PathVariable long userId, @Valid @RequestBody ProfileInput b) {
         return files.saveProfile(userId, new EmployeeFile.Profile(b.birthDate(), b.gender(), b.nationality(),
                 b.maritalStatus(), b.cnssNumber(), b.taxNumber(), b.paymentMethod(), b.bankName(), b.bankAccount(),
-                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.postnom(), b.commune()));
+                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.postnom(), b.commune(), b.nursingBreakUntil()));
     }
 
     @PostMapping("/users/{userId}/dependants")

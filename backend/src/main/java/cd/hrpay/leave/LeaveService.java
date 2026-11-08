@@ -34,7 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class LeaveService {
 
     public record LeaveType(long id, String code, String name, boolean paid, boolean usesBalance,
-                            boolean requiresDocument, Integer maxDays, boolean active, BigDecimal payPercent) {}
+                            boolean requiresDocument, Integer maxDays, boolean active, BigDecimal payPercent,
+                            boolean circumstance) {}
 
     public record GradeCategory(long id, String code, String name, BigDecimal annualLeaveDays, boolean active,
                                 BigDecimal anniversaryRaisePercent, String raiseTiming, BigDecimal noticeBase,
@@ -98,7 +99,8 @@ public class LeaveService {
     // ---- Settings -------------------------------------------------------------------------------------------
 
     public List<LeaveType> types() {
-        return jdbc.sql("select id, code, name, paid, uses_balance, requires_document, max_days, active, pay_percent from leave_type order by id")
+        return jdbc.sql("select id, code, name, paid, uses_balance, requires_document, max_days, active, pay_percent, circumstance"
+                + " from leave_type order by id")
                 .query(LeaveType.class).list();
     }
 
@@ -296,6 +298,9 @@ public class LeaveService {
         values.put("LEAVE_SENIORITY_YEARS", String.valueOf(seniorityYears));
         values.put("LEAVE_SENIORITY_DAYS", seniorityDays.stripTrailingZeros().toPlainString());
         if (annualPaid != null) {
+            if (!annualPaid && !congo()) {
+                throw new BusinessRuleException("Annual leave must be paid in the DR Congo (Code du travail art. 142).");
+            }
             values.put(ANNUAL_PAID, String.valueOf(annualPaid));
         }
         if (carryPercent != null) {
@@ -587,7 +592,7 @@ public class LeaveService {
             throw new BusinessRuleException("Choose dates from 60 days ago to one year ahead.");
         }
         long calendarDays = ChronoUnit.DAYS.between(start, end) + 1;
-        if (type.maxDays() != null && calendarDays > type.maxDays()) {
+        if (!type.circumstance() && type.maxDays() != null && calendarDays > type.maxDays()) {
             throw new BusinessRuleException(type.name() + " lasts at most " + type.maxDays() + " days.");
         }
         if (halfDay != null && !start.equals(end)) {
@@ -599,6 +604,9 @@ public class LeaveService {
         }
         if (halfDay != null) {
             days = new BigDecimal("0.5");
+        }
+        if (type.circumstance()) {
+            checkCircumstance(user, type, start, days);
         }
         int overlapping = jdbc.sql("""
                 select count(*) from leave_request where user_id = ? and status in ('PENDING', 'AWAITING_HR', 'APPROVED')
@@ -621,6 +629,33 @@ public class LeaveService {
         audit.record("leave.requested", "leave_request", id, Map.of("userId", user.getId(), "type", type.code(),
                 "start", start.toString(), "end", end.toString(), "days", days));
         return find(id);
+    }
+
+    public static final String CIRCUMSTANCE_YEAR_MAX = "LEAVE_CIRCUMSTANCE_YEAR_MAX";
+
+    /**
+     * Leave for a family event (DRC Code du travail art. 146): each event gives a number of working days, and the paid days
+     * for all events of a calendar year stay within a yearly limit (15 working days in the DRC).
+     */
+    private void checkCircumstance(AppUser user, LeaveType type, LocalDate start, BigDecimal days) {
+        if (type.maxDays() != null && days.compareTo(BigDecimal.valueOf(type.maxDays())) > 0) {
+            throw new BusinessRuleException(type.name() + " gives at most " + type.maxDays() + " working days.");
+        }
+        String max = setting(CIRCUMSTANCE_YEAR_MAX, "");
+        if (max.isBlank()) {
+            return;
+        }
+        BigDecimal taken = jdbc.sql("""
+                select coalesce(sum(r.working_days), 0) from leave_request r join leave_type t on t.id = r.leave_type_id
+                where r.user_id = ? and t.circumstance and r.status in ('PENDING', 'AWAITING_HR', 'APPROVED')
+                and extract(year from r.start_date) = ?""").params(user.getId(), start.getYear())
+                .query(BigDecimal.class).single();
+        BigDecimal limit = new BigDecimal(max);
+        if (taken.add(days).compareTo(limit) > 0) {
+            throw new BusinessRuleException("Family event leave is limited to " + limit.stripTrailingZeros().toPlainString()
+                    + " working days a year; " + taken.stripTrailingZeros().toPlainString() + " are already taken or requested in "
+                    + start.getYear() + ".");
+        }
     }
 
     public LeaveRequest find(long id) {

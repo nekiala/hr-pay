@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api, type GradeCategory, type Grade, type Occupation } from '../api'
+import { ApiError, api, money, type GradeCategory, type Grade, type Occupation } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
+import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+
+type LegalMinimum = {
+  from: string; smigDaily: number; usdLocal: number; rateDate: string; applied: boolean
+  grades: { gradeId: number; code: string; currency: string; coefficient: number; minimumLocal: number; oldBase: number; newBase: number }[]
+  people: { userId: number; name: string; registrationNo: string | null; oldGrade: string; oldBasic: number; oldComplement: number; net: number
+    newGrade: string | null; newBasic: number | null; newComplement: number | null; newNet: number | null; currency: string; problem: string | null }[]
+}
+
+const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01` }
 
 type CategoryWithRaise = GradeCategory & {
   anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH'
@@ -20,6 +30,23 @@ export default function PayrollSettingsPage() {
   const [newOccupation, setNewOccupation] = useState({ code: '', name: '' })
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [minimumFrom, setMinimumFrom] = useState(firstOfMonth())
+  const [minimum, setMinimum] = useState<LegalMinimum | null>(null)
+  const [minimumBusy, setMinimumBusy] = useState(false)
+  const [minimumError, setMinimumError] = useState<string | null>(null)
+  const legalMinimum = async (apply: boolean) => {
+    setMinimumBusy(true)
+    setMinimumError(null)
+    try {
+      const r = await api<LegalMinimum>(`/api/grades/legal-minimum?from=${minimumFrom}`, apply ? { method: 'POST' } : {})
+      setMinimum(r)
+      if (apply) load()
+    } catch (e) {
+      setMinimumError(e instanceof Error ? e.message : t('Something went wrong.'))
+    } finally {
+      setMinimumBusy(false)
+    }
+  }
 
   const load = () => {
     api<CategoryWithRaise[]>('/api/leave/categories').then(setCategories).catch((e: Error) => setError(e.message))
@@ -124,7 +151,7 @@ export default function PayrollSettingsPage() {
         <h3>{t('Grades')}</h3>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Category')}</th><th>{t('Base salary')}</th><th>{t('Currency')}</th><th>{t('Active')}</th><th></th></tr></thead>
+            <thead><tr><th>{t('Code')}</th><th>{t('Name')}</th><th>{t('Category')}</th><th>{t('Base salary')}</th><th>{t('Currency')}</th><th title={t('Coefficient on the SMIG for the legal minimum of the grade (DRC Décret 25/22, 100 for the lowest)')}>{t('SMIG coefficient')}</th><th>{t('Active')}</th><th></th></tr></thead>
             <tbody>
               {grades.map((g) => (
                 <tr key={g.id}>
@@ -141,6 +168,7 @@ export default function PayrollSettingsPage() {
                       <option>{t('USD')}</option><option>{t('CDF')}</option>
                     </select>
                   </td>
+                  <td><input type="number" min={1} step={1} className="narrow-input" disabled={!editable} value={g.smigCoefficient ?? ''} placeholder="—" onChange={(e) => setGrade(g.id, { smigCoefficient: e.target.value === '' ? null : Number(e.target.value) })} /></td>
                   <td><input type="checkbox" checked={g.active} disabled={!editable} onChange={(e) => setGrade(g.id, { active: e.target.checked })} /></td>
                   <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grades/${g.id}`, { method: 'PUT', body: g }), t("{a} saved.", { a: g.code }))}>{t('Save')}</Button>}</td>
                 </tr>
@@ -160,6 +188,7 @@ export default function PayrollSettingsPage() {
                     <select value={newGrade.currency} onChange={(e) => setNewGrade({ ...newGrade, currency: e.target.value })}><option>{t('USD')}</option><option>{t('CDF')}</option></select>
                   </td>
                   <td></td>
+                  <td></td>
                   <td><Button onClick={() => run(async () => {
                     await api('/api/grades', { method: 'POST', body: { ...newGrade, categoryId: Number(newGrade.categoryId), baseSalary: Number(newGrade.baseSalary), active: true } })
                     setNewGrade({ categoryId: '', code: '', name: '', baseSalary: '', currency: 'USD' })
@@ -170,6 +199,13 @@ export default function PayrollSettingsPage() {
           </table>
         </div>
         <p className="hint">{t('Changing a grade\'s base salary does not change anyone\'s current basic; it is the default for new contracts and the base for anniversary raises.')}</p>
+        {editable && can('salary.write') && grades.some((g) => g.smigCoefficient != null) && (
+          <div className="row">
+            <Button className="secondary" onClick={() => { setMinimumError(null); setMinimum({ from: minimumFrom, smigDaily: 0, usdLocal: 0, rateDate: '', applied: false, grades: [], people: [] }); void legalMinimum(false) }}>
+              {t('Raise grades to the legal minimum…')}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -201,6 +237,53 @@ export default function PayrollSettingsPage() {
           </table>
         </div>
       </div>
+      {minimum && (
+        <Modal size="lg" title={t('Raise grades to the legal minimum')} onClose={() => setMinimum(null)}
+          footer={minimum.applied ? <Button onClick={() => setMinimum(null)}>{t('Close')}</Button> : (
+            <>
+              <Button className="secondary" onClick={() => setMinimum(null)}>{t('Cancel')}</Button>
+              <Button disabled={minimumBusy || minimum.grades.length === 0} onClick={() => legalMinimum(true)}>{t('Apply')}</Button>
+            </>
+          )}>
+          <p className="hint">{t('Each grade base below SMIG x coefficient x 26 days (Décret 25/22) is raised. Each person on a raised grade keeps the same net: the basic becomes the new base and the complement shrinks; when the net is too low for the new base, the person moves to the nearest grade below whose base fits, with a complement for the rest.')}</p>
+          <label>{t('From')}<input type="date" value={minimumFrom} disabled={minimum.applied} onChange={(e) => setMinimumFrom(e.target.value)} onBlur={() => !minimum.applied && legalMinimum(false)} /></label>
+          <ErrorText error={minimumError} />
+          {minimumBusy && <p className="muted">{t('Working it out…')}</p>}
+          {!minimumBusy && minimum.smigDaily > 0 && (
+            <>
+              {minimum.applied && <p className="success">{t('Applied from {a}.', { a: minimum.from })}</p>}
+              <p className="muted">{t('SMIG {a} FC a day; {b} FC to the dollar ({c}).', { a: minimum.smigDaily, b: minimum.usdLocal, c: minimum.rateDate })}</p>
+              {minimum.grades.length === 0 ? <p>{t('Every grade is at or above its legal minimum.')}</p> : (
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>{t('Grade')}</th><th>{t('Coefficient')}</th><th>{t('Legal minimum')}</th><th>{t('Base now')}</th><th>{t('New base')}</th></tr></thead>
+                    <tbody>{minimum.grades.map((g) => (
+                      <tr key={g.gradeId}><td>{g.code}</td><td>{g.coefficient}</td><td>{money(g.minimumLocal, 'CDF')}</td><td>{money(g.oldBase, g.currency)}</td><td><strong>{money(g.newBase, g.currency)}</strong></td></tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+              {minimum.people.length > 0 && (
+                <div className="table-wrap">
+                  <table>
+                    <thead><tr><th>{t('Employee')}</th><th>{t('Grade')}</th><th>{t('Basic')}</th><th>{t('Complement')}</th><th>{t('Net')}</th><th></th></tr></thead>
+                    <tbody>{minimum.people.map((p) => (
+                      <tr key={p.userId}>
+                        <td>{p.name}{p.registrationNo && <span className="muted"> · {p.registrationNo}</span>}</td>
+                        <td>{p.oldGrade}{p.newGrade && p.newGrade !== p.oldGrade ? ` → ${p.newGrade}` : ''}</td>
+                        <td>{money(p.oldBasic, p.currency)}{p.newBasic != null && ` → ${money(p.newBasic, p.currency)}`}</td>
+                        <td>{money(p.oldComplement, p.currency)}{p.newComplement != null && ` → ${money(p.newComplement, p.currency)}`}</td>
+                        <td>{money(p.net, p.currency)}{p.newNet != null && ` → ${money(p.newNet, p.currency)}`}</td>
+                        <td>{p.problem && <span className="badge warn">{p.problem}</span>}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </Modal>
+      )}
     </section>
   )
 }

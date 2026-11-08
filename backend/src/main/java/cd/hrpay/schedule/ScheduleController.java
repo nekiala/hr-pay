@@ -2,6 +2,7 @@ package cd.hrpay.schedule;
 
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
+import cd.hrpay.i18n.Texts;
 import cd.hrpay.common.ConflictException;
 import cd.hrpay.common.NotFoundException;
 import cd.hrpay.user.UserRepository;
@@ -50,14 +51,38 @@ public class ScheduleController {
                           LocalTime lunchStart, Integer lunchMinutes, boolean lunchPaid, int scheduledMinutes) {}
 
     public record ScheduleView(Long id, String code, String name, int graceMinutes, boolean deductLateArrival,
-                               boolean deductEarlyDeparture, boolean active, int weeklyMinutes, List<DayView> days) {
+                               boolean deductEarlyDeparture, boolean active, int weeklyMinutes, List<DayView> days,
+                               List<String> warnings) {
         static ScheduleView of(WorkSchedule s) {
-            return new ScheduleView(s.getId(), s.getCode(), s.getName(), s.getGraceMinutes(), s.isDeductLateArrival(),
-                    s.isDeductEarlyDeparture(), s.isActive(), s.weeklyMinutes(), s.getDays().stream()
+            List<DayView> days = s.getDays().stream()
                     .map(d -> new DayView(d.getWeekday(), d.isWorkday(), d.getStartTime(), d.getEndTime(),
                             d.isLunchEnabled(), d.getLunchStart(), d.getLunchMinutes(), d.isLunchPaid(),
-                            d.scheduledMinutes())).toList());
+                            d.scheduledMinutes())).toList();
+            return new ScheduleView(s.getId(), s.getCode(), s.getName(), s.getGraceMinutes(), s.isDeductLateArrival(),
+                    s.isDeductEarlyDeparture(), s.isActive(), s.weeklyMinutes(), days, legalWarnings(days));
         }
+    }
+
+    /**
+     * The legal working day is 8 hours (DRC Code du travail art. 119 as amended by Loi 16/010; Republic of the Congo, 40 hours a
+     * week over 5 days). A longer planned day is allowed but the time above is overtime.
+     */
+    static final int LEGAL_DAY_MINUTES = 480;
+
+    static List<String> legalWarnings(List<DayView> days) {
+        List<String> out = new java.util.ArrayList<>();
+        for (DayView d : days) {
+            if (d.workday() && d.scheduledMinutes() > LEGAL_DAY_MINUTES) {
+                out.add(Texts.t("%s: %s of work planned, more than the legal 8 hours a day; the time above is overtime.",
+                        java.time.DayOfWeek.of(d.weekday()).getDisplayName(java.time.format.TextStyle.FULL, Texts.locale()),
+                        hours(d.scheduledMinutes())));
+            }
+        }
+        return out;
+    }
+
+    private static String hours(int minutes) {
+        return minutes / 60 + "h" + (minutes % 60 == 0 ? "" : String.format("%02d", minutes % 60));
     }
 
     public record AssignInput(@NotNull Long scheduleId, @NotNull LocalDate effectiveFrom) {}

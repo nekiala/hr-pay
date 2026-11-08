@@ -5,7 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
 
-type Draft = Omit<Schedule, 'id' | 'weeklyMinutes'> & { id?: number }
+type Draft = Omit<Schedule, 'id' | 'weeklyMinutes' | 'warnings'> & { id?: number }
 
 const blank = (): Draft => ({
   code: '', name: '', graceMinutes: 10, deductLateArrival: true, deductEarlyDeparture: true, active: true,
@@ -41,7 +41,7 @@ export default function SchedulesPage() {
       const saved = await api<Schedule>(draft.id ? `/api/schedules/${draft.id}` : '/api/schedules',
         { method: draft.id ? 'PUT' : 'POST', body })
       setDraft(saved)
-      setMessage(t('Saved. {a} per week.', { a: hours(saved.weeklyMinutes) }))
+      setMessage([t('Saved. {a} per week.', { a: hours(saved.weeklyMinutes) }), ...(saved.warnings ?? [])].join(' '))
       await load()
     } catch (e) {
       setError(e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Could not save.'))

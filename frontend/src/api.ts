@@ -431,6 +431,7 @@ export type Schedule = {
   active: boolean
   weeklyMinutes: number
   days: ScheduleDay[]
+  warnings?: string[]
 }
 
 export type ScheduleAssignment = { id: number; scheduleId: number; scheduleName: string; effectiveFrom: string }
@@ -693,7 +694,7 @@ export const fileToBase64 = (file: File) => new Promise<string>((resolve, reject
 export type LeaveLedgerEntry = { id: number; leaveType: string; entryDate: string; days: number; kind: string; year: number | null; note: string | null; createdBy: string }
 export const days = (n: number) => plural('{a} day', '{a} days', Number(n), { a: Number(n).toLocaleString(locale(), { maximumFractionDigits: 2 }) })
 
-export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: string; active: boolean }
+export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: string; active: boolean; smigCoefficient: number | null }
 export type Occupation = { id: number; code: string; name: string; active: boolean }
 export type Contract = {
   id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
@@ -705,6 +706,7 @@ export type Profile = {
   maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED'; cnssNumber: string | null; taxNumber: string | null
   paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
   mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; postnom: string | null; commune: string | null
+  nursingBreakUntil?: string | null
 }
 export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
 export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }

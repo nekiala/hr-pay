@@ -10,7 +10,7 @@
      "id": 1,
      "code": "CAT1",
      "name": "Category 1: execution staff (sample)",
-     "annual_leave_days": 20.0,
+     "annual_leave_days": 26.0,
      "active": true,
      "anniversary_raise_percent": 2.0,
      "raise_timing": "NEXT_MONTH",
@@ -24,7 +24,7 @@
      "id": 2,
      "code": "CAT2",
      "name": "Category 2: supervisors (sample)",
-     "annual_leave_days": 24.0,
+     "annual_leave_days": 26.0,
      "active": true,
      "anniversary_raise_percent": 2.5,
      "raise_timing": "NEXT_MONTH",
@@ -63,7 +63,8 @@
      "name": "Grade 1B (sample)",
      "base_salary": 120000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     },
     {
      "id": 2,
@@ -72,7 +73,8 @@
      "name": "Grade 1A (sample)",
      "base_salary": 100000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     },
     {
      "id": 3,
@@ -81,7 +83,8 @@
      "name": "Grade 2B (sample)",
      "base_salary": 300000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     },
     {
      "id": 4,
@@ -90,7 +93,8 @@
      "name": "Grade 2A (sample)",
      "base_salary": 250000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     },
     {
      "id": 5,
@@ -99,7 +103,8 @@
      "name": "Grade 3B (sample)",
      "base_salary": 900000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     },
     {
      "id": 6,
@@ -108,7 +113,8 @@
      "name": "Grade 3A (sample)",
      "base_salary": 700000.0,
      "currency": "XAF",
-     "active": true
+     "active": true,
+     "smig_coefficient": null
     }
    ]
   },
@@ -167,7 +173,8 @@
      "requires_document": false,
      "max_days": null,
      "active": true,
-     "pay_percent": 100.0
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 3,
@@ -178,7 +185,8 @@
      "requires_document": true,
      "max_days": 98,
      "active": true,
-     "pay_percent": 100.0
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 4,
@@ -189,7 +197,8 @@
      "requires_document": true,
      "max_days": 5,
      "active": true,
-     "pay_percent": 100.0
+     "pay_percent": 100.0,
+     "circumstance": false
     },
     {
      "id": 5,
@@ -200,7 +209,8 @@
      "requires_document": false,
      "max_days": null,
      "active": true,
-     "pay_percent": 0.0
+     "pay_percent": 0.0,
+     "circumstance": false
     },
     {
      "id": 2,
@@ -211,7 +221,8 @@
      "requires_document": true,
      "max_days": null,
      "active": true,
-     "pay_percent": 66.67
+     "pay_percent": 66.67,
+     "circumstance": false
     }
    ]
   },
@@ -578,7 +589,7 @@
      "default_currency": null,
      "percent": 30.0,
      "subject_to_cnss": false,
-     "taxable_ipr": false,
+     "taxable_ipr": true,
      "ipr_exempt_cap_percent": null,
      "prorated": true,
      "default_for_all": true,
@@ -1157,6 +1168,20 @@
      "unit": "COUNT",
      "description": "Paid days the person may take each week of the notice to look for a new job.",
      "display_order": 310
+    },
+    {
+     "code": "ITS_FIRST_BAND_FLAT",
+     "name": "ITS, flat amount of the first band, per part and year",
+     "unit": "XAF",
+     "description": "Tax per part on the first band of the yearly pay, whatever the amount in it (CGI art. 116 G).",
+     "display_order": 85
+    },
+    {
+     "code": "ITS_MINIMUM_YEARLY",
+     "name": "ITS minimum per year when the pay is below the SMIG",
+     "unit": "XAF",
+     "description": "Tax a year, at least, of a person paid below the minimum wage (CGI art. 116 G).",
+     "display_order": 86
     }
    ]
   },
@@ -1275,6 +1300,22 @@
      "value": 2.0,
      "note": "Code du travail art. 40",
      "created_by": "system"
+    },
+    {
+     "id": 17,
+     "code": "ITS_FIRST_BAND_FLAT",
+     "effective_from": "2026-01-01",
+     "value": 1200.0,
+     "note": "Loi 42-2025 (loi de finances 2026), CGI art. 116 G",
+     "created_by": "system"
+    },
+    {
+     "id": 18,
+     "code": "ITS_MINIMUM_YEARLY",
+     "effective_from": "2026-01-01",
+     "value": 1200.0,
+     "note": "Loi 42-2025 (loi de finances 2026), CGI art. 116 G",
+     "created_by": "system"
     }
    ]
   },
@@ -1312,6 +1353,46 @@
      "lower_bound": 3000000.0,
      "upper_bound": null,
      "rate_percent": 40.0,
+     "created_by": "system"
+    },
+    {
+     "id": 5,
+     "effective_from": "2026-01-01",
+     "lower_bound": 0.0,
+     "upper_bound": 615000.0,
+     "rate_percent": 0.0,
+     "created_by": "system"
+    },
+    {
+     "id": 6,
+     "effective_from": "2026-01-01",
+     "lower_bound": 615000.0,
+     "upper_bound": 1500000.0,
+     "rate_percent": 10.0,
+     "created_by": "system"
+    },
+    {
+     "id": 7,
+     "effective_from": "2026-01-01",
+     "lower_bound": 1500000.0,
+     "upper_bound": 3500000.0,
+     "rate_percent": 15.0,
+     "created_by": "system"
+    },
+    {
+     "id": 8,
+     "effective_from": "2026-01-01",
+     "lower_bound": 3500000.0,
+     "upper_bound": 5000000.0,
+     "rate_percent": 20.0,
+     "created_by": "system"
+    },
+    {
+     "id": 9,
+     "effective_from": "2026-01-01",
+     "lower_bound": 5000000.0,
+     "upper_bound": null,
+     "rate_percent": 30.0,
      "created_by": "system"
     }
    ]
@@ -1362,11 +1443,11 @@
     },
     {
      "key": "LEAVE_MIN_DAYS_MONTH",
-     "value": "0"
+     "value": "2.1667"
     },
     {
      "key": "LEAVE_MIN_DAYS_MONTH_MINOR",
-     "value": "0"
+     "value": "2.1667"
     },
     {
      "key": "GPS_RETENTION_DAYS",

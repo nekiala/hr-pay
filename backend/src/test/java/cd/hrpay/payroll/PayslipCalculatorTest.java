@@ -173,4 +173,41 @@ class PayslipCalculatorTest {
         assertThat(r.cnssBase()).isEqualByComparingTo("1812.50");
         assertThat(r.lines()).anyMatch(l -> l.label().equals("THIRTEENTH_MONTH (81.25% x 1000)"));
     }
+    static final PayslipCalculator.Rates RATES_2026 = new PayslipCalculator.Rates(d("2000"), d("5"), d("13"), d("1"),
+            d("0.2"), d("25"), d("30"), IprCalculatorTest.BANDS, d("2"), 9, d("30"), d("21500"), "CD", "CDF",
+            java.util.Map.of("IPR_MIN_MONTHLY", d("2500")));
+
+    static PayslipCalculator.Input graded(String basic, String coefficient, PayslipCalculator.Rates rates) {
+        return new PayslipCalculator.Input("USD", d(basic), 10560, 10560, 22, 22, BigDecimal.ZERO, 0, null, null, 2, 3,
+                false, ELEMENTS, List.of(), List.of(), List.of(), rates, 0, coefficient == null ? null : d(coefficient), "MARRIED");
+    }
+
+    @Test
+    void theBasicIsCheckedAgainstTheGradeMinimumOfDecret2522() {
+        // Cat. 3 step 1, coefficient 154: 21,500 x 1.54 x 26 = 860,860 CDF, 430.43 USD at 2,000.
+        var below = PayslipCalculator.calculate(graded("430", "154", RATES_2026));
+        assertThat(below.warnings()).anyMatch(w -> w.startsWith("The basic salary (860000 CDF) is below the legal minimum")
+                && w.contains("= 860860 CDF"));
+        assertThat(PayslipCalculator.calculate(graded("431", "154", RATES_2026)).warnings())
+                .noneMatch(w -> w.contains("legal minimum of the grade"));
+        // No coefficient: the SMIG itself (21,500 x 26 = 559,000 CDF).
+        assertThat(PayslipCalculator.calculate(graded("279", null, RATES_2026)).warnings())
+                .anyMatch(w -> w.contains("= 559000 CDF"));
+    }
+
+    @Test
+    void familyAllowancesBelowTheLegalMinimumAreFlagged() {
+        // 1/27 of 21,500 a day x 26 days = 20,703.70 CDF a child; 10 USD at 2,000 = 20,000 CDF.
+        var r = PayslipCalculator.calculate(graded("1000", "651", RATES_2026));
+        assertThat(r.warnings()).anyMatch(w -> w.startsWith("Family allowances (20000 CDF a child) are below the legal minimum"));
+        assertThat(PayslipCalculator.calculate(input(10560, List.of(), List.of(), List.of(), false)).warnings())
+                .noneMatch(w -> w.startsWith("Family allowances"));
+    }
+
+    @Test
+    void theIprIsAtLeast2500FcAMonthWhenTaxIsDue() {
+        assertThat(PayslipCalculator.minimumMonthly(d("21500"), d("100"))).isEqualByComparingTo("559000");
+        var r = PayslipCalculator.calculate(graded("300", null, RATES_2026));
+        assertThat(line(r, "IPR").multiply(d("2000"))).isGreaterThanOrEqualTo(d("2500"));
+    }
 }

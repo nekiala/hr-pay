@@ -190,9 +190,19 @@ public class PayrollRuns {
                 "ITS_PROFESSIONAL_DEDUCTION", "ITS_MAX_PARTS", "SMIG_MONTHLY")) {
             more.put(code, statutory.rate(code, on));
         }
+        // Loi n° 42-2025 (finance law 2026): the ITS first band as a flat amount, and the minimum below the SMIG.
+        for (String code : List.of("ITS_FIRST_BAND_FLAT", "ITS_MINIMUM_YEARLY")) {
+            more.put(code, statutory.rateOrZero(code, on));
+        }
         return new PayslipCalculator.Rates(usdLocal, statutory.rate("CNSS_EMPLOYEE", on), statutory.rate("CNSS_EMPLOYER", on),
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, statutory.rate("DEBT_MAX_SHARE", on),
                 statutory.brackets(on).brackets(), BigDecimal.ZERO, 0, BigDecimal.valueOf(100), null, "CG", local, Map.copyOf(more));
+    }
+
+    /** The grade's minimum-wage coefficient (100 = manœuvre ordinaire), or null when the grade has none. */
+    BigDecimal smigCoefficient(Long gradeId) {
+        return gradeId == null ? null : jdbc.sql("select smig_coefficient from grade where id = ?").param(gradeId)
+                .query(BigDecimal.class).optional().orElse(null);
     }
 
     String localCurrency() {
@@ -209,7 +219,8 @@ public class PayrollRuns {
                         statutory.rate("ONEM", last), statutory.rate("IERE", last), statutory.rate("DEBT_MAX_SHARE", last),
                         statutory.brackets(last).brackets(), statutory.rate("IPR_DEPENDANT_REDUCTION", last),
                         statutory.rate("IPR_MAX_DEPENDANTS", last).intValue(), statutory.rate("IPR_CAP", last),
-                        statutory.rate("SMIG_DAILY", last));
+                        statutory.rate("SMIG_DAILY", last), "CD", "CDF",
+                        Map.of("IPR_MIN_MONTHLY", statutory.rateOrZero("IPR_MIN_MONTHLY", last)));
     }
 
     /** What working out the payslips of one month needs, gathered once. */
@@ -315,7 +326,7 @@ public class PayrollRuns {
                 thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(), ctx.elements(),
                 pay.standingFor(userId, month),
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
-                allocatedMinutes));
+                allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus()));
         List<String> warnings = new ArrayList<>(r.warnings());
         if (summary.overtimePendingMinutes() > 0) {
             warnings.add(summary.overtimePendingMinutes() / 60 + " h " + summary.overtimePendingMinutes() % 60
