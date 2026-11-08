@@ -981,3 +981,32 @@ export async function openFile(path: string) {
 export const fileSize = (bytes: number) => bytes < 1024 * 1024
   ? t('{a} KB', { a: Math.max(1, Math.round(bytes / 1024)) })
   : t('{a} MB', { a: (bytes / 1024 / 1024).toLocaleString(locale(), { maximumFractionDigits: 1 }) })
+
+// ---- pay runs: every type in one list ------------------------------------------------------------------------------
+export type PayRunType = 'MONTHLY' | 'QUINZAINE' | 'LEAVE_PAY' | 'THIRTEENTH' | 'CORRECTION' | 'SETTLEMENT'
+export type PayRunStage = 'TO_APPROVE' | 'TO_CLOSE' | 'TO_PAY' | 'DONE' | 'CANCELLED'
+export type PayRunRow = {
+  type: PayRunType; key: string; month: string; payDate: string | null; title: string; status: string; stage: PayRunStage
+  people: number; totals: { currency: string; amount: number }[]; calculatedBy: string | null; calculatedAt: string | null
+  approvedBy: string | null
+}
+export type PayRunNotice = { level: 'WARN' | 'INFO'; text: string; type: PayRunType; key: string }
+export type PayRunMonth = { month: string; runs: PayRunRow[]; notices: PayRunNotice[] }
+export type PayRunTypeInfo = { type: PayRunType; available: boolean }
+export type ThirteenthSettings = { enabled: boolean; base: 'AVERAGE_BASIC' | 'LAST_BASIC'; fallbackPercent: number; payMonth: number; prorate: boolean }
+export type ThirteenthLine = {
+  id: number; userId: number; employeeName: string; registrationNo: string; currency: string; scorePercent: number
+  scoreSource: 'EVALUATIONS' | 'FALLBACK'; evaluations: number; base: number; monthsWorked: number; amount: number
+}
+export type ThirteenthRun = {
+  id: number; year: number; month: string; base: ThirteenthSettings['base']; fallbackPercent: number; prorate: boolean
+  status: 'CALCULATED' | 'APPROVED' | 'PAID' | 'CANCELLED'; skipped: string[]; excluded: { userId: number; name: string; reason: string }[]
+  calculatedBy: string; calculatedAt: string; approvedBy: string | null; approvedAt: string | null; paidAt: string | null
+  cancelNote: string | null; totals: { currency: string; amount: number; employees: number }[]; lines: ThirteenthLine[]
+}
+
+/** Where each pay run opens. */
+export const payRunLink = (r: { type: PayRunType; key: string }) => ({
+  MONTHLY: `/payroll/runs/monthly/${r.key}`, QUINZAINE: `/payroll/runs/quinzaine/${r.key}`, LEAVE_PAY: `/payroll/runs/leave-pay/${r.key}`,
+  THIRTEENTH: `/payroll/runs/thirteenth/${r.key}`, CORRECTION: '/payroll/runs/corrections', SETTLEMENT: `/users/${r.key}/departure`,
+}[r.type])

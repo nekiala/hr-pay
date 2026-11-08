@@ -30,10 +30,11 @@ class PayrollJobs {
     static final String CLOSE = "payroll.close";
     static final String QUINZAINE = "quinzaine.calculate";
     static final String LEAVE_PAY = "leave-pay.calculate";
+    static final String THIRTEENTH = "thirteenth.calculate";
     static final String IMPORT = "import";
     static final String PAYSLIPS_ZIP = "payslips.zip";
 
-    PayrollJobs(JobTypes types, PayrollRuns runs, Quinzaines quinzaines, LeaveAllowances allowances, Imports imports,
+    PayrollJobs(JobTypes types, PayrollRuns runs, Quinzaines quinzaines, LeaveAllowances allowances, cd.hrpay.payroll.Thirteenths thirteenths, Imports imports,
                 PayslipPdf pdf) {
         types.register(CALCULATE, "payroll.run", p -> Texts.t("Payroll calculation, %s", month(p)),
                 job -> runs.calculate(YearMonth.parse(job.text("month"))));
@@ -49,6 +50,8 @@ class PayrollJobs {
                 job -> quinzaines.calculate(YearMonth.parse(job.text("month"))));
         types.register(LEAVE_PAY, "payroll.run", p -> Texts.t("Leave pay calculation"),
                 job -> allowances.calculate(job.ids("leaveRequestIds")));
+        types.register(THIRTEENTH, "payroll.run", p -> Texts.t("13th month calculation, %s", p.path("year").asString("")),
+                job -> thirteenths.calculate(Integer.parseInt(job.text("year")), YearMonth.parse(job.text("month"))));
         types.register(IMPORT, "data.import", p -> Texts.t("Import: %s", p.path("fileName").asString("")),
                 job -> {
                     Imports.Kind kind = Imports.Kind.valueOf(job.text("kind"));

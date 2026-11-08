@@ -49,7 +49,7 @@ export default function QuinzaineSettingsPage() {
 
   return (
     <section>
-      <p className="small muted"><Link to="/payroll/quinzaine">{t('Quinzaine')}</Link></p>
+      <p className="small muted"><Link to="/payroll/new?type=QUINZAINE">{t('New pay run')}</Link></p>
       <h2>{t('Quinzaine settings')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

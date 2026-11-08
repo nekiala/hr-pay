@@ -636,3 +636,21 @@ select.auto-width { width: auto; min-width: 0; }
 .job-card .progress { margin: 8px 0 4px; }
 .job-card p { margin: 4px 0 0; }
 @media (max-width: 960px) { .job-progress { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+
+/* Pay runs: the type picker and the month timeline. */
+.badge.info { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.type-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+.type-pick > button, .type-pick > .off { text-align: left; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; padding: 16px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); color: inherit; font: inherit; cursor: pointer; min-height: 0; height: auto; }
+.type-pick button:hover { border-color: var(--primary); background: var(--primary-soft); }
+.type-pick button.chosen { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: var(--primary-soft); }
+.type-pick .off { cursor: default; opacity: .65; background: var(--surface-2); }
+.type-pick strong { font-size: 15px; }
+.type-pick span { font-size: 13px; color: var(--muted); line-height: 18px; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.timeline li a { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+  text-decoration: none; color: inherit; background: var(--surface-2); height: 100%; }
+.timeline li a:hover { border-color: var(--border-strong); }
+.timeline .when { font-size: 12px; color: var(--muted); }
+.row > label.month-pick { flex: 0 0 auto; }
+.row > label.month-pick input { width: auto; flex: 0 0 auto; }
