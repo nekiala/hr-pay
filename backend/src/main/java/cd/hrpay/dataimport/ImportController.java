@@ -41,8 +41,10 @@ public class ImportController {
     public record KindView(Imports.Kind kind, List<Imports.Column> columns) {}
 
     private final Imports imports;
+    private final cd.hrpay.job.BackgroundJobs jobs;
 
-    public ImportController(Imports imports) {
+    public ImportController(Imports imports, cd.hrpay.job.BackgroundJobs jobs) {
+        this.jobs = jobs;
         this.imports = imports;
     }
 
@@ -70,8 +72,12 @@ public class ImportController {
     }
 
     @PostMapping("/{kind}")
-    public Imports.Result apply(@PathVariable String kind, @Valid @RequestBody FileInput in) {
-        return imports.run(kind(kind), in.fileName(), in.bytes(), true);
+    public org.springframework.http.ResponseEntity<Object> apply(@PathVariable String kind, @Valid @RequestBody FileInput in) {
+        Imports.Kind k = kind(kind);
+        String name = in.fileName() == null || in.fileName().isBlank() ? "import" : in.fileName();
+        return jobs.answer(jobs.submit("import", "import:" + k.name(),
+                Map.of("kind", k.name(), "apply", true, "fileName", name),
+                new cd.hrpay.job.JobFile(name, "application/octet-stream", in.bytes())));
     }
 
     private static Imports.Kind kind(String v) {

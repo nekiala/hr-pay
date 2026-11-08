@@ -59,7 +59,53 @@ export async function api<T>(path: string, options: { method?: string; body?: un
     throw new ApiError(response.status, message, fieldErrors)
   }
   if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+  const body = await response.json()
+  // A long task runs in the background: follow its job, then answer as the request would have.
+  if (response.status === 202 && body && typeof body === 'object' && 'job' in body) return followJob<T>(body.job as Job)
+  return body as T
+}
+
+// ---- background jobs ----------------------------------------------------------------------------------------------
+
+export type JobStatus = 'WAITING' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED'
+export type Job = {
+  id: number; type: string; title: string; status: JobStatus; progress: number; step: string | null; requestedBy: string
+  createdAt: string; startedAt: string | null; finishedAt: string | null; attempts: number; error: string | null
+  errorStatus: number | null; fileName: string | null; fileSize: number | null; existing: boolean; result: unknown
+}
+/** What a job that makes a file answers: the file to download from My jobs. */
+export type JobFileResult = { jobId: number; fileName: string; size: number; download: string }
+
+export const jobFinished = (j: Job) => j.status === 'DONE' || j.status === 'FAILED' || j.status === 'CANCELLED'
+
+/** Sent on window as 'hrpay:job' each time a followed job changes, for the progress card. */
+export type JobEvent = CustomEvent<Job>
+
+/** Follows a job until it ends: its answer, or its error as the request would have thrown it. */
+export async function followJob<T>(job: Job): Promise<T> {
+  let current = job
+  let pause = 700
+  while (true) {
+    window.dispatchEvent(new CustomEvent('hrpay:job', { detail: current }))
+    if (current.status === 'DONE') return current.result as T
+    if (current.status === 'FAILED') throw new ApiError(current.errorStatus ?? 500, current.error ?? t('The job failed.'))
+    if (current.status === 'CANCELLED') throw new ApiError(409, t('The job was cancelled.'))
+    await new Promise((resolve) => window.setTimeout(resolve, pause))
+    pause = Math.min(3000, pause + 300)
+    try {
+      current = await api<Job>(`/api/jobs/${current.id}`)
+    } catch (e) {
+      // A network blip: keep following; signed out or gone: stop.
+      if (e instanceof ApiError && (e.status === 401 || e.status === 404)) throw e
+    }
+  }
+}
+
+/** Starts a job that makes a file and downloads the file when it is ready. */
+export async function downloadJob(path: string, body?: unknown) {
+  const r = await api<JobFileResult>(path, { method: 'POST', body })
+  await download(r.download, r.fileName)
+  return r
 }
 
 export type Me = {

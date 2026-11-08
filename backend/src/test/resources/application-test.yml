@@ -24,3 +24,12 @@ app:
   webhooks:
     # Deliveries are sent by the tests themselves, never in the background.
     every: PT10H
+  jobs:
+    # Requests wait for their job, as they did before jobs ran in the background (JobsIT checks the 202 answer).
+    inline-wait: PT2M
+    # Workers only take the jobs their own test context starts (each context has its own workers).
+    poll: PT1H
+    heartbeat: PT1S
+  payroll:
+    # Every test payroll goes through the threads, as a large one does.
+    parallel-from: 1

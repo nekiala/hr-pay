@@ -628,3 +628,11 @@ textarea.template { min-height: 320px; font-family: 'JetBrains Mono', monospace;
 .inline-pair { display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; }
 .inline-pair .narrow-input { width: 72px; flex: none; }
 select.auto-width { width: auto; min-width: 0; }
+
+/* Background jobs followed from this page: bottom right, above the bottom bar on phones. */
+.job-progress { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: flex; flex-direction: column; gap: 8px; width: min(360px, calc(100vw - 32px)); }
+.job-card { background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px; padding: 12px 14px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+.job-card.failed { border-color: var(--danger-border); }
+.job-card .progress { margin: 8px 0 4px; }
+.job-card p { margin: 4px 0 0; }
+@media (max-width: 960px) { .job-progress { bottom: calc(84px + env(safe-area-inset-bottom)); } }

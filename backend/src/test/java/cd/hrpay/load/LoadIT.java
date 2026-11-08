@@ -1,6 +1,7 @@
 package cd.hrpay.load;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -74,15 +75,33 @@ class LoadIT extends IntegrationTest {
                 {"data":[{"currency_code":"USD","rate_date":"2026-09-30","indicative_rate":"2250"}]}""");
         MockHttpSession hr = login(HR);
         start = System.nanoTime();
-        String run = mvc.perform(post("/api/payroll/runs/2026-09/calculate").session(hr)
-                        .with(SecurityMockMvcRequestPostProcessors.csrf()))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        // As a background job: the page gets a 202 at once and follows the progress.
+        String accepted = mvc.perform(post("/api/payroll/runs/2026-09/calculate").session(hr)
+                        .with(SecurityMockMvcRequestPostProcessors.csrf()).header("Prefer", "respond-async"))
+                .andExpect(status().isAccepted()).andReturn().getResponse().getContentAsString();
+        long job = JsonPath.<Number>read(accepted, "$.job.id").longValue();
+        String run;
+        java.util.Set<Integer> seen = new java.util.TreeSet<>();
+        while (true) {
+            String j = mvc.perform(get("/api/jobs/" + job).session(hr)).andExpect(status().isOk()).andReturn().getResponse()
+                    .getContentAsString();
+            String state = JsonPath.read(j, "$.status");
+            seen.add(JsonPath.<Integer>read(j, "$.progress"));
+            if (state.equals("DONE")) {
+                run = new tools.jackson.databind.json.JsonMapper().writeValueAsString(JsonPath.<Object>read(j, "$.result"));
+                break;
+            }
+            assertThat(state).isIn("WAITING", "RUNNING");
+            Thread.sleep(1000);
+        }
         Duration payroll = Duration.ofNanos(System.nanoTime() - start);
+        System.out.printf("LOAD: progress seen %s%n", seen);
+        assertThat(seen.size()).isGreaterThan(3);
         int slips = JsonPath.<List<Object>>read(run, "$.payslips").size();
         System.out.printf("LOAD: payroll of %d payslips in %.1f s (%.1f ms each)%n", slips, payroll.toMillis() / 1e3,
                 (double) payroll.toMillis() / slips);
         assertThat(slips).isGreaterThanOrEqualTo(EMPLOYEES);
-        assertThat(payroll).isLessThan(Duration.ofMinutes(5));
+        assertThat(payroll).isLessThan(Duration.ofMinutes(1));
 
         // The morning rush: 1,000 people sign in, ask for a code, type it and are checked in, 25 at a time.
         ExecutorService pool = Executors.newFixedThreadPool(25);
@@ -98,7 +117,7 @@ class LoadIT extends IntegrationTest {
                 String challenge = JsonPath.read(started, "$.challengeId");
                 String body = jdbc.sql("select body from outbox_message where recipient = ? order by id desc limit 1")
                         .param(email).query(String.class).single();
-                Matcher m = Pattern.compile("code is (\\d{6})").matcher(body);
+                Matcher m = Pattern.compile("(?:code is|est) (\\d{6})").matcher(body);
                 assertThat(m.find()).isTrue();
                 mvc.perform(json(post("/api/attendance/check-in/confirm").session(s),
                         "{\"challengeId\":\"%s\",\"code\":\"%s\"}".formatted(challenge, m.group(1)))).andExpect(status().isOk());

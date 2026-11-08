@@ -57,6 +57,7 @@ import OrgUnitPage from './pages/OrgUnitPage'
 import OrgSettingsPage from './pages/OrgSettingsPage'
 import CompanyPage from './pages/CompanyPage'
 import SystemPage from './pages/SystemPage'
+import JobsPage from './pages/JobsPage'
 import CompaniesPage from './pages/CompaniesPage'
 import PlatformCompanyPage from './pages/PlatformCompanyPage'
 import PlatformBillingPage from './pages/PlatformBillingPage'
@@ -236,6 +237,7 @@ export default function App() {
           <Route path="/billing" element={<Guard permission="subscription.manage"><BillingPage /></Guard>} />
           <Route path="/platform/licence" element={<Guard permission="platform.manage"><LicencePage /></Guard>} />
           <Route path="/system" element={<Guard permission="system.monitor"><SystemPage /></Guard>} />
+          <Route path="/jobs" element={<JobsPage />} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/privacy/requests" element={<Guard permission="privacy.manage"><PersonalDataPage /></Guard>} />

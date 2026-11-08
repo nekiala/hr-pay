@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, api, money, type PayrollRun, type RunView } from '../api'
+import { ApiError, api, downloadJob, money, type PayrollRun, type RunView } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { ThirteenthMonthCard } from '../components/ThirteenthMonthCard'
@@ -135,6 +135,12 @@ export default function PayrollRunsPage() {
           )}
           {can('payroll.close') && run?.status === 'APPROVED' && (
             <Button disabled={busy} onClick={() => ask({ title: t('Close {a}?', { a: month }), message: t('Payslips are numbered and locked, and loan repayments are recorded. This cannot be undone.'), confirmLabel: t('Close the month'), danger: true, onConfirm: () => act('close', t('Month closed. Employees can now see their payslips.')) })}>{t('Close the month')}</Button>
+          )}
+          {can('payslip.read.all') && run && run.employeeCount > 0 && (
+            <Button className="secondary" onClick={async () => {
+              setError(null)
+              try { await downloadJob(`/api/payroll/runs/${month}/payslips.zip`) } catch (e) { setError((e as Error).message) }
+            }}>{t('All payslips (zip)')}</Button>
           )}
         </div>
       </div>

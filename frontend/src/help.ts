@@ -106,6 +106,27 @@ In **My documents**:
 - **My file**: the documents HR keeps for you, and the ones you send them.` },
   },
   {
+    id: 'jobs', audience: 'everyone', routes: ['/jobs'],
+    fr: { title: 'Les tâches longues en arrière-plan', body: `
+Calculer ou clôturer la paie de milliers de personnes, importer un fichier Excel ou préparer tous les bulletins en zip prend du temps. HR Pay le fait **en arrière-plan** :
+
+- une barre de progression s'affiche en bas de l'écran ; vous pouvez quitter la page et continuer à travailler ;
+- la **cloche** vous prévient quand c'est terminé (et un e-mail si cela a pris plus de 2 minutes) ;
+- **Mes tâches** liste vos tâches des 30 derniers jours : état, durée, fichier à télécharger (gardé 7 jours) ;
+- une tâche en attente peut être annulée, une tâche en échec affiche la raison et peut être relancée.
+
+Une même paie ne peut pas être calculée deux fois en même temps : relancer le calcul montre celui en cours. Si un serveur s'arrête pendant une tâche, elle reprend d'elle-même.` },
+    en: { title: 'Long tasks in the background', body: `
+Calculating or closing the payroll of thousands of people, importing an Excel file or preparing every payslip as a zip takes time. HR Pay does it **in the background**:
+
+- a progress bar shows at the bottom of the screen; you can leave the page and keep working;
+- the **bell** tells you when it ends (and an email if it took more than 2 minutes);
+- **My jobs** lists your jobs of the last 30 days: status, time taken, file to download (kept 7 days);
+- a waiting job can be cancelled; a failed job shows why and can be started again.
+
+The same payroll cannot be calculated twice at once: starting it again shows the one running. If a server stops during a job, the job starts again by itself.` },
+  },
+  {
     id: 'approvals', audience: 'managers', routes: ['/presence', '/overtime/approvals', '/corrections', '/evaluations'],
     fr: { title: 'Responsables : présence, approbations et évaluations', body: `
 Le responsable d'une unité approuve pour toute son équipe, sous-unités comprises ; son adjoint seulement quand il est absent ou le poste vacant.

@@ -51,7 +51,7 @@ public class ErrorAlertFilter extends OncePerRequestFilter {
         return e.getClass().getName();
     }
 
-    static String trace(Throwable e) {
+    public static String trace(Throwable e) {
         StringWriter out = new StringWriter();
         e.printStackTrace(new PrintWriter(out));
         return out.toString();

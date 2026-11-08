@@ -95,6 +95,28 @@ app:
   # fresh with the sample data. Only for a server of its own; it refuses to start without SAMPLE_DATA=true.
   demo:
     enabled: ${DEMO_MODE:false}
+  # "all" (default) answers the web and runs background jobs; "web" only answers; "worker" is meant to only run jobs
+  # (a second container from the same image, for a large installation). Jobs wait in PostgreSQL, nothing else to run.
+  role: ${APP_ROLE:all}
+  jobs:
+    # Threads running background jobs on this server (payroll calculation, closing, imports, zips).
+    workers: ${JOBS_WORKERS:2}
+    # How long a page waits for its job before showing a progress bar instead (small jobs answer at once).
+    inline-wait: ${JOBS_INLINE_WAIT:PT3S}
+    # How often idle workers look for jobs started on another server.
+    poll: ${JOBS_POLL:PT2S}
+    heartbeat: PT15S
+    # A running job whose server sent no heartbeat for this long is put back in the queue (at most 3 tries).
+    stale-after: PT2M
+    # Jobs that end later than this are also announced by email; administrators are alerted past alert-wait.
+    email-after: PT2M
+    alert-wait: PT10M
+    # On shutdown, how long running jobs get to finish before they are left to another server.
+    shutdown-wait: ${JOBS_SHUTDOWN_WAIT:PT60S}
+  payroll:
+    # A payroll of this many people or more is worked out by several threads at once (each uses database connections).
+    threads: ${PAYROLL_THREADS:4}
+    parallel-from: 100
   # Frontend origin allowed to call the API in development.
   cors-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   # Address employees reach the app at; used in the kiosk QR code.

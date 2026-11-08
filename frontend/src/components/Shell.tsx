@@ -4,12 +4,13 @@ import {
   Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, FilePenLine, Banknote, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
-  ChartNoAxesCombined, CircleHelp, Palmtree, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
+  ChartNoAxesCombined, CircleHelp, ListChecks, Palmtree, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
 import { t } from '../i18n'
 import { NotificationBell } from './NotificationBell'
+import { JobProgress } from './JobProgress'
 import { useOfflineSync } from '../pwa'
 import { articleFor } from '../help'
 import { hasNews, ReportProblem, serverVersion } from '../pages/HelpPage'
@@ -36,6 +37,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/corrections', label: t('Corrections'), icon: PencilLine, show: att && any('attendance.correct.request', 'attendance.correct.propose', 'attendance.correct') },
         { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
         { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
+        { to: '/jobs', label: t('My jobs'), icon: ListChecks, show: true },
       ],
     },
     {
@@ -253,6 +255,7 @@ export function Shell({ children }: { children: ReactNode }) {
           {children}
           {reporting && <ReportProblem onClose={() => setReporting(false)} onDone={(id) => { setReporting(false); navigate(`/support/${id}`) }} />}
         </main>
+        <JobProgress />
         <BottomNav />
       </div>
     </div>

@@ -6,6 +6,11 @@ import { t, locale } from '../i18n'
 type Backup = { id: number; startedAt: string; finishedAt: string | null; fileName: string | null; sizeBytes: number | null; status: 'RUNNING' | 'OK' | 'FAILED'; offsite: boolean; message: string | null }
 type Job = { name: string; lockedAt: string | null; lockedBy: string | null; lastOkAt: string | null; lastError: string | null; lastErrorAt: string | null }
 type Alert = { id: number; kind: string; summary: string; detail: string | null; firstAt: string; lastAt: string; occurrences: number; notifiedAt: string | null }
+type Queue = {
+  waiting: number; running: number; failedToday: number; doneToday: number; oldestWaitSeconds: number | null; averageSeconds: number | null
+  recent: { id: number; companyId: number; company: string; type: string; status: string; progress: number; createdAt: string
+    startedAt: string | null; finishedAt: string | null; worker: string | null; error: string | null }[]
+}
 type Status = {
   version: string; builtAt: string | null; javaVersion: string; startedAt: string; uptimeSeconds: number
   databaseBytes: number; activeSessions: number; employees: number; backupsExpected: boolean
@@ -16,11 +21,11 @@ type Status = {
 
 const JOBS: Record<string, string> = {
   'auto-close': t('Close days left open'), 'anniversary-raises': t('Anniversary raises'), 'exchange-rates': t('BCC exchange rates'),
-  'gps-erase': t('Erase old GPS positions'), 'backup-watch': t('Check the backups'), 'audit-chain': t('Check the audit log'),
+  'gps-erase': t('Erase old GPS positions'), 'jobs.cleanup': t('Delete old job files'), 'backup-watch': t('Check the backups'), 'audit-chain': t('Check the audit log'),
 }
 const KINDS: Record<string, string> = {
   ERROR: t('Error'), JOB_FAILED: t('Job failed'), BACKUP_FAILED: t('Backup failed'), BACKUP_MISSING: t('No recent backup'),
-  AUDIT_CHAIN_BROKEN: t('Audit log changed'),
+  AUDIT_CHAIN_BROKEN: t('Audit log changed'), JOB_WAITING: t('Jobs waiting too long'),
 }
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString(locale()) : '—')
 const size = (b: number | null) => (b === null ? '—' : b > 1e9 ? `${(b / 1e9).toFixed(1)} GB` : b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.round(b / 1e3)} KB`)
@@ -31,7 +36,11 @@ export default function SystemPage() {
   const [s, setS] = useState<Status | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<number | null>(null)
-  useEffect(() => { api<Status>('/api/system/status').then(setS).catch((e: Error) => setError(e.message)) }, [])
+  const [queue, setQueue] = useState<Queue | null>(null)
+  useEffect(() => {
+    api<Status>('/api/system/status').then(setS).catch((e: Error) => setError(e.message))
+    api<Queue>('/api/system/jobs').then(setQueue).catch(() => undefined)
+  }, [])
 
   if (!s) return <section><h2>{t('System')}</h2><ErrorText error={error} />{!error && <p className="muted">{t('Loading…')}</p>}</section>
   const backups = s.backups.filter((b) => !b.fileName?.startsWith('restore-test:') && !b.fileName?.startsWith('restore:'))
@@ -110,6 +119,37 @@ export default function SystemPage() {
         )}
         {tests.length > 0 && <p className="hint">{t('Last restore test:')}{' '}{when(tests[0].finishedAt)}, {tests[0].status === 'OK' ? 'passed' : 'failed'}. {tests[0].message}</p>}
       </div>
+
+      {queue && (
+        <div className="card">
+          <h3>{t('Background jobs')}</h3>
+          <p className="hint">{t('Long tasks people start (payroll calculation, closing, imports, zips) wait in a queue in the database and run on the servers\' workers. Administrators are alerted when one fails or waits more than 10 minutes.')}</p>
+          <div className="tiles">
+            <div className={`tile${(queue.oldestWaitSeconds ?? 0) > 600 ? ' warn' : ''}`}><span>{t('Waiting')}</span><strong>{queue.waiting}</strong>
+              <small>{queue.oldestWaitSeconds === null ? t('none waiting') : t('oldest for {a} s', { a: queue.oldestWaitSeconds })}</small></div>
+            <div className="tile"><span>{t('Running')}</span><strong>{queue.running}</strong><small>&nbsp;</small></div>
+            <div className="tile"><span>{t('Done in 24 h')}</span><strong>{queue.doneToday}</strong>
+              <small>{queue.averageSeconds === null ? '—' : t('{a} s on average', { a: Math.round(queue.averageSeconds) })}</small></div>
+            <div className={`tile${queue.failedToday > 0 ? ' warn' : ''}`}><span>{t('Failed in 24 h')}</span><strong>{queue.failedToday}</strong><small>&nbsp;</small></div>
+          </div>
+          {queue.recent.length > 0 && (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>{t('Company')}</th><th>{t('Job')}</th><th>{t('Status')}</th><th>{t('Started')}</th><th>{t('Ended')}</th><th>{t('Server')}</th></tr></thead>
+                <tbody>
+                  {queue.recent.map((j) => (
+                    <tr key={j.id}>
+                      <td>{j.id}</td><td>{j.company}</td><td>{j.type}</td>
+                      <td>{j.status}{j.status === 'RUNNING' ? ` ${j.progress}%` : ''}{j.error && <div className="error small">{j.error}</div>}</td>
+                      <td>{when(j.startedAt ?? j.createdAt)}</td><td>{when(j.finishedAt)}</td><td className="small">{j.worker ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h3>{t('Scheduled jobs')}</h3>

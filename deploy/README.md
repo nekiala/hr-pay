@@ -122,6 +122,16 @@ Sessions, the sign-in lockout and the scheduled jobs are kept in the database, s
 one database behind a load balancer, and each scheduled job runs on one of them only. A restart or an upgrade signs
 no one out.
 
+### Background jobs
+
+Long tasks (calculating or closing the payroll of thousands of people, imports, every payslip in one zip) wait in a
+queue kept in PostgreSQL (table `background_job`) and run on the workers of any app server, two threads each by default
+(`JOBS_WORKERS`). Nothing else to install. For a large installation, run a container that only runs jobs:
+`docker compose --profile worker up -d` (`WORKER_THREADS`, default 4), and optionally `APP_ROLE=web` on the app so
+it leaves the jobs to the worker. A server that stops in the middle of a job hands it back: another server runs it
+again after 2 minutes (at most 3 tries). Files made by jobs are kept 7 days. The System page shows the queue;
+administrators are alerted when a job fails or waits more than 10 minutes.
+
 ## Settings
 
 All settings are in `.env`; `.env.example` explains each one. Never commit `.env`: it holds the passwords.
