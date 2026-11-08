@@ -13,10 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.mail.javamail.JavaMailSender;
+import cd.hrpay.notify.MailServers;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -57,13 +56,13 @@ public class TwoStep {
     private final PasswordEncoder encoder;
     private final OtpService otp;
     private final AuditService audit;
-    private final ObjectProvider<JavaMailSender> mail;
+    private final MailServers mail;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
     private volatile boolean enforced;
 
     public TwoStep(JdbcClient jdbc, DataCrypto crypto, PasswordEncoder encoder, OtpService otp, AuditService audit,
-                   ObjectProvider<JavaMailSender> mail, Clock clock,
+                   MailServers mail, Clock clock,
                    @Value("${app.security.two-step-enforced:true}") boolean enforced) {
         this.jdbc = jdbc;
         this.crypto = crypto;
@@ -84,9 +83,9 @@ public class TwoStep {
         return enforced;
     }
 
-    /** A code by email only reaches people when an email server is set; otherwise only the app is offered. */
-    public boolean codesAvailable() {
-        return mail.getIfAvailable() != null;
+    /** A code by email only reaches people when their company has an email server; otherwise only the app is offered. */
+    public boolean codesAvailable(long companyId) {
+        return mail.available(companyId);
     }
 
     public boolean required(AppUser user) {
@@ -113,7 +112,7 @@ public class TwoStep {
     public Status status(AppUser user) {
         Optional<Row> r = row(user.getId()).filter(x -> x.confirmedAt() != null);
         return new Status(r.isPresent(), r.map(x -> Method.valueOf(x.method())).orElse(null), required(user),
-                r.map(x -> x.recoveryCodes().length).orElse(0), r.map(Row::confirmedAt).orElse(null), codesAvailable());
+                r.map(x -> x.recoveryCodes().length).orElse(0), r.map(Row::confirmedAt).orElse(null), codesAvailable(user.getCompanyId()));
     }
 
     /** Whether the sign-in needs a second step, and the step to ask for. */
@@ -142,7 +141,7 @@ public class TwoStep {
     /** Starts setting up a method: a new authenticator secret, or a code sent now. Nothing changes until confirmed. */
     public Setup beginSetup(AppUser user, Method method) {
         if (method == Method.CODE) {
-            if (!codesAvailable()) {
+            if (!codesAvailable(user.getCompanyId())) {
                 throw new BusinessRuleException("Codes by email are not available on this installation: use an authenticator app.");
             }
             UUID id = otp.issue(user, "TWO_STEP_SETUP", null).id();

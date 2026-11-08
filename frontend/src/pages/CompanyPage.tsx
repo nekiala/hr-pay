@@ -4,6 +4,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 import { useAuth } from '../auth'
 import { t } from '../i18n'
+import { PageTitle, SettingsLink } from '../components/SettingsLink'
 
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', t('Name')], ['address', t('Address')], ['rccm', 'RCCM'], ['nationalId', t('Id. Nat.')], ['taxNumber', 'NIF'],
@@ -110,7 +111,7 @@ export default function CompanyPage() {
 
   return (
     <section>
-      <h2>{t('Company')}</h2>
+      <PageTitle title={t('Company')}><SettingsLink to="/company/email" label={t('Email server')} /></PageTitle>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <LanguageCard />
