@@ -46,7 +46,7 @@ export default function PaymentFilePage() {
   const shownTotal = lines.reduce((s, l) => s + l.amount, 0)
   const cash = b.method === 'CASH'
   return (
-    <section className="narrow">
+    <section>
       <p className="no-print"><Link to={`/payroll/payments?month=${view.month}`}>{t('← Payments')}{' '}{view.month}</Link>
         {' · '}<Button className="link" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
         {can('payroll.pay') && <>{' '}<LayoutDownload target={view.batch.method as LayoutTarget} path={(l) => `/api/payment-batches/${view.batch.id}/layout/${l}`} /></>}

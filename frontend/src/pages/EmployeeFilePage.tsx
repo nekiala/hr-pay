@@ -110,7 +110,7 @@ export default function EmployeeFilePage() {
   const setP = (patch: Partial<Profile>) => p && setProfile({ ...p, ...patch })
 
   return (
-    <section className="narrow">
+    <section>
       <p><Link to={`/users/${id}`}>{t('← Back to employee')}</Link></p>
       <h2>{t('Contract and family')}{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
       {user?.unitId && <p className="muted">{t('Unit:')}{' '}<Link to={`/org/units/${user.unitId}`}>{user.unitName}</Link></p>}

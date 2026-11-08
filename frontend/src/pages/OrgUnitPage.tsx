@@ -35,13 +35,13 @@ export default function OrgUnitPage() {
     api<OrgLevel[]>('/api/org/levels').then(setLevels).catch(() => undefined)
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!data) return <section className="narrow"><ErrorText error={error} /></section>
+  if (!data) return <section><ErrorText error={error} /></section>
   const u = data.unit
   const children = units.filter((c) => c.parentId === u.id)
   const current = (role: 'HEAD' | 'DEPUTY') => role === 'HEAD' ? u.head : u.deputy
 
   return (
-    <section className="narrow">
+    <section>
       <p className="small muted"><Link to="/org">{t('Org chart')}</Link> · {unitPath(units, u.id)}</p>
       <h2>{u.name} <span className="muted">({u.code})</span></h2>
       <p className="muted">

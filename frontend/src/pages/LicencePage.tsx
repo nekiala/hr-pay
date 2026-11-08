@@ -46,7 +46,7 @@ export default function LicencePage() {
   const l = status?.licence
   const state = status ? STATES[status.state] : null
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('Licence')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

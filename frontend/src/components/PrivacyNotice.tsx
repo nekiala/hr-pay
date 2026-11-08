@@ -61,7 +61,7 @@ export function PrivacyGate() {
 
 export default function PrivacyPage() {
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('Privacy')}</h2>
       <div className="card"><PrivacyText /></div>
     </section>

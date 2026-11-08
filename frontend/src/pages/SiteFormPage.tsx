@@ -62,7 +62,7 @@ export default function SiteFormPage() {
   }
 
   return (
-    <section className="narrow">
+    <section>
       <h2>{isNew ? t('New site') : form.name}</h2>
       <Form className="card" onSubmit={save}>
         <fieldset disabled={!editable}>

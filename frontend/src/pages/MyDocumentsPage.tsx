@@ -29,7 +29,7 @@ export default function MyDocumentsPage() {
   const pending = new Set(data.certificates.filter((c) => c.status === 'PENDING').map((c) => c.kind))
 
   return (
-    <section className="narrow">
+    <section>
       <h2>{t('My documents')}</h2>
       <ErrorText error={error} />
       {info && <p className="success">{info}</p>}

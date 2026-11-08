@@ -60,7 +60,7 @@ export default function ExportLayoutsPage() {
   if (draft) {
     const available = Object.entries(fields[draft.target] ?? {})
     return (
-      <section className="narrow">
+      <section>
         <h2>{draft.id ? t('Edit the layout') : t('New layout')}</h2>
         <Form onSubmit={save} className="card">
           <label>{t('Name')}<input required maxLength={100} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>

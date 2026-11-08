@@ -87,7 +87,7 @@ export default function DeparturePage() {
   const cur = shown?.currency ?? 'USD'
 
   return (
-    <section className="narrow">
+    <section>
       <p><Link to={`/users/${id}`}>{t('← Back to the person')}</Link>{' · '}<Link to="/departures">{t('All departures')}</Link></p>
       <h2>{t('Departure and final settlement')}{shown ? ` · ${shown.name}` : ''}</h2>
       <ErrorText error={error} />

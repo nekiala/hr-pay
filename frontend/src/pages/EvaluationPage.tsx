@@ -58,7 +58,7 @@ export default function EvaluationPage() {
   }, 0)
 
   return (
-    <section className="narrow">
+    <section>
       <p><Link to="/evaluations">{t('← Evaluations')}</Link></p>
       <h2>{ev.userName} · {ev.periodStart}{' '}{t('to')}{' '}{ev.periodEnd}</h2>
       <p className="muted">{ev.templateName}{' '}{t('· evaluated by')}{' '}{ev.evaluatorName} · <strong>{EVAL_STATUS[ev.status]}</strong></p>
