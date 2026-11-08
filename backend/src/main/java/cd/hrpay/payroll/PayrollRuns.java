@@ -1,5 +1,6 @@
 package cd.hrpay.payroll;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import cd.hrpay.attendance.AttendanceDays;
 import cd.hrpay.attendance.DayCalculator;
 import cd.hrpay.audit.AuditService;
@@ -101,6 +102,18 @@ public class PayrollRuns {
     }
 
     private cd.hrpay.leave.LeaveService leave;
+    private cd.hrpay.tenancy.Tenants tenants;
+    private int threads = 4;
+    private int parallelFrom = 100;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setTenants(cd.hrpay.tenancy.Tenants tenants,
+                    @org.springframework.beans.factory.annotation.Value("${app.payroll.threads:4}") int threads,
+                    @org.springframework.beans.factory.annotation.Value("${app.payroll.parallel-from:100}") int parallelFrom) {
+        this.tenants = tenants;
+        this.threads = threads;
+        this.parallelFrom = parallelFrom;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setLeave(cd.hrpay.leave.LeaveService leave) {
@@ -449,28 +462,101 @@ public class PayrollRuns {
                        and d.status = 'CONFIRMED' and d.last_day >= ?))
                 order by c.user_id""").params(last, first, first).query(Long.class).list();
         int done = 0;
-        for (long userId : employees) {
-            done++;
-            cd.hrpay.job.Progress.report(done - 1, employees.size(),
-                    cd.hrpay.i18n.Texts.t("Payslip %s of %s", done, employees.size()));
-            Computed c = compute(ctx, userId, true);
-            if (c.skipped() != null) {
-                skipped.add(c.skipped());
-                continue;
-            }
-            store(runId, c, "REGULAR", null, null);
-            count++;
-            // The loop only reads entities (payslips are written with SQL). Letting thousands pile up in the session
-            // makes every query check them all for changes: clear it as we go.
-            if (count % 50 == 0) {
-                entities.flush();
-                entities.clear();
+        try (var computed = computeAll(ctx, employees)) {
+            for (Computed c : (Iterable<Computed>) computed::iterator) {
+                done++;
+                cd.hrpay.job.Progress.report(done, employees.size(),
+                        cd.hrpay.i18n.Texts.t("Payslip %s of %s", done, employees.size()));
+                if (c.skipped() != null) {
+                    skipped.add(c.skipped());
+                    continue;
+                }
+                store(runId, c, "REGULAR", null, null);
+                count++;
+                // The loop only reads entities (payslips are written with SQL). Letting thousands pile up in the session
+                // makes every query check them all for changes: clear it as we go.
+                if (count % 50 == 0) {
+                    entities.flush();
+                    entities.clear();
+                }
             }
         }
         jdbc.sql("update payroll_run set employee_count = ? where id = ?").params(count, runId).update();
         audit.record("payroll.calculated", "payroll_run", runId, Map.of("month", month.toString(), "payslips", count,
                 "usdCdf", usd.cdfPerUnit().toPlainString(), "projected", projected));
         return view(month, skipped);
+    }
+
+    /**
+     * Each person's payslip worked out, in the given order. A large payroll is worked out by several threads at once
+     * (app.payroll.threads), each reading in its own connections in the same company, language and rights; the payslips
+     * are still written one by one in the calling transaction, as they come.
+     */
+    private java.util.stream.Stream<Computed> computeAll(MonthContext ctx, List<Long> employees) {
+        if (threads <= 1 || employees.size() < parallelFrom || tenants == null) {
+            return employees.stream().map(id -> compute(ctx, id, true));
+        }
+        Long company = cd.hrpay.tenancy.TenantContext.companyId();
+        var security = SecurityContextHolder.getContext();
+        String language = cd.hrpay.i18n.Texts.current();
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(threads, Thread.ofPlatform().name("payroll-", 1).daemon().factory());
+        // At most a few hundred payslips ahead of the writer, so memory stays small.
+        var permits = new java.util.concurrent.Semaphore(threads * 50);
+        List<java.util.concurrent.Future<Computed>> futures = new ArrayList<>(employees.size());
+        Thread feeder = Thread.ofPlatform().daemon().name("payroll-feeder").start(() -> {
+            for (long id : employees) {
+                try {
+                    permits.acquire();
+                } catch (InterruptedException e) {
+                    return;
+                }
+                synchronized (futures) {
+                    futures.add(pool.submit(() -> {
+                        var before = SecurityContextHolder.getContext();
+                        SecurityContextHolder.setContext(security);
+                        try {
+                            return tenants.callAs(company, () -> cd.hrpay.i18n.Texts.in(language, () -> compute(ctx, id, true)));
+                        } finally {
+                            SecurityContextHolder.setContext(before);
+                        }
+                    }));
+                    futures.notifyAll();
+                }
+            }
+        });
+        return java.util.stream.IntStream.range(0, employees.size()).mapToObj(i -> {
+            java.util.concurrent.Future<Computed> f;
+            synchronized (futures) {
+                while (futures.size() <= i) {
+                    try {
+                        futures.wait();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("Interrupted", e);
+                    }
+                }
+                f = futures.get(i);
+                futures.set(i, null);
+            }
+            try {
+                return f.get();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted", e);
+            } catch (java.util.concurrent.ExecutionException e) {
+                feeder.interrupt();
+                pool.shutdownNow();
+                if (e.getCause() instanceof RuntimeException r) {
+                    throw r;
+                }
+                throw new IllegalStateException(e.getCause());
+            } finally {
+                permits.release();
+            }
+        }).onClose(() -> {
+            feeder.interrupt();
+            pool.shutdownNow();
+        });
     }
 
     private static String thirteenthNote(cd.hrpay.evaluation.ThirteenthMonth.Row r) {

@@ -117,7 +117,7 @@ class LoadIT extends IntegrationTest {
                 String challenge = JsonPath.read(started, "$.challengeId");
                 String body = jdbc.sql("select body from outbox_message where recipient = ? order by id desc limit 1")
                         .param(email).query(String.class).single();
-                Matcher m = Pattern.compile("code is (\\d{6})").matcher(body);
+                Matcher m = Pattern.compile("(?:code is|est) (\\d{6})").matcher(body);
                 assertThat(m.find()).isTrue();
                 mvc.perform(json(post("/api/attendance/check-in/confirm").session(s),
                         "{\"challengeId\":\"%s\",\"code\":\"%s\"}".formatted(challenge, m.group(1)))).andExpect(status().isOk());

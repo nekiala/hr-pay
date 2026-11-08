@@ -30,3 +30,6 @@ app:
     # Workers only take the jobs their own test context starts (each context has its own workers).
     poll: PT1H
     heartbeat: PT1S
+  payroll:
+    # Every test payroll goes through the threads, as a large one does.
+    parallel-from: 1

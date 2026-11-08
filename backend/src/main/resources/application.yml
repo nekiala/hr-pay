@@ -113,6 +113,10 @@ app:
     alert-wait: PT10M
     # On shutdown, how long running jobs get to finish before they are left to another server.
     shutdown-wait: ${JOBS_SHUTDOWN_WAIT:PT60S}
+  payroll:
+    # A payroll of this many people or more is worked out by several threads at once (each uses database connections).
+    threads: ${PAYROLL_THREADS:4}
+    parallel-from: 100
   # Frontend origin allowed to call the API in development.
   cors-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   # Address employees reach the app at; used in the kiosk QR code.
