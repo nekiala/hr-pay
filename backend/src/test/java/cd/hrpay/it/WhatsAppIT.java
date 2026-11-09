@@ -66,7 +66,7 @@ class WhatsAppIT extends IntegrationTest {
                 answer = "{\"id\":\"%d\",\"status\":\"PENDING\",\"category\":\"UTILITY\"}".formatted(ids.incrementAndGet());
             } else {
                 StringBuilder data = new StringBuilder();
-                for (String name : List.of("hrpay_otp", "hrpay_payslip_ready", "hrpay_request_update", "hrpay_action_needed",
+                for (String name : List.of("hrpay_otp", "hrpay_payslip_available", "hrpay_request_update", "hrpay_action_needed",
                         "hrpay_checkout_reminder", "someone_elses")) {
                     for (String lang : List.of("fr", "en")) {
                         data.append(data.isEmpty() ? "" : ",").append(
@@ -182,7 +182,7 @@ class WhatsAppIT extends IntegrationTest {
         assertThat(update).hasSize(1);
         assertThat(update.getFirst()).contains(myPhone.replace("+", "")).contains("Your leave from 3 to 7 Nov is approved.")
                 .contains("\"text\":\"leave\"");
-        assertThat(sent("hrpay_payslip_ready")).isEmpty();
+        assertThat(sent("hrpay_payslip_available")).isEmpty();
         assertThat(consent.sendPending()).isZero();
         String wamid = jdbc.sql("select provider_id from outbox_message where provider_id is not null and user_id = ? order by id desc limit 1")
                 .param(myId).query(String.class).single();

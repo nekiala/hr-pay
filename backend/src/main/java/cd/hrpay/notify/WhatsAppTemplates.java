@@ -19,18 +19,25 @@ public final class WhatsAppTemplates {
     /** What a company may send on WhatsApp, chosen on its WhatsApp page. */
     public enum Group { PAYSLIP, DECISIONS, ACTIONS, REMINDERS }
 
-    public record Text(String body, String button, String exampleText) {}
+    /** {@code exampleText} is null for a template that takes only the first name. */
+    public record Text(String body, String button, String exampleText) {
+
+        public boolean takesDetail() {
+            return body.contains("{{2}}");
+        }
+    }
 
     public record Template(String name, Group group, Map<String, Text> languages) {}
 
     public static final List<String> LANGUAGES = List.of("fr", "en");
 
     public static final List<Template> NOTIFICATIONS = List.of(
-            new Template("hrpay_payslip_ready", Group.PAYSLIP, Map.of(
-                    "fr", new Text("Bonjour {{1}}, {{2}} Pour protéger vos données, le bulletin s'ouvre uniquement dans HR Pay, après connexion.",
-                            "Voir le bulletin", "Le bulletin de octobre 2026 peut être consulté dans HR Pay."),
-                    "en", new Text("Hello {{1}}, {{2}} To protect your data, the payslip only opens in HR Pay, after you sign in.",
-                            "View payslip", "The payslip for October 2026 can be read in HR Pay."))),
+            // Only the first name: Meta refused a payslip notice whose sentence came from a parameter (INCORRECT_CATEGORY).
+            new Template("hrpay_payslip_available", Group.PAYSLIP, Map.of(
+                    "fr", new Text("Bonjour {{1}}, votre bulletin de paie est disponible dans HR Pay. Pour protéger vos données, il s'ouvre uniquement après connexion.",
+                            "Voir le bulletin", null),
+                    "en", new Text("Hello {{1}}, your payslip is available in HR Pay. To protect your data, it only opens after you sign in.",
+                            "View payslip", null))),
             new Template("hrpay_request_update", Group.DECISIONS, Map.of(
                     "fr", new Text("Bonjour {{1}}, du nouveau sur votre demande : {{2}} Le détail est dans HR Pay.",
                             "Ouvrir HR Pay", "Votre congé du 3 au 7 novembre 2026 est approuvé."),
@@ -82,7 +89,8 @@ public final class WhatsAppTemplates {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("type", "BODY");
         body.put("text", x.body());
-        body.put("example", Map.of("body_text", List.of(List.of(language.equals("fr") ? "Marie" : "Mary", x.exampleText()))));
+        String name = language.equals("fr") ? "Marie" : "Mary";
+        body.put("example", Map.of("body_text", List.of(x.exampleText() == null ? List.of(name) : List.of(name, x.exampleText()))));
         Map<String, Object> button = new LinkedHashMap<>();
         button.put("type", "URL");
         button.put("text", x.button());
