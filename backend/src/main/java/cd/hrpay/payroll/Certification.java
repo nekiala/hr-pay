@@ -81,7 +81,7 @@ public class Certification {
         String country = company.country();
         LocalDate today = LocalDate.now(clock);
         sheet.row(Texts.t("HR Pay: rates and formulas to check"), company.get().name(),
-                "CG".equals(country) ? Texts.t("Republic of the Congo") : Texts.t("DR Congo"), Texts.day(today));
+                Texts.t(cd.hrpay.platform.CountryPacks.COUNTRIES.getOrDefault(country, "DR Congo")), Texts.day(today));
         sheet.row(Texts.t("Tick each line in the Checked column, write the correct value in Comment when it is wrong, then sign at the end."));
         sheet.row();
 
@@ -95,13 +95,35 @@ public class Certification {
         sheet.row();
 
         var brackets = statutory.brackets(today);
-        sheet.row("CG".equals(country) ? Texts.t("2. ITS bands (yearly, per part)") : Texts.t("2. IPR bands (yearly)"),
+        CountryRules rules = statutory.countryRules(today);
+        sheet.row("CG".equals(country) || rules != null && rules.familyQuotient()
+                        ? Texts.t("2. %s bands (yearly, per part)", cd.hrpay.platform.CountryPacks.taxName(country))
+                        : Texts.t("2. %s bands (yearly)", cd.hrpay.platform.CountryPacks.taxName(country)),
                 Texts.t("since %s", brackets.effectiveFrom()));
         sheet.row(Texts.t("From"), Texts.t("To"), Texts.t("Rate %"), "", "", "", Texts.t("Checked"), Texts.t("Comment"));
         for (IprCalculator.Bracket b : brackets.brackets()) {
             sheet.row(b.lowerBound(), b.upperBound() == null ? Texts.t("and above") : b.upperBound(), b.ratePercent(), "", "", "", "", "");
         }
         sheet.row();
+
+        if (rules != null) {
+            sheet.row(Texts.t("2b. Contributions and taxes"));
+            sheet.row(Texts.t("Code"), Texts.t("Paid by"), Texts.t("Worked out on"), Texts.t("Rate"), Texts.t("Ceiling"),
+                    Texts.t("Not charged"), Texts.t("Scale"), Texts.t("Before tax"), Texts.t("Checked"), Texts.t("Comment"));
+            for (CountryRules.Contribution c : rules.contributions()) {
+                sheet.row(c.code(), Texts.t(c.employee() ? "Employee" : "Employer"), Texts.t(baseLabel(c.base())),
+                        c.rate() == null ? "" : c.rate(), c.ceiling() == null ? "" : c.ceiling(),
+                        c.exempt() == null ? "" : c.exempt(), c.scale() == null ? "" : c.scale(), yes(c.beforeTax()), "", "");
+            }
+            for (Map.Entry<String, java.util.List<CountryRules.Band>> s : new java.util.TreeMap<>(rules.scales()).entrySet()) {
+                sheet.row(Texts.t("Scale %s (a month)", s.getKey()));
+                sheet.row(Texts.t("From"), Texts.t("To"), Texts.t("Amount"), "", "", "", "", "", Texts.t("Checked"), Texts.t("Comment"));
+                for (CountryRules.Band b : s.getValue()) {
+                    sheet.row(b.lower(), b.upper() == null ? Texts.t("and above") : b.upper(), b.amount(), "", "", "", "", "", "", "");
+                }
+            }
+            sheet.row();
+        }
 
         sheet.row(Texts.t("3. Pay elements"));
         sheet.row(Texts.t("Code"), Texts.t("Name"), Texts.t("Kind"), Texts.t("Method"), Texts.t("Subject to CNSS"),
@@ -142,6 +164,18 @@ public class Certification {
         audit.record("payroll.certification_workbook", "company", country, Map.of());
     }
 
+    private static String baseLabel(String base) {
+        return switch (base) {
+            case "CNSS" -> "Earnings subject to social security";
+            case "GROSS" -> "Gross pay";
+            case "TAXABLE" -> "Taxable earnings";
+            case "NET_TAXABLE" -> "Taxable earnings less contributions before tax";
+            case "TAX" -> "Income tax";
+            case "BASIC" -> "Basic salary";
+            default -> base;
+        };
+    }
+
     private static String yes(boolean v) {
         return v ? Texts.t("Yes") : Texts.t("No");
     }
@@ -173,7 +207,13 @@ public class Certification {
                 "Net pay = gross − employee deductions. Amounts in US dollars are converted at the central bank rate of the payroll (last of the month, or of the day it is calculated).",
                 "Final settlement: daily rate = basic ÷ days per month; notice pay (when not worked) = (base days + days per year × full years) × daily rate; leave paid out = days left × daily rate; severance = days per year × years × daily rate; the last payslip also takes what is left of loans.",
                 "Corrections of a closed month: the payslip is worked out again and the difference is a complementary payslip of that month, or back pay in the next payroll. Closed payslips are never changed.");
-        List<String> taxes = "CG".equals(country) ? List.of(
+        List<String> taxes = cd.hrpay.platform.CountryPacks.RULES_AS_DATA.contains(country) ? List.of(
+                "Employee contributions (table 2b): rate × their base, up to their monthly ceiling, less the part not charged; those marked before tax are taken off the taxable pay.",
+                "IRPP: yearly taxable income = (monthly taxable earnings − employee contributions before tax) × 12; less the professional deduction % (up to its cap) and the yearly allowance; divided by the family parts when the country uses them; the bands apply to one part, the result is multiplied by the parts and divided by 12. No IRPP below the monthly threshold.",
+                "Taxes on the IRPP (such as the CAC) and flat monthly taxes by band (such as the RAV and the TDL) follow table 2b.",
+                "Employer charges (table 2b): rate × their base, up to their ceiling.",
+                "A basic salary below the monthly SMIG shows a warning.")
+                : "CG".equals(country) ? List.of(
                 "CNSS employee share = rate × earnings subject to CNSS, up to the monthly pension ceiling.",
                 "ITS: yearly taxable income = (monthly taxable earnings − employee CNSS) × 12; less the professional deduction %; divided by the family parts (1, +1 for a spouse, +0.5 per child, up to the maximum); the bands apply to one part, the result is multiplied by the parts and divided by 12.",
                 "Employer charges: CNSS pensions up to the pension ceiling; family benefits and work accidents up to their ceiling; the tax on salaries (TUS) on the gross.",

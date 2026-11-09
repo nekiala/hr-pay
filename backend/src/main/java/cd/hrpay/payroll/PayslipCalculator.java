@@ -28,12 +28,30 @@ public final class PayslipCalculator {
      * The month's rates. {@code usdCdf} is the price of one US dollar in the local currency ({@code local}: CDF in
      * the DRC, XAF in the Republic of the Congo); {@code country} picks the rules (CD or CG); {@code more} holds the
      * rates only one country has, by their code (for CG: CNSS_CEILING, CNSS_FAMILY, CNSS_ACCIDENT,
-     * CNSS_FAMILY_CEILING, TUS, ITS_PROFESSIONAL_DEDUCTION, ITS_MAX_PARTS, SMIG_MONTHLY).
+     * CNSS_FAMILY_CEILING, TUS, ITS_PROFESSIONAL_DEDUCTION, ITS_MAX_PARTS, SMIG_MONTHLY); {@code rules} the
+     * contributions and taxes of a country whose rules are data (then the CNSS and IPR fields are not used).
      */
     public record Rates(BigDecimal usdCdf, BigDecimal cnssEmployee, BigDecimal cnssEmployer, BigDecimal inpp,
                         BigDecimal onem, BigDecimal iere, BigDecimal debtMaxShare, List<IprCalculator.Bracket> iprBrackets,
                         BigDecimal iprDependantReduction, int iprMaxDependants, BigDecimal iprCap,
-                        BigDecimal smigDailyCdf, String country, String local, Map<String, BigDecimal> more) {
+                        BigDecimal smigDailyCdf, String country, String local, Map<String, BigDecimal> more,
+                        CountryRules rules) {
+
+        /** The rates of a country whose rules are in code (CD or CG). */
+        public Rates(BigDecimal usdCdf, BigDecimal cnssEmployee, BigDecimal cnssEmployer, BigDecimal inpp,
+                     BigDecimal onem, BigDecimal iere, BigDecimal debtMaxShare, List<IprCalculator.Bracket> iprBrackets,
+                     BigDecimal iprDependantReduction, int iprMaxDependants, BigDecimal iprCap,
+                     BigDecimal smigDailyCdf, String country, String local, Map<String, BigDecimal> more) {
+            this(usdCdf, cnssEmployee, cnssEmployer, inpp, onem, iere, debtMaxShare, iprBrackets, iprDependantReduction,
+                    iprMaxDependants, iprCap, smigDailyCdf, country, local, more, null);
+        }
+
+        /** A country whose rules are data ({@link CountryRules}): Cameroon, Gabon. */
+        public static Rates of(BigDecimal usdLocal, String country, String local, BigDecimal debtMaxShare,
+                               List<IprCalculator.Bracket> brackets, CountryRules rules) {
+            return new Rates(usdLocal, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    debtMaxShare, brackets, BigDecimal.ZERO, 0, BigDecimal.valueOf(100), null, country, local, Map.of(), rules);
+        }
 
         /** The DRC's rates, in CDF. */
         public Rates(BigDecimal usdCdf, BigDecimal cnssEmployee, BigDecimal cnssEmployer, BigDecimal inpp,
@@ -259,39 +277,75 @@ public final class PayslipCalculator {
         }
 
         String local = r.local();
-        // In the Republic of the Congo the pension contributions stop at a monthly ceiling.
-        BigDecimal pensionBase = r.congo() ? cnssBase.min(convert(r.more("CNSS_CEILING"), local, cur, r.usdCdf())) : cnssBase;
-        BigDecimal cnssEmployee = money(pensionBase.multiply(r.cnssEmployee()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
-        lines.add(new Line("CNSS_EMPLOYEE", byCode.get("CNSS_EMPLOYEE").name(), "DEDUCTION", pensionBase, r.cnssEmployee(),
-                cnssEmployee, byCode.get("CNSS_EMPLOYEE").displayOrder(), null));
-
-        BigDecimal taxableBase = taxable.subtract(cnssEmployee).max(BigDecimal.ZERO);
-        BigDecimal taxableCdf = convert(taxableBase, cur, local, r.usdCdf());
-        BigDecimal taxLocal;
-        if (r.congo()) {
-            boolean spouse = in.dependantsInCharge() > in.childrenInCharge();
-            BigDecimal parts = ItsCalculator.parts(in.maritalStatus(), spouse, in.childrenInCharge(), r.more("ITS_MAX_PARTS"));
-            taxLocal = ItsCalculator.monthly(taxableCdf, parts, r.iprBrackets(), r.more("ITS_PROFESSIONAL_DEDUCTION"),
-                    r.more().getOrDefault("ITS_FIRST_BAND_FLAT", BigDecimal.ZERO)).tax();
-            // CGI art. 116 G 2 (Loi 42-2025): a gross below the SMIG owes a minimum yearly tax.
-            BigDecimal minimumYear = r.more().getOrDefault("ITS_MINIMUM_YEARLY", BigDecimal.ZERO);
-            BigDecimal smig = r.more().get("SMIG_MONTHLY");
-            BigDecimal grossLocal = convert(gross, cur, local, r.usdCdf());
-            if (minimumYear.signum() > 0 && smig != null && grossLocal.signum() > 0 && grossLocal.compareTo(smig) < 0) {
-                taxLocal = taxLocal.max(minimumYear.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP));
+        BigDecimal taxableBase;
+        BigDecimal taxableCdf;
+        BigDecimal pensionBase = cnssBase;
+        BigDecimal iprAmount = BigDecimal.ZERO;
+        if (r.rules() != null) {
+            // A country whose rules are data: employee contributions, the income tax, then what is worked out on it.
+            Map<String, BigDecimal> bases = new java.util.HashMap<>(Map.of("CNSS", cnssBase, "GROSS", gross,
+                    "TAXABLE", taxable, "BASIC", basic));
+            BigDecimal beforeTax = BigDecimal.ZERO;
+            for (CountryRules.Contribution c : r.rules().contributions()) {
+                if (c.employee() && !c.base().equals("TAX") && !c.base().equals("NET_TAXABLE")) {
+                    BigDecimal amount = contribution(lines, byCode, c, bases.get(c.base()), r, cur);
+                    if (c.beforeTax()) {
+                        beforeTax = beforeTax.add(amount);
+                    }
+                }
+            }
+            taxableBase = taxable.subtract(beforeTax).max(BigDecimal.ZERO);
+            taxableCdf = convert(taxableBase, cur, local, r.usdCdf());
+            BigDecimal parts = BigDecimal.ONE;
+            if (r.rules().familyQuotient()) {
+                boolean spouse = in.dependantsInCharge() > in.childrenInCharge();
+                parts = ItsCalculator.parts(in.maritalStatus(), spouse, in.childrenInCharge(), r.rules().maxParts());
+            }
+            BigDecimal taxLocal = r.rules().monthlyTax(taxableCdf, convert(taxable, cur, local, r.usdCdf()), parts, r.iprBrackets());
+            iprAmount = convert(taxLocal, local, cur, r.usdCdf());
+            lines.add(new Line("IPR", name(byCode, "IPR"), "DEDUCTION", taxableBase, null, iprAmount, order(byCode, "IPR"), null));
+            bases.put("TAX", iprAmount);
+            bases.put("NET_TAXABLE", taxableBase);
+            for (CountryRules.Contribution c : r.rules().contributions()) {
+                if (c.employee() && (c.base().equals("TAX") || c.base().equals("NET_TAXABLE"))) {
+                    contribution(lines, byCode, c, bases.get(c.base()), r, cur);
+                }
             }
         } else {
-            taxLocal = IprCalculator.monthly(taxableCdf, in.dependantsInCharge(), r.iprBrackets(),
-                    r.iprDependantReduction(), r.iprMaxDependants(), r.iprCap()).tax();
-            // DGI: the IPR due after family charges is never below a monthly minimum.
-            BigDecimal minimum = r.more().getOrDefault("IPR_MIN_MONTHLY", BigDecimal.ZERO);
-            if (taxLocal.signum() > 0 && taxLocal.compareTo(minimum) < 0) {
-                taxLocal = minimum.setScale(2, RoundingMode.HALF_UP);
+            // In the Republic of the Congo the pension contributions stop at a monthly ceiling.
+            pensionBase = r.congo() ? cnssBase.min(convert(r.more("CNSS_CEILING"), local, cur, r.usdCdf())) : cnssBase;
+            BigDecimal cnssEmployee = money(pensionBase.multiply(r.cnssEmployee()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+            lines.add(new Line("CNSS_EMPLOYEE", byCode.get("CNSS_EMPLOYEE").name(), "DEDUCTION", pensionBase, r.cnssEmployee(),
+                    cnssEmployee, byCode.get("CNSS_EMPLOYEE").displayOrder(), null));
+
+            taxableBase = taxable.subtract(cnssEmployee).max(BigDecimal.ZERO);
+            taxableCdf = convert(taxableBase, cur, local, r.usdCdf());
+            BigDecimal taxLocal;
+            if (r.congo()) {
+                boolean spouse = in.dependantsInCharge() > in.childrenInCharge();
+                BigDecimal parts = ItsCalculator.parts(in.maritalStatus(), spouse, in.childrenInCharge(), r.more("ITS_MAX_PARTS"));
+                taxLocal = ItsCalculator.monthly(taxableCdf, parts, r.iprBrackets(), r.more("ITS_PROFESSIONAL_DEDUCTION"),
+                        r.more().getOrDefault("ITS_FIRST_BAND_FLAT", BigDecimal.ZERO)).tax();
+                // CGI art. 116 G 2 (Loi 42-2025): a gross below the SMIG owes a minimum yearly tax.
+                BigDecimal minimumYear = r.more().getOrDefault("ITS_MINIMUM_YEARLY", BigDecimal.ZERO);
+                BigDecimal smig = r.more().get("SMIG_MONTHLY");
+                BigDecimal grossLocal = convert(gross, cur, local, r.usdCdf());
+                if (minimumYear.signum() > 0 && smig != null && grossLocal.signum() > 0 && grossLocal.compareTo(smig) < 0) {
+                    taxLocal = taxLocal.max(minimumYear.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP));
+                }
+            } else {
+                taxLocal = IprCalculator.monthly(taxableCdf, in.dependantsInCharge(), r.iprBrackets(),
+                        r.iprDependantReduction(), r.iprMaxDependants(), r.iprCap()).tax();
+                // DGI: the IPR due after family charges is never below a monthly minimum.
+                BigDecimal minimum = r.more().getOrDefault("IPR_MIN_MONTHLY", BigDecimal.ZERO);
+                if (taxLocal.signum() > 0 && taxLocal.compareTo(minimum) < 0) {
+                    taxLocal = minimum.setScale(2, RoundingMode.HALF_UP);
+                }
             }
+            iprAmount = convert(taxLocal, local, cur, r.usdCdf());
+            lines.add(new Line("IPR", byCode.get("IPR").name(), "DEDUCTION", taxableBase, null, iprAmount,
+                    byCode.get("IPR").displayOrder(), null));
         }
-        BigDecimal iprAmount = convert(taxLocal, local, cur, r.usdCdf());
-        lines.add(new Line("IPR", byCode.get("IPR").name(), "DEDUCTION", taxableBase, null, iprAmount,
-                byCode.get("IPR").displayOrder(), null));
 
         // 6. Net before loans, then loans within the allowed share.
         BigDecimal deductions = lines.stream().filter(l -> l.kind().equals("DEDUCTION")).map(Line::amount)
@@ -356,7 +410,15 @@ public final class PayslipCalculator {
 
         // 7. Employer charges.
         BigDecimal employer = BigDecimal.ZERO;
-        if (r.congo()) {
+        if (r.rules() != null) {
+            Map<String, BigDecimal> bases = Map.of("CNSS", cnssBase, "GROSS", gross, "TAXABLE", taxable, "BASIC", basic,
+                    "TAX", iprAmount, "NET_TAXABLE", taxableBase);
+            for (CountryRules.Contribution c : r.rules().contributions()) {
+                if (!c.employee()) {
+                    employer = employer.add(contribution(lines, byCode, c, bases.get(c.base()), r, cur));
+                }
+            }
+        } else if (r.congo()) {
             // Pensions up to their ceiling; family benefits and work accidents up to theirs; the tax on salaries (TUS) on the gross.
             BigDecimal familyBase = cnssBase.min(convert(r.more("CNSS_FAMILY_CEILING"), local, cur, r.usdCdf()));
             employer = employer.add(charge(lines, byCode, "CNSS_EMPLOYER", pensionBase, r.cnssEmployer()));
@@ -373,8 +435,8 @@ public final class PayslipCalculator {
         }
 
         // 8. Checks.
-        if (r.congo()) {
-            BigDecimal smig = r.more().get("SMIG_MONTHLY");
+        if (r.rules() != null || r.congo()) {
+            BigDecimal smig = r.rules() != null ? r.rules().smigMonthly() : r.more().get("SMIG_MONTHLY");
             if (smig != null && convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smig) < 0) {
                 warnings.add(BELOW_MINIMUM + " is below the monthly minimum wage (SMIG).");
             }
@@ -436,6 +498,50 @@ public final class PayslipCalculator {
 
     private static String plain(BigDecimal v) {
         return v.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+    }
+
+    /**
+     * One contribution or tax of a country whose rules are data, added to the payslip: the rate on the base within its
+     * ceiling and less its exempt part, or the scale's flat amount. Limits and scales are in the local currency.
+     */
+    private static BigDecimal contribution(List<Line> lines, Map<String, PayElements.Element> byCode,
+                                           CountryRules.Contribution c, BigDecimal base, Rates r, String cur) {
+        String kind = c.employee() ? "DEDUCTION" : "EMPLOYER_CHARGE";
+        BigDecimal amount;
+        BigDecimal shownBase = base.max(BigDecimal.ZERO);
+        BigDecimal rate = null;
+        if (c.scale() != null) {
+            BigDecimal local = convert(shownBase, cur, r.local(), r.usdCdf());
+            amount = money(convert(r.rules().scaleAmount(c.scale(), local), r.local(), cur, r.usdCdf()));
+            if (amount.signum() == 0) {
+                return amount;
+            }
+        } else {
+            if (c.ceiling() != null && c.ceiling().signum() > 0) {
+                shownBase = shownBase.min(convert(c.ceiling(), r.local(), cur, r.usdCdf()));
+            }
+            if (c.exempt() != null && c.exempt().signum() > 0) {
+                shownBase = shownBase.subtract(convert(c.exempt(), r.local(), cur, r.usdCdf())).max(BigDecimal.ZERO);
+                if (shownBase.signum() == 0) {
+                    return BigDecimal.ZERO;
+                }
+            }
+            rate = c.rate();
+            amount = money(shownBase.multiply(rate).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+        }
+        lines.add(new Line(c.code(), name(byCode, c.code()), kind, shownBase, rate, amount,
+                byCode.containsKey(c.code()) ? order(byCode, c.code()) : c.displayOrder(), null));
+        return amount;
+    }
+
+    private static String name(Map<String, PayElements.Element> byCode, String code) {
+        PayElements.Element e = byCode.get(code);
+        return e == null ? code : e.name();
+    }
+
+    private static int order(Map<String, PayElements.Element> byCode, String code) {
+        PayElements.Element e = byCode.get(code);
+        return e == null ? 200 : e.displayOrder();
     }
 
     private static BigDecimal charge(List<Line> lines, Map<String, PayElements.Element> byCode, String code,

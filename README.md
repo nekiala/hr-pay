@@ -268,6 +268,26 @@ critical advisories in the browser app (`npm audit`) and in the container image 
   3,000,000 XAF a year; SMIG 90,000 XAF; overtime 110% / 125% / 150% / 200%; the 7 public holidays; the declaration
   formats and the payslip mentions.
 
+- **Cameroon and Gabon** (V56, packs `CM` and `GA`, XAF): their payroll rules are data, not code. Each company lists
+  its contributions and taxes (`payroll_contribution`: who pays, the base it is worked out on, the statutory rate codes
+  of its rate, ceiling and untaxed part, or a flat-amount scale in `payroll_scale`), and the income tax (IRPP) takes its
+  settings from the rates `TAX_PROFESSIONAL_DEDUCTION`, `TAX_PROFESSIONAL_CAP`, `TAX_YEARLY_ALLOWANCE`, `TAX_EXEMPT_BELOW`
+  and `TAX_MAX_PARTS` (family quotient when set). The Rates page shows them; the DRC and the Republic of the Congo keep
+  their rules in code. **Every value is a sample from secondary sources that disagree; a local payroll accountant must
+  confirm them before any real payroll.**
+  - Cameroon (Code du travail, loi 92/007): CNPS pension 4.2 % employee and 4.2 % employer, family benefits 7 %, work
+    accidents 1.75 % (risk group), all up to 750,000 XAF a month; IRPP 10 / 15 / 25 / 35 % at 2,000,000 / 3,000,000 /
+    5,000,000 a year after 30 % professional deduction and 500,000 a year, none below 62,000 a month; CAC 10 % of the
+    IRPP; crédit foncier 1 % employee and 1.5 % employer, FNE 1 % employer on taxable pay; RAV and TDL by monthly scale;
+    SMIG 41,875 (décret 2024/0168/PM, amount to confirm); 18 working days of leave a year; DIPE and CNPS by the 15th.
+  - Gabon (Code du travail, loi 022/2021): CNSS 2.5 % employee, employer 5 % pension, 8 % family, 3 % accidents, up to
+    1,500,000 a month; CNAMGS 2 % employee and 4.1 % employer up to 2,500,000; IRPP by family parts (6 at most) after
+    20 % professional deduction, 0 to 35 % in 8 bands; TCS 5 % of taxable pay after social contributions above 150,000;
+    FNH 2 % and vocational training 0.5 % employer; SMIG 150,000 (80,000 by décret 855/PR/MTE of 2006, to confirm);
+    24 working days of leave a year; declarations by the 15th.
+  - The website calculator answers for them once `APP_PUBLIC_CALCULATOR_COUNTRIES` lists `CM` and `GA` (after sign-off).
+    Mobile money with NTPay stays DRC only.
+
 ## Payroll completeness (phase 14)
 
 - **Departure and final settlement**: open a person on the Users page and choose Departure. HR Pay works out the notice pay (when not worked), the unused annual leave paid out, the severance and the share of the 13th month from the rates on the Rates page (`SETTLEMENT_DAYS_PER_MONTH`, `SEVERANCE_DAYS_PER_YEAR`, `JOB_SEARCH_DAYS_PER_WEEK`) and the notice of the person's grade category; HR can change each amount. Confirming (by someone other than the leaver) writes the amounts as pay entries of the last month, takes the leave out of the balance and ends the contract. The last payslip pays only the days up to the last day and takes what is left of loans, within the allowed share of net pay. The certificate of employment is a PDF numbered `CT-YYYY-NNNN`. The departure can be taken back while that month is still open.

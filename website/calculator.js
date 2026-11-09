@@ -13,7 +13,7 @@
 
   var T = {
     fr: {
-      gross: 'Du brut au net', net: 'Du net au brut', country: 'Pays', CD: 'RDC', CG: 'République du Congo',
+      gross: 'Du brut au net', net: 'Du net au brut', country: 'Pays', CD: 'RDC', CG: 'République du Congo', CM: 'Cameroun', GA: 'Gabon',
       amountGross: 'Salaire de base brut, par mois', amountNet: 'Net à payer souhaité, par mois',
       currency: 'Monnaie', housing: 'Indemnité de logement', transport: 'Indemnité de transport',
       family: 'Allocations familiales', bonus: 'Primes imposables', children: 'Enfants à charge',
@@ -35,7 +35,7 @@
       noRate: 'Le taux du dollar n\'est pas encore connu : saisissez les montants en {cur}.'
     },
     en: {
-      gross: 'Gross to net', net: 'Net to gross', country: 'Country', CD: 'DR Congo', CG: 'Republic of the Congo',
+      gross: 'Gross to net', net: 'Net to gross', country: 'Country', CD: 'DR Congo', CG: 'Republic of the Congo', CM: 'Cameroon', GA: 'Gabon',
       amountGross: 'Gross basic salary, per month', amountNet: 'Wanted net pay, per month',
       currency: 'Currency', housing: 'Housing allowance', transport: 'Transport allowance',
       family: 'Family allowances', bonus: 'Taxable bonuses', children: 'Children in charge',
@@ -67,6 +67,20 @@
     CNSS_EMPLOYER_FAMILY: ['CNSS, prestations familiales', 'CNSS, family benefits'],
     CNSS_EMPLOYER_ACCIDENT: ['CNSS, accidents du travail', 'CNSS, work accidents']
   };
+  var CEMAC_LINES = { IPR: ['IRPP (impôt sur le revenu des personnes physiques)', 'IRPP (personal income tax)'],
+    CNSS_EMPLOYEE: ['Pension vieillesse, part salariale', 'Old-age pension, employee share'],
+    CNSS_EMPLOYER: ['Pension vieillesse, part patronale', 'Old-age pension, employer share'],
+    CAC: ['CAC (centimes additionnels communaux)', 'CAC (additional council tax)'],
+    CFC_EMPLOYEE: ['Crédit foncier, part salariale', 'Crédit foncier, employee share'],
+    CFC_EMPLOYER: ['Crédit foncier, part patronale', 'Crédit foncier, employer share'],
+    FNE: ['FNE (fonds national de l\'emploi)', 'FNE (national employment fund)'],
+    RAV: ['RAV (redevance audiovisuelle)', 'RAV (audiovisual licence fee)'],
+    TDL: ['TDL (taxe de développement local)', 'TDL (local development tax)'],
+    CNAMGS_EMPLOYEE: ['CNAMGS, part salariale', 'CNAMGS, employee share'],
+    CNAMGS_EMPLOYER: ['CNAMGS, part patronale', 'CNAMGS, employer share'],
+    TCS: ['TCS (taxe complémentaire sur les salaires)', 'TCS (additional tax on salaries)'],
+    FNH: ['FNH (fonds national de l\'habitat)', 'FNH (national housing fund)'],
+    CFP: ['Formation professionnelle', 'Vocational training'] };
   var CONGO_LINES = { IPR: ['ITS (impôt sur les traitements et salaires)', 'ITS (tax on salaries)'],
     CNSS_EMPLOYEE: ['CNSS pensions, part salariale', 'CNSS pensions, employee share'],
     CNSS_EMPLOYER: ['CNSS pensions, part patronale', 'CNSS pensions, employer share'] };
@@ -82,11 +96,18 @@
     CNSS_ACCIDENT: ['CNSS accidents du travail', 'CNSS work accidents'], CNSS_FAMILY_CEILING: ['Plafond CNSS famille et accidents', 'CNSS family and accident ceiling'],
     TUS: ['TUS', 'TUS'], ITS_PROFESSIONAL_DEDUCTION: ['Abattement professionnel ITS', 'ITS professional deduction'],
     ITS_MAX_PARTS: ['Parts ITS, au plus', 'ITS parts, at most'], ITS_FIRST_BAND_FLAT: ['ITS, première tranche par part et par an', 'ITS, first band per part and year'],
-    ITS_MINIMUM_YEARLY: ['ITS minimum par an', 'ITS minimum per year']
+    ITS_MINIMUM_YEARLY: ['ITS minimum par an', 'ITS minimum per year'],
+    CNAMGS_EMPLOYEE: ['CNAMGS salarié', 'CNAMGS employee'], CNAMGS_EMPLOYER: ['CNAMGS employeur', 'CNAMGS employer'],
+    CNAMGS_CEILING: ['Plafond CNAMGS', 'CNAMGS ceiling'], CFC_EMPLOYEE: ['Crédit foncier salarié', 'Crédit foncier employee'],
+    CFC_EMPLOYER: ['Crédit foncier employeur', 'Crédit foncier employer'], FNE: ['FNE', 'FNE'], CAC: ['CAC', 'CAC'],
+    TCS: ['TCS', 'TCS'], TCS_THRESHOLD: ['Seuil de la TCS', 'TCS threshold'], FNH: ['FNH', 'FNH'], CFP: ['Formation professionnelle', 'Vocational training'],
+    TAX_PROFESSIONAL_DEDUCTION: ['Abattement professionnel IRPP', 'IRPP professional deduction'],
+    TAX_YEARLY_ALLOWANCE: ['Abattement annuel IRPP', 'IRPP yearly allowance'], TAX_EXEMPT_BELOW: ['IRPP : pas d\'impôt sous', 'IRPP: no tax below'],
+    TAX_MAX_PARTS: ['Parts IRPP, au plus', 'IRPP parts, at most']
   };
-  var PERCENT = /^(CNSS_EMPLOYEE|CNSS_EMPLOYER|INPP_|ONEM|IERE|IPR_DEPENDANT_REDUCTION|IPR_CAP|CNSS_FAMILY$|CNSS_ACCIDENT|TUS|ITS_PROFESSIONAL)/;
-  var LOCAL = { CD: 'CDF', CG: 'XAF' };
-  var SAMPLE = { CD: '1500000', CG: '400000' };
+  var PERCENT = /^(CNSS_EMPLOYEE|CNSS_EMPLOYER|INPP_|ONEM|IERE|IPR_DEPENDANT_REDUCTION|IPR_CAP|CNSS_FAMILY$|CNSS_ACCIDENT|TUS|ITS_PROFESSIONAL|CNAMGS_EMPLOY|CFC_|FNE$|CAC$|TCS$|FNH$|CFP$|TAX_PROFESSIONAL)/;
+  var LOCAL = { CD: 'CDF', CG: 'XAF', CM: 'XAF', GA: 'XAF' };
+  var SAMPLE = { CD: '1500000', CG: '400000', CM: '300000', GA: '600000' };
 
   var state = { country: countries.indexOf(root.dataset.country) >= 0 ? root.dataset.country : countries[0],
     mode: 'GROSS', last: null, ask: null };
@@ -102,13 +123,14 @@
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function lineName(code) {
-    var l = state.country === 'CG' && CONGO_LINES[code] || LINES[code];
+    var cemac = state.country === 'CM' || state.country === 'GA';
+    var l = state.country === 'CG' && CONGO_LINES[code] || cemac && CEMAC_LINES[code] || LINES[code];
     return l ? l[H.lang() === 'fr' ? 0 : 1] : code;
   }
   function el(id) { return document.getElementById('calc-' + id); }
 
   function render() {
-    var cg = state.country === 'CG', cur = LOCAL[state.country];
+    var cg = state.country !== 'CD', cur = LOCAL[state.country];   // no INPP or IERE outside the DRC
     var keep = state.ask;
     root.innerHTML =
       '<div class="calc">' +

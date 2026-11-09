@@ -26,7 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class LawChanges {
 
-    public static final Set<String> COUNTRIES = Set.of("CD", "CG");
+    public static final Set<String> COUNTRIES = Set.of("CD", "CG", "CM", "GA");
     public static final Set<String> CATEGORIES = Set.of("TAX", "SOCIAL", "WAGE", "LABOUR", "DECLARATION");
     public static final Set<String> IN_APP = Set.of("APPLIED", "COMING", "INFO");
 

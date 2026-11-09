@@ -233,6 +233,7 @@ public class DeclarationCalendar {
         }
         return country.equals("CG")
                 ? Texts.t("Year end: the annual statement of salaries (DAS) follows in January.")
+                : !country.equals("CD") ? Texts.t("Year end: the annual statement of salaries follows in January (to confirm with the tax office).")
                 : Texts.t("December: add the annual summary, a sheet for each employee and the nominal list (Loi 004/2003 art. 18).");
     }
 

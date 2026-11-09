@@ -44,7 +44,7 @@ public class StatutoryRateController {
     public record SettingInput(@NotBlank @Size(max = 40) String value) {}
 
     public record Overview(LocalDate on, List<StatutoryRates.RateType> rates, StatutoryRates.BracketSet ipr,
-                           List<LocalDate> iprDates, Map<String, String> settings) {}
+                           List<LocalDate> iprDates, Map<String, String> settings, CountryRules rules) {}
 
     public record IprTrial(@NotNull @DecimalMin("0") BigDecimal taxableMonthlyCdf, @Min(0) int dependants, LocalDate on) {}
 
@@ -59,7 +59,8 @@ public class StatutoryRateController {
     @GetMapping
     public Overview overview(@RequestParam(required = false) LocalDate on) {
         LocalDate day = on != null ? on : LocalDate.now(clock);
-        return new Overview(day, rates.types(day), rates.brackets(day), rates.bracketDates(), rates.settings());
+        return new Overview(day, rates.types(day), rates.brackets(day), rates.bracketDates(), rates.settings(),
+                rates.countryRules(day));
     }
 
     @GetMapping("/rates/{code}")

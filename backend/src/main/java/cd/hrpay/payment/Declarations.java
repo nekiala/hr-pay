@@ -30,7 +30,15 @@ public class Declarations {
     public static final List<String> KINDS = List.of("CNSS", "IPR", "INPP", "ONEM", "IERE");
 
     /** The declarations of each country: the DRC's, and the Republic of the Congo's (IPR there is the ITS). */
-    public static final Map<String, List<String>> KINDS_BY_COUNTRY = Map.of("CD", KINDS, "CG", List.of("CNSS", "IPR", "TUS"));
+    public static final Map<String, List<String>> KINDS_BY_COUNTRY = Map.of("CD", KINDS, "CG", List.of("CNSS", "IPR", "TUS"),
+            "CM", List.of("CNSS", "IPR", "CAC", "CFC", "FNE", "RAV", "TDL"),
+            "GA", List.of("CNSS", "CNAMGS", "IPR", "TCS", "FNH", "CFP"));
+
+    /** Withheld from the employee only: the payslip line has the declaration's code. */
+    private static final java.util.Set<String> EMPLOYEE_ONLY = java.util.Set.of("IPR", "CAC", "RAV", "TDL", "TCS");
+
+    /** Shared by the employee and the employer, on lines {kind}_EMPLOYEE and {kind}_EMPLOYER. */
+    private static final java.util.Set<String> SHARED = java.util.Set.of("CNAMGS", "CFC");
 
     private String country() {
         return jdbc.sql("select country_code from company where id = current_company_id()").query(String.class).optional().orElse("CD");
@@ -99,16 +107,11 @@ public class Declarations {
     public Declaration declaration(YearMonth month, String kind) {
         requireKind(kind);
         RunRow run = run(month);
-        String employeeCode = switch (kind) {
-            case "CNSS" -> "CNSS_EMPLOYEE";
-            case "IPR" -> "IPR";
-            default -> null;
-        };
-        String employerCode = switch (kind) {
-            case "CNSS" -> "CNSS_EMPLOYER%";   // in the Republic of the Congo: pensions, family benefits and accidents
-            case "IPR" -> null;
-            default -> kind;
-        };
+        String employeeCode = kind.equals("CNSS") ? "CNSS_EMPLOYEE" : SHARED.contains(kind) ? kind + "_EMPLOYEE"
+                : EMPLOYEE_ONLY.contains(kind) ? kind : null;
+        // CNSS: in the Republic of the Congo, Cameroon and Gabon, pensions, family benefits and accidents.
+        String employerCode = kind.equals("CNSS") ? "CNSS_EMPLOYER%" : SHARED.contains(kind) ? kind + "_EMPLOYER"
+                : EMPLOYEE_ONLY.contains(kind) ? null : kind;
         String idKey = switch (kind) {
             case "CNSS" -> "cnssNumber";
             case "IPR" -> "taxNumber";
@@ -125,13 +128,15 @@ public class Declarations {
                        sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = ?)) as employee_amount,
                        sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code like ?)) as employer_amount,
                        sum((select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code like ?)) as employer_base,
+                       sum((select max(l.base) from payslip_line l where l.payslip_id = p.id and l.element_code = ?)) as employee_base,
                        min(p.unit_id) as unit_id
                 from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? and (p.kind = 'REGULAR' or p.number is not null)
                 group by p.user_id, u.registration_no, u.first_name, u.last_name
                 order by u.last_name, u.first_name""")
                 .params(idKey == null ? "-" : idKey, employeeCode == null ? "-" : employeeCode,
-                        employerCode == null ? "-" : employerCode, employerCode == null ? "-" : employerCode, run.id())
+                        employerCode == null ? "-" : employerCode, employerCode == null ? "-" : employerCode,
+                        employeeCode == null ? "-" : employeeCode, run.id())
                 .query((rs, i) -> {
                     String currency = rs.getString("currency");
                     BigDecimal employee = rs.getBigDecimal("employee_amount");
@@ -139,7 +144,7 @@ public class Declarations {
                     BigDecimal base = switch (kind) {
                         case "CNSS" -> rs.getBigDecimal("cnss_base");
                         case "IPR" -> rs.getBigDecimal("taxable_base");
-                        default -> rs.getBigDecimal("employer_base");
+                        default -> rs.getBigDecimal(employerCode == null ? "employee_base" : "employer_base");
                     };
                     if (employee == null && employer == null) {
                         return null;     // not concerned (for instance IERE for a national)
