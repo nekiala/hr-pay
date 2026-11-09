@@ -10,6 +10,7 @@ import { localCurrency, t } from '../i18n'
 type Rule = {
   kind: string; authority: string; declareDay: number; payDay: number; quarterlyUpToStaff: number | null
   lateDeclarationPercent: number | null; lateDeclarationPercentLater: number | null; laterAfterMonths: number | null
+  latePaymentPercentFlat: number | null; latePaymentPercentFlatLater: number | null
   latePaymentPercentMonth: number | null; latePaymentPercentDay: number | null; dailyFromDay: number | null
   legalBasis: string | null; verified: boolean
 }
@@ -113,10 +114,13 @@ export default function DeclarationCalendarPage() {
                   <tr key={r.kind}>
                     <td><strong>{r.kind}</strong> <span className="muted small">{r.authority}</span></td>
                     <td className="small">{t('Day {a} of the next month', { a: r.declareDay })}
-                      {r.quarterlyUpToStaff && <div className="muted">{t('Quarterly up to {a} workers', { a: r.quarterlyUpToStaff })}</div>}</td>
+                      {r.quarterlyUpToStaff !== null && <div className="muted">{t('Quarterly up to {a} workers', { a: r.quarterlyUpToStaff })}</div>}</td>
                     <td className="small">{r.lateDeclarationPercent === null ? '—' : `${r.lateDeclarationPercent} %`}
                       {r.lateDeclarationPercentLater !== null && <div className="muted">{t('{a} % after {b} months', { a: r.lateDeclarationPercentLater, b: r.laterAfterMonths ?? '' })}</div>}</td>
-                    <td className="small">{[r.latePaymentPercentMonth !== null ? t('{a} % a month started', { a: r.latePaymentPercentMonth }) : null,
+                    <td className="small">{[r.latePaymentPercentFlat !== null ? (r.latePaymentPercentFlatLater !== null
+                        ? t('{a} %, {b} % after {c} months', { a: r.latePaymentPercentFlat, b: r.latePaymentPercentFlatLater, c: r.laterAfterMonths ?? '' })
+                        : `${r.latePaymentPercentFlat} %`) : null,
+                      r.latePaymentPercentMonth !== null ? t('{a} % a month started', { a: r.latePaymentPercentMonth }) : null,
                       r.latePaymentPercentDay !== null ? (r.dailyFromDay ? t('{a} % a day from the {b}th', { a: r.latePaymentPercentDay, b: r.dailyFromDay }) : t('{a} % a day', { a: r.latePaymentPercentDay })) : null]
                       .filter(Boolean).join(' · ') || '—'}</td>
                     <td className="small">{r.legalBasis}{!r.verified && <>{' '}<span className="badge warn">{t('To confirm')}</span></>}</td>

@@ -38,7 +38,7 @@ public class DeclarationCalendar {
 
     public record Rule(String kind, String authority, int declareDay, int payDay, Integer quarterlyUpToStaff,
                        BigDecimal lateDeclarationPercent, BigDecimal lateDeclarationPercentLater, Integer laterAfterMonths,
-                       BigDecimal latePaymentPercentMonth, BigDecimal latePaymentPercentDay, Integer dailyFromDay,
+                       BigDecimal latePaymentPercentFlat, BigDecimal latePaymentPercentFlatLater, BigDecimal latePaymentPercentMonth, BigDecimal latePaymentPercentDay, Integer dailyFromDay,
                        String legalBasis, boolean verified) {}
 
     public record Paid(LocalDate paidOn, BigDecimal amount, String reference, String mode, String paidBy, OffsetDateTime paidAt) {}
@@ -78,8 +78,8 @@ public class DeclarationCalendar {
     public List<Rule> rules() {
         return jdbc.sql("""
                 select kind, authority, declare_day, pay_day, quarterly_up_to_staff, late_declaration_percent,
-                       late_declaration_percent_later, later_after_months, late_payment_percent_month,
-                       late_payment_percent_day, daily_from_day, legal_basis, verified
+                       late_declaration_percent_later, later_after_months, late_payment_percent_flat,
+                       late_payment_percent_flat_later, late_payment_percent_month, late_payment_percent_day, daily_from_day, legal_basis, verified
                 from declaration_rule order by id""").query(Rule.class).list();
     }
 
@@ -185,6 +185,12 @@ public class DeclarationCalendar {
         BigDecimal payment = zero;
         LocalDate paid = paidOn != null ? paidOn : today;
         if (paid.isAfter(payDue)) {
+            if (rule.latePaymentPercentFlat() != null) {
+                BigDecimal pct = rule.latePaymentPercentFlatLater() != null && rule.laterAfterMonths() != null
+                        && startedMonths(payDue, paid) > rule.laterAfterMonths() ? rule.latePaymentPercentFlatLater() : rule.latePaymentPercentFlat();
+                payment = payment.add(percent(amount, pct));
+                how.add(Texts.t("Late payment: %s %% of the amount.", plain(pct)));
+            }
             if (rule.latePaymentPercentMonth() != null) {
                 long months = startedMonths(payDue, paid);
                 payment = payment.add(percent(amount, rule.latePaymentPercentMonth().multiply(BigDecimal.valueOf(months))));

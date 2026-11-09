@@ -10,7 +10,7 @@ class DeclarationCalendarTest {
 
     private static DeclarationCalendar.Rule rule(String decl, String later, Integer after, String month, String day, Integer from) {
         return new DeclarationCalendar.Rule("IPR", "DGI", 15, 15, null, decl == null ? null : new BigDecimal(decl),
-                later == null ? null : new BigDecimal(later), after, month == null ? null : new BigDecimal(month),
+                later == null ? null : new BigDecimal(later), after, null, null, month == null ? null : new BigDecimal(month),
                 day == null ? null : new BigDecimal(day), from, null, true);
     }
 
@@ -60,6 +60,18 @@ class DeclarationCalendarTest {
         var later = DeclarationCalendar.penalty(rule("50", "100", 2, null, null, null), new BigDecimal("1000"), DUE, DUE,
                 null, null, LocalDate.of(2026, 12, 1));
         assertThat(later.lateDeclaration()).isEqualByComparingTo("1000");
+    }
+
+    @Test
+    void congoWithheldTaxPaidLateCostsHalfThenAll() {
+        // CGI art. 512: 50 % of the sums paid late, 100 % when more than two months late.
+        var r = new DeclarationCalendar.Rule("IPR", "Impôts", 15, 15, 5, null, null, 2, new BigDecimal("50"), new BigDecimal("100"),
+                null, null, null, null, true);
+        var p = DeclarationCalendar.penalty(r, new BigDecimal("1000"), DUE, DUE, DUE, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31));
+        assertThat(p.latePayment()).isEqualByComparingTo("500");
+        assertThat(p.lateDeclaration()).isEqualByComparingTo("0");
+        var later = DeclarationCalendar.penalty(r, new BigDecimal("1000"), DUE, DUE, DUE, null, LocalDate.of(2026, 12, 1));
+        assertThat(later.latePayment()).isEqualByComparingTo("1000");
     }
 
     @Test

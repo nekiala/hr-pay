@@ -25,6 +25,8 @@ create table declaration_rule (
     late_declaration_percent      numeric(7, 3) check (late_declaration_percent is null or late_declaration_percent >= 0),
     late_declaration_percent_later numeric(7, 3) check (late_declaration_percent_later is null or late_declaration_percent_later >= 0),
     later_after_months            int check (later_after_months is null or later_after_months > 0),
+    late_payment_percent_flat     numeric(7, 3) check (late_payment_percent_flat is null or late_payment_percent_flat >= 0),
+    late_payment_percent_flat_later numeric(7, 3) check (late_payment_percent_flat_later is null or late_payment_percent_flat_later >= 0),
     late_payment_percent_month    numeric(7, 3) check (late_payment_percent_month is null or late_payment_percent_month >= 0),
     late_payment_percent_day      numeric(7, 3) check (late_payment_percent_day is null or late_payment_percent_day >= 0),
     daily_from_day                int check (daily_from_day is null or daily_from_day between 1 and 31),
@@ -35,28 +37,29 @@ select hrpay_company_table('declaration_rule');
 alter table declaration_rule add constraint declaration_rule_kind_key unique (company_id, kind);
 
 insert into declaration_rule (company_id, kind, authority, declare_day, pay_day, quarterly_up_to_staff, late_declaration_percent,
-                              late_declaration_percent_later, later_after_months, late_payment_percent_month,
+                              late_declaration_percent_later, later_after_months, late_payment_percent_flat,
+                              late_payment_percent_flat_later, late_payment_percent_month,
                               late_payment_percent_day, daily_from_day, legal_basis, verified)
 select c.id, r.kind, r.authority, r.declare_day, r.pay_day, r.quarterly, r.late_decl, r.late_decl_later, r.later_months,
-       r.late_month, r.late_day, r.daily_from, r.basis, r.verified
+       r.flat, r.flat_later, r.late_month, r.late_day, r.daily_from, r.basis, r.verified
 from company c, (values
-    ('CD', 'CNSS', 'CNSS', 15, 15, null::int, null::numeric, null::numeric, null::int, null::numeric, 0.5, 21,
+    ('CD', 'CNSS', 'CNSS', 15, 15, null::int, null::numeric, null::numeric, null::int, null::numeric, null::numeric, null::numeric, 0.5, 21,
      'Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; majoration de 0,5 % par jour à partir du 21 (CNSS, à confirmer)', false),
-    ('CD', 'IPR', 'DGI', 15, 15, null, 25, null, null, 2, null, null,
+    ('CD', 'IPR', 'DGI', 15, 15, null, 25, null, null, null, null, 2, null, null,
      'Loi 004/2003 art. 17 (déclaration et versement dans les 15 jours, même néant), art. 89 (+25 %), art. 91 (2 % par mois commencé)', true),
-    ('CD', 'INPP', 'INPP', 15, 15, null, null, null, null, null, null, null,
+    ('CD', 'INPP', 'INPP', 15, 15, null, null, null, null, null, null, null, null, null,
      'Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; pénalités à confirmer', false),
-    ('CD', 'ONEM', 'ONEM', 15, 15, null, null, null, null, null, 0.5, null,
+    ('CD', 'ONEM', 'ONEM', 15, 15, null, null, null, null, null, null, null, 0.5, null,
      'Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; 0,5 % par jour de retard (à confirmer)', false),
-    ('CD', 'IERE', 'DGI', 15, 15, null, 25, null, null, 2, null, null,
+    ('CD', 'IERE', 'DGI', 15, 15, null, 25, null, null, null, null, 2, null, null,
      'Loi 004/2003 art. 17, 89 et 91', true),
-    ('CG', 'CNSS', 'CNSS', 15, 15, 20, null, null, null, null, null, null,
+    ('CG', 'CNSS', 'CNSS', 15, 15, 20, null, null, null, null, null, null, null, null,
      'Déclaration mensuelle au plus tard le 15; trimestrielle jusqu''à 20 travailleurs (à confirmer)', false),
-    ('CG', 'IPR', 'Impôts', 15, 15, null, 50, 100, 2, null, null, null,
-     'ITS: déclaration et versement au plus tard le 15 (e-Tax); CGI art. 512: 50 %, 100 % au-delà de deux mois (à confirmer)', false),
-    ('CG', 'TUS', 'Impôts', 15, 15, null, null, null, null, null, null, null,
-     'TUS: déclaration et versement au plus tard le 15 (à confirmer)', false)
-) as r(country, kind, authority, declare_day, pay_day, quarterly, late_decl, late_decl_later, later_months, late_month,
+    ('CG', 'IPR', 'Impôts', 15, 15, 5, null, null, 2, 50, 100, null, null, null,
+     'CGI art. 173 (versement dans les 15 jours du mois suivant; trimestriel jusqu''à 5 salariés), art. 177 bis (déclaration mensuelle), art. 512 (50 %, 100 % au-delà de deux mois)', true),
+    ('CG', 'TUS', 'Impôts', 15, 15, 5, null, null, 2, 50, 100, null, null, null,
+     'Comme la taxe forfaitaire sur les salaires qu''elle remplace: CGI art. 173 et 512 (à confirmer pour la TUS)', false)
+) as r(country, kind, authority, declare_day, pay_day, quarterly, late_decl, late_decl_later, later_months, flat, flat_later, late_month,
        late_day, daily_from, basis, verified)
 where c.country_code = r.country
   and exists (select 1 from statutory_rate_type s where s.company_id = c.id and s.code = 'CNSS_EMPLOYEE');

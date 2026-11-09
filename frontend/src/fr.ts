@@ -1,5 +1,6 @@
 // French texts of the interface, by their English text. Generated from the t() calls, then edited by hand.
 const fr: Record<string, string> = {
+  "{a} %, {b} % after {c} months": "{a} %, {b} % au-delà de {c} mois",
   "Declarations calendar": "Calendrier des déclarations",
   "Next deadline": "Prochaine échéance",
   "Nothing open": "Rien en attente",

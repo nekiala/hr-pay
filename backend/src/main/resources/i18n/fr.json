@@ -1380,5 +1380,6 @@
  "declare": "déclarer",
  "pay": "payer",
  "Declarations due soon": "Déclarations bientôt dues",
- "Declarations late": "Déclarations en retard"
+ "Declarations late": "Déclarations en retard",
+ "Late payment: %s %% of the amount.": "Paiement tardif : %s %% du montant."
 }
