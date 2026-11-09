@@ -295,6 +295,9 @@ class PayrollCompletenessIT extends IntegrationTest {
         assertThat(new BigDecimal(JsonPath.read(journal, "$.debit").toString()))
                 .isEqualByComparingTo(new BigDecimal(JsonPath.read(journal, "$.credit").toString()));
         assertThat(JsonPath.<List<String>>read(journal, "$.entries[*].account")).contains("6612", "4310", "4220", "6641");
+        // INPP and ONEM share an account: the line names both.
+        assertThat(JsonPath.<List<String>>read(journal, "$.entries[?(@.account == '6413')].label"))
+                .allMatch(l -> l.contains("INPP") && l.contains("ONEM"));
         mvc.perform(get("/api/accounting/2026-03.csv").session(finance)).andExpect(status().isOk());
         mvc.perform(get("/api/accounting/2026-03").session(login(EMPLOYEE))).andExpect(status().isForbidden());
 

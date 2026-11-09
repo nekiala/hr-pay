@@ -37,8 +37,8 @@ public class CountryPacks {
     public static String taxName(String country) {
         return switch (country == null ? "CD" : country) {
             case "CG" -> "ITS";
-            case "CM", "GA" -> "IRPP";
-            default -> "IPR";
+            // The DRC's IPR is the IRPP since 2026 (Loi 23/053); the DGI's forms and the declarations still say IPR.
+            default -> "IRPP";
         };
     }
 

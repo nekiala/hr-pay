@@ -57,5 +57,10 @@ class StatutoryRatesIT extends IntegrationTest {
         mvc.perform(json(put("/api/statutory/settings/INPP_BAND").session(hr), """
                         {"value":"HUGE"}"""))
                 .andExpect(status().is(422));
+        // By default the band follows the number of people under contract.
+        mvc.perform(get("/api/statutory").session(hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.settings.INPP_BAND").value("AUTO"))
+                .andExpect(jsonPath("$.staff").isNumber())
+                .andExpect(jsonPath("$.inppBand").isString());
     }
 }

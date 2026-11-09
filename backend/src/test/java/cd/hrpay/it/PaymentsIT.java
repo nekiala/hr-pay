@@ -106,6 +106,11 @@ class PaymentsIT extends IntegrationTest {
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             bankId = JsonPath.<Number>read(bank, "$.batch.id").longValue();
 
+            // The bank file's total sits under Amount.
+            String bankCsv = mvc.perform(get("/api/payment-batches/" + bankId + "/file.csv").session(finance))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(bankCsv).containsPattern(",,Total,,,[0-9]+\\.[0-9]{2},USD");
+
             // A bank payment needs its reference; it then cannot be cancelled.
             mvc.perform(json(post("/api/payment-batches/" + bankId + "/paid").session(finance), "{\"paidOn\":\"2026-09-02\"}"))
                     .andExpect(status().is(422));

@@ -1,5 +1,7 @@
 // French texts of the interface, by their English text. Generated from the t() calls, then edited by hand.
 const fr: Record<string, string> = {
+  'From the number of people under contract': 'Selon le nombre de personnes sous contrat',
+  '{n} people under contract today: {band}.': '{n} personnes sous contrat aujourd’hui : {band}.',
   'CNAMGS (health insurance)': 'CNAMGS (assurance maladie)',
   'CAC (additional council tax)': 'CAC (centimes additionnels communaux)',
   'Crédit foncier (CFC)': 'Crédit foncier (CFC)',

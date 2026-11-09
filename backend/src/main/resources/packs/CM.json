@@ -1792,7 +1792,7 @@
    "rows": [
     {
      "key": "INPP_BAND",
-     "value": "LARGE"
+     "value": "AUTO"
     },
     {
      "key": "RATE_DAY",

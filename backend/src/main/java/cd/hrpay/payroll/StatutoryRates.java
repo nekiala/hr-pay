@@ -211,7 +211,7 @@ public class StatutoryRates {
     @Transactional
     public void setSetting(String key, String value) {
         boolean valid = switch (key) {
-            case "INPP_BAND" -> List.of("SMALL", "MEDIUM", "LARGE").contains(value);
+            case "INPP_BAND" -> List.of("AUTO", "SMALL", "MEDIUM", "LARGE").contains(value);
             case "RATE_DAY" -> List.of("LAST_OF_MONTH", "RUN_DATE").contains(value);
             case "THIRTEENTH_ENABLED", "THIRTEENTH_PRORATE" -> List.of("true", "false").contains(value);
             case "THIRTEENTH_BASE" -> List.of("AVERAGE_BASIC", "LAST_BASIC").contains(value);
@@ -238,6 +238,26 @@ public class StatutoryRates {
     }
 
     public BigDecimal inppRate(LocalDate on) {
-        return rate("INPP_" + setting("INPP_BAND"), on);
+        return rate("INPP_" + inppBand(on), on);
+    }
+
+    /** The INPP band: the one HR picked, or by default the one of the number of people under contract on that day. */
+    public String inppBand(LocalDate on) {
+        String band = setting("INPP_BAND");
+        if (!"AUTO".equals(band)) {
+            return band;
+        }
+        return inppBandFor(staffOn(on));
+    }
+
+    static String inppBandFor(long staff) {
+        return staff <= 50 ? "SMALL" : staff <= 300 ? "MEDIUM" : "LARGE";
+    }
+
+    /** People with a contract running on that day. */
+    public long staffOn(LocalDate on) {
+        return jdbc.sql("""
+                select count(distinct user_id) from employee_contract
+                where start_date <= ? and (end_date is null or end_date >= ?)""").params(on, on).query(Long.class).single();
     }
 }

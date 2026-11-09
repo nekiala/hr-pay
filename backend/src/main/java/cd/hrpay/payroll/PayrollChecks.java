@@ -311,7 +311,7 @@ public class PayrollChecks {
 
         // Requests still waiting.
         jdbc.sql("""
-                select user_id, count(*) from leave_request where status = 'PENDING' and start_date <= ? and end_date >= ?
+                select user_id, count(*) from leave_request where status in ('PENDING', 'AWAITING_HR') and start_date <= ? and end_date >= ?
                 group by user_id""").params(last, first).query((rs, i) -> {
                     Slip s = byUser.get(rs.getLong(1));
                     if (s != null) {
@@ -335,10 +335,13 @@ public class PayrollChecks {
         // Pay in another currency than the local one is converted (taxes and contributions are declared locally).
         boolean converted = slips.stream().anyMatch(s -> !s.currency().equals(local));
         LocalDate calculatedOn = run.calculatedAt() == null ? LocalDate.now() : run.calculatedAt().toLocalDate();
-        long age = ChronoUnit.DAYS.between(run.rateDate(), calculatedOn);
+        // A month calculated after it ended is measured from its last day: the month-end rate is the right one then.
+        boolean late = calculatedOn.isAfter(last);
+        long age = ChronoUnit.DAYS.between(run.rateDate(), late ? last : calculatedOn);
         if (converted && age > settings.rateMaxDays()) {
-            add.add("RATE_OLD", null, Texts.t("The exchange rate used is from %s, %s days before the calculation.",
-                    Texts.day(run.rateDate()), age));
+            add.add("RATE_OLD", null, late
+                    ? Texts.t("The exchange rate used is from %s, %s days before the end of the month.", Texts.day(run.rateDate()), age)
+                    : Texts.t("The exchange rate used is from %s, %s days before the calculation.", Texts.day(run.rateDate()), age));
         }
 
         // A rate or the tax scale changed for this month after it was calculated (a published law change, or HR).

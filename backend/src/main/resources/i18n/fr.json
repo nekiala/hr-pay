@@ -599,7 +599,6 @@
  "Employer charges: CNSS pensions up to the pension ceiling; family benefits and work accidents up to their ceiling; the tax on salaries (TUS) on the gross.": "Charges patronales : pensions CNSS jusqu'au plafond des pensions ; prestations familiales et accidents du travail jusqu'à leur plafond ; la taxe unique sur les salaires (TUS) sur le brut.",
  "A basic salary below the monthly SMIG shows a warning.": "Un salaire de base inférieur au SMIG mensuel affiche un avertissement.",
  "CNSS employee share = rate × earnings subject to CNSS.": "Part salariale CNSS = taux × gains soumis à la CNSS.",
- "IPR: monthly taxable income = taxable earnings − employee CNSS, converted to CDF; the yearly bands apply to it × 12, the result ÷ 12; less the reduction per dependant (up to the maximum number); at most the cap % of the taxable income.": "IPR : revenu imposable mensuel = gains imposables − CNSS salariale, converti en CDF ; le barème annuel s'applique à ce montant × 12, le résultat ÷ 12 ; moins la réduction par personne à charge (jusqu'au nombre maximum) ; au plus le % plafond du revenu imposable.",
  "Employer charges: CNSS employer share on earnings subject to CNSS; INPP at the rate of the company's size band; ONEM; IERE on expatriates' pay.": "Charges patronales : part patronale CNSS sur les gains soumis à la CNSS ; INPP au taux de la tranche d'effectif de l'entreprise ; ONEM ; IERE sur la rémunération des expatriés.",
  "A basic salary below the daily SMIG times the days of the month shows a warning.": "Un salaire de base inférieur au SMIG journalier multiplié par les jours du mois affiche un avertissement.",
  "Give the last day and the reason for leaving.": "Indiquez le dernier jour et le motif du départ.",
@@ -1459,5 +1458,8 @@
  "Taxes on the IRPP (such as the CAC) and flat monthly taxes by band (such as the RAV and the TDL) follow table 2b.": "Les taxes sur l'IRPP (comme les CAC) et les taxes mensuelles forfaitaires par tranche (comme la RAV et la TDL) suivent le tableau 2b.",
  "Employer charges (table 2b): rate × their base, up to their ceiling.": "Charges patronales (tableau 2b) : taux × leur base, jusqu'à leur plafond.",
  "Year end: the annual statement of salaries follows in January (to confirm with the tax office).": "Fin d'année : la déclaration annuelle des salaires suit en janvier (à confirmer auprès des impôts).",
- "No contributions are set for this country.": "Aucune cotisation n'est définie pour ce pays."
+ "No contributions are set for this country.": "Aucune cotisation n'est définie pour ce pays.",
+ "The exchange rate used is from %s, %s days before the end of the month.": "Le taux de change utilisé date du %s, %s jours avant la fin du mois.",
+ "IRPP: monthly taxable income = taxable earnings − employee CNSS, converted to CDF; the yearly bands apply to it × 12, the result ÷ 12; less the reduction per dependant (up to the maximum number); at most the cap % of the taxable income.": "IRPP : revenu imposable mensuel = gains imposables − CNSS salariale, converti en CDF ; le barème annuel s'applique à ce montant × 12, le résultat ÷ 12 ; moins la réduction par personne à charge (jusqu'au nombre maximum) ; au plus le % plafond du revenu imposable.",
+ "IRPP (income tax)": "IRPP (impôt sur le revenu)"
 }
