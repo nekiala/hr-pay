@@ -38,6 +38,13 @@ public class ClockIngest {
     private final AutoClose autoClose;
     private final AuditService audit;
 
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
     public ClockIngest(ClockEventRepository events, AutoClose autoClose, AuditService audit) {
         this.events = events;
         this.autoClose = autoClose;
@@ -64,6 +71,9 @@ public class ClockIngest {
         }
         long before = day.stream().filter(e -> e.getOccurredAt().isBefore(at)).count();
         ClockEvent.Type type = wanted != null ? wanted : before % 2 == 0 ? ClockEvent.Type.IN : ClockEvent.Type.OUT;
+        if (type == ClockEvent.Type.IN && contracts != null && !contracts.on(user.getId(), date)) {
+            return Outcome.ignored("no contract");   // nobody works without a contract
+        }
         if (type == ClockEvent.Type.IN && last.isPresent() && last.get().getType() == ClockEvent.Type.IN
                 && last.get().getWorkDate().isBefore(date)) {
             // A day forgotten open before today is closed first, as for a check-in in the app.

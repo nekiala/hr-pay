@@ -110,6 +110,15 @@ class CheckInIT extends IntegrationTest {
         mvc.perform(json(post("/api/users").session(admin), body)).andExpect(status().isCreated());
         String email = JsonPath.read(body, "$.user.email");
         MockHttpSession s = login(email);
+        // Nobody works without a contract.
+        mvc.perform(json(post("/api/attendance/check-in").session(s), "{}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("no contract")));
+        long userId = jdbc.sql("select id from app_user where email = ?").param(email).query(Long.class).single();
+        long grade = jdbc.sql("select id from grade where code = 'E4A'").query(Long.class).single();
+        mvc.perform(json(post("/api/users/" + userId + "/contracts").session(login(HR)), """
+                        {"contractType":"PERMANENT","startDate":"2020-01-01","gradeId":%d,"expatriate":false}""".formatted(grade)))
+                .andExpect(status().isCreated());
         // The temporary password must be changed before anything else matters; the API still works.
         mvc.perform(json(post("/api/attendance/check-in").session(s), "{}"))
                 .andExpect(status().isUnprocessableContent())

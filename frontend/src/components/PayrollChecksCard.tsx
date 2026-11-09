@@ -22,6 +22,7 @@ export const CHECK_TITLES: Record<string, string> = {
   NET_NEGATIVE: t('Net pay below zero'),
   BELOW_MINIMUM: t('Basic pay below the legal minimum'),
   AFTER_LEAVING: t('Paid after leaving'),
+  NO_CONTRACT: t('Employees with no contract (not paid)'),
   MISSING_DETAILS: t('Missing CNSS, tax or payment details'),
   SHARED_ACCOUNT: t('Same account for several people'),
   NET_CHANGE: t('Large change in net pay'),

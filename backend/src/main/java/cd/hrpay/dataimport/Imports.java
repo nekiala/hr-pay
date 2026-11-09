@@ -58,14 +58,13 @@ public class Imports {
 
     static {
         COLUMNS.put(Kind.EMPLOYEES, List.of(
-                col("registration_no", "Registration no.", true, "The person's number in the company. A number already in HR Pay updates that person."),
+                col("registration_no", "Registration no.", true, "The person's number in the company. A number already in HR Pay updates that person. Empty: HR Pay gives the next number when the company numbers employees automatically."),
                 col("first_name", "First name", true, null),
                 col("last_name", "Last name", true, null),
                 col("email", "Email", true, "Used to sign in; unique."),
                 col("phone", "Phone", true, "International format, for example +243812345678."),
                 col("site", "Site code", false, "Code of the site on the Sites page."),
                 col("unit", "Unit code", false, "Code of the unit in the structure. Empty: the top unit."),
-                col("hire_date", "Hire date", false, "Date: 2026-03-01 or 01/03/2026."),
                 col("grade_category", "Grade category code", false, null),
                 col("manager", "Manager's registration no.", false, "Only when the manager is not the head of the unit."),
                 col("clock_pin", "Time clock number", false, "The number the person is enrolled under on the time clock. Empty: the registration number."),
@@ -87,6 +86,7 @@ public class Imports {
                 col("contract_type", "Contract type", true, "Permanent (CDI), fixed-term (CDD), intern or consultant."),
                 col("start_date", "Start date", true, null),
                 col("end_date", "End date", false, "Required for a fixed-term contract."),
+                col("hire_date", "In the company since", false, "First contract only, when the person was hired before it (seniority). Empty: the start date."),
                 col("grade", "Grade code", true, "Code of the grade on the Grades page."),
                 col("occupation", "Occupation code", false, null),
                 col("expatriate", "Expatriate", false, "Yes or no."),
@@ -145,6 +145,12 @@ public class Imports {
 
     @PersistenceContext
     private EntityManager em;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.user.Matricules matricules;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.user.Contracts contracts;
 
     public Imports(JdbcClient jdbc, UserService users, UserRepository userRepository, SiteRepository sites, OrgStructure org,
                    EmployeeFile employees, MasterData masterData, SalaryService salaries, LeaveService leave,
@@ -355,7 +361,8 @@ public class Imports {
     }
 
     private void employee(Row row, Outcome out, Context ctx) {
-        String registration = row.required("registration_no");
+        // Empty: HR Pay gives the next number from the company's format (when it has one).
+        String registration = matricules.enabled() ? row.text("registration_no") : row.required("registration_no");
         String email = row.required("email");
         String phone = row.required("phone");
         String first = row.required("first_name");
@@ -380,14 +387,14 @@ public class Imports {
                     .query(Long.class).optional()
                     .orElseThrow(() -> new BusinessRuleException(Texts.t("No grade category has the code %s.", categoryCode)));
         }
-        LocalDate hire = row.date("hire_date");
         if (!row.errors.isEmpty()) {
             return;
         }
         String postnom = row.text("postnom");
         out.name = AppUser.fullName(first, postnom, last);
         UserService.UserData data = new UserService.UserData(email, registration, phone, first, last, siteId, postnom);
-        Optional<AppUser> existing = userRepository.findByRegistrationNoIgnoreCase(registration.trim());
+        Optional<AppUser> existing = registration == null ? Optional.empty()
+                : userRepository.findByRegistrationNoIgnoreCase(registration.trim());
         AppUser user;
         if (existing.isPresent()) {
             if (ctx.created.containsKey(registration.trim().toUpperCase())) {
@@ -404,13 +411,14 @@ public class Imports {
             user = users.create(data, List.of(), null);
             out.action = "CREATE";
             if (unitId != null) {
-                org.assign(user.getId(), unitId, hire, "HIRE", null);
+                org.assign(user.getId(), unitId, null, "HIRE", null);
             }
         }
-        ctx.created.put(registration.trim().toUpperCase(), user.getId());
-        if (hire != null || categoryId != null) {
-            users.setEmployment(user.getId(), categoryId != null ? categoryId : user.getGradeCategoryId(),
-                    hire != null ? hire : user.getHireDate());
+        out.registration = user.getRegistrationNo();
+        ctx.created.put(user.getRegistrationNo().toUpperCase(), user.getId());
+        // The hire date comes with the contract (Contracts import), never on its own.
+        if (categoryId != null && !java.util.Objects.equals(categoryId, user.getGradeCategoryId())) {
+            users.setEmployment(user.getId(), categoryId);
         }
         String pin = row.text("clock_pin");
         if (pin != null) {
@@ -509,7 +517,8 @@ public class Imports {
                     .map(MasterData.Occupation::id)
                     .orElseThrow(() -> new BusinessRuleException(Texts.t("No occupation has the code %s.", occupation)));
         }
-        negotiated.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic, net, row.text("note"));
+        negotiated.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic, net, row.text("note"),
+                row.date("hire_date"));
         out.action = "ADD";
     }
 
@@ -525,6 +534,8 @@ public class Imports {
         if (gross.signum() <= 0) {
             throw new BusinessRuleException(Texts.t("The salary must be above zero."));
         }
+        // The first salary comes with the contract; this file holds the later ones.
+        contracts.require(p.id(), from);
         salaries.add(p.id(), from, gross, currency(currency), or(row.text("note"), Texts.t("Imported")));
         out.action = "ADD";
     }

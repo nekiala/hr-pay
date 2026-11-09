@@ -72,7 +72,6 @@ class RbacIT extends IntegrationTest {
                         "{\"user\":{\"email\":\"bad\",\"registrationNo\":\"\",\"phone\":\"12\",\"firstName\":\"A\",\"lastName\":\"B\"}}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors['user.email']").exists())
-                .andExpect(jsonPath("$.errors['user.registrationNo']").exists())
                 .andExpect(jsonPath("$.errors['user.phone']").exists());
     }
 

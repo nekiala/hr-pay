@@ -60,7 +60,8 @@ class IntegrationsIT extends IntegrationTest {
                 .andExpect(jsonPath("$.saved").value(true))
                 .andExpect(jsonPath("$.withErrors").value(0));
         var aline = users.findByRegistrationNoIgnoreCase("IMP-" + n + "-1").orElseThrow();
-        assertThat(aline.getHireDate()).isEqualTo(java.time.LocalDate.of(2026, 3, 1));
+        // No hire date without a contract: the hire date column of an employee file is not read.
+        assertThat(aline.getHireDate()).isNull();
         assertThat(jdbc.sql("select payment_method from employee_profile where user_id = ?").param(aline.getId())
                 .query(String.class).single()).isEqualTo("BANK");
         // Everyone imported is placed in the structure.
@@ -84,6 +85,8 @@ class IntegrationsIT extends IntegrationTest {
                         IMP-%1$s-2,CDD,2026-03-15,2027-03-14,E3A,no
                         """.formatted(n))))
                 .andExpect(jsonPath("$.saved").value(true));
+        assertThat(users.findByRegistrationNoIgnoreCase("IMP-" + n + "-1").orElseThrow().getHireDate())
+                .isEqualTo(java.time.LocalDate.of(2026, 3, 1));
         mvc.perform(json(post("/api/imports/salaries").session(hr), file("s.csv", """
                         registration_no,effective_from,gross_monthly,currency
                         IMP-%1$s-1,2026-06-01,"1 250,50",USD

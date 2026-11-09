@@ -79,6 +79,10 @@ class LeaveIT extends IntegrationTest {
                 .andExpect(status().is(422));   // a weekend has no working days
 
         MockHttpSession hr = login(HR);
+        // Granting twice gives nothing the second time (people hired by other tests get theirs the first time).
+        mvc.perform(post("/api/leave/grant-annual").param("year", "2026").session(hr).with(
+                        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isOk());
         mvc.perform(post("/api/leave/grant-annual").param("year", "2026").session(hr).with(
                         org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk())

@@ -242,6 +242,8 @@ public class DataSetup implements ApplicationRunner {
                 "MANAGER", "MANAGER");
         for (SampleUser s : SAMPLE_USERS) {
             if (s.role().equals("ADMIN")) {
+                // The sample administrator is not staff: no contract, never works or is paid.
+                jdbc.sql("update app_user set not_employee = true where lower(email) = lower(?)").param(s.email()).update();
                 continue;
             }
             users.findByEmailIgnoreCase(s.email()).filter(u -> files.contracts(u.getId()).isEmpty()).ifPresent(u -> {

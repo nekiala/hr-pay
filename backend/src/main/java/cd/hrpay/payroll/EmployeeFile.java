@@ -98,7 +98,28 @@ public class EmployeeFile {
     @Transactional
     public Contract startContract(long userId, String type, LocalDate start, LocalDate end, long gradeId,
                                   Long occupationId, boolean expatriate, BigDecimal negotiatedBasic, String note) {
+        return startContract(userId, type, start, end, gradeId, occupationId, expatriate, negotiatedBasic, note, null);
+    }
+
+    /**
+     * Starts a contract; the first one also sets the hire date: its start, or the earlier date given ("in the company
+     * since", for someone hired before HR Pay's records). Nobody has a hire date without a contract.
+     */
+    @Transactional
+    public Contract startContract(long userId, String type, LocalDate start, LocalDate end, long gradeId,
+                                  Long occupationId, boolean expatriate, BigDecimal negotiatedBasic, String note,
+                                  LocalDate since) {
         AppUser user = users.find(userId);
+        if (user.isNotEmployee()) {
+            throw new BusinessRuleException("This account is marked as not an employee: an administrator must change that first.");
+        }
+        boolean first = contracts(userId).isEmpty();
+        if (since != null && since.isAfter(start)) {
+            throw new BusinessRuleException("The date in the company cannot be after the contract start.");
+        }
+        if (since != null && !first && !since.equals(user.getHireDate())) {
+            throw new BusinessRuleException("The date in the company is given with the first contract only.");
+        }
         if (java.util.Objects.equals(userId, CurrentUser.id())) {
             throw new org.springframework.security.access.AccessDeniedException("You cannot change your own contract.");
         }
@@ -125,6 +146,14 @@ public class EmployeeFile {
                 .params(userId, type, start, end, gradeId, occupationId, expatriate, note, CurrentUser.email())
                 .query(Long.class).single();
         user.setGradeCategoryId(grade.categoryId());
+        if (first) {
+            // A hire date typed before contracts were required stays when it is not after the start.
+            LocalDate hired = since != null ? since
+                    : user.getHireDate() != null && !user.getHireDate().isAfter(start) ? user.getHireDate() : start;
+            user.setHireDate(hired);
+        } else if (user.getHireDate() == null || user.getHireDate().isAfter(start)) {
+            user.setHireDate(start);
+        }
         if (salaries.history(userId).stream().noneMatch(s -> s.effectiveFrom().equals(start))) {
             BigDecimal basic = negotiatedBasic != null ? negotiatedBasic : grade.baseSalary();
             salaries.add(userId, start, basic, grade.currency(),

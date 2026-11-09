@@ -24,7 +24,7 @@ export default function EmployeeFilePage() {
   const [grades, setGrades] = useState<Grade[]>([])
   const [occupations, setOccupations] = useState<Occupation[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, agreedNet: '', note: '' })
+  const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, agreedNet: '', note: '', hireDate: '' })
   const emptyDependant = { fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, student: false, disabled: false, note: '' }
   const [dependant, setDependant] = useState(emptyDependant)
   const [elements, setElements] = useState<PayElement[]>([])
@@ -62,6 +62,7 @@ export default function EmployeeFilePage() {
   const grade = grades.find((g) => g.id === Number(contract.gradeId))
   const today = new Date().toISOString().slice(0, 10)
   const latestContract = file?.contracts[0] ?? null
+  const firstContract = (file?.contracts.length ?? 0) === 0
   const currentContract = file?.contracts.find((c) => c.startDate <= today && (!c.endDate || c.endDate >= today)) ?? latestContract
 
   const startContract = (e: FormEvent) => {
@@ -71,6 +72,7 @@ export default function EmployeeFilePage() {
       body: {
         ...contract, gradeId: Number(contract.gradeId), occupationId: contract.occupationId ? Number(contract.occupationId) : null,
         endDate: contract.endDate || null, agreedNet: contract.agreedNet ? Number(contract.agreedNet) : null,
+        hireDate: firstContract && contract.hireDate ? contract.hireDate : null,
       },
     }), t('Contract saved.'))
   }
@@ -172,6 +174,13 @@ export default function EmployeeFilePage() {
                 </label>
                 <label>{t('Note')}<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
               </div>
+              {firstContract && (
+                <label>{t('In the company since (optional)')}<input type="date" value={contract.hireDate} max={contract.startDate || undefined}
+                    onChange={(e) => setContract({ ...contract, hireDate: e.target.value })} />
+                  <span className="hint">{t('The hire date. Empty: the contract start. Give an earlier date only for someone hired before this contract (seniority).')}</span>
+                </label>
+              )}
+              {firstContract && <p className="hint">{t('The first salary is set here: the agreed net, or the grade\'s basic. Raises and promotions come later.')}</p>}
               <label className="check"><input type="checkbox" checked={contract.expatriate} onChange={(e) => setContract({ ...contract, expatriate: e.target.checked })} />{t('Expatriate (employer pays IERE)')}</label>
               <p className="hint">{t('The previous contract ends the day before. With an agreed net, what is above the grade\'s basic is paid as a salary complement.')}</p>
               <ErrorText error={error} />

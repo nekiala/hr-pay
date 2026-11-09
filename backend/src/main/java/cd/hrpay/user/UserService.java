@@ -55,7 +55,9 @@ public class UserService {
 
     @Transactional
     public AppUser create(UserData data, List<String> roleCodes, String initialPassword) {
-        UserData clean = normalize(data);
+        UserData given = data.registrationNo() == null || data.registrationNo().isBlank()
+                ? withRegistration(data, generated(data.siteId())) : data;
+        UserData clean = normalize(given);
         checkUnique(clean, null);
         Set<Role> wanted = resolveRoles(roleCodes == null || roleCodes.isEmpty() ? List.of(Role.EMPLOYEE) : roleCodes);
         requireCanGrant(wanted);
@@ -79,7 +81,9 @@ public class UserService {
     public AppUser update(Long id, UserData data) {
         AppUser user = find(id);
         requireCanManage(user);
-        UserData clean = normalize(data);
+        // An employee ID given by HR Pay may be left out: it stays as it is.
+        UserData clean = normalize(data.registrationNo() == null || data.registrationNo().isBlank()
+                ? withRegistration(data, user.getRegistrationNo()) : data);
         checkUnique(clean, user.getId());
         Map<String, Object> changes = new LinkedHashMap<>();
         track(changes, "email", user.getEmail(), clean.email());
@@ -109,8 +113,42 @@ public class UserService {
         this.jdbc = jdbc;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private Matricules matricules;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private Contracts contracts;
+
+    /** The next employee ID from the company's format; without one, HR must type it. */
+    private String generated(Long siteId) {
+        String site = siteId == null ? null : sites.findById(siteId).map(cd.hrpay.site.Site::getCode).orElse(null);
+        return matricules.next(site).orElseThrow(() -> new BusinessRuleException("Enter the employee ID (matricule)."));
+    }
+
+    private static UserData withRegistration(UserData d, String registrationNo) {
+        return new UserData(d.email(), registrationNo, d.phone(), d.firstName(), d.lastName(), d.siteId(), d.middleName());
+    }
+
+    /**
+     * Marks an account as not an employee (the provider's administrator, an outside accounting firm, a consultant): it
+     * needs no contract and never works or is paid here. Someone under contract stays an employee.
+     */
     @Transactional
-    public AppUser setEmployment(Long id, Long gradeCategoryId, java.time.LocalDate hireDate) {
+    public AppUser setNotEmployee(Long id, boolean notEmployee) {
+        AppUser user = find(id);
+        if (notEmployee && contracts.on(id, java.time.LocalDate.now())) {
+            throw new BusinessRuleException("This person has a contract: end it before marking them as not an employee.");
+        }
+        if (user.isNotEmployee() != notEmployee) {
+            user.setNotEmployee(notEmployee);
+            audit.record("user.not_employee", "user", id, Map.of("notEmployee", notEmployee));
+        }
+        return user;
+    }
+
+    /** The grade category of someone without a contract yet. The hire date comes from the first contract only. */
+    @Transactional
+    public AppUser setEmployment(Long id, Long gradeCategoryId) {
         AppUser user = find(id);
         // With a contract, the category is the one of the contract's grade: it changes with the grade.
         if (jdbc != null && !Objects.equals(gradeCategoryId, user.getGradeCategoryId())
@@ -120,9 +158,7 @@ public class UserService {
         }
         Map<String, Object> changes = new LinkedHashMap<>();
         track(changes, "gradeCategoryId", user.getGradeCategoryId(), gradeCategoryId);
-        track(changes, "hireDate", user.getHireDate(), hireDate);
         user.setGradeCategoryId(gradeCategoryId);
-        user.setHireDate(hireDate);
         if (!changes.isEmpty()) {
             audit.record("user.employment_changed", "user", id, changes);
         }

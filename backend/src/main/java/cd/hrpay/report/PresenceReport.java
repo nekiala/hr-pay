@@ -64,10 +64,19 @@ public class PresenceReport {
         this.audit = audit;
     }
 
-    private List<AppUser> scope(Long unitId, Map<Long, OrgStructure.Placement> where) {
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
+    /** The people seen on a day: active and under contract (nobody without a contract is expected at work). */
+    private List<AppUser> scope(Long unitId, Map<Long, OrgStructure.Placement> where, LocalDate from, LocalDate to) {
         List<AppUser> list = CurrentUser.has("attendance.read.all") ? users.findAll() : users.findAllById(org.teamOf(CurrentUser.id()));
         Set<Long> branch = unitId == null ? null : org.branch(unitId);
-        return list.stream().filter(AppUser::isActive)
+        Set<Long> employed = contracts.underContract(from, to);
+        return list.stream().filter(AppUser::isActive).filter(u -> employed.contains(u.getId()))
                 .filter(u -> branch == null || (where.containsKey(u.getId()) && branch.contains(where.get(u.getId()).unitId())))
                 .sorted(Comparator.comparing(AppUser::getLastName).thenComparing(AppUser::getFirstName)).toList();
     }
@@ -92,7 +101,7 @@ public class PresenceReport {
             counts.put(k, 0);
         }
         List<Person> people = new ArrayList<>();
-        for (AppUser u : scope(unitId, where)) {
+        for (AppUser u : scope(unitId, where, day, day)) {
             DayCalculator.DayResult d = attendance.days(u, day, day).getFirst();
             var p = where.get(u.getId());
             String status = d.mission() && d.workedMinutes() == 0 ? "MISSION" : d.status().name();
@@ -127,7 +136,7 @@ public class PresenceReport {
         }
         Map<Long, OrgStructure.Placement> where = org.placementsOn(last);
         List<Issue> rows = new ArrayList<>();
-        for (AppUser u : scope(unitId, where)) {
+        for (AppUser u : scope(unitId, where, from, last)) {
             var p = where.get(u.getId());
             String name = u.fullName();
             String dir = p == null ? null : p.directionName();
