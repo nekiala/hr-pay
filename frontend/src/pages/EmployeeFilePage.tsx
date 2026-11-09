@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, CONTRACT_TYPES, api, money, type Dependant, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User , personName } from '../api'
+import { ApiError, CONTRACT_TYPES, ID_DOCUMENTS, api, money, type Dependant, type EmployeeFileView, type Grade, type IdDocumentType, type Occupation, type PayAssignment, type PayElement, type Profile, type User , personName } from '../api'
+import { CountrySelect, InstitutionSelect, OldValue, PlacePicker, useCountries } from '../components/ReferencePickers'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -17,7 +18,9 @@ export default function EmployeeFilePage() {
   const [contracting, setContracting] = useState(false)
   const ask = useAsk()
   const { id } = useParams()
-  const { can } = useAuth()
+  const { can, me } = useAuth()
+  const home = me?.company?.country ?? 'CD'
+  const { withPlaces } = useCountries()
   const editable = can('salary.write')
   const [user, setUser] = useState<User | null>(null)
   const [file, setFile] = useState<EmployeeFileView | null>(null)
@@ -194,13 +197,16 @@ export default function EmployeeFilePage() {
         <Form className="card" onSubmit={saveProfile}>
           <h3>{t('Personal and payment details')}</h3>
           <fieldset disabled={!editable}>
+            <h4>{t('Identity')}</h4>
             <div className="grid3">
               <label>{t('Date of birth')}<input type="date" value={p.birthDate ?? ''} onChange={(e) => setP({ birthDate: e.target.value || null })} /></label>
               <label>{t('Gender')}<select value={p.gender ?? ''} onChange={(e) => setP({ gender: (e.target.value || null) as Profile['gender'] })}>
                   <option value="">{t('Not given')}</option><option value="FEMALE">{t('Female')}</option><option value="MALE">{t('Male')}</option>
                 </select>
               </label>
-              <label>{t('Nationality')}<input value={p.nationality ?? ''} onChange={(e) => setP({ nationality: e.target.value })} /></label>
+              <label>{t('Nationality')}<CountrySelect nationality value={p.nationalityCode} onChange={(c) => setP({ nationalityCode: c })} />
+                {!p.nationalityCode && <OldValue value={file?.profile.nationalityCode ? null : file?.profile.nationality} />}
+              </label>
             </div>
             <div className="grid3">
               <label>{t('Marital status')}<select value={p.maritalStatus} onChange={(e) => setP({ maritalStatus: e.target.value as Profile['maritalStatus'] })}>
@@ -210,28 +216,73 @@ export default function EmployeeFilePage() {
               <label>{t('CNSS number')}<input value={p.cnssNumber ?? ''} onChange={(e) => setP({ cnssNumber: e.target.value })} /></label>
               <label>{t('Tax number (NIF)')}<input value={p.taxNumber ?? ''} onChange={(e) => setP({ taxNumber: e.target.value })} /></label>
             </div>
-            <label>{t('Commune or territory')}<input value={p.commune ?? ''} onChange={(e) => setP({ commune: e.target.value })} maxLength={100} placeholder={t('For the tax declaration')} /></label>
+            <div className="grid2">
+              <label>{t('Identity document')}<select value={p.idDocumentType ?? ''} onChange={(e) => setP({ idDocumentType: (e.target.value || null) as IdDocumentType | null })}>
+                  <option value="">{t('Not given')}</option>
+                  {(Object.keys(ID_DOCUMENTS) as IdDocumentType[]).map((k) => <option key={k} value={k}>{ID_DOCUMENTS[k]}</option>)}
+                </select>
+              </label>
+              <label>{t('Document number')}<input value={p.idDocumentNumber ?? ''} maxLength={40} onChange={(e) => setP({ idDocumentNumber: e.target.value })} /></label>
+            </div>
+            <div className="grid2">
+              <label>{t('Issued on')}<input type="date" value={p.idDocumentIssuedOn ?? ''} onChange={(e) => setP({ idDocumentIssuedOn: e.target.value || null })} /></label>
+              <label>{t('Issued at')}<input value={p.idDocumentIssuedAt ?? ''} maxLength={100} onChange={(e) => setP({ idDocumentIssuedAt: e.target.value })} /></label>
+            </div>
+
+            <h4>{t('Place of birth')}</h4>
+            <div className="grid3">
+              <label>{t('Country of birth')}<CountrySelect value={p.birthCountryCode} onChange={(c) => setP({ birthCountryCode: c, birthPlaceId: null, birthPlaceText: null })} /></label>
+              {p.birthCountryCode && !withPlaces.includes(p.birthCountryCode) && (
+                <label>{t('Town of birth')}<input value={p.birthPlaceText ?? ''} maxLength={100} onChange={(e) => setP({ birthPlaceText: e.target.value })} />
+                  <span className="hint">{t('Abroad: the town is typed.')}</span>
+                </label>
+              )}
+            </div>
+            {p.birthCountryCode && withPlaces.includes(p.birthCountryCode) && (
+              <PlacePicker country={p.birthCountryCode} path={file?.birthPlacePath ?? []} disabled={!editable}
+                onChange={(place) => setP({ birthPlaceId: place?.id ?? null, birthPlaceText: null })} />
+            )}
+
+            <h4>{t('Current address')}</h4>
+            <PlacePicker country={home} path={file?.addressPlacePath ?? []} disabled={!editable}
+              onChange={(place) => setP({ addressPlaceId: place?.id ?? null })} />
+            {!p.addressPlaceId && <OldValue value={file?.profile.addressPlaceId ? null : file?.profile.commune} />}
+            <div className="grid2">
+              <label>{t('Quarter (quartier)')}<input value={p.addressQuarter ?? ''} maxLength={100} onChange={(e) => setP({ addressQuarter: e.target.value })} /></label>
+              <label>{t('Avenue and number')}<input value={p.addressStreet ?? ''} maxLength={200} onChange={(e) => setP({ addressStreet: e.target.value })} /></label>
+            </div>
+            <p className="hint">{t('The commune or territory goes on the tax declaration; the CNSS registration asks for the full address.')}</p>
+
             {p.gender !== 'MALE' && (
               <label>{t('Nursing breaks until')}<input type="date" value={p.nursingBreakUntil ?? ''} onChange={(e) => setP({ nursingBreakUntil: e.target.value || null })} />
                 <span className="muted small">{t('Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.')}</span>
               </label>
             )}
+
+            <h4>{t('Payment')}</h4>
             <label>{t('Paid by')}<select value={p.paymentMethod} onChange={(e) => setP({ paymentMethod: e.target.value as Profile['paymentMethod'] })}>
                 <option value="BANK">{t('Bank transfer')}</option><option value="MOBILE_MONEY">{t('Mobile money')}</option><option value="CASH">{t('Cash')}</option>
               </select>
             </label>
             {p.paymentMethod === 'BANK' && (
               <div className="grid2">
-                <label>{t('Bank')}<input value={p.bankName ?? ''} onChange={(e) => setP({ bankName: e.target.value })} required /></label>
+                <label>{t('Bank')}<InstitutionSelect country={home} kind="BANK" value={p.bankId} required={!p.bankName}
+                    onChange={(b) => setP({ bankId: b?.id ?? null, bankName: b ? b.name : file?.profile.bankId ? null : file?.profile.bankName ?? null })} />
+                  {!p.bankId && <OldValue value={file?.profile.bankId ? null : file?.profile.bankName} />}
+                </label>
                 <label>{t('Account number')}<input value={p.bankAccount ?? ''} onChange={(e) => setP({ bankAccount: e.target.value })} required /></label>
               </div>
             )}
             {p.paymentMethod === 'MOBILE_MONEY' && (
               <div className="grid2">
-                <label>{t('Operator')}<input value={p.mobileMoneyOperator ?? ''} placeholder={t('M-Pesa, Orange Money, Airtel Money')} onChange={(e) => setP({ mobileMoneyOperator: e.target.value })} required /></label>
+                <label>{t('Operator')}<InstitutionSelect country={home} kind="MOBILE_MONEY" value={p.mobileMoneyOperatorId} required={!p.mobileMoneyOperator}
+                    onChange={(o) => setP({ mobileMoneyOperatorId: o?.id ?? null, mobileMoneyOperator: o ? o.name : file?.profile.mobileMoneyOperatorId ? null : file?.profile.mobileMoneyOperator ?? null })} />
+                  {!p.mobileMoneyOperatorId && <OldValue value={file?.profile.mobileMoneyOperatorId ? null : file?.profile.mobileMoneyOperator} />}
+                </label>
                 <label>{t('Number')}<input value={p.mobileMoneyNumber ?? ''} placeholder="+243…" onChange={(e) => setP({ mobileMoneyNumber: e.target.value })} required /></label>
               </div>
             )}
+            {can('masterdata.manage') && <p className="hint">{t('A bank, operator or place is missing? Add it on the')}{' '}<Link to="/reference-lists">{t('Reference lists')}</Link>{t(' page.')}</p>}
           </fieldset>
           {editable && <Button type="submit">{t('Save details')}</Button>}
         </Form>

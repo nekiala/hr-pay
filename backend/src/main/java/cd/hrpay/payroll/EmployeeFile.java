@@ -32,7 +32,22 @@ public class EmployeeFile {
     public record Profile(LocalDate birthDate, String gender, String nationality, String maritalStatus,
                           String cnssNumber, String taxNumber, String paymentMethod, String bankName,
                           String bankAccount, String mobileMoneyOperator, String mobileMoneyNumber,
-                          String commune, LocalDate nursingBreakUntil) {}
+                          String commune, LocalDate nursingBreakUntil,
+                          // From the reference lists (the texts above then hold the names of what was picked).
+                          String nationalityCode, String birthCountryCode, Long birthPlaceId, String birthPlaceText,
+                          Long addressPlaceId, String addressQuarter, String addressStreet, Long bankId,
+                          Long mobileMoneyOperatorId, String idDocumentType, String idDocumentNumber,
+                          LocalDate idDocumentIssuedOn, String idDocumentIssuedAt) {
+
+        /** The details before the reference lists: the new fields empty. */
+        public Profile(LocalDate birthDate, String gender, String nationality, String maritalStatus, String cnssNumber,
+                       String taxNumber, String paymentMethod, String bankName, String bankAccount,
+                       String mobileMoneyOperator, String mobileMoneyNumber, String commune, LocalDate nursingBreakUntil) {
+            this(birthDate, gender, nationality, maritalStatus, cnssNumber, taxNumber, paymentMethod, bankName, bankAccount,
+                    mobileMoneyOperator, mobileMoneyNumber, commune, nursingBreakUntil, null, null, null, null, null, null,
+                    null, null, null, null, null, null, null);
+        }
+    }
 
     public record Dependant(long id, String fullName, String relationship, LocalDate birthDate, boolean inCharge,
                             boolean student, boolean disabled, String note) {}
@@ -68,10 +83,13 @@ public class EmployeeFile {
     private final SalaryService salaries;
     private final AuditService audit;
     private final StatutoryRates statutory;
+    private final cd.hrpay.reference.References refs;
 
     public EmployeeFile(JdbcClient jdbc, UserService users, MasterData masterData, SalaryService salaries,
-                        AuditService audit, cd.hrpay.security.DataCrypto crypto, StatutoryRates statutory) {
+                        AuditService audit, cd.hrpay.security.DataCrypto crypto, StatutoryRates statutory,
+                        cd.hrpay.reference.References refs) {
         this.jdbc = jdbc;
+        this.refs = refs;
         this.statutory = statutory;
         this.crypto = crypto;
         this.users = users;
@@ -220,42 +238,131 @@ public class EmployeeFile {
         return jdbc.sql("""
                 select birth_date, gender, nationality, marital_status, cnss_number, tax_number, payment_method,
                        bank_name, bank_account, mobile_money_operator, mobile_money_number, commune,
-                       nursing_break_until
+                       nursing_break_until, nationality_code, birth_country_code, birth_place_id, birth_place_text,
+                       address_place_id, address_quarter, address_street, bank_id, mobile_money_operator_id,
+                       id_document_type, id_document_number, id_document_issued_on, id_document_issued_at
                 from employee_profile where user_id = ?""").param(userId).query(Profile.class).optional()
                 .map(p -> new Profile(p.birthDate(), p.gender(), p.nationality(), p.maritalStatus(),
                         crypto.decrypt(p.cnssNumber()), crypto.decrypt(p.taxNumber()), p.paymentMethod(), p.bankName(),
                         crypto.decrypt(p.bankAccount()), p.mobileMoneyOperator(), crypto.decrypt(p.mobileMoneyNumber()),
-                        p.commune(), p.nursingBreakUntil()))
+                        p.commune(), p.nursingBreakUntil(), p.nationalityCode(), p.birthCountryCode(), p.birthPlaceId(),
+                        p.birthPlaceText(), p.addressPlaceId(), p.addressQuarter(), p.addressStreet(), p.bankId(),
+                        p.mobileMoneyOperatorId(), p.idDocumentType(), crypto.decrypt(p.idDocumentNumber()),
+                        p.idDocumentIssuedOn(), p.idDocumentIssuedAt()))
                 .orElse(new Profile(null, null, null, "SINGLE", null, null, "BANK", null, null, null, null, null, null));
+    }
+
+    /** Where the person was born, in words: "Ngaliema, Kinshasa" or "Lyon (France)". */
+    public String birthPlace(Profile p) {
+        if (p.birthPlaceId() != null) {
+            return refs.label(p.birthPlaceId());
+        }
+        if (p.birthPlaceText() == null) {
+            return null;
+        }
+        return refs.country(p.birthCountryCode()).map(c -> p.birthPlaceText() + " (" + c.name() + ")").orElse(p.birthPlaceText());
+    }
+
+    /** The current address in words: avenue and number, quartier, commune and town. */
+    public String address(Profile p) {
+        List<String> parts = new java.util.ArrayList<>();
+        if (p.addressStreet() != null) {
+            parts.add(p.addressStreet());
+        }
+        if (p.addressQuarter() != null) {
+            parts.add(p.addressQuarter());
+        }
+        String place = p.addressPlaceId() != null ? refs.label(p.addressPlaceId()) : p.commune();
+        if (place != null) {
+            parts.add(place);
+        }
+        return parts.isEmpty() ? null : String.join(", ", parts);
+    }
+
+    /** The nationality in words, in the language of the moment. */
+    public String nationality(Profile p) {
+        return p.nationalityCode() != null ? refs.country(p.nationalityCode()).map(cd.hrpay.reference.References.Country::nationality)
+                .orElse(p.nationality()) : p.nationality();
     }
 
     @Transactional
     public Profile saveProfile(long userId, Profile p) {
         users.find(userId);
-        if (p.paymentMethod().equals("BANK") && (blank(p.bankName()) || blank(p.bankAccount()))) {
-            throw new BusinessRuleException("Enter the bank and the account number, or choose another payment method.");
+        // What is picked from the lists gives the names kept with it; a value typed before stays until HR picks one.
+        String nationality = p.nationalityCode() != null ? refs.requireCountry(p.nationalityCode()).nationality() : trim(p.nationality());
+        String birthCountry = p.birthCountryCode() == null ? null : refs.requireCountry(p.birthCountryCode()).code();
+        Long birthPlaceId = p.birthPlaceId();
+        String birthPlaceText = trim(p.birthPlaceText());
+        if (birthPlaceId != null) {
+            var place = refs.place(birthPlaceId);
+            if (birthCountry != null && !birthCountry.equals(place.countryCode())) {
+                throw new BusinessRuleException("The place of birth is not in the country of birth.");
+            }
+            birthCountry = place.countryCode();
+            birthPlaceText = null;
         }
-        if (p.paymentMethod().equals("MOBILE_MONEY") && (blank(p.mobileMoneyOperator()) || blank(p.mobileMoneyNumber()))) {
-            throw new BusinessRuleException("Enter the mobile money operator and number.");
+        String commune = trim(p.commune());
+        if (p.addressPlaceId() != null) {
+            commune = refs.place(p.addressPlaceId()).name();
+        }
+        String bankName = trim(p.bankName());
+        if (p.bankId() != null) {
+            var bank = refs.institution(p.bankId());
+            if (!bank.kind().equals("BANK")) {
+                throw new BusinessRuleException("Choose a bank from the list.");
+            }
+            bankName = bank.name();
+        }
+        String operator = trim(p.mobileMoneyOperator());
+        if (p.mobileMoneyOperatorId() != null) {
+            var op = refs.institution(p.mobileMoneyOperatorId());
+            if (!op.kind().equals("MOBILE_MONEY")) {
+                throw new BusinessRuleException("Choose a mobile money operator from the list.");
+            }
+            operator = op.name();
+        }
+        if (p.paymentMethod().equals("BANK") && (blank(bankName) || blank(p.bankAccount()))) {
+            throw new BusinessRuleException("Choose the bank and enter the account number, or choose another payment method.");
+        }
+        if (p.paymentMethod().equals("MOBILE_MONEY") && (blank(operator) || blank(p.mobileMoneyNumber()))) {
+            throw new BusinessRuleException("Choose the mobile money operator and enter the number.");
+        }
+        if (p.idDocumentType() != null && !java.util.Set.of("NATIONAL_ID", "ELECTOR_CARD", "PASSPORT", "RESIDENCE_PERMIT",
+                "DRIVING_LICENCE", "OTHER").contains(p.idDocumentType())) {
+            throw new BusinessRuleException("Choose the kind of identity document.");
         }
         jdbc.sql("""
                 insert into employee_profile (user_id, birth_date, gender, nationality, marital_status, cnss_number,
                     tax_number, payment_method, bank_name, bank_account, mobile_money_operator, mobile_money_number,
-                    commune, nursing_break_until, updated_by, updated_at)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
+                    commune, nursing_break_until, nationality_code, birth_country_code, birth_place_id, birth_place_text,
+                    address_place_id, address_quarter, address_street, bank_id, mobile_money_operator_id,
+                    id_document_type, id_document_number, id_document_issued_on, id_document_issued_at,
+                    updated_by, updated_at)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now())
                 on conflict (user_id) do update set birth_date = excluded.birth_date, gender = excluded.gender,
                     nationality = excluded.nationality, marital_status = excluded.marital_status,
                     cnss_number = excluded.cnss_number, tax_number = excluded.tax_number,
                     payment_method = excluded.payment_method, bank_name = excluded.bank_name,
                     bank_account = excluded.bank_account, mobile_money_operator = excluded.mobile_money_operator,
                     mobile_money_number = excluded.mobile_money_number,
-                    commune = excluded.commune, nursing_break_until = excluded.nursing_break_until, updated_by = excluded.updated_by,
-                    updated_at = now()""")
-                .params(userId, p.birthDate(), p.gender(), trim(p.nationality()), p.maritalStatus(),
+                    commune = excluded.commune, nursing_break_until = excluded.nursing_break_until,
+                    nationality_code = excluded.nationality_code, birth_country_code = excluded.birth_country_code,
+                    birth_place_id = excluded.birth_place_id, birth_place_text = excluded.birth_place_text,
+                    address_place_id = excluded.address_place_id, address_quarter = excluded.address_quarter,
+                    address_street = excluded.address_street, bank_id = excluded.bank_id,
+                    mobile_money_operator_id = excluded.mobile_money_operator_id,
+                    id_document_type = excluded.id_document_type, id_document_number = excluded.id_document_number,
+                    id_document_issued_on = excluded.id_document_issued_on,
+                    id_document_issued_at = excluded.id_document_issued_at,
+                    updated_by = excluded.updated_by, updated_at = now()""")
+                .params(userId, p.birthDate(), p.gender(), nationality, p.maritalStatus(),
                         crypto.encrypt(trim(p.cnssNumber())), crypto.encrypt(trim(p.taxNumber())), p.paymentMethod(),
-                        trim(p.bankName()), crypto.encrypt(trim(p.bankAccount())), trim(p.mobileMoneyOperator()),
-                        crypto.encrypt(trim(p.mobileMoneyNumber())), trim(p.commune()), p.nursingBreakUntil(),
-                        CurrentUser.email())
+                        bankName, crypto.encrypt(trim(p.bankAccount())), operator,
+                        crypto.encrypt(trim(p.mobileMoneyNumber())), commune, p.nursingBreakUntil(),
+                        p.nationalityCode() == null ? null : p.nationalityCode().toUpperCase(), birthCountry, birthPlaceId,
+                        birthPlaceText, p.addressPlaceId(), trim(p.addressQuarter()), trim(p.addressStreet()), p.bankId(),
+                        p.mobileMoneyOperatorId(), p.idDocumentType(), crypto.encrypt(trim(p.idDocumentNumber())),
+                        p.idDocumentIssuedOn(), trim(p.idDocumentIssuedAt()), CurrentUser.email())
                 .update();
         audit.record("profile.saved", "user", userId, Map.of("maritalStatus", p.maritalStatus(),
                 "paymentMethod", p.paymentMethod()));

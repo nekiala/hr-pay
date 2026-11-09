@@ -5,6 +5,7 @@ import { Button, Form } from '../components/Button'
 import { useAuth } from '../auth'
 import { t } from '../i18n'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
+import { InstitutionSelect, OldValue } from '../components/ReferencePickers'
 
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', t('Name')], ['address', t('Address')], ['rccm', 'RCCM'], ['nationalId', t('Id. Nat.')], ['taxNumber', 'NIF'],
@@ -12,7 +13,7 @@ const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['bankName', t('Bank')], ['bankAccount', t('Account salaries are paid from')],
 ]
 
-const LIMITS: Record<keyof Employer, number> = {
+const LIMITS: Partial<Record<keyof Employer, number>> = {
   name: 150, address: 300, cnssNumber: 40, taxNumber: 40, nationalId: 40, rccm: 60, inppNumber: 40, onemNumber: 40, bankName: 100, bankAccount: 60,
 }
 
@@ -120,7 +121,12 @@ export default function CompanyPage() {
         <h3>{t('Name, address and legal information')}</h3>
         <p className="hint">{t('Printed on payslips, declarations and payment files.')}</p>
         <div className="grid3">
-          {EMPLOYER_FIELDS.filter(([k]) => drc || (k !== 'inppNumber' && k !== 'onemNumber')).map(([k, label]) => (
+          {EMPLOYER_FIELDS.filter(([k]) => drc || (k !== 'inppNumber' && k !== 'onemNumber')).map(([k, label]) => k === 'bankName' ? (
+            <label key={k}>{label}<InstitutionSelect country={me?.company?.country ?? 'CD'} kind="BANK" value={employer.bankId}
+                onChange={(b) => setEmployer({ ...employer, bankId: b?.id ?? null, bankName: b?.name ?? (employer.bankId ? '' : employer.bankName) })} />
+              {!employer.bankId && <OldValue value={employer.bankName} />}
+            </label>
+          ) : (
             <label key={k}>{label}<input value={employer[k] ?? ''} required={k === 'name'} maxLength={LIMITS[k]}
               onChange={(e) => setEmployer({ ...employer, [k]: e.target.value })} /></label>
           ))}

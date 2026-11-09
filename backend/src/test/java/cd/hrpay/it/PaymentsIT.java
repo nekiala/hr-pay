@@ -59,7 +59,7 @@ class PaymentsIT extends IntegrationTest {
 
             // Nothing can be paid or filed before the month is closed.
             mvc.perform(json(post("/api/payments/2026-08/batches").session(finance), """
-                            {"method":"BANK","provider":"RAWBANK (SAMPLE)","currency":"USD"}"""))
+                            {"method":"BANK","provider":"RAWBANK","currency":"USD"}"""))
                     .andExpect(status().is(422));
             mvc.perform(get("/api/declarations/2026-08/CNSS").session(finance))
                     .andExpect(jsonPath("$.warnings[0]").value(org.hamcrest.Matchers.containsString("not closed")));
@@ -72,7 +72,7 @@ class PaymentsIT extends IntegrationTest {
                     .andExpect(jsonPath("$.problems[?(@.userId==" + patrick + ")].problem").isNotEmpty())
                     .andExpect(jsonPath("$.toPay[?(@.provider=='M-PESA')].count").isNotEmpty())
                     .andReturn().getResponse().getContentAsString();
-            int bankCount = JsonPath.<List<Integer>>read(overview, "$.toPay[?(@.provider=='RAWBANK (SAMPLE)')].count").getFirst();
+            int bankCount = JsonPath.<List<Integer>>read(overview, "$.toPay[?(@.provider=='RAWBANK')].count").getFirst();
             assertThat(bankCount).isGreaterThanOrEqualTo(1);
 
             // HR cannot make payment files; Finance can.
@@ -95,14 +95,14 @@ class PaymentsIT extends IntegrationTest {
                     .andExpect(status().is(422));
 
             String bank = mvc.perform(json(post("/api/payments/2026-08/batches").session(finance), """
-                            {"method":"BANK","provider":"RAWBANK (SAMPLE)","currency":"USD"}"""))
+                            {"method":"BANK","provider":"RAWBANK","currency":"USD"}"""))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             long bankId = JsonPath.<Number>read(bank, "$.batch.id").longValue();
             // Cancelled, the people are free again and a new file can be made.
             mvc.perform(json(post("/api/payment-batches/" + bankId + "/cancel").session(finance), "{\"reason\":\"Wrong date\"}"))
                     .andExpect(jsonPath("$.batch.status").value("CANCELLED")).andExpect(jsonPath("$.lines.length()").value(0));
             bank = mvc.perform(json(post("/api/payments/2026-08/batches").session(finance), """
-                            {"method":"BANK","provider":"RAWBANK (SAMPLE)","currency":"USD"}"""))
+                            {"method":"BANK","provider":"RAWBANK","currency":"USD"}"""))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
             bankId = JsonPath.<Number>read(bank, "$.batch.id").longValue();
 

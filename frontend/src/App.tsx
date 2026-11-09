@@ -34,6 +34,7 @@ import PayElementsPage from './pages/PayElementsPage'
 import PayEntriesPage from './pages/PayEntriesPage'
 import QuinzaineSettingsPage from './pages/QuinzaineSettingsPage'
 import MatriculeSettingsPage from './pages/MatriculeSettingsPage'
+import ReferenceListsPage from './pages/ReferenceListsPage'
 import PayrollChecksSettingsPage from './pages/PayrollChecksSettingsPage'
 import FirmPage from './pages/FirmPage'
 import CompanyAccountantPage from './pages/CompanyAccountantPage'
@@ -217,6 +218,7 @@ export default function App() {
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/matricule" element={<Guard permission="matricule.manage"><MatriculeSettingsPage /></Guard>} />
+          <Route path="/reference-lists" element={<Guard permission="salary.read"><ReferenceListsPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
           <Route path="/users/:id/attendance" element={<Guard permission="attendance.read.all"><UserAttendancePage /></Guard>} />
           <Route path="/users/:id/lifecycle" element={<Guard permission="lifecycle.manage"><PersonLifecyclePage /></Guard>} />

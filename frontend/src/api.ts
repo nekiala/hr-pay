@@ -725,6 +725,41 @@ export type Profile = {
   paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
   mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; commune: string | null
   nursingBreakUntil?: string | null
+  /** From the reference lists; the texts above then hold the names of what was picked. */
+  nationalityCode?: string | null; birthCountryCode?: string | null; birthPlaceId?: number | null; birthPlaceText?: string | null
+  addressPlaceId?: number | null; addressQuarter?: string | null; addressStreet?: string | null
+  bankId?: number | null; mobileMoneyOperatorId?: number | null
+  idDocumentType?: IdDocumentType | null; idDocumentNumber?: string | null; idDocumentIssuedOn?: string | null; idDocumentIssuedAt?: string | null
+}
+export type IdDocumentType = 'NATIONAL_ID' | 'ELECTOR_CARD' | 'PASSPORT' | 'RESIDENCE_PERMIT' | 'DRIVING_LICENCE' | 'OTHER'
+export const ID_DOCUMENTS: Record<IdDocumentType, string> = {
+  NATIONAL_ID: t('National identity card'), ELECTOR_CARD: t('Voter card'), PASSPORT: t('Passport'),
+  RESIDENCE_PERMIT: t('Residence permit'), DRIVING_LICENCE: t('Driving licence'), OTHER: t('Other document'),
+}
+
+// ---- reference lists ------------------------------------------------------------------------------------------------
+export type Country = { code: string; name: string; nationality: string }
+export type CountryList = { countries: Country[]; withPlaces: string[]; canShare: boolean }
+export type PlaceKind = 'PROVINCE' | 'DEPARTMENT' | 'CITY' | 'TERRITORY' | 'COMMUNE' | 'SECTOR' | 'CHIEFDOM' | 'DISTRICT' | 'ARRONDISSEMENT'
+export type Place = {
+  id: number; countryCode: string; parentId: number | null; kind: PlaceKind; name: string; active: boolean
+  verified: boolean; shared: boolean; children: number
+}
+export type Institution = {
+  id: number; countryCode: string; kind: 'BANK' | 'MOBILE_MONEY'; name: string; shortName: string | null
+  swiftCode: string | null; aliases: string | null; active: boolean; verified: boolean; shared: boolean
+}
+export type ToPick = { userId: number; name: string; registrationNo: string; field: 'NATIONALITY' | 'COMMUNE' | 'BANK' | 'MOBILE_MONEY'; value: string }
+export const PLACE_KINDS: Record<PlaceKind, string> = {
+  PROVINCE: t('Province'), DEPARTMENT: t('Department'), CITY: t('Town (ville)'), TERRITORY: t('Territory'),
+  COMMUNE: t('Commune'), SECTOR: t('Sector'), CHIEFDOM: t('Chiefdom'), DISTRICT: t('District'), ARRONDISSEMENT: t('Arrondissement'),
+}
+
+let countryCache: Promise<CountryList> | null = null
+/** The countries, loaded once per page load. */
+export function countries(): Promise<CountryList> {
+  countryCache ??= api<CountryList>('/api/reference/countries').catch((e) => { countryCache = null; throw e })
+  return countryCache
 }
 export type Dependant = {
   id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean
@@ -732,7 +767,11 @@ export type Dependant = {
   /** Whether the person counts today for family allowances and the tax reduction (Code du travail art. 7). */
   age: number | null; counts: boolean; countsUntil: string | null; reason: string | null
 }
-export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }
+export type EmployeeFileView = {
+  contracts: Contract[]; profile: Profile; dependants: Dependant[]
+  /** The places picked, the top one first. */
+  birthPlacePath?: Place[]; addressPlacePath?: Place[]
+}
 export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant') }
 
 export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
@@ -862,7 +901,7 @@ export type EvalTemplate = {
 }
 export const FREQUENCY = { MONTHLY: t('Monthly'), QUARTERLY: t('Quarterly'), SEMI_ANNUAL: t('Every six months') }
 
-export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
+export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string; bankId?: number | null }
 export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean; activity: string | null }
 
 /** The countries a company may be in, by their code. */

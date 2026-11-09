@@ -12,7 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class Company {
 
     public record Details(String name, String address, String cnssNumber, String taxNumber, String nationalId,
-                          String rccm, String inppNumber, String onemNumber, String bankName, String bankAccount) {}
+                          String rccm, String inppNumber, String onemNumber, String bankName, String bankAccount,
+                          Long bankId) {}
 
     /** How payslips look: contact details and legal mentions next to the logo, the footer, and the layout. */
     public record PayslipSettings(String phone, String email, String website, String legalForm, String footer,
@@ -48,18 +49,28 @@ public class Company {
     public Details get() {
         return jdbc.sql("""
                 select name, address, cnss_number, tax_number, national_id, rccm, inpp_number, onem_number,
-                       bank_name, bank_account from company where id = current_company_id()""").query(Details.class).single();
+                       bank_name, bank_account, bank_id from company where id = current_company_id()""").query(Details.class).single();
     }
 
     @Transactional
     public Details save(Details d) {
+        // The bank is picked from the reference lists; a name typed before stays until one is picked.
+        String bankName = blank(d.bankName());
+        if (d.bankId() != null) {
+            bankName = jdbc.sql("""
+                    select name from financial_institution where id = ? and kind = 'BANK'
+                      and (company_id is null or company_id = current_company_id())""").param(d.bankId())
+                    .query(String.class).optional()
+                    .orElseThrow(() -> new cd.hrpay.common.BusinessRuleException("Choose the bank from the list."));
+        }
         jdbc.sql("""
                 update company set name = ?, address = ?, cnss_number = ?, tax_number = ?, national_id = ?, rccm = ?,
-                       inpp_number = ?, onem_number = ?, bank_name = ?, bank_account = ?, updated_by = ?, updated_at = now()
+                       inpp_number = ?, onem_number = ?, bank_name = ?, bank_account = ?, bank_id = ?, updated_by = ?,
+                       updated_at = now()
                 where id = current_company_id()""")
                 .params(d.name().trim(), blank(d.address()), blank(d.cnssNumber()), blank(d.taxNumber()),
                         blank(d.nationalId()), blank(d.rccm()), blank(d.inppNumber()), blank(d.onemNumber()),
-                        blank(d.bankName()), blank(d.bankAccount()), CurrentUser.email())
+                        bankName, blank(d.bankAccount()), d.bankId(), CurrentUser.email())
                 .update();
         audit.record("company.updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("name", d.name().trim()));
         return get();

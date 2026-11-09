@@ -37,7 +37,7 @@ public class PaymentController {
                                @Size(max = 40) String cnssNumber, @Size(max = 40) String taxNumber,
                                @Size(max = 40) String nationalId, @Size(max = 60) String rccm,
                                @Size(max = 40) String inppNumber, @Size(max = 40) String onemNumber,
-                               @Size(max = 100) String bankName, @Size(max = 60) String bankAccount) {}
+                               @Size(max = 100) String bankName, @Size(max = 60) String bankAccount, Long bankId) {}
 
     public record PayslipSettingsInput(@Size(max = 40) String phone, @Size(max = 150) String email,
                                        @Size(max = 150) String website, @Size(max = 200) String legalForm,
@@ -106,7 +106,7 @@ public class PaymentController {
     @PreAuthorize("hasAuthority('company.manage')")
     public Company.Details saveCompany(@Valid @RequestBody CompanyInput b) {
         return company.save(new Company.Details(b.name(), b.address(), b.cnssNumber(), b.taxNumber(), b.nationalId(),
-                b.rccm(), b.inppNumber(), b.onemNumber(), b.bankName(), b.bankAccount()));
+                b.rccm(), b.inppNumber(), b.onemNumber(), b.bankName(), b.bankAccount(), b.bankId()));
     }
 
     @GetMapping("/company/payslip-settings")
