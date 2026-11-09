@@ -17,7 +17,10 @@ public final class WhatsAppTemplates {
     private WhatsAppTemplates() {}
 
     /** What a company may send on WhatsApp, chosen on its WhatsApp page. */
-    public enum Group { PAYSLIP, DECISIONS, ACTIONS, REMINDERS }
+    public enum Group { PAYSLIP, DECISIONS, ACTIONS, REMINDERS, ANNOUNCEMENTS }
+
+    /** What a company chooses on its WhatsApp page; announcements are chosen one by one when HR sends them. */
+    public static final List<Group> CHOSEN_BY_COMPANY = List.of(Group.PAYSLIP, Group.DECISIONS, Group.ACTIONS, Group.REMINDERS);
 
     /** {@code exampleText} is null for a template that takes only the first name. */
     public record Text(String body, String button, String exampleText) {
@@ -48,11 +51,21 @@ public final class WhatsAppTemplates {
                             "Ouvrir HR Pay", "Jean Mukendi demande un congé du 3 au 7 novembre 2026."),
                     "en", new Text("Hello {{1}}, something is waiting for you in HR Pay: {{2}} Please sign in to deal with it.",
                             "Open HR Pay", "Jean Mukendi asks for leave from 3 to 7 November 2026."))),
-            new Template("hrpay_checkout_reminder", Group.REMINDERS, Map.of(
-                    "fr", new Text("Bonjour {{1}}, {{2}} Pensez à pointer votre départ dans HR Pay.",
-                            "Pointer", "Votre journée s'est terminée à 17:00."),
-                    "en", new Text("Hello {{1}}, {{2}} Remember to check out in HR Pay.",
-                            "Check out", "Your day ended at 17:00."))));
+            // Fixed words about the person's own record: Meta moved a "remember to check out" wording to MARKETING.
+            new Template("hrpay_checkout_pending", Group.REMINDERS, Map.of(
+                    "fr", new Text("Bonjour {{1}}, votre départ n'est pas encore pointé dans HR Pay. Merci de le pointer pour que vos heures de travail soient justes.",
+                            "Pointer", null),
+                    "en", new Text("Hello {{1}}, your check-out is not recorded in HR Pay yet. Please check out so that your working hours are right.",
+                            "Check out", null))),
+            // A notice in fixed words: the announcement itself is read in HR Pay.
+            new Template("hrpay_announcement", Group.ANNOUNCEMENTS, Map.of(
+                    "fr", new Text("Bonjour {{1}}, votre employeur a publié une annonce pour vous dans HR Pay. Merci de vous connecter pour la lire.",
+                            "Lire l'annonce", null),
+                    "en", new Text("Hello {{1}}, your employer has posted an announcement for you in HR Pay. Please sign in to read it.",
+                            "Read it", null))));
+
+    /** An announcement HR chose to send on WhatsApp too; plain "announcement" notifications stay in HR Pay. */
+    public static final String ANNOUNCEMENT_KIND = "announcement.whatsapp";
 
     private static final Map<String, Group> KINDS = Map.ofEntries(
             Map.entry("payslip.ready", Group.PAYSLIP),
@@ -64,7 +77,8 @@ public final class WhatsAppTemplates {
             Map.entry("letter.signed", Group.ACTIONS), Map.entry("letter.declined", Group.ACTIONS),
             Map.entry("advance.requested", Group.ACTIONS), Map.entry("advance.to-pay", Group.ACTIONS),
             Map.entry("document.expiring", Group.ACTIONS), Map.entry("certificate.requested", Group.ACTIONS),
-            Map.entry("reminder.check_out", Group.REMINDERS));
+            Map.entry("reminder.check_out", Group.REMINDERS),
+            Map.entry(ANNOUNCEMENT_KIND, Group.ANNOUNCEMENTS));
 
     /** The kind of message a notification is, or null for those that never go by WhatsApp (security, support…). */
     public static Group groupOf(String kind) {
@@ -95,7 +109,12 @@ public final class WhatsAppTemplates {
         button.put("type", "URL");
         button.put("text", x.button());
         button.put("url", base + "{{1}}");
-        button.put("example", List.of(base + (t.group() == Group.PAYSLIP ? "my/payslips" : t.group() == Group.REMINDERS ? "check-in" : "leave")));
+        button.put("example", List.of(base + (switch (t.group()) {
+            case PAYSLIP -> "my/payslips";
+            case REMINDERS -> "check-in";
+            case ANNOUNCEMENTS -> "announcements/1";
+            default -> "leave";
+        })));
         Map<String, Object> p = new LinkedHashMap<>();
         p.put("name", t.name());
         p.put("language", language);

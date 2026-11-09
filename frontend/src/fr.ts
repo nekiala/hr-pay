@@ -2689,6 +2689,23 @@ const fr: Record<string, string> = {
   "stopped": "arrêté",
   "read": "lu",
   "delivered": "remis",
+  "Unit: {a}": "Unité : {a}",
+  "Site: {a}": "Site : {a}",
+  "Announcements": "Annonces",
+  "For me": "Pour moi",
+  "No announcement yet.": "Aucune annonce pour l'instant.",
+  "Send this announcement?": "Envoyer cette annonce ?",
+  "{a} people will receive it. It cannot be withdrawn once sent.": "{a} personnes la recevront. Elle ne peut plus être retirée une fois envoyée.",
+  "Announcement sent to {a} people.": "Annonce envoyée à {a} personnes.",
+  "New announcement": "Nouvelle annonce",
+  "Who receives it": "Destinataires",
+  "A unit and the units below it": "Une unité et les unités en dessous",
+  "A site": "Un site",
+  "Also send a WhatsApp notice to those who agreed": "Envoyer aussi un avis WhatsApp à ceux qui ont accepté",
+  "{a} people: {b} by WhatsApp, {c} by email, {d} only in HR Pay. Everyone sees it in HR Pay.": "{a} personnes : {b} par WhatsApp, {c} par email, {d} uniquement dans HR Pay. Tout le monde la voit dans HR Pay.",
+  "Estimated Meta cost: about {a} USD ({b} USD per message). The WhatsApp notice only says there is an announcement; it is read in HR Pay.": "Coût Meta estimé : environ {a} USD ({b} USD par message). L'avis WhatsApp dit seulement qu'il y a une annonce ; elle se lit dans HR Pay.",
+  "WhatsApp is not turned on for this company: emails go instead.": "WhatsApp n'est pas activé pour cette entreprise : des emails partent à la place.",
+  "Meta has not approved the announcement template yet: emails go instead.": "Meta n'a pas encore approuvé le modèle d'annonce : des emails partent à la place.",
 }
 
 export default fr

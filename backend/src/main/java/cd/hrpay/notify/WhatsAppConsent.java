@@ -51,9 +51,11 @@ public class WhatsAppConsent {
     private final Tenants tenants;
     private final JobLocks locks;
     private final NotificationService messages;
+    private final WhatsAppKeywords keywords;
 
     public WhatsAppConsent(JdbcClient jdbc, WhatsApp whatsapp, OtpService otp, UserRepository users, AuditService audit,
-                           Tenants tenants, JobLocks locks, NotificationService messages) {
+                           Tenants tenants, JobLocks locks, NotificationService messages,
+                           WhatsAppKeywords keywords) {
         this.jdbc = jdbc;
         this.whatsapp = whatsapp;
         this.otp = otp;
@@ -62,6 +64,7 @@ public class WhatsAppConsent {
         this.tenants = tenants;
         this.locks = locks;
         this.messages = messages;
+        this.keywords = keywords;
     }
 
     // ---- the person's choice ----------------------------------------------------------------------------------------
@@ -129,7 +132,10 @@ public class WhatsAppConsent {
 
     // ---- replies from employees ---------------------------------------------------------------------------------------
 
-    /** A message someone sent to an HR Pay number. STOP (or ARRÊT) ends the agreement and gets a confirmation. */
+    /**
+     * A message someone sent to an HR Pay number. STOP (or ARRÊT) ends the agreement and gets a confirmation; from
+     * someone who agreed, a word such as SOLDE gets its answer (see WhatsAppKeywords). Other people get no answer.
+     */
     public void received(WhatsApp.Account account, String from, String text) {
         String phone = "+" + from.replaceAll("\\D", "");
         Long company = tenants.callAsPlatform(() -> jdbc.sql("select company_id from app_user where whatsapp_phone = ?")
@@ -138,16 +144,24 @@ public class WhatsAppConsent {
             return;
         }
         String word = text == null ? "" : text.trim().toUpperCase(Locale.ROOT).replaceAll("[^\\p{L}]", "");
-        if (!STOP_WORDS.contains(word)) {
-            return;
-        }
+        boolean stop = STOP_WORDS.contains(word);
         tenants.runAs(company, () -> {
-            Long userId = jdbc.sql("select id from app_user where whatsapp_phone = ?").param(phone).query(Long.class).single();
-            optOut(userId, "REPLY");
-            AppUser user = users.findById(userId).orElse(null);
-            String reply = Texts.in(user == null ? Texts.FR : messages.languageOf(user),
-                    () -> Texts.t("You will no longer receive HR Pay messages on WhatsApp. You can turn them on again in HR Pay, under My account."));
-            whatsapp.sendText(account, user, phone, reply);
+            record Who(long id, String phone, OffsetDateTime optIn) {}
+            Who who = jdbc.sql("select id, phone_e164 as phone, whatsapp_opt_in_at as opt_in from app_user where whatsapp_phone = ?")
+                    .param(phone).query(Who.class).single();
+            AppUser user = users.findById(who.id()).orElse(null);
+            String language = user == null ? Texts.FR : messages.languageOf(user);
+            if (stop) {
+                optOut(who.id(), "REPLY");
+                whatsapp.sendText(account, user, phone, Texts.in(language, () -> Texts.t(
+                        "You will no longer receive HR Pay messages on WhatsApp. You can turn them on again in HR Pay, under My account.")));
+                return;
+            }
+            // Answers only to someone who agreed, on the number they confirmed, while they are still employed.
+            if (who.optIn() == null || !phone.equals(who.phone()) || user == null || !user.isActive()) {
+                return;
+            }
+            whatsapp.sendText(account, user, phone, Texts.in(language, () -> keywords.answer(user, text)));
         });
     }
 
@@ -165,7 +179,7 @@ public class WhatsAppConsent {
     public int sendPending() {
         long companyId = TenantContext.companyId();
         List<String> kinds = whatsapp.enabledKinds(companyId);
-        Optional<WhatsApp.Account> account = kinds.isEmpty() ? Optional.empty() : whatsapp.resolve(companyId);
+        Optional<WhatsApp.Account> account = whatsapp.usable(companyId) ? whatsapp.resolve(companyId) : Optional.empty();
         int sent = 0;
         // Notifications made while this runs wait for the next run.
         long upTo = jdbc.sql("select coalesce(max(id), 0) from notification").query(Long.class).single();
@@ -190,7 +204,8 @@ public class WhatsAppConsent {
                     continue;
                 }
                 WhatsAppTemplates.Group group = WhatsAppTemplates.groupOf(p.kind());
-                if (group == null || !kinds.contains(group.name())) {
+                // Announcements go on WhatsApp when HR chose it for that announcement.
+                if (group == null || group != WhatsAppTemplates.Group.ANNOUNCEMENTS && !kinds.contains(group.name())) {
                     continue;
                 }
                 WhatsAppTemplates.Template t = WhatsAppTemplates.forGroup(group);

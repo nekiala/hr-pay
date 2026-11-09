@@ -54,11 +54,21 @@ expires in 5 minutes." with a **Copy code** button (French: "Copier le code").
 - EN: Hello {{1}}, something is waiting for you in HR Pay: {{2}} Please sign in to deal with it. Button: **Open HR Pay**
 - Example: {{2}} = "Jean Mukendi demande un congé du 3 au 7 novembre 2026."
 
-### hrpay_checkout_reminder (utility): forgot to check out
+### hrpay_checkout_pending (utility): check-out not recorded
 
-- FR: Bonjour {{1}}, {{2}} Pensez à pointer votre départ dans HR Pay. Button: **Pointer**
-- EN: Hello {{1}}, {{2}} Remember to check out in HR Pay. Button: **Check out**
-- Example: {{2}} = "Votre journée s'est terminée à 17:00."
+- FR: Bonjour {{1}}, votre départ n'est pas encore pointé dans HR Pay. Merci de le pointer pour que vos heures de travail
+  soient justes. Button: **Pointer**
+- EN: Hello {{1}}, your check-out is not recorded in HR Pay yet. Please check out so that your working hours are right.
+  Button: **Check out**
+- Meta moved the earlier "remember to check out" wording (`hrpay_checkout_reminder`) to MARKETING; delete that one in
+  WhatsApp Manager. The WhatsApp page shows the category Meta gave each template and warns when it differs.
+
+### hrpay_announcement (utility): an HR announcement
+
+- FR: Bonjour {{1}}, votre employeur a publié une annonce pour vous dans HR Pay. Merci de vous connecter pour la lire.
+  Button: **Lire l'annonce**
+- EN: Hello {{1}}, your employer has posted an announcement for you in HR Pay. Please sign in to read it. Button: **Read it**
+- The announcement itself is read in HR Pay; people without WhatsApp get it by email.
 
 ## 3. Register the webhook
 
@@ -70,7 +80,21 @@ employee who answers STOP (or ARRÊT) stops receiving messages and gets a confir
 the app secret (`X-Hub-Signature-256`). Meta needs a public HTTPS address, so the webhook does not work on a laptop
 (`localhost`); sending does.
 
-## 4. Turn it on for a company
+## 4. Words employees can send
+
+Someone who agreed can write to the number and gets the answer at once (Meta allows free replies within 24 hours of
+their message, at no cost): **SOLDE** (leave days left), **PRÉSENCE** (hours this month, late and absent days),
+**BULLETIN** (link to the payslips), **AVANCE** (link to the salary advance page), **AIDE** or anything else (the list),
+**STOP** (no more messages). Pay figures never go in an answer. Replies need the webhook, so a public HTTPS address.
+
+## 5. Announcements and their cost
+
+HR sends announcements from **Announcements** (permission `announcement.send`). Before sending, the page shows how
+many people get it by WhatsApp, by email and only in HR Pay, and Meta's estimated cost: the number of WhatsApp notices
+times `WHATSAPP_UTILITY_PRICE_USD` (default 0.004 USD, Meta's utility price for the Rest of Africa; check Meta's
+current rate card).
+
+## 6. Turn it on for a company
 
 Company > Settings > WhatsApp: tick **Send notifications to employees on WhatsApp** and choose what is sent. Each
 employee then opens **My account > WhatsApp**, receives a code on WhatsApp at the number in their file, types it, and

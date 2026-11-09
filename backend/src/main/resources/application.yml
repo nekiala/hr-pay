@@ -129,6 +129,9 @@ app:
     whatsapp-template: ${WHATSAPP_TEMPLATE:hrpay_otp}
     whatsapp-language: ${WHATSAPP_LANGUAGE:fr}
   # The production set-up runs a backup job; when true, an alert goes out if no backup succeeded for 26 hours.
+  whatsapp:
+    # Meta's price of one utility message, for the announcement cost estimate (check Meta's current rate card).
+    utility-price-usd: ${WHATSAPP_UTILITY_PRICE_USD:0.004}
   backups:
     expected: ${BACKUPS_EXPECTED:false}
   # BCC exchange rates (CDF per unit). Fetched at start-up and twice a day; HR can enter one by hand.
