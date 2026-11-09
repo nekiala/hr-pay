@@ -20,7 +20,7 @@ public final class Authorities {
 
     public static UsernamePasswordAuthenticationToken token(AppUser user) {
         AuthenticatedUser principal = new AuthenticatedUser(user.getId(), user.getEmail(),
-                user.getFirstName() + " " + user.getLastName(), user.getCompanyId());
+                user.fullName(), user.getCompanyId());
         return UsernamePasswordAuthenticationToken.authenticated(principal, null, of(user));
     }
 }

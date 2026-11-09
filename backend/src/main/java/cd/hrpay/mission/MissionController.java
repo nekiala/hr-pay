@@ -47,7 +47,7 @@ public class MissionController {
 
     private MissionView view(Mission m) {
         AppUser u = users.find(m.getUserId());
-        return new MissionView(m.getId(), m.getUserId(), u.getFirstName() + " " + u.getLastName(),
+        return new MissionView(m.getId(), m.getUserId(), u.fullName(),
                 u.getRegistrationNo(), m.getWorkDate(), m.getStartTime(), m.getEndTime(), m.getLocation(),
                 m.getPurpose(), m.getStatus(), m.getRequestedAt(), m.getDecidedBy(), m.getDecidedAt(),
                 m.getDecisionNote());

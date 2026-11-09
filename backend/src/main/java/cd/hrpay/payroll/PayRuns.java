@@ -256,7 +256,7 @@ public class PayRuns {
         return jdbc.sql("""
                 select d.user_id, d.last_day, d.status, trim(d.currency) as currency, d.created_by, d.created_at, d.confirmed_by,
                        d.notice_amount + d.leave_amount + d.severance_amount + d.thirteenth_amount - d.notice_owed as total,
-                       u.first_name || ' ' || u.last_name as name
+                       person_name(u.first_name, u.middle_name, u.last_name) as name
                 from departure d join app_user u on u.id = d.user_id
                 where date_trunc('month', d.last_day)::date between ? and ?""").params(a, b)
                 .query((rs, i) -> {

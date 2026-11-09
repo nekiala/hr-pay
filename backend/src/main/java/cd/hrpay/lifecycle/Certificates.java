@@ -40,7 +40,7 @@ public class Certificates {
                           String decidedBy, OffsetDateTime decidedAt, String reason) {}
 
     private static final String SELECT = """
-            select c.id, c.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no, c.kind, c.purpose,
+            select c.id, c.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no, c.kind, c.purpose,
                    c.status, c.number, c.document_id, c.requested_by, c.requested_at, c.decided_by, c.decided_at, c.reason
             from certificate_request c join app_user u on u.id = c.user_id""";
 
@@ -94,7 +94,7 @@ public class Certificates {
         long id = jdbc.sql("insert into certificate_request (user_id, kind, purpose, requested_by) values (?, ?, ?, ?) returning id")
                 .params(user.getId(), kind, clean(purpose), user.getEmail()).query(Long.class).single();
         audit.record("certificate.requested", "user", user.getId(), Map.of("request", id, "kind", kind));
-        String who = user.getFirstName() + " " + user.getLastName();
+        String who = user.fullName();
         notifications.sendToHolders("lifecycle.manage", "certificate.requested", () -> Texts.t("Certificate requested"),
                 () -> Texts.t("%s asks for a %s.", who, kindName(kind)), "/lifecycle");
         return find(id);
@@ -182,7 +182,7 @@ public class Certificates {
         var contract = files.contractOn(u.getId(), today).orElse(null);
         LocalDate from = hired(u);
         StringBuilder body = new StringBuilder(Texts.t("We, %s, certify that %s, registration number %s, has been working for our company since %s",
-                employer.name(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), from == null ? "…" : Texts.day(from)));
+                employer.name(), u.fullName(), u.getRegistrationNo(), from == null ? "…" : Texts.day(from)));
         if (contract != null) {
             if (contract.occupationName() != null) {
                 body.append(Texts.t(" as %s", contract.occupationName()));
@@ -204,7 +204,7 @@ public class Certificates {
         var current = salaries.agreed(u.getId(), today)
                 .orElseThrow(() -> new BusinessRuleException("This person has no salary on file."));
         StringBuilder body = new StringBuilder(Texts.t("We, %s, certify that %s, registration number %s, employed by our company since %s, receives a gross monthly salary of %s %s.",
-                employer.name(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(),
+                employer.name(), u.fullName(), u.getRegistrationNo(),
                 hired(u) == null ? "…" : Texts.day(hired(u)), Letters.amount(current.grossMonthly()), current.currency()));
         record Month(LocalDate month, BigDecimal gross, BigDecimal net, String currency) {}
         List<Month> months = jdbc.sql("""
@@ -238,7 +238,7 @@ public class Certificates {
 
     private String signer() {
         Long me = CurrentUser.id();
-        return me == null ? " " : users.findById(me).map(s -> s.getFirstName() + " " + s.getLastName()).orElse(" ");
+        return me == null ? " " : users.findById(me).map(s -> s.fullName()).orElse(" ");
     }
 
     private static void check(String kind) {

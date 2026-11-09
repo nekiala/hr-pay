@@ -13,6 +13,7 @@ import PersonalDataPage from './pages/PersonalDataPage'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/UsersPage'
 import UserFormPage from './pages/UserFormPage'
+import UserViewPage from './pages/UserViewPage'
 import RolesPage from './pages/RolesPage'
 import SitesPage from './pages/SitesPage'
 import SiteFormPage from './pages/SiteFormPage'
@@ -226,7 +227,8 @@ export default function App() {
           <Route path="/payroll/advances" element={<AdvancesRoute />} />
           <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />
           <Route path="/departures" element={<PayrollStaff><DeparturesPage /></PayrollStaff>} />
-          <Route path="/users/:id" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
+          <Route path="/users/:id/edit" element={<Guard permission="user.read"><UserFormPage /></Guard>} />
+          <Route path="/users/:id" element={<Guard permission="user.read"><UserViewPage /></Guard>} />
           <Route path="/org" element={<OrgChartPage />} />
           <Route path="/org/units/:id" element={<OrgUnitPage />} />
           <Route path="/org/manage" element={<Guard permission="org.manage"><OrgSettingsPage /></Guard>} />

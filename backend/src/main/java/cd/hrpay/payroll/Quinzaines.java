@@ -182,7 +182,7 @@ public class Quinzaines {
     /** Only the employees who asked not to receive it (a company may have thousands who do), with their current category. */
     public List<Employee> employees() {
         return jdbc.sql("""
-                select u.id as user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+                select u.id as user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                        k.code as category, k.quinzaine_percent as percent,
                        true as refused, r.reason, r.recorded_by, r.recorded_at
                 from quinzaine_refusal r
@@ -216,7 +216,7 @@ public class Quinzaines {
 
     public List<Exclusion> exclusions(YearMonth month) {
         return jdbc.sql("""
-                select x.id, x.month, x.user_id, u.first_name || ' ' || u.last_name as employee_name, x.reason, x.recorded_by,
+                select x.id, x.month, x.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, x.reason, x.recorded_by,
                        x.recorded_at
                 from quinzaine_exclusion x join app_user u on u.id = x.user_id where x.month = ? order by u.last_name""")
                 .param(month.atDay(1)).query(Exclusion.class).list();
@@ -282,7 +282,7 @@ public class Quinzaines {
 
     private Run view(RunRow r) {
         List<Line> lines = jdbc.sql("""
-                select l.id, l.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no, l.number,
+                select l.id, l.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no, l.number,
                        trim(l.currency) as currency, l.category, l.percent, l.base_amount, l.normal_net, l.worked_share,
                        l.earned_net, l.amount, l.explanation::text as explanation,
                        exists (select 1 from payment_line p join payment_batch b on b.id = p.batch_id
@@ -337,7 +337,7 @@ public class Quinzaines {
         List<String> skipped = new ArrayList<>();
         // Under contract on the pay day (its grade gives the category), and active.
         List<Candidate> people = jdbc.sql("""
-                select u.id as user_id, u.first_name || ' ' || u.last_name as employee_name,
+                select u.id as user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name,
                        greatest((select min(c2.start_date) from employee_contract c2 where c2.user_id = u.id
                                  and (c2.end_date is null or c2.end_date >= ?)), ?) as first_day,
                        k.code as category, k.quinzaine_percent as percent

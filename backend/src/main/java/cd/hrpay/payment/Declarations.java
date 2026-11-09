@@ -121,7 +121,7 @@ public class Declarations {
         var units = org.placementsOfUnits();
         List<String> warnings = new ArrayList<>();
         jdbc.sql("""
-                select p.user_id, u.registration_no, u.first_name || ' ' || u.last_name as name,
+                select p.user_id, u.registration_no, person_name(u.first_name, u.middle_name, u.last_name) as name,
                        trim(min(p.currency)) as currency, sum(p.cnss_base) as cnss_base, sum(p.taxable_base) as taxable_base,
                        sum(p.taxable_base_cdf) as taxable_base_cdf,
                        max(p.snapshot ->> ?) filter (where p.kind = 'REGULAR') as id_number,
@@ -132,7 +132,7 @@ public class Declarations {
                        min(p.unit_id) as unit_id
                 from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? and (p.kind = 'REGULAR' or p.number is not null)
-                group by p.user_id, u.registration_no, u.first_name, u.last_name
+                group by p.user_id, u.registration_no, u.first_name, u.middle_name, u.last_name
                 order by u.last_name, u.first_name""")
                 .params(idKey == null ? "-" : idKey, employeeCode == null ? "-" : employeeCode,
                         employerCode == null ? "-" : employerCode, employerCode == null ? "-" : employerCode,

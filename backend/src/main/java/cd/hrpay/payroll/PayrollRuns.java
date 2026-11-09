@@ -177,7 +177,7 @@ public class PayrollRuns {
     public RunView view(YearMonth month, List<String> skipped) {
         Run run = require(month);
         List<PayslipSummary> slips = jdbc.sql("""
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, u.registration_no, p.number,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, u.registration_no, p.number,
                        trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.employer_charges,
                        jsonb_array_length(p.warnings) as warning_count, p.unit_id, null as unit_name,
                        null::bigint as direction_id, null as direction_name, p.kind, p.corrects_id
@@ -289,7 +289,7 @@ public class PayrollRuns {
         LocalDate today = ctx.today();
         BigDecimal usdLocal = ctx.usdLocal();
         AppUser user = users.findById(userId).orElseThrow();
-        String name = user.getFirstName() + " " + user.getLastName();
+        String name = user.fullName();
         var salary = salaries.on(userId, last.isAfter(today) ? today : last).orElse(null);
         if (salary == null) {
             return new Computed(userId, name, null, null, null, 0, 0, 0, null, name + ": no basic salary recorded.");
@@ -844,7 +844,7 @@ public class PayrollRuns {
 
     public List<PayslipSummary> closedPayslipsOf(long userId) {
         return jdbc.sql("""
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, u.registration_no, p.number,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, u.registration_no, p.number,
                        trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.employer_charges, 0 as warning_count,
                        p.unit_id, null as unit_name, null::bigint as direction_id, null as direction_name, p.kind, p.corrects_id
                 from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id

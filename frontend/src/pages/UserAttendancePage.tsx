@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, api, type User } from '../api'
+import { ApiError, api, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -58,7 +58,7 @@ export default function UserAttendancePage() {
     <section>
       <p><Link to={`/users/${id}`}>{t('← Back to employee')}</Link></p>
       <div className="row between">
-        <h2>{t('Attendance')}{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
+        <h2>{t('Attendance')}{user ? `: ${personName(user)}` : ''}</h2>
         {canCorrect && <Button onClick={() => setAdding(true)}>{t('Add a missing entry')}</Button>}
       </div>
       {canCorrect && adding && (

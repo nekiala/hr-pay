@@ -52,7 +52,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicApiController {
 
     public record Employee(String registrationNo, String firstName, String lastName, String email, String phone, String status,
-                           String site, String unit, LocalDate hireDate, String gradeCategory, String manager, String clockPin) {}
+                           String site, String unit, LocalDate hireDate, String gradeCategory, String manager, String clockPin,
+                           String postnom) {}
 
     public record Unit(String code, String name, String level, String parent, LocalDate validFrom, LocalDate validTo) {}
 
@@ -109,7 +110,8 @@ public class PublicApiController {
             select u.registration_no, u.first_name, u.last_name, u.email, u.phone_e164 as phone, u.status, s.code as site,
                    (select o.code from org_assignment a join org_unit o on o.id = a.unit_id
                     where a.user_id = u.id and a.valid_to is null limit 1) as unit,
-                   u.hire_date, g.code as grade_category, m.registration_no as manager, coalesce(u.clock_pin, u.registration_no) as clock_pin
+                   u.hire_date, g.code as grade_category, m.registration_no as manager, coalesce(u.clock_pin, u.registration_no) as clock_pin,
+                   u.middle_name as postnom
             from app_user u left join site s on s.id = u.site_id left join grade_category g on g.id = u.grade_category_id
             left join app_user m on m.id = u.manager_id""";
 
@@ -239,7 +241,7 @@ public class PublicApiController {
     @PreAuthorize("hasAuthority('payslip.read.all')")
     public List<Payslip> payslips(@PathVariable YearMonth month) {
         return jdbc.sql("""
-                select u.registration_no, u.first_name || ' ' || u.last_name as name, p.number, p.kind, trim(p.currency) as currency,
+                select u.registration_no, person_name(u.first_name, u.middle_name, u.last_name) as name, p.number, p.kind, trim(p.currency) as currency,
                        p.gross, p.employee_deductions, p.net, p.employer_charges
                 from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id
                 where r.month = ? and (p.kind = 'REGULAR' or p.number is not null)

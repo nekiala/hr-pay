@@ -53,7 +53,7 @@ public class PayElements {
             from employee_pay_element a join pay_element e on e.id = a.element_id""";
 
     private static final String ENTRY_SELECT = """
-            select p.id, p.user_id, u.first_name || ' ' || u.last_name as user_name, p.element_id,
+            select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, p.element_id,
                    e.code as element_code, e.name as element_name, e.kind, p.month, p.amount,
                    trim(p.currency) as currency, p.note, p.created_by, p.created_at
             from pay_entry p join pay_element e on e.id = p.element_id join app_user u on u.id = p.user_id""";

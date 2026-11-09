@@ -168,7 +168,7 @@ public class Documents {
     /** Documents that expire within the next days, newest replacement aside: the HR list of things to chase. */
     public List<Expiring> expiring(int days) {
         return jdbc.sql("""
-                select d.id, d.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, t.name as type_name, d.expires_on
+                select d.id, d.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, t.name as type_name, d.expires_on
                 from employee_document d join document_type t on t.id = d.type_id join app_user u on u.id = d.user_id
                 where d.deleted_at is null and d.expires_on is not null and d.expires_on <= ? and u.status = 'ACTIVE'
                   and not exists (select 1 from employee_document n where n.user_id = d.user_id and n.type_id = d.type_id
@@ -182,7 +182,7 @@ public class Documents {
         record Due(long id, long userId, String name, String typeName, LocalDate expiresOn, boolean employeeCanSee) {}
         LocalDate today = LocalDate.now(clock);
         List<Due> due = jdbc.sql("""
-                select d.id, d.user_id, u.first_name || ' ' || u.last_name as name, t.name as type_name, d.expires_on,
+                select d.id, d.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, t.name as type_name, d.expires_on,
                        t.employee_can_see
                 from employee_document d join document_type t on t.id = d.type_id join app_user u on u.id = d.user_id
                 where d.deleted_at is null and d.expires_on is not null and u.status = 'ACTIVE'

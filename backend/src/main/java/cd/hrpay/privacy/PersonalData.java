@@ -120,7 +120,7 @@ public class PersonalData {
     // ---- corrections -----------------------------------------------------------------------------------------
 
     private static final String CORRECTION_SELECT = """
-            select c.id, c.user_id, u.first_name || ' ' || u.last_name as name, c.field, c.current, c.requested,
+            select c.id, c.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, c.field, c.current, c.requested,
                    c.reason, c.status, c.answer, c.created_at, c.decided_at, c.decided_by
             from data_correction_request c join app_user u on u.id = c.user_id""";
 
@@ -190,7 +190,7 @@ public class PersonalData {
      */
     public List<Due> due() {
         return jdbc.sql("""
-                select u.id as user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                select u.id as user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
                        max(c.end_date) as left_on,
                        (max(c.end_date) + make_interval(years => co.erase_after_years))::date as erase_from
                 from app_user u join employee_contract c on c.user_id = u.id
@@ -210,7 +210,7 @@ public class PersonalData {
         }
         String name = "Erased #" + userId;
         jdbc.sql("""
-                update app_user set first_name = 'Erased', last_name = '#' || id, email = 'erased-' || id || '@erased.invalid',
+                update app_user set first_name = 'Erased', last_name = '#' || id, middle_name = null, email = 'erased-' || id || '@erased.invalid',
                        phone_e164 = '+999' || lpad(id::text, 11, '0'), password_hash = null, manager_id = null,
                        erased_at = now(), updated_at = now() where id = ?""").param(userId).update();
         jdbc.sql("delete from employee_profile where user_id = ?").param(userId).update();

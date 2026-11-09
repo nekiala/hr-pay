@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ApiError, api, days, longDay, type LeaveAllowance, type LeavePayDue, type Page, type PayRunType, type PayRunTypeInfo,
   type QuinzaineEmployee, type QuinzaineExclusion, type QuinzaineRun, type ThirteenthRun, type ThirteenthSettings, type User,
+  personName,
 } from '../api'
 import { useAuth } from '../auth'
 import { Button } from '../components/Button'
@@ -260,7 +261,7 @@ function Settlement() {
       <p className="hint">{t('The settlement goes on the last payslip, in the month of the last day.')}</p>
       <input type="search" placeholder={t('Search an employee')} value={query} onChange={(e) => setQuery(e.target.value)} />
       <ul>{people.map((u) => (
-        <li key={u.id}><Button className="link" onClick={() => navigate(`/users/${u.id}/departure`)}>{u.lastName} {u.firstName}</Button>
+        <li key={u.id}><Button className="link" onClick={() => navigate(`/users/${u.id}/departure`)}>{personName(u)}</Button>
           {' '}<span className="muted">{u.registrationNo ?? ''}</span></li>
       ))}</ul>
     </>

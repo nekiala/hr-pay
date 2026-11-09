@@ -58,7 +58,7 @@ public class OrgStructure {
             from org_unit u join org_level l on l.id = u.level_id""";
 
     private static final String HEAD_SELECT = """
-            select h.id, h.unit_id, h.user_id, a.first_name || ' ' || a.last_name as user_name, h.role, h.interim,
+            select h.id, h.unit_id, h.user_id, person_name(a.first_name, a.middle_name, a.last_name) as user_name, h.role, h.interim,
                    h.title, h.valid_from, h.valid_to
             from org_head h join app_user a on a.id = h.user_id""";
 
@@ -468,8 +468,8 @@ public class OrgStructure {
         Map<Long, List<Long>> headsBy = new HashMap<>();
         heads.values().forEach(h -> headsBy.computeIfAbsent(h.userId(), k -> new ArrayList<>()).add(h.unitId()));
         return jdbc.sql("""
-                select a.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, a.unit_id, a.valid_from,
-                       m.id as manual_id, m.first_name || ' ' || m.last_name as manual_name, u.site_id, s.name as site_name
+                select a.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, a.unit_id, a.valid_from,
+                       m.id as manual_id, person_name(m.first_name, m.middle_name, m.last_name) as manual_name, u.site_id, s.name as site_name
                 from org_assignment a join app_user u on u.id = a.user_id left join app_user m on m.id = u.manager_id
                      left join site s on s.id = u.site_id
                 where a.valid_to is null and u.status = 'ACTIVE' order by u.last_name, u.first_name""")
@@ -509,7 +509,7 @@ public class OrgStructure {
     /** Who an employee reports to today. Empty for the top of the company. */
     public Optional<Boss> managerOf(long userId) {
         Optional<Boss> manual = jdbc.sql("""
-                select m.id as user_id, m.first_name || ' ' || m.last_name as user_name, true as manual
+                select m.id as user_id, person_name(m.first_name, m.middle_name, m.last_name) as user_name, true as manual
                 from app_user u join app_user m on m.id = u.manager_id
                 where u.id = ?""").param(userId).query(Boss.class).optional();
         if (manual.isPresent()) {

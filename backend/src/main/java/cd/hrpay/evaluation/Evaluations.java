@@ -54,8 +54,8 @@ public class Evaluations {
     public record ScoreInput(long criterionId, BigDecimal score, String comment) {}
 
     private static final String EVAL_SELECT = """
-            select e.id, e.user_id, u.first_name || ' ' || u.last_name as user_name, e.template_id, t.name as template_name,
-                   e.period_start, e.period_end, e.evaluator_id, v.first_name || ' ' || v.last_name as evaluator_name,
+            select e.id, e.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, e.template_id, t.name as template_name,
+                   e.period_start, e.period_end, e.evaluator_id, person_name(v.first_name, v.middle_name, v.last_name) as evaluator_name,
                    e.status, e.total_percent, e.manager_comment, e.employee_comment, e.hr_comment, e.submitted_at,
                    e.answered_at, e.approved_by, e.approved_at, null as scores
             from evaluation e join app_user u on u.id = e.user_id join app_user v on v.id = e.evaluator_id
@@ -390,7 +390,7 @@ public class Evaluations {
             }
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("userId", u.getId());
-            row.put("name", u.getFirstName() + " " + u.getLastName());
+            row.put("name", u.fullName());
             try {
                 Template t = templateFor(u);
                 LocalDate[] p = period(t.frequency(), on);

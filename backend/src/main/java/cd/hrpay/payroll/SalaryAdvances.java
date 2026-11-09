@@ -74,7 +74,7 @@ public class SalaryAdvances {
     public record Mine(Settings settings, Availability availability, List<Advance> advances) {}
 
     private static final String SELECT = """
-            select a.id, a.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no, a.month, a.number,
+            select a.id, a.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no, a.month, a.number,
                    a.amount, trim(a.currency) as currency, a.available, a.earned_net, a.percent, a.status, a.signed_name,
                    a.signed_at, a.signed_channels, a.sha256, a.decided_by, a.decided_at, a.decision_note, a.created_at,
                    a.status = 'PAID' as paid
@@ -348,7 +348,7 @@ public class SalaryAdvances {
                 .optional().orElse("CD");
         return Texts.t("I, %s (registration no. %s), receive from %s an advance of %s %s on my pay of %s. It carries no "
                         + "interest and no fees, and is taken back in full from my payslip of %s.",
-                user.getFirstName() + " " + user.getLastName(), user.getRegistrationNo() == null ? "—" : user.getRegistrationNo(),
+                user.fullName(), user.getRegistrationNo() == null ? "—" : user.getRegistrationNo(),
                 company, plain(amount), currency, period, period)
                 + ("CD".equals(country) ? " " + Texts.t("(Code du travail art. 112 c)") : "");
     }
@@ -384,7 +384,7 @@ public class SalaryAdvances {
     /** The employee confirms with the code and their name; the advance is approved at once when the company says so. */
     @Transactional
     public Advance request(AppUser user, UUID challengeId, String code, BigDecimal amount, String typedName, String ip) {
-        String expected = user.getFirstName() + " " + user.getLastName();
+        String expected = user.fullName();
         if (typedName == null || !norm(typedName).equals(norm(expected))) {
             throw new BusinessRuleException(Texts.t("Type your name as HR Pay knows it: %s.", expected));
         }
@@ -579,8 +579,10 @@ public class SalaryAdvances {
         }
     }
 
+    /** The name's words without accents or case, in any order (Nom Postnom Prénom or Prénom Nom both match). */
     private static String norm(String s) {
-        return java.text.Normalizer.normalize(s.trim().replaceAll("\\s+", " "), java.text.Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "").toLowerCase(java.util.Locale.ROOT);
+        return java.util.Arrays.stream(java.text.Normalizer.normalize(s.trim(), java.text.Normalizer.Form.NFD)
+                        .replaceAll("\\p{M}", "").toLowerCase(java.util.Locale.ROOT).split("\\s+"))
+                .sorted().collect(java.util.stream.Collectors.joining(" "));
     }
 }

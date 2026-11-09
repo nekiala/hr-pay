@@ -22,6 +22,7 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
                or lower(u.email) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.firstName) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.lastName) like lower(concat('%', cast(:q as string), '%'))
+               or lower(u.middleName) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.registrationNo) like lower(concat('%', cast(:q as string), '%'))
             """)
     Page<AppUser> search(String q, Pageable pageable);
@@ -32,6 +33,7 @@ public interface UserRepository extends JpaRepository<AppUser, Long> {
                or lower(u.email) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.firstName) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.lastName) like lower(concat('%', cast(:q as string), '%'))
+               or lower(u.middleName) like lower(concat('%', cast(:q as string), '%'))
                or lower(u.registrationNo) like lower(concat('%', cast(:q as string), '%')))
             """)
     Page<AppUser> searchIn(String q, java.util.Collection<Long> ids, Pageable pageable);

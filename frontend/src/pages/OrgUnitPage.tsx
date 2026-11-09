@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, type User } from '../api'
+import { ApiError, api, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
@@ -164,7 +164,7 @@ function HeadRow({ unit, role, head, levels, editable, onSaved }: {
               <>
                 <input placeholder={t('Search by name or registration number')} value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
                 {results.map((r) => (
-                  <p key={r.id}><Button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: r.id, name: `${r.firstName} ${r.lastName}` })}>{t('Choose')}</Button> {r.firstName} {r.lastName} <span className="muted">{r.registrationNo}</span></p>
+                  <p key={r.id}><Button type="button" className="secondary void" onClick={() => setForm({ ...form, userId: r.id, name: personName(r) })}>{t('Choose')}</Button> {r.firstName} {r.lastName} <span className="muted">{r.registrationNo}</span></p>
                 ))}
               </>
             )}

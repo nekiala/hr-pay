@@ -41,7 +41,7 @@ class OrgStructureIT extends IntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         // The Service logistique is vacant, so its people report to the head of the Direction des opérations.
         assertThat(JsonPath.<List<String>>read(people, "$[?(@.userId==" + id(EMPLOYEE) + ")].reportsToName"))
-                .containsExactly("Sarah Tshibangu");
+                .containsExactly("TSHIBANGU Sarah");
         // Sarah heads the Direction; the Direction générale above is vacant, so she reports to nobody.
         assertThat(JsonPath.<List<Object>>read(people, "$[?(@.userId==" + id("manager@demo.hrpay.cd") + ")].reportsToId"))
                 .containsExactly((Object) null);
@@ -55,7 +55,7 @@ class OrgStructureIT extends IntegrationTest {
         mvc.perform(get("/api/org/people").session(employee)).andExpect(status().isForbidden());
         mvc.perform(get("/api/org/me").session(employee))
                 .andExpect(jsonPath("$.history[0].unitCode").value("SLOG"))
-                .andExpect(jsonPath("$.manager.userName").value("Sarah Tshibangu"));
+                .andExpect(jsonPath("$.manager.userName").value("TSHIBANGU Sarah"));
     }
 
     @Test
@@ -108,11 +108,11 @@ class OrgStructureIT extends IntegrationTest {
                 .andExpect(status().is(422));
         mvc.perform(json(put("/api/org/units/" + smaint + "/head").session(hr), """
                         {"userId":%d,"role":"DEPUTY","from":"2026-03-01"}""".formatted(id(EMPLOYEE))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.deputy.userName").value("Jean Mukendi"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.deputy.userName").value("MUKENDI Jean"));
         mvc.perform(get("/api/org/users/" + sarah + "/assignments").session(hr))
                 .andExpect(jsonPath("$.heads.length()").value(2));
         String people = mvc.perform(get("/api/org/people").session(hr)).andReturn().getResponse().getContentAsString();
-        assertThat(JsonPath.<List<String>>read(people, "$[?(@.userId==" + david + ")].reportsToName")).containsExactly("Sarah Tshibangu");
+        assertThat(JsonPath.<List<String>>read(people, "$[?(@.userId==" + david + ")].reportsToName")).containsExactly("TSHIBANGU Sarah");
 
         // A unit with people cannot close; once empty, it can, and its heads' terms end with it.
         mvc.perform(json(post("/api/org/units/" + smaint + "/close").session(hr), "{\"on\":\"2026-06-30\"}"))
@@ -145,7 +145,7 @@ class OrgStructureIT extends IntegrationTest {
                 .andExpect(jsonPath("$.updated").value(1))
                 .andExpect(jsonPath("$.headsSet").value(1));
         mvc.perform(get("/api/org/units").session(hr))
-                .andExpect(jsonPath("$[?(@.code=='SQUAL')].head.userName").value(org.hamcrest.Matchers.contains("Jean Mukendi")))
+                .andExpect(jsonPath("$[?(@.code=='SQUAL')].head.userName").value(org.hamcrest.Matchers.contains("MUKENDI Jean")))
                 .andExpect(jsonPath("$[?(@.code=='DAF')].costCentre").value(org.hamcrest.Matchers.contains("CC-20")));
 
         String noUnit = newUser(null).replace("\"orgUnitId\":1,", "");
@@ -158,7 +158,7 @@ class OrgStructureIT extends IntegrationTest {
         mvc.perform(get("/api/org/users/" + newId + "/assignments").session(hr))
                 .andExpect(jsonPath("$.history[0].unitCode").value("SQUAL"))
                 .andExpect(jsonPath("$.history[0].reason").value("HIRE"))
-                .andExpect(jsonPath("$.manager.userName").value("Jean Mukendi"));
+                .andExpect(jsonPath("$.manager.userName").value("MUKENDI Jean"));
         mvc.perform(post("/api/users/" + newId + "/disable").session(login(ADMIN)).with(csrf())).andExpect(status().isOk());
     }
 }

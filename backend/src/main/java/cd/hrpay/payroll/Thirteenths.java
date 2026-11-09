@@ -128,12 +128,12 @@ public class Thirteenths {
         // Those whose final settlement already paid their share of this year's 13th month.
         Map<Long, String> settled = new TreeMap<>();
         jdbc.sql("""
-                select d.user_id, u.first_name || ' ' || u.last_name as name from departure d join app_user u on u.id = d.user_id
+                select d.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name from departure d join app_user u on u.id = d.user_id
                 where d.status = 'CONFIRMED' and d.thirteenth_amount > 0 and extract(year from d.last_day) = ?""")
                 .param(year).query((rs, i) -> settled.put(rs.getLong(1), rs.getString(2))).list();
         Map<Long, OrgStructure.Placement> places = org.placementsOn(month.atEndOfMonth());
         List<Map.Entry<Long, String>> people = jdbc.sql("""
-                select distinct u.id, u.first_name || ' ' || u.last_name as name, u.last_name, u.first_name
+                select distinct u.id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.last_name, u.first_name
                 from app_user u join employee_contract c on c.user_id = u.id
                 where u.status = 'ACTIVE' and c.start_date <= ? and (c.end_date is null or c.end_date >= ?)
                 order by u.last_name, u.first_name""").params(LocalDate.of(year, 12, 31), LocalDate.of(year, 1, 1))
@@ -294,7 +294,7 @@ public class Thirteenths {
 
     private Run view(RunRow r) {
         List<Line> lines = jdbc.sql("""
-                select l.id, l.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+                select l.id, l.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                        trim(l.currency) as currency, l.score_percent, l.score_source, l.evaluations, l.base, l.months_worked, l.amount
                 from thirteenth_line l join app_user u on u.id = l.user_id
                 where l.run_id = ? order by u.last_name, u.first_name, u.id""").param(r.id()).query(Line.class).list();

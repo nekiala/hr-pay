@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, type Page, type User } from '../api'
+import { api, type Page, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
@@ -50,7 +50,7 @@ export default function UsersPage() {
           <tbody>
             {data?.items.map((u) => (
               <tr key={u.id}>
-                <td><Link to={`/users/${u.id}`}>{u.lastName} {u.firstName}</Link></td>
+                <td><Link to={`/users/${u.id}`}>{personName(u)}</Link></td>
                 <td>{u.registrationNo}</td>
                 <td>{u.email}</td>
                 <td>{u.phone}</td>

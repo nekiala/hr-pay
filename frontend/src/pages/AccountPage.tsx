@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, CORRECTION_FIELDS, download, longDay, type DataCorrection, type PushSettings, type SignedInSession, type TwoStepStatus } from '../api'
+import { api, CORRECTION_FIELDS, download, longDay, type DataCorrection, type PushSettings, type SignedInSession, type TwoStepStatus , personName } from '../api'
 import { currentSubscription, installed, isIos, pushSupported, turnOffPush, turnOnPush, useInstall } from '../pwa'
 import { useAuth } from '../auth'
 import { Button, Form } from '../components/Button'
@@ -33,7 +33,7 @@ export default function AccountPage() {
   return (
     <section>
       <h2>{t('My account')}</h2>
-      <p className="muted">{me.firstName} {me.lastName} · {me.email} · {me.roles.join(', ')}</p>
+      <p className="muted">{personName(me)} · {me.email} · {me.roles.join(', ')}</p>
       {me.support
         ? <p className="notice">{t('You are on a support visit: your own account settings are in your own company.')}</p>
         : (

@@ -55,6 +55,7 @@ public class Letters {
         m.put("employee.name", "Full name");
         m.put("employee.first_name", "First name");
         m.put("employee.last_name", "Last name");
+        m.put("employee.postnom", "Postnom");
         m.put("employee.registration_no", "Registration no.");
         m.put("employee.birth_date", "Date of birth");
         m.put("employee.nationality", "Nationality");
@@ -91,7 +92,7 @@ public class Letters {
     public record CodeSent(UUID challengeId, List<String> channels, OffsetDateTime expiresAt) {}
 
     private static final String SELECT = """
-            select l.id, l.user_id, u.first_name || ' ' || u.last_name as employee_name, l.template_id, l.kind, l.number, l.title,
+            select l.id, l.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, l.template_id, l.kind, l.number, l.title,
                    l.body, l.requires_signature, l.status, l.sha256, l.sent_by, l.sent_by_name, l.sent_at, l.signed_sha256,
                    l.signed_at, l.signed_name, l.signed_ip, l.declined_reason, l.document_id, l.created_by, l.created_at
             from employee_letter l join app_user u on u.id = l.user_id""";
@@ -191,9 +192,10 @@ public class Letters {
         AppUser u = users.findById(userId).orElseThrow(() -> new NotFoundException("User not found."));
         LocalDate today = LocalDate.now(clock);
         Map<String, String> v = new LinkedHashMap<>();
-        v.put("employee.name", u.getFirstName() + " " + u.getLastName());
+        v.put("employee.name", u.fullName());
         v.put("employee.first_name", u.getFirstName());
         v.put("employee.last_name", u.getLastName());
+        v.put("employee.postnom", u.getMiddleName() == null ? "" : u.getMiddleName());
         v.put("employee.registration_no", u.getRegistrationNo());
         v.put("employee.email", u.getEmail());
         v.put("employee.phone", u.getPhone());
@@ -230,7 +232,7 @@ public class Letters {
         v.put("company.address", employer.address());
         Long me = CurrentUser.id();
         if (me != null) {
-            users.findById(me).ifPresent(s -> v.put("signatory.name", s.getFirstName() + " " + s.getLastName()));
+            users.findById(me).ifPresent(s -> v.put("signatory.name", s.fullName()));
         }
         v.put("today", Texts.day(today));
         v.entrySet().removeIf(e -> e.getValue() == null || e.getValue().isBlank());
@@ -353,7 +355,7 @@ public class Letters {
         }
         AppUser sender = users.findById(CurrentUser.id()).orElseThrow();
         AppUser employee = users.findById(l.userId()).orElseThrow();
-        String senderName = sender.getFirstName() + " " + sender.getLastName();
+        String senderName = sender.fullName();
         int year = LocalDate.now(clock).getYear();
         int n = jdbc.sql("select count(*) from employee_letter where number like ?").param("LT-" + year + "-%")
                 .query(Integer.class).single() + 1;
@@ -362,7 +364,7 @@ public class Letters {
             List<LifecyclePdf.Signature> signatures = new ArrayList<>();
             signatures.add(new LifecyclePdf.Signature(senderName, Texts.t("For the employer")));
             if (l.requiresSignature()) {
-                signatures.add(new LifecyclePdf.Signature(employee.getFirstName() + " " + employee.getLastName(),
+                signatures.add(new LifecyclePdf.Signature(employee.fullName(),
                         Texts.t("The employee (signed electronically, see the last page)")));
             }
             return pdf.letter(d.title(), number, d.body(), Texts.t("Done on %s.", Texts.day(LocalDate.now(clock))), signatures);
@@ -440,7 +442,7 @@ public class Letters {
     /** Signs with the code. The name typed must be the person's own name, as HR Pay knows it. */
     public Letter sign(long id, AppUser user, UUID challengeId, String code, String typedName, String ip, String agent) {
         Letter l = toSign(id, user);
-        String expected = user.getFirstName() + " " + user.getLastName();
+        String expected = user.fullName();
         if (!sameName(typedName, expected)) {
             throw new BusinessRuleException("Type your name as HR Pay knows it: %s.".formatted(expected));
         }
@@ -460,7 +462,7 @@ public class Letters {
         byte[] original = file(l.id());
         byte[] page = Texts.in(company.language(), () -> pdf.signaturePage(Texts.t("Electronic signature"), List.of(
                 new LifecyclePdf.Line(Texts.t("Document"), l.title() + " · " + Texts.t("No. %s", l.number())),
-                new LifecyclePdf.Line(Texts.t("Signed by"), user.getFirstName() + " " + user.getLastName() + " · "
+                new LifecyclePdf.Line(Texts.t("Signed by"), user.fullName() + " · "
                         + Texts.t("registration no. %s", user.getRegistrationNo())),
                 new LifecyclePdf.Line(Texts.t("Name typed"), typedName),
                 new LifecyclePdf.Line(Texts.t("Date and time"), now.atZoneSameInstant(zone)
@@ -484,7 +486,7 @@ public class Letters {
         audit.record("letter.signed", "user", l.userId(), Map.of("letter", l.id(), "number", l.number(), "sha256", l.sha256(),
                 "signedSha256", sha));
         users.findByEmailIgnoreCase(l.sentBy()).ifPresent(s -> notifications.send(s.getId(), "letter.signed",
-                () -> Texts.t("Document signed"), () -> Texts.t("%s signed %s.", user.getFirstName() + " " + user.getLastName(), l.title()),
+                () -> Texts.t("Document signed"), () -> Texts.t("%s signed %s.", user.fullName(), l.title()),
                 "/users/" + l.userId() + "/lifecycle"));
         return find(l.id());
     }
@@ -497,7 +499,7 @@ public class Letters {
         audit.record("letter.declined", "user", l.userId(), Map.of("letter", id));
         users.findByEmailIgnoreCase(l.sentBy()).ifPresent(s -> notifications.send(s.getId(), "letter.declined",
                 () -> Texts.t("Document refused"),
-                () -> Texts.t("%s did not sign %s: %s", user.getFirstName() + " " + user.getLastName(), l.title(), why == null ? "—" : why),
+                () -> Texts.t("%s did not sign %s: %s", user.fullName(), l.title(), why == null ? "—" : why),
                 "/users/" + l.userId() + "/lifecycle"));
         return find(id);
     }
@@ -526,8 +528,10 @@ public class Letters {
         return typed != null && simple(typed).equals(simple(expected));
     }
 
+    /** The name's words without accents or case, in any order (Nom Postnom Prénom or Prénom Nom both match). */
     private static String simple(String s) {
-        return Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]+", " ").trim();
+        return java.util.Arrays.stream(Normalizer.normalize(s, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                        .toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim().split(" "))
+                .sorted().collect(java.util.stream.Collectors.joining(" "));
     }
 }

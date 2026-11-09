@@ -80,7 +80,7 @@ public class PayrollReports {
         }
 
         String name() {
-            return s.lastName().toUpperCase() + " " + s.firstName();
+            return fullName();
         }
 
         /** Last name and postnom in capitals, then first names (mention 2 of the livre de paie). */
@@ -153,9 +153,8 @@ public class PayrollReports {
                        p.employer_charges as charges, p.scheduled_minutes, p.paid_minutes, p.days_worked, p.unit_id,
                        p.site_id, s.name as site_name, p.category_id, c.code as category_code, c.name as category_name,
                        p.grade_id, g.code as grade_code, g.name as grade_name, p.snapshot::text as snapshot_json,
-                       (select o.number from payslip o where o.id = p.corrects_id) as corrects_number, p.reason, ep.postnom
+                       (select o.number from payslip o where o.id = p.corrects_id) as corrects_number, p.reason, u.middle_name as postnom
                 from payslip p join app_user u on u.id = p.user_id
-                left join employee_profile ep on ep.user_id = p.user_id
                 left join site s on s.id = p.site_id
                 left join grade_category c on c.id = p.category_id
                 left join grade g on g.id = p.grade_id
@@ -1239,7 +1238,7 @@ public class PayrollReports {
                  BigDecimal days, BigDecimal dailyRate, BigDecimal gross, BigDecimal cnssBase, BigDecimal deductions, BigDecimal net,
                  String lines, String snapshot) {}
         List<A> list = jdbc.sql("""
-                select a.user_id, u.first_name, u.last_name, u.registration_no, a.number, trim(a.currency) as currency, a.days,
+                select a.user_id, u.first_name, upper(u.last_name) || coalesce(' ' || upper(nullif(trim(u.middle_name), '')), '') as last_name, u.registration_no, a.number, trim(a.currency) as currency, a.days,
                        a.daily_rate, a.gross, coalesce(a.cnss_base, 0) as cnss_base, coalesce(a.employee_deductions, 0) as deductions,
                        coalesce(a.net, a.gross) as net, a.lines::text as lines, coalesce(a.snapshot::text, '{}') as snapshot
                 from leave_allowance a join app_user u on u.id = a.user_id
@@ -1317,7 +1316,7 @@ public class PayrollReports {
         String categoryCode = categoryId == null ? null
                 : jdbc.sql("select code from grade_category where id = ?").param(categoryId).query(String.class).optional().orElse("?");
         List<Q> lines = jdbc.sql("""
-                select l.user_id, u.first_name, u.last_name, u.registration_no, trim(l.currency) as currency, l.category, l.amount,
+                select l.user_id, u.first_name, upper(u.last_name) || coalesce(' ' || upper(nullif(trim(u.middle_name), '')), '') as last_name, u.registration_no, trim(l.currency) as currency, l.category, l.amount,
                        l.unit_id, u.site_id, s.name as site_name, e.payment_method as method, e.bank_name as bank,
                        e.mobile_money_operator as operator
                 from quinzaine_line l join app_user u on u.id = l.user_id left join site s on s.id = u.site_id

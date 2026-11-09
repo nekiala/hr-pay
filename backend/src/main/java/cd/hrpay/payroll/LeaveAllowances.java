@@ -73,7 +73,7 @@ public class LeaveAllowances {
                        BigDecimal employerCharges, BigDecimal usdCdf, LocalDate rateDate, String lines, String snapshot) {}
 
     private static final String SELECT = """
-            select a.id, a.leave_request_id, a.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+            select a.id, a.leave_request_id, a.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                    r.start_date, r.end_date, trim(a.currency) as currency, a.days, a.monthly_salary, a.days_per_month,
                    a.daily_rate, a.salary_part, a.variable_12m as variable12m, a.months_counted, a.variable_part, a.gross, a.net_share,
                    a.advance, a.pay_by, a.status, a.explanation::text as explanation, a.calculated_by, a.calculated_at,
@@ -136,7 +136,7 @@ public class LeaveAllowances {
         record R(long leaveRequestId, long userId, String employeeName, String registrationNo, LocalDate startDate,
                  LocalDate endDate, BigDecimal workingDays) {}
         return jdbc.sql("""
-                select r.id as leave_request_id, r.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+                select r.id as leave_request_id, r.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                        r.start_date, r.end_date, r.working_days
                 from leave_request r join leave_type t on t.id = r.leave_type_id join app_user u on u.id = r.user_id
                 where t.code = 'ANNUAL' and r.status = 'APPROVED' and r.end_date >= ?
@@ -298,7 +298,7 @@ public class LeaveAllowances {
         }
         if (snapshot == null) {
             snapshot = new java.util.LinkedHashMap<>();
-            snapshot.put("name", user.getFirstName() + " " + user.getLastName());
+            snapshot.put("name", user.fullName());
             snapshot.put("registrationNo", user.getRegistrationNo());
         }
         long id = jdbc.sql("""

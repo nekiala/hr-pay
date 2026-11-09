@@ -99,7 +99,7 @@ public class ReportController {
         }
         for (AppUser u : people) {
             AttendanceDays.MonthSummary m = attendance.month(u, month, false);
-            String name = u.getFirstName() + " " + u.getLastName();
+            String name = u.fullName();
             if (detail) {
                 Map<java.time.LocalDate, AttendanceDays.OvertimeDay> ot = m.overtime().stream()
                         .collect(Collectors.toMap(AttendanceDays.OvertimeDay::date, o -> o));
@@ -149,7 +149,7 @@ public class ReportController {
             AttendanceDays.MonthSummary m = attendance.month(u, month, true);
             var e = m.earnings();
             var p = where.get(u.getId());
-            row(out, u.getRegistrationNo(), u.getFirstName() + " " + u.getLastName(), dir(where, u), unit(where, u),
+            row(out, u.getRegistrationNo(), u.fullName(), dir(where, u), unit(where, u),
                     p == null || p.costCentre() == null ? "" : p.costCentre(), e == null ? "" : e.currency(), e == null ? "" : e.grossMonthly().toPlainString(),
                     h(m.scheduledMinutesMonth()), h(m.payableMinutesToDate()),
                     e == null ? "" : e.earnedToDate().toPlainString(), h(m.overtimeApprovedMinutes()),

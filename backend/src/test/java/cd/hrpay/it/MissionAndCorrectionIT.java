@@ -82,7 +82,7 @@ class MissionAndCorrectionIT extends IntegrationTest {
         MockHttpSession manager = login(MANAGER);
         mvc.perform(get("/api/missions/to-decide").session(manager))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.id == %s)].employeeName".formatted(id)).value("Esther Kalala"));
+                .andExpect(jsonPath("$[?(@.id == %s)].employeeName".formatted(id)).value("KALALA Esther"));
         mvc.perform(json(post("/api/missions/" + id + "/decision").session(manager), "{\"approve\":true}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))

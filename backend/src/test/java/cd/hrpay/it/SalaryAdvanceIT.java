@@ -47,7 +47,7 @@ class SalaryAdvanceIT extends IntegrationTest {
     }
 
     String name(String email) {
-        return jdbc.sql("select first_name || ' ' || last_name from app_user where email = ?").param(email).query(String.class).single();
+        return jdbc.sql("select person_name(first_name, middle_name, last_name) from app_user where email = ?").param(email).query(String.class).single();
     }
 
     String latestCode(String email) {

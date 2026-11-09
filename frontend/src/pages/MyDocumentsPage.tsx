@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   api, CERTIFICATE_KINDS, DOC_SOURCES, fileSize, LETTER_STATUS, longDay, openFile,
   type CertificateKind, type CodeSent, type Letter, type MyDocuments,
+  personName,
 } from '../api'
 import { useAuth } from '../auth'
 import { Button, Form } from '../components/Button'
@@ -153,7 +154,7 @@ function SignModal({ letter, onOpen, onClose, onDone }: { letter: Letter; onOpen
                 <p>{t('We sent a 6-digit code by {a}.', { a: channels || t('email') })}</p>
                 <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="123456" value={code} className="code-input"
                   aria-label={t('Code')} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} autoFocus />
-                <label>{t('Type your full name to sign')}<input required maxLength={200} value={name} placeholder={me ? `${me.firstName} ${me.lastName}` : ''} onChange={(e) => setName(e.target.value)} /></label>
+                <label>{t('Type your full name to sign')}<input required maxLength={200} value={name} placeholder={me ? personName(me) : ''} onChange={(e) => setName(e.target.value)} /></label>
                 <p className="muted">{t('By signing you confirm you read this document and agree to it. The date, the time and this device are recorded with your signature.')}</p>
                 <div className="row">
                   <Button type="submit" disabled={code.length !== 6 || !name.trim()}>{t('Sign')}</Button>

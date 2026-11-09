@@ -155,7 +155,7 @@ public class HolidayAdjustments {
 
     public List<Adjustment> recent() {
         return jdbc.sql("""
-                select a.id, a.user_id, u.first_name || ' ' || u.last_name as user_name, a.payslip_id,
+                select a.id, a.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, a.payslip_id,
                        to_char(r.month, 'YYYY-MM') as closed_month, a.amount, trim(a.currency) as currency, a.target_month,
                        a.note, a.created_by
                 from holiday_adjustment a join app_user u on u.id = a.user_id join payslip p on p.id = a.payslip_id

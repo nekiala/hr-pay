@@ -367,7 +367,7 @@ public class Firms {
     public List<Staff> staffOptions() {
         requireFirm();
         return jdbc.sql("""
-                select u.id, u.first_name || ' ' || u.last_name as name, u.email,
+                select u.id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.email,
                        exists (select 1 from user_role ur join role_permission rp on rp.role_id = ur.role_id
                                where ur.user_id = u.id and rp.permission_code = 'firm.manage') as admin
                 from app_user u where u.status = 'ACTIVE' order by u.last_name, u.first_name""").query(Staff.class).list();

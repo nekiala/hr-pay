@@ -35,7 +35,7 @@ public class CorrectionRequests {
                           String decisionNote) {}
 
     private static final String SELECT = """
-            select r.id, r.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no, r.work_date,
+            select r.id, r.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no, r.work_date,
                    r.action, r.event_type, r.local_time, r.event_id, e.occurred_at as event_at, r.reason, r.status,
                    r.requested_by, r.requested_at, r.proposed_by, r.proposed_at, r.decided_by, r.decided_at, r.decision_note
             from correction_request r join app_user u on u.id = r.user_id left join clock_event e on e.id = r.event_id""";

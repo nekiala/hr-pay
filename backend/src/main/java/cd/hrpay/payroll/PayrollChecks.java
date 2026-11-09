@@ -185,7 +185,7 @@ public class PayrollChecks {
         LocalDate first = month.atDay(1);
         LocalDate last = month.atEndOfMonth();
         List<Slip> slips = jdbc.sql("""
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, trim(p.currency) as currency,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, trim(p.currency) as currency,
                        p.net, p.warnings::text as warnings, p.snapshot::text as snapshot
                 from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? and p.kind = 'REGULAR' order by u.last_name, u.first_name""")

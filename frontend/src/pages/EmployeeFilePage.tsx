@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, CONTRACT_TYPES, api, money, type Dependant, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User } from '../api'
+import { ApiError, CONTRACT_TYPES, api, money, type Dependant, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -118,7 +118,7 @@ export default function EmployeeFilePage() {
   return (
     <section>
       <p><Link to={`/users/${id}`}>{t('← Back to employee')}</Link></p>
-      <h2>{t('Contract and family')}{user ? `: ${user.firstName} ${user.lastName}` : ''}</h2>
+      <h2>{t('Contract and family')}{user ? `: ${personName(user)}` : ''}</h2>
       {user?.unitId && <p className="muted">{t('Unit:')}{' '}<Link to={`/org/units/${user.unitId}`}>{user.unitName}</Link></p>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
@@ -201,10 +201,7 @@ export default function EmployeeFilePage() {
               <label>{t('CNSS number')}<input value={p.cnssNumber ?? ''} onChange={(e) => setP({ cnssNumber: e.target.value })} /></label>
               <label>{t('Tax number (NIF)')}<input value={p.taxNumber ?? ''} onChange={(e) => setP({ taxNumber: e.target.value })} /></label>
             </div>
-            <div className="grid2">
-              <label>{t('Postnom')}<input value={p.postnom ?? ''} onChange={(e) => setP({ postnom: e.target.value })} maxLength={100} /></label>
-              <label>{t('Commune or territory')}<input value={p.commune ?? ''} onChange={(e) => setP({ commune: e.target.value })} maxLength={100} placeholder={t('For the tax declaration')} /></label>
-            </div>
+            <label>{t('Commune or territory')}<input value={p.commune ?? ''} onChange={(e) => setP({ commune: e.target.value })} maxLength={100} placeholder={t('For the tax declaration')} /></label>
             {p.gender !== 'MALE' && (
               <label>{t('Nursing breaks until')}<input type="date" value={p.nursingBreakUntil ?? ''} onChange={(e) => setP({ nursingBreakUntil: e.target.value || null })} />
                 <span className="muted small">{t('Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.')}</span>

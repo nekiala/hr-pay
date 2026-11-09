@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api, longDay, money, type AdvanceCodeSent, type MyAdvances, type SalaryAdvance } from '../api'
+import { ApiError, api, longDay, money, type AdvanceCodeSent, type MyAdvances, type SalaryAdvance , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
@@ -64,7 +64,7 @@ export default function MyAdvancePage() {
   }
 
   const a = data?.availability
-  const fullName = me ? `${me.firstName} ${me.lastName}` : ''
+  const fullName = me ? personName(me) : ''
 
   return (
     <section>

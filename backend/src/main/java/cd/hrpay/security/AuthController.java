@@ -57,7 +57,8 @@ public class AuthController {
     /** language: the one the person sees the app in (theirs, else the company's); ownLanguage: theirs, or null. */
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
                      Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company,
-                     SupportInfo support, String language, String ownLanguage, FirmInfo firm, boolean firmMember) {
+                     SupportInfo support, String language, String ownLanguage, FirmInfo firm, boolean firmMember,
+                     String middleName, String fullName) {
         static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c) {
             Set<String> permissions = new java.util.TreeSet<>();
             Authorities.of(u).forEach(a -> permissions.add(a.getAuthority()));
@@ -71,12 +72,12 @@ public class AuthController {
             String language = u.getLanguage() != null ? u.getLanguage() : c == null ? "fr" : c.language();
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
                     permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company, support, language,
-                    u.getLanguage(), null, false);
+                    u.getLanguage(), null, false, u.getMiddleName(), u.fullName());
         }
 
         Me withFirm(FirmInfo f, boolean member) {
             return new Me(id, email, firstName, lastName, roles, permissions, mustChangePassword, privacyAccepted, company,
-                    support, language, ownLanguage, f, member);
+                    support, language, ownLanguage, f, member, middleName, fullName);
         }
     }
 

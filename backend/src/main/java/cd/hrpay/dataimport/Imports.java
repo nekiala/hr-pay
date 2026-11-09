@@ -341,7 +341,7 @@ public class Imports {
         if (registration == null) {
             return Optional.empty();
         }
-        return jdbc.sql("select id, first_name || ' ' || last_name from app_user where upper(registration_no) = upper(?)")
+        return jdbc.sql("select id, person_name(first_name, middle_name, last_name) from app_user where upper(registration_no) = upper(?)")
                 .param(registration.trim()).query((rs, i) -> new Person(rs.getLong(1), rs.getString(2))).optional();
     }
 
@@ -384,8 +384,9 @@ public class Imports {
         if (!row.errors.isEmpty()) {
             return;
         }
-        out.name = first + " " + last;
-        UserService.UserData data = new UserService.UserData(email, registration, phone, first, last, siteId);
+        String postnom = row.text("postnom");
+        out.name = AppUser.fullName(first, postnom, last);
+        UserService.UserData data = new UserService.UserData(email, registration, phone, first, last, siteId, postnom);
         Optional<AppUser> existing = userRepository.findByRegistrationNoIgnoreCase(registration.trim());
         AppUser user;
         if (existing.isPresent()) {
@@ -393,7 +394,8 @@ public class Imports {
                 throw new BusinessRuleException(Texts.t("The registration number %s appears twice in the file.", registration));
             }
             user = users.update(existing.get().getId(), new UserService.UserData(email, registration, phone, first, last,
-                    siteId != null ? siteId : existing.get().getSite() == null ? null : existing.get().getSite().getId()));
+                    siteId != null ? siteId : existing.get().getSite() == null ? null : existing.get().getSite().getId(),
+                    postnom != null ? postnom : existing.get().getMiddleName()));
             out.action = "UPDATE";
             if (unitId != null && org.currentAssignment(user.getId()).map(a -> a.unitId()).filter(unitId::equals).isEmpty()) {
                 row.warnings.add(Texts.t("The unit is not changed for someone already in HR Pay: move them on the Structure page."));
@@ -419,7 +421,7 @@ public class Imports {
 
     private void profile(Row row, long userId) {
         String[] keys = {"birth_date", "gender", "nationality", "marital_status", "cnss_number", "tax_number", "payment_method",
-                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number", "postnom", "commune"};
+                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number", "commune"};
         boolean any = false;
         for (String k : keys) {
             any |= row.text(k) != null;
@@ -459,7 +461,7 @@ public class Imports {
         }
         employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, or(row.text("nationality"), p.nationality()),
                 marital == null ? "SINGLE" : marital, or(row.text("cnss_number"), p.cnssNumber()), or(row.text("tax_number"), p.taxNumber()),
-                method, bank, account, operator, number, or(row.text("postnom"), p.postnom()), or(row.text("commune"), p.commune()),
+                method, bank, account, operator, number, or(row.text("commune"), p.commune()),
                 p.nursingBreakUntil()));
     }
 

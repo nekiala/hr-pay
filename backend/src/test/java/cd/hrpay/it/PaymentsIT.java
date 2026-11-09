@@ -88,7 +88,7 @@ class PaymentsIT extends IntegrationTest {
             long mobileId = JsonPath.<Number>read(mobile, "$.batch.id").longValue();
             String csv = mvc.perform(get("/api/payment-batches/" + mobileId + "/file.csv").session(finance))
                     .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-            assertThat(csv).contains("No,MSISDN,Beneficiary,Amount,Currency,Reference").contains("243810000007,David Lukusa");
+            assertThat(csv).contains("No,MSISDN,Beneficiary,Amount,Currency,Reference").contains("243810000007,LUKUSA David");
             // The same people cannot be put in a second file.
             mvc.perform(json(post("/api/payments/2026-08/batches").session(finance), """
                             {"method":"MOBILE_MONEY","provider":"M-PESA","currency":"USD"}"""))
@@ -128,7 +128,7 @@ class PaymentsIT extends IntegrationTest {
                     .andExpect(jsonPath("$.usdCdf").value(2000))
                     .andReturn().getResponse().getContentAsString();
             // Sample staff all have CNSS numbers (people created by other tests may not).
-            assertThat(JsonPath.<List<String>>read(cnss, "$.warnings")).noneMatch(w -> w.contains("Jean Mukendi") || w.contains("not closed"));
+            assertThat(JsonPath.<List<String>>read(cnss, "$.warnings")).noneMatch(w -> w.contains("MUKENDI Jean") || w.contains("not closed"));
             String employeeSlip = jdbc.sql("""
                     select p.cnss_base::text from payslip p join payroll_run r on r.id = p.run_id
                     where r.month = '2026-08-01' and p.user_id = ?""").param(id(EMPLOYEE)).query(String.class).single();
