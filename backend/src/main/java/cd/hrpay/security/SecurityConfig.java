@@ -99,7 +99,8 @@ public class SecurityConfig {
                             ObjectProvider<ClientRegistrationRepository> googleClients,
                             SecurityContextRepository contextRepository, cd.hrpay.platform.SupportAccess support,
                             org.springframework.jdbc.core.simple.JdbcClient jdbc, SignInSteps steps,
-                            org.springframework.transaction.support.TransactionTemplate tx, UserSessions sessions) throws Exception {
+                            org.springframework.transaction.support.TransactionTemplate tx, UserSessions sessions,
+                            cd.hrpay.firm.Firms firms) throws Exception {
         http
                 .securityContext(c -> c.securityContextRepository(contextRepository))
                 .csrf(csrf -> csrf
@@ -118,7 +119,7 @@ public class SecurityConfig {
                 .httpBasic(b -> b.disable())
                 .logout(l -> l.logoutUrl("/api/auth/logout")
                         .logoutSuccessHandler((req, res, a) -> res.setStatus(HttpStatus.NO_CONTENT.value())))
-                .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc, sessions), AuthorizationFilter.class);
+                .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc, sessions, firms), AuthorizationFilter.class);
 
         if (googleClients.getIfAvailable() != null) {
             OidcSignIn oidc = new OidcSignIn(users, audit, tenants, jdbc, steps, tx);

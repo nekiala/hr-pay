@@ -141,6 +141,10 @@ export type Me = {
   language: 'fr' | 'en'
   /** The person's own choice, null to follow the company. */
   ownLanguage: 'fr' | 'en' | null
+  /** An accounting firm's member working in a client, with the rights the client gave the firm. */
+  firm: { linkId: number; firmName: string; clientId: number; clientName: string } | null
+  /** The person belongs to an accounting firm. */
+  firmMember: boolean
 }
 
 export type Module = 'ATTENDANCE' | 'PAYROLL' | 'EVALUATIONS'
@@ -169,6 +173,7 @@ export type CompanySummary = {
   overdueInvoices: number
   lastSignIn: string | null
   supportOpen: boolean
+  kind: 'COMPANY' | 'FIRM'
 }
 
 export type Subscription = {

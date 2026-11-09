@@ -124,8 +124,11 @@ export function StatusPage() {
 /** The website's trial request: the provider reads it and creates the company. */
 export function TrialPage() {
   // The website's calculator opens the form with the visitor's country (?country=CG).
-  const startCountry = new URLSearchParams(window.location.search).get('country') === 'CG' ? 'CG' : 'CD'
-  const [form, setForm] = useState({ companyName: '', countryCode: startCountry, employees: '51-300', firstName: '', lastName: '', email: '', phone: startCountry === 'CG' ? '+242' : '+243', message: '', website: '' })
+  const params = new URLSearchParams(window.location.search)
+  const startCountry = params.get('country') === 'CG' ? 'CG' : 'CD'
+  // ?firm=1: an accounting firm asking for the accountant portal.
+  const [form, setForm] = useState({ companyName: '', countryCode: startCountry, employees: '51-300', firstName: '', lastName: '', email: '', phone: startCountry === 'CG' ? '+242' : '+243', message: '', website: '', kind: params.get('firm') ? 'FIRM' : 'COMPANY', firmRegistration: '' })
+  const firm = form.kind === 'FIRM'
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value })
@@ -141,7 +144,10 @@ export function TrialPage() {
       ) : (
         <Form onSubmit={send} className="card stack">
           <p className="muted">{t('Attendance, leave and payroll for the DRC and the Republic of the Congo, in French and English. Tell us about your company; we open your trial and help you set it up.')}</p>
-          <label>{t('Company name')}<input required maxLength={150} value={form.companyName} onChange={set('companyName')} /></label>
+          <label className="check"><input type="checkbox" checked={firm} onChange={(e) => setForm({ ...form, kind: e.target.checked ? 'FIRM' : 'COMPANY' })} />
+            {t('We are an accounting firm and run the payroll of client companies')}</label>
+          <label>{firm ? t('Firm name') : t('Company name')}<input required maxLength={150} value={form.companyName} onChange={set('companyName')} /></label>
+          {firm && <label>{t('ONEC or ONECCA number (optional)')}<input maxLength={60} value={form.firmRegistration} onChange={set('firmRegistration')} /></label>}
           <div className="grid2">
             <label>{t('Country')}<select value={form.countryCode} onChange={(e) => setForm({ ...form, countryCode: e.target.value, phone: e.target.value === 'CG' ? '+242' : '+243' })}>
               <option value="CD">{t('DR Congo')}</option><option value="CG">{t('Republic of the Congo')}</option></select></label>

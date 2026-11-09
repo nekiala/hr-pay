@@ -1,5 +1,6 @@
 package cd.hrpay.security;
 
+import cd.hrpay.firm.Firms;
 import cd.hrpay.platform.SupportAccess;
 import cd.hrpay.tenancy.TenantContext;
 import cd.hrpay.tenancy.Tenants;
@@ -34,9 +35,12 @@ class UserRefreshFilter extends OncePerRequestFilter {
     private final SupportAccess support;
     private final JdbcClient jdbc;
     private final UserSessions sessions;
+    private final Firms firms;
 
-    UserRefreshFilter(UserRepository users, Tenants tenants, SupportAccess support, JdbcClient jdbc, UserSessions sessions) {
+    UserRefreshFilter(UserRepository users, Tenants tenants, SupportAccess support, JdbcClient jdbc, UserSessions sessions,
+                      Firms firms) {
         this.sessions = sessions;
+        this.firms = firms;
         this.users = users;
         this.tenants = tenants;
         this.support = support;
@@ -55,6 +59,11 @@ class UserRefreshFilter extends OncePerRequestFilter {
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute(SupportAccess.SESSION_KEY) instanceof SupportAccess.Visit visit) {
             if (supportVisit(request, response, chain, company, session, visit)) {
+                return;
+            }
+        }
+        if (session != null && session.getAttribute(Firms.SESSION_KEY) instanceof Firms.Visit visit) {
+            if (firmVisit(request, response, chain, company, session, visit)) {
                 return;
             }
         }
@@ -108,6 +117,53 @@ class UserRefreshFilter extends OncePerRequestFilter {
                 SupportAccess.markCurrent(request, visit);
                 if (request.getRequestURI().startsWith(request.getContextPath() + "/api/")) {
                     support.log(visit, me.email(), request.getMethod(), request.getRequestURI().substring(request.getContextPath().length()));
+                }
+                try {
+                    chain.doFilter(request, response);
+                } catch (IOException | ServletException e) {
+                    throw new Wrapped(e);
+                }
+                return null;
+            });
+        } catch (Wrapped w) {
+            if (w.getCause() instanceof IOException io) {
+                throw io;
+            }
+            throw (ServletException) w.getCause();
+        }
+        return true;
+    }
+
+    /**
+     * An accounting firm's member working in a client: signed in as themselves, in their firm, then working in the
+     * client with the permissions of the roles the client gave the firm. Returns false, and ends the visit, when the
+     * client or the firm ended the link, or the person is no longer given that client.
+     */
+    private boolean firmVisit(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
+                              Long company, HttpSession session, Firms.Visit visit) throws IOException, ServletException {
+        tenants.callAs(company, () -> {
+            refresh(request);
+            return null;
+        });
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean allowed = auth != null && auth.getPrincipal() instanceof AuthenticatedUser me
+                && company.equals(visit.firmId()) && firms.allowed(visit, me.id(), CurrentUser.has("firm.manage"));
+        if (!allowed) {
+            if (request.getSession(false) != null) {
+                session.removeAttribute(Firms.SESSION_KEY);
+            }
+            return false;
+        }
+        AuthenticatedUser me = (AuthenticatedUser) auth.getPrincipal();
+        List<GrantedAuthority> granted = firms.permissions(visit).stream().<GrantedAuthority>map(SimpleGrantedAuthority::new).toList();
+        try {
+            tenants.callAs(visit.clientId(), () -> {
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(me, null, granted));
+                SecurityContextHolder.setContext(context);
+                Firms.markCurrent(request, visit);
+                if (request.getRequestURI().startsWith(request.getContextPath() + "/api/")) {
+                    firms.log(visit, me.email(), request.getMethod(), request.getRequestURI().substring(request.getContextPath().length()));
                 }
                 try {
                     chain.doFilter(request, response);

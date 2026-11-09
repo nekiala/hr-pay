@@ -45,11 +45,14 @@ public class TrialRequests {
                       @NotBlank @Size(max = 100) String firstName, @NotBlank @Size(max = 100) String lastName,
                       @NotBlank @Email @Size(max = 320) String email, @NotBlank @Size(max = 40) String phone,
                       @Size(max = 1000) String message, @Pattern(regexp = "fr|en") String language,
-                      /** Left empty by people; filled by robots that fill every field. */ String website) {}
+                      /** Left empty by people; filled by robots that fill every field. */ String website,
+                      /** FIRM for an accounting firm that wants the accountant portal. */ @Pattern(regexp = "COMPANY|FIRM") String kind,
+                      @Size(max = 60) String firmRegistration) {}
 
     public record Request(long id, String companyName, String countryCode, String employees, String firstName,
                           String lastName, String email, String phone, String message, String language, String status,
-                          Long companyId, String decidedBy, OffsetDateTime decidedAt, OffsetDateTime createdAt) {}
+                          Long companyId, String decidedBy, OffsetDateTime decidedAt, OffsetDateTime createdAt,
+                          String kind, String firmRegistration) {}
 
     public record Approve(@NotBlank String planCode, @NotEmpty Set<String> modules) {}
 
@@ -83,6 +86,7 @@ public class TrialRequests {
         }
         String ip = request.getRemoteAddr();
         String email = in.email().trim().toLowerCase();
+        boolean firm = "FIRM".equals(in.kind());
         Long id = tenants.callAsPlatform(() -> {
             int fromIp = jdbc.sql("select count(*) from trial_request where ip = ? and created_at > now() - interval '1 hour'")
                     .param(ip).query(Integer.class).single();
@@ -93,11 +97,12 @@ public class TrialRequests {
             }
             return jdbc.sql("""
                     insert into trial_request (company_name, country_code, employees, first_name, last_name, email, phone,
-                                               message, language, ip)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                                               message, language, ip, kind, firm_registration)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                     .params(in.companyName().trim(), in.countryCode(), in.employees(), in.firstName().trim(),
                             in.lastName().trim(), email, in.phone().trim(), in.message() == null ? null : in.message().trim(),
-                            in.language() == null ? "fr" : in.language(), ip)
+                            in.language() == null ? "fr" : in.language(), ip, firm ? "FIRM" : "COMPANY",
+                            firm && in.firmRegistration() != null && !in.firmRegistration().isBlank() ? in.firmRegistration().trim() : null)
                     .query(Long.class).single();
         });
         if (id == null) {
@@ -106,7 +111,8 @@ public class TrialRequests {
         tenants.runAs(TenantContext.providerCompany(), () -> {
             audit.recordAs(email, "trial.requested", "trial_request", id, Map.of("company", in.companyName().trim()));
             for (Long holder : notifications.holders("platform.manage")) {
-                notifications.send(holder, "trial.requested", () -> Texts.t("Trial requested by %s", in.companyName().trim()),
+                notifications.send(holder, "trial.requested", () -> firm ? Texts.t("Accounting firm %s asks to join", in.companyName().trim())
+                                : Texts.t("Trial requested by %s", in.companyName().trim()),
                         () -> in.firstName() + " " + in.lastName() + " · " + email + " · " + in.employees(), "/platform/trials");
                 users.findById(holder).ifPresent(u -> messages.email(u,
                         () -> Texts.t("Trial requested by %s", in.companyName().trim()),
@@ -123,7 +129,7 @@ public class TrialRequests {
         requireProvider();
         return tenants.callAsPlatform(() -> jdbc.sql("""
                 select id, company_name, country_code, employees, first_name, last_name, email, phone, message, language,
-                       status, company_id, decided_by, decided_at, created_at
+                       status, company_id, decided_by, decided_at, created_at, kind, firm_registration
                 from trial_request order by case status when 'NEW' then 0 else 1 end, created_at desc limit 300""")
                 .query(Request.class).list());
     }
@@ -138,6 +144,15 @@ public class TrialRequests {
                 new PlatformController.AdminInput(r.firstName(), r.lastName(), r.email(), r.phone()), r.language()));
         long companyId = created.company().id();
         String by = CurrentUser.email();
+        if ("FIRM".equals(r.kind())) {
+            // An accounting firm: its own space for its staff; it is not billed for itself.
+            tenants.callAsPlatform(() -> {
+                jdbc.sql("update company set kind = 'FIRM', firm_registration = ? where id = ?")
+                        .params(r.firmRegistration(), companyId).update();
+                jdbc.sql("delete from subscription where company_id = ?").param(companyId).update();
+                return null;
+            });
+        }
         tenants.runAs(companyId, () -> users.findByEmailIgnoreCase(r.email())
                 .ifPresent(admin -> resets.send(admin, by, request.getRemoteAddr(), PasswordResets.Reason.WELCOME)));
         tenants.callAsPlatform(() -> jdbc.sql("""
@@ -170,7 +185,8 @@ public class TrialRequests {
     private Request find(long id) {
         return tenants.callAsPlatform(() -> jdbc.sql("""
                 select id, company_name, country_code, employees, first_name, last_name, email, phone, message, language,
-                       status, company_id, decided_by, decided_at, created_at from trial_request where id = ?""")
+                       status, company_id, decided_by, decided_at, created_at, kind, firm_registration
+                from trial_request where id = ?""")
                 .param(id).query(Request.class).optional()).orElseThrow(() -> new NotFoundException("Request not found."));
     }
 

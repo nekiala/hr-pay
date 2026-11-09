@@ -51,10 +51,13 @@ public class AuthController {
     /** A provider administrator looking at a company on a support visit. */
     public record SupportInfo(long companyId, String companyName, java.time.OffsetDateTime expiresAt) {}
 
+    /** An accounting firm's member working in a client company. */
+    public record FirmInfo(long linkId, String firmName, long clientId, String clientName) {}
+
     /** language: the one the person sees the app in (theirs, else the company's); ownLanguage: theirs, or null. */
     public record Me(Long id, String email, String firstName, String lastName, Set<String> roles,
                      Set<String> permissions, boolean mustChangePassword, boolean privacyAccepted, CompanyInfo company,
-                     SupportInfo support, String language, String ownLanguage) {
+                     SupportInfo support, String language, String ownLanguage, FirmInfo firm, boolean firmMember) {
         static Me of(AppUser u, cd.hrpay.platform.Entitlements.Current c) {
             Set<String> permissions = new java.util.TreeSet<>();
             Authorities.of(u).forEach(a -> permissions.add(a.getAuthority()));
@@ -68,7 +71,12 @@ public class AuthController {
             String language = u.getLanguage() != null ? u.getLanguage() : c == null ? "fr" : c.language();
             return new Me(u.getId(), u.getEmail(), u.getFirstName(), u.getLastName(), u.roleCodes(),
                     permissions, u.isMustChangePassword(), u.getPrivacyAcceptedAt() != null, company, support, language,
-                    u.getLanguage());
+                    u.getLanguage(), null, false);
+        }
+
+        Me withFirm(FirmInfo f, boolean member) {
+            return new Me(id, email, firstName, lastName, roles, permissions, mustChangePassword, privacyAccepted, company,
+                    support, language, ownLanguage, f, member);
         }
     }
 
@@ -98,12 +106,14 @@ public class AuthController {
     private final TwoStep twoStep;
     private final UserSessions sessions;
     private final SignInSteps steps;
+    private final cd.hrpay.firm.Firms firms;
 
     public AuthController(AuthenticationManager authenticationManager, SecurityContextRepository contextRepository,
                           UserRepository users, UserService userService, LoginAttempts attempts,
                           AuditService audit, ObjectProvider<ClientRegistrationRepository> googleClients,
                           Tenants tenants, TransactionTemplate tx, cd.hrpay.platform.Entitlements entitlements,
-                          TwoStep twoStep, UserSessions sessions, SignInSteps steps) {
+                          TwoStep twoStep, UserSessions sessions, SignInSteps steps, cd.hrpay.firm.Firms firms) {
+        this.firms = firms;
         this.steps = steps;
         this.twoStep = twoStep;
         this.sessions = sessions;
@@ -312,7 +322,22 @@ public class AuthController {
             return Me.of(user, entitlements.current(), permissions,
                     new SupportInfo(visit.companyId(), visit.companyName(), visit.expiresAt()));
         }
-        return Me.of(userService.find(id), entitlements.current());
+        cd.hrpay.firm.Firms.Visit firmVisit = cd.hrpay.firm.Firms.current();
+        if (firmVisit != null) {
+            // A member of an accounting firm, working in a client.
+            AppUser user = tenants.callAs(firmVisit.firmId(), () -> {
+                AppUser u = userService.find(id);
+                u.roleCodes();
+                return u;
+            });
+            Set<String> permissions = new java.util.TreeSet<>();
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().forEach(a -> permissions.add(a.getAuthority()));
+            return Me.of(user, entitlements.current(), permissions, null).withFirm(new FirmInfo(firmVisit.linkId(),
+                    firmVisit.firmName(), firmVisit.clientId(), firmVisit.clientName()), true);
+        }
+        Me me = Me.of(userService.find(id), entitlements.current());
+        return firms.isFirm(cd.hrpay.tenancy.TenantContext.companyId()) ? me.withFirm(null, true) : me;
     }
 
     @PostMapping("/password")

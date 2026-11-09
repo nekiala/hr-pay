@@ -31,7 +31,7 @@ export function SupportDeskPage() {
   )
 }
 
-type Trial = { id: number; companyName: string; countryCode: string; employees: string; firstName: string; lastName: string; email: string; phone: string; message: string | null; language: string; status: 'NEW' | 'APPROVED' | 'DECLINED'; companyId: number | null; decidedBy: string | null; decidedAt: string | null; createdAt: string }
+type Trial = { id: number; companyName: string; countryCode: string; employees: string; firstName: string; lastName: string; email: string; phone: string; message: string | null; language: string; status: 'NEW' | 'APPROVED' | 'DECLINED'; companyId: number | null; decidedBy: string | null; decidedAt: string | null; createdAt: string; kind: 'COMPANY' | 'FIRM'; firmRegistration: string | null }
 type Plan = { code: string; name: string; maxEmployees: number | null }
 const MODULES: [string, string][] = [['ATTENDANCE', t('Attendance')], ['PAYROLL', t('Payroll')], ['EVALUATIONS', t('Evaluations')]]
 const BAND_SIZE: Record<string, number> = { '1-50': 50, '51-300': 300, '301-1000': 1000, '1000+': 100000 }
@@ -81,7 +81,9 @@ export function TrialsPage() {
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td className="small">{new Date(r.createdAt).toLocaleString(locale())}</td>
-                    <td>{r.companyName} <span className="small muted">{r.countryCode}</span>{r.message && <div className="small muted">{r.message}</div>}</td>
+                    <td>{r.companyName} <span className="small muted">{r.countryCode}</span>
+                      {r.kind === 'FIRM' && <>{' '}<span className="badge info">{t('Accounting firm')}</span>{r.firmRegistration && <span className="small muted"> {r.firmRegistration}</span>}</>}
+                      {r.message && <div className="small muted">{r.message}</div>}</td>
                     <td className="small">{r.firstName} {r.lastName}<br /><a href={`mailto:${r.email}`}>{r.email}</a> · {r.phone}</td>
                     <td>{r.employees}</td>
                     <td><span className={STATUS[r.status][1]}>{STATUS[r.status][0]}</span>{r.companyId && <div><Link className="small" to={`/platform/companies/${r.companyId}`}>{t('Open the company')}</Link></div>}</td>

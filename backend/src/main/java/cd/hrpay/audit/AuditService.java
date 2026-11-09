@@ -72,7 +72,8 @@ public class AuditService {
 
     private static String currentActor() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth == null || !auth.isAuthenticated() ? "system" : auth.getName();
+        // A firm member working in a client shows as "email (firm)" in the client's log.
+        return auth == null || !auth.isAuthenticated() ? "system" : cd.hrpay.firm.Firms.actor(auth.getName());
     }
 
     private static String currentIp() {

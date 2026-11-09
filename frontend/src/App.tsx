@@ -33,6 +33,8 @@ import PayElementsPage from './pages/PayElementsPage'
 import PayEntriesPage from './pages/PayEntriesPage'
 import QuinzaineSettingsPage from './pages/QuinzaineSettingsPage'
 import PayrollChecksSettingsPage from './pages/PayrollChecksSettingsPage'
+import FirmPage from './pages/FirmPage'
+import CompanyAccountantPage from './pages/CompanyAccountantPage'
 import StatutoryRatesPage from './pages/StatutoryRatesPage'
 import PayRunsPage from './pages/PayRunsPage'
 import NewPayRunPage from './pages/NewPayRunPage'
@@ -103,6 +105,13 @@ function AdvancesRoute() {
   return can('advance.manage') || can('payroll.pay')
     ? <AdvancesPage />
     : <p className="notice">{t('You do not have permission to open this page.')}</p>
+}
+
+function FirmRoute() {
+  const { me } = useAuth()
+  return me?.firmMember && !me.firm
+    ? <FirmPage />
+    : <p className="notice">{t('This page is for accounting firms.')}</p>
 }
 
 function PayrollStaff({ children }: { children: ReactNode }) {
@@ -268,6 +277,8 @@ export default function App() {
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/company/email" element={<Guard permission="company.manage"><CompanyMailServerPage /></Guard>} />
+          <Route path="/company/accountant" element={<Guard permission="firm.manage"><CompanyAccountantPage /></Guard>} />
+          <Route path="/firm" element={<FirmRoute />} />
           <Route path="/company/whatsapp" element={<Guard permission="company.manage"><CompanyWhatsAppPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/privacy/requests" element={<Guard permission="privacy.manage"><PersonalDataPage /></Guard>} />
