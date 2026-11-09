@@ -86,6 +86,13 @@ public class LeaveService {
         this.org = org;
     }
 
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
     public LeaveService(JdbcClient jdbc, UserService users, UserRepository userRepository, WorkCalendar calendar,
                         AuditService audit, Clock clock) {
         this.jdbc = jdbc;
@@ -598,6 +605,9 @@ public class LeaveService {
         if (halfDay != null && !start.equals(end)) {
             throw new BusinessRuleException("A half day covers a single day.");
         }
+        // Leave is taken under a contract, on its first and its last day.
+        contracts.require(user.getId(), start);
+        contracts.require(user.getId(), end);
         BigDecimal days = workingDays(user, start, end);
         if (days.signum() == 0) {
             throw new BusinessRuleException("There are no working days in this period.");

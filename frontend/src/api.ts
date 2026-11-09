@@ -300,8 +300,16 @@ export type User = {
   createdAt: string
   managerId: number | null
   gradeCategoryId: number | null
+  /** The first contract's start (or the date it gave); null without a contract. */
   hireDate: string | null
+  /** Not staff: never under contract, never works or is paid here. */
+  notEmployee: boolean
+  /** Has a contract today. */
+  underContract: boolean
 }
+
+/** How HR Pay numbers new employees. */
+export type MatriculeFormat = { enabled: boolean; pattern: string; resetYearly: boolean; nextSeq: number; next: string; updatedBy: string | null }
 
 export type Page<T> = { items: T[]; page: number; size: number; total: number }
 

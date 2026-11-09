@@ -36,6 +36,13 @@ public class CorrectionService {
     private final AuditService audit;
     private final Clock clock;
 
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
     public CorrectionService(ClockEventRepository events, UserService users, AuditService audit, Clock clock) {
         this.events = events;
         this.users = users;
@@ -52,6 +59,9 @@ public class CorrectionService {
         LocalDate date = workDate != null ? workDate : localTime.toLocalDate();
         if (at.toInstant().isAfter(clock.instant())) {
             throw new BusinessRuleException("The time cannot be in the future.");
+        }
+        if (type == ClockEvent.Type.IN) {
+            contracts.require(userId, date);
         }
         if (Math.abs(Duration.between(date.atStartOfDay(), localTime).toHours()) > 36) {
             throw new BusinessRuleException("The time must be on or close to the work date.");

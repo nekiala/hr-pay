@@ -111,7 +111,7 @@ export default function UserViewPage() {
           {fact(t('Unit'), user.unitId ? <Link to={`/org/units/${user.unitId}`}>{user.unitName}</Link> : null)}
           {fact(t('Site'), user.siteName)}
           {fact(t('Manager'), manager ? <Link to={`/users/${manager.id}`}>{personName(manager)}</Link> : <span className="muted">{t('The head of the unit')}</span>)}
-          {fact(t('Hire date'), user.hireDate)}
+          {fact(t('Hire date'), user.hireDate ?? <span className="muted">{user.notEmployee ? t('Not an employee') : t('No contract')}</span>)}
           {fact(t('Work schedule'), schedule ? `${schedule.scheduleName} (${t('from')} ${schedule.effectiveFrom})` : null)}
           {can('salary.read') && fact(t('Occupation'), contract?.occupationName ?? null)}
           {fact(t('Last sign-in'), user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString(locale()) : <span className="muted">{t('Never signed in')}</span>)}

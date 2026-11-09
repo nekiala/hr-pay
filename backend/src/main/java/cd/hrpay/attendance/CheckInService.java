@@ -63,6 +63,13 @@ public class CheckInService {
         this.json = json;
     }
 
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
     public Optional<ClockEvent> openCheckIn(Long userId) {
         return events.findLast(userId).filter(e -> e.getType() == ClockEvent.Type.IN);
     }
@@ -74,8 +81,9 @@ public class CheckInService {
         if (openCheckIn(user.getId()).isPresent()) {
             throw new BusinessRuleException("You are already checked in.");
         }
-        Verified verified = verify(user, presence, "check_in");
         LocalDate today = LocalDate.now(zone(user.getSite()));
+        contracts.requireOwn(user.getId(), today);   // nobody works without a contract
+        Verified verified = verify(user, presence, "check_in");
         boolean codeDoneToday = events.findForPeriod(user.getId(), today, today).stream()
                 .anyMatch(e -> e.getType() == ClockEvent.Type.IN && e.getSource() == ClockEvent.Source.SELF);
         if (codeDoneToday) {

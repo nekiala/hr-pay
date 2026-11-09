@@ -53,7 +53,8 @@ public class MasterDataController {
                                 boolean expatriate,
                                 @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal negotiatedBasic,
                                 @Size(max = 300) String note,
-                                @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal agreedNet) {}
+                                @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal agreedNet,
+                                LocalDate hireDate) {}
 
     public record ProfileInput(LocalDate birthDate, @Pattern(regexp = "FEMALE|MALE") String gender,
                                @Size(max = 60) String nationality,
@@ -160,7 +161,7 @@ public class MasterDataController {
     public EmployeeFile.Contract startContract(@PathVariable long userId, @Valid @RequestBody ContractInput b) {
         // The agreed salary (negotiatedBasic) or net: the basic stays the grade's, the rest is the complement.
         return negotiated.startContract(userId, b.contractType(), b.startDate(), b.endDate(), b.gradeId(), b.occupationId(),
-                b.expatriate(), b.negotiatedBasic(), b.agreedNet(), b.note());
+                b.expatriate(), b.negotiatedBasic(), b.agreedNet(), b.note(), b.hireDate());
     }
 
     public record GradeChangeInput(@NotNull Long gradeId, @NotNull LocalDate from, Boolean keepNet,

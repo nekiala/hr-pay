@@ -60,10 +60,10 @@ public class SalaryController {
     public SalaryService.Salary add(@PathVariable Long userId, @Valid @RequestBody SalaryInput body) {
         long id = users.find(userId).getId();
         String note = body.note() == null || body.note().isBlank() ? null : body.note().trim();
-        var contract = files.contractOn(id, body.effectiveFrom()).orElse(null);
-        if (contract == null) {     // no grade yet: the amount is the basic as given
-            return salaries.add(id, body.effectiveFrom(), body.grossMonthly(), body.currency(), note);
-        }
+        // The first salary is set with the contract; later changes (raises, promotions) need a contract on that day.
+        files.contractOn(id, body.effectiveFrom()).orElseThrow(() -> new cd.hrpay.common.BusinessRuleException(
+                cd.hrpay.i18n.Texts.t("There is no contract on %s for this person: record the contract first.",
+                        cd.hrpay.i18n.Texts.day(body.effectiveFrom()))));
         requireNoSalaryOn(id, body.effectiveFrom());
         // Under a contract the basic is the grade's: an agreed salary below it is refused, above it the rest is the complement.
         var plan = negotiated.fromNegotiated(id, body.effectiveFrom(), body.grossMonthly(), null);

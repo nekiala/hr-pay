@@ -161,6 +161,14 @@ public class NegotiatedPay {
     public EmployeeFile.Contract startContract(long userId, String type, LocalDate start, LocalDate end, long gradeId,
                                                Long occupationId, boolean expatriate, BigDecimal agreedSalary,
                                                BigDecimal agreedNet, String note) {
+        return startContract(userId, type, start, end, gradeId, occupationId, expatriate, agreedSalary, agreedNet, note, null);
+    }
+
+    /** Starts a contract with its first salary; the first contract also sets the hire date (since: an earlier one). */
+    @Transactional
+    public EmployeeFile.Contract startContract(long userId, String type, LocalDate start, LocalDate end, long gradeId,
+                                               Long occupationId, boolean expatriate, BigDecimal agreedSalary,
+                                               BigDecimal agreedNet, String note, LocalDate since) {
         if (agreedSalary != null && agreedNet != null) {
             throw new BusinessRuleException("Give the agreed salary or the agreed net, not both.");
         }
@@ -169,7 +177,8 @@ public class NegotiatedPay {
             throw new BusinessRuleException(Texts.t("The agreed salary (%s) cannot be below the basic salary of grade %s (%s).",
                     agreedSalary.toPlainString(), grade.code(), grade.baseSalary().toPlainString()));
         }
-        EmployeeFile.Contract c = files.startContract(userId, type, start, end, gradeId, occupationId, expatriate, null, note);
+        EmployeeFile.Contract c = files.startContract(userId, type, start, end, gradeId, occupationId, expatriate, null, note,
+                since);
         if (agreedSalary != null) {
             apply(fromNegotiated(userId, start, agreedSalary, gradeId), null);
         } else if (agreedNet != null) {

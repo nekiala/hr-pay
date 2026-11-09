@@ -40,6 +40,13 @@ public class MissionService {
         this.org = org;
     }
 
+    private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(cd.hrpay.user.Contracts contracts) {
+        this.contracts = contracts;
+    }
+
     public MissionService(MissionRepository missions, ClockEventRepository events, UserService users,
                           AuditService audit, Clock clock) {
         this.missions = missions;
@@ -63,6 +70,7 @@ public class MissionService {
         if (date.isBefore(today.minusDays(7)) || date.isAfter(today.plusDays(90))) {
             throw new BusinessRuleException("Choose a date from 7 days ago to 90 days ahead.");
         }
+        contracts.require(user.getId(), date);
         boolean overlaps = missions.findByUserIdAndWorkDate(user.getId(), date).stream()
                 .filter(Mission::isActive)
                 .anyMatch(m -> start.isBefore(m.getEndTime()) && m.getStartTime().isBefore(end));

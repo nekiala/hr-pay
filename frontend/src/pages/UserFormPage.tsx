@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User , personName } from '../api'
+import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User, type MatriculeFormat, personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
@@ -35,6 +35,7 @@ export default function UserFormPage() {
   const [scheduleFrom, setScheduleFrom] = useState(new Date().toISOString().slice(0, 10))
   const [units, setUnits] = useState<OrgUnit[]>([])
   const [orgUnitId, setOrgUnitId] = useState('')
+  const [autoId, setAutoId] = useState<MatriculeFormat | null>(null)
 
   const canAssign = can('role.assign')
   const canEdit = isNew ? can('user.create') : can('user.update')
@@ -43,6 +44,7 @@ export default function UserFormPage() {
     api<Role[]>('/api/roles').then(setRoles).catch(() => undefined)
     if (can('site.read') || can('site.manage')) api<Site[]>('/api/sites').then(setSites).catch(() => undefined)
     if (!id) api<OrgUnit[]>('/api/org/units').then(setUnits).catch(() => undefined)
+    if (!id) api<MatriculeFormat>('/api/matricule-format').then((f) => setAutoId(f.enabled ? f : null)).catch(() => undefined)
     if (id) {
       api<Schedule[]>('/api/schedules').then(setSchedules).catch(() => undefined)
       api<ScheduleAssignment[]>(`/api/users/${id}/schedules`).then(setAssignments).catch(() => undefined)
@@ -155,7 +157,10 @@ export default function UserFormPage() {
         </div>
         {field('email', t('Email'), 'email')}
         <div className="grid2">
-          {field('registrationNo', t('Registration number'))}
+          {isNew && autoId
+            ? <label>{t('Registration number')}<input value="" placeholder={t('Given by HR Pay: {n}', { n: autoId.next })} disabled />
+                <span className="hint">{t('The company numbers new employees automatically.')}</span></label>
+            : field('registrationNo', t('Registration number'))}
           {field('phone', t('Phone (WhatsApp)'), 'tel', t('International format, for example +243 81 234 5678'))}
         </div>
         <label>{t('Site')}<select value={form.siteId} onChange={set('siteId')} disabled={!canEdit}>
@@ -217,7 +222,7 @@ export default function UserFormPage() {
         </p>
       )}
 
-      {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} />}
+      {!isNew && user && can('salary.read') && <SalaryCard userId={Number(id)} user={user} />}
 
       {!isNew && user && <OrgCard userId={user.id} />}
 
@@ -226,6 +231,8 @@ export default function UserFormPage() {
       {!isNew && user && <EmploymentCard user={user} editable={can('user.update')} onChange={setUser} />}
 
       {!isNew && user && can('leave.manage') && <LeaveCard userId={user.id} />}
+
+      {!isNew && user && canAssign && <NotEmployeeCard user={user} onChange={setUser} />}
 
       {!isNew && user && canAssign && (
         <div className="card">
@@ -278,7 +285,7 @@ type NetPlan = {
   cnss: number | null; tax: number | null; net: number | null; targetNet: number; usdLocal: number | null; rateDate: string | null
 }
 
-function SalaryCard({ userId }: { userId: number }) {
+function SalaryCard({ userId, user }: { userId: number; user: User }) {
   const { can } = useAuth()
   const [history, setHistory] = useState<Salary[]>([])
   const [form, setForm] = useState({ effectiveFrom: new Date().toISOString().slice(0, 8) + '01', net: '', note: '' })
@@ -324,7 +331,13 @@ function SalaryCard({ userId }: { userId: number }) {
       {history.map((s) => (
         <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">{t('from')}{' '}{s.effectiveFrom}{s.note ? ` · ${s.note}` : ''}{' '}{t('· set by')}{' '}{s.createdBy}</span></p>
       ))}
-      {can('salary.write') && (
+      {!user.underContract && (
+        <p className="muted">{user.notEmployee
+          ? t('This account is not an employee: no contract and no salary.')
+          : <>{t('No contract today. The first salary is set with the contract; raises and promotions come after.')}
+            {can('salary.write') && <>{' '}<Link to={`/users/${userId}/file`}>{t('Start a contract')}</Link></>}</>}</p>
+      )}
+      {can('salary.write') && user.underContract && (
         <Form className="row" onSubmit={preview}>
           <input type="date" value={form.effectiveFrom} onChange={(e) => { setForm({ ...form, effectiveFrom: e.target.value }); setPlan(null) }} required />
           <input type="number" min="0.01" step="0.01" placeholder={t('Agreed net per month')} value={form.net}
@@ -345,7 +358,7 @@ function SalaryCard({ userId }: { userId: number }) {
           <Button onClick={save}>{t('Save this salary')}</Button>
         </div>
       )}
-      <p className="hint">{t('The net agreed with the person. HR Pay works out the salary complement so that a normal month pays it.')}</p>
+      {user.underContract && <p className="hint">{t('The net agreed with the person. HR Pay works out the salary complement so that a normal month pays it.')}</p>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -408,7 +421,6 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
   const [contracts, setContracts] = useState<Contract[] | null>(null)
   const [grades, setGrades] = useState<Grade[]>([])
   const [categoryId, setCategoryId] = useState(user.gradeCategoryId ? String(user.gradeCategoryId) : '')
-  const [hireDate, setHireDate] = useState(user.hireDate ?? '')
   const [gradeMode, setGradeMode] = useState<'change' | 'correct' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -434,7 +446,7 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
     setMessage(null)
     try {
       onChange(await api<User>(`/api/users/${user.id}/employment`, {
-        method: 'PUT', body: { gradeCategoryId: categoryFollowsGrade ? user.gradeCategoryId : categoryId ? Number(categoryId) : null, hireDate: hireDate || null },
+        method: 'PUT', body: { gradeCategoryId: categoryId ? Number(categoryId) : null },
       }))
       setMessage(t('Saved.'))
     } catch (e) {
@@ -476,12 +488,13 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)}{' '}{t('leave)')}</option>)}
           </select>
         </label>
-        <label>{t('Hire date')}<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
+        <label>{t('Hire date')}<input type="date" value={user.hireDate ?? ''} disabled />
+          <span className="hint">{user.hireDate ? t('Set by the first contract.') : t('No contract: no hire date.')}</span></label>
       </div>
       <p className="hint">{categoryFollowsGrade
         ? t('The grade category follows the grade of the contract and sets the yearly annual leave.')
         : t('The grade category sets the yearly annual leave. Once a contract is recorded, it follows the contract\'s grade.')}</p>
-      {editable && <Button className="secondary" onClick={() => save()}>{t('Save employment')}</Button>}
+      {editable && !categoryFollowsGrade && <Button className="secondary" onClick={() => save()}>{t('Save employment')}</Button>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
     </div>
@@ -536,6 +549,30 @@ function LeaveCard({ userId }: { userId: number }) {
           ))}
         </details>
       )}
+    </div>
+  )
+}
+
+/** An account that is not staff (the provider's administrator, an outside firm) needs no contract. Administrators only. */
+function NotEmployeeCard({ user, onChange }: { user: User; onChange: (u: User) => void }) {
+  const [error, setError] = useState<string | null>(null)
+  const toggle = async (notEmployee: boolean) => {
+    setError(null)
+    try {
+      onChange(await api<User>(`/api/users/${user.id}/not-employee`, { method: 'PUT', body: { notEmployee } }))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('Could not save.'))
+    }
+  }
+  return (
+    <div className="card">
+      <h3>{t('Employee')}</h3>
+      <label className="check">
+        <input type="checkbox" checked={user.notEmployee} onChange={(e) => toggle(e.target.checked)} />
+        {t('Not an employee (no contract)')}
+      </label>
+      <p className="hint">{t('Only for accounts that are not staff: the provider\'s administrator, an outside accounting firm, a consultant. They never check in, take leave or get paid. Everyone else needs a contract.')}</p>
+      <ErrorText error={error} />
     </div>
   )
 }

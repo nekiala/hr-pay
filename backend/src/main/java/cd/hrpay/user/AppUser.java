@@ -50,6 +50,8 @@ public class AppUser {
     private Long managerId;
     private Long gradeCategoryId;
     private java.time.LocalDate hireDate;
+    /** Not staff (the provider's administrator, an outside firm): never under contract, never works or is paid here. */
+    private boolean notEmployee;
     private OffsetDateTime lastLoginAt;
     private OffsetDateTime privacyAcceptedAt;
     private String language;
@@ -119,6 +121,8 @@ public class AppUser {
     public void setGradeCategoryId(Long gradeCategoryId) { this.gradeCategoryId = gradeCategoryId; }
     public java.time.LocalDate getHireDate() { return hireDate; }
     public void setHireDate(java.time.LocalDate hireDate) { this.hireDate = hireDate; }
+    public boolean isNotEmployee() { return notEmployee; }
+    public void setNotEmployee(boolean notEmployee) { this.notEmployee = notEmployee; }
     public void setManagerId(Long managerId) { this.managerId = managerId; }
     public void setSite(Site site) { this.site = site; }
     public boolean isMustChangePassword() { return mustChangePassword; }

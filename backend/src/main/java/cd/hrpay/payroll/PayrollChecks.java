@@ -214,6 +214,20 @@ public class PayrollChecks {
             }
         }
 
+        // Employees left out of the payroll for want of a contract (nobody is paid without one).
+        jdbc.sql("""
+                select u.id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no from app_user u
+                where u.status = 'ACTIVE' and not u.not_employee
+                  and not exists (select 1 from employee_contract c where c.user_id = u.id and c.start_date <= ?
+                                  and (c.end_date is null or c.end_date >= ?))
+                  and not exists (select 1 from departure x where x.user_id = u.id and x.status = 'CONFIRMED' and x.last_day < ?)
+                order by u.last_name, u.first_name""")
+                .params(last, first, first).query((rs, i) -> {
+                    add.add("NO_CONTRACT", new Slip(0, rs.getLong(1), rs.getString(2), rs.getString(3), null, null, "[]", null),
+                            Texts.t("No contract this month: not paid. Record the contract, or ask an administrator to mark the account as not an employee."));
+                    return null;
+                }).list();
+
         Map<Long, Slip> byUser = slips.stream().collect(Collectors.toMap(Slip::userId, s -> s, (a, b) -> a, LinkedHashMap::new));
         Set<Long> users = byUser.keySet();
         if (users.isEmpty()) {

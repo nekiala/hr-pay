@@ -46,7 +46,9 @@ class Phase8IT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.counts.expected").exists())
                 .andReturn().getResponse().getContentAsString();
-        assertThat(JsonPath.<List<Object>>read(all, "$.people")).hasSizeGreaterThanOrEqualTo(7);
+        // The sample staff under contract; the administrator is not an employee and is not expected at work.
+        assertThat(JsonPath.<List<Object>>read(all, "$.people")).hasSizeGreaterThanOrEqualTo(6);
+        assertThat(JsonPath.<List<String>>read(all, "$.people[*].registrationNo")).doesNotContain("ADM-0001");
         String team = mvc.perform(get("/api/reports/presence").param("date", "2026-11-05").session(login(MANAGER)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<List<Number>>read(team, "$.people[*].userId").stream().map(Number::longValue))

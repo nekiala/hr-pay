@@ -52,11 +52,12 @@ public class Dashboards {
             union
             select id, name from org_unit where parent_id is null""";
 
-    /** People on the staff at a date: assigned to a unit then, and not gone by a confirmed departure. */
+    /** People on the staff at a date: assigned to a unit and under contract then, not gone by a confirmed departure. */
     private static final String STAFF_AT = """
             select a.user_id, a.unit_id from org_assignment a join app_user u on u.id = a.user_id
             where a.valid_from <= :d and (a.valid_to is null or a.valid_to >= :d)
-              and (u.hire_date is null or u.hire_date <= :d)
+              and exists (select 1 from employee_contract c where c.user_id = a.user_id and c.start_date <= :d
+                          and (c.end_date is null or c.end_date >= :d))
               and not exists (select 1 from departure x where x.user_id = a.user_id and x.status = 'CONFIRMED' and x.last_day < :d)""";
 
     @GetMapping("/api/dashboards")
@@ -76,8 +77,8 @@ public class Dashboards {
             int headcount = count("select count(distinct user_id) from (" + STAFF_AT + ") s", end);
             int before = count("select count(distinct user_id) from (" + STAFF_AT + ") s", start.minusDays(1));
             int hires = jdbc.sql("""
-                    select count(*) from app_user u where coalesce(u.hire_date,
-                        (select min(a.valid_from) from org_assignment a where a.user_id = u.id)) between ? and ?""")
+                    select count(*) from app_user u where u.hire_date between ? and ?
+                      and exists (select 1 from employee_contract c where c.user_id = u.id)""")
                     .params(start, end).query(Integer.class).single();
             int departures = jdbc.sql("select count(*) from departure where status = 'CONFIRMED' and last_day between ? and ?")
                     .params(start, end).query(Integer.class).single();

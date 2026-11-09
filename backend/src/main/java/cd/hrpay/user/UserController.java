@@ -33,7 +33,7 @@ public class UserController {
 
     public record UserInput(
             @NotBlank @Email @Size(max = 254) String email,
-            @NotBlank @Size(max = 32) String registrationNo,
+            @Size(max = 32) String registrationNo,     // empty: HR Pay gives one when the company has a format
             @NotBlank @Pattern(regexp = PHONE, message = "Use international format, for example +243 81 234 5678")
             String phone,
             @NotBlank @Size(max = 100) String firstName,
@@ -54,25 +54,29 @@ public class UserController {
 
     public record ManagerInput(Long managerId) {}
 
-    public record EmploymentInput(Long gradeCategoryId, java.time.LocalDate hireDate) {}
+    public record EmploymentInput(Long gradeCategoryId) {}
+
+    public record NotEmployeeInput(boolean notEmployee) {}
 
     public record UserView(Long id, String email, String registrationNo, String phone, String firstName,
                            String lastName, Long siteId, String siteName, UserStatus status, Set<String> roles,
                            boolean hasPassword, OffsetDateTime lastLoginAt, OffsetDateTime createdAt,
                            Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate, Long unitId, String unitName,
-                           String middleName, String fullName) {
-        static UserView of(AppUser u) {
+                           String middleName, String fullName, boolean notEmployee, boolean underContract) {
+        /** The hire date shows only once a contract exists: it is the first contract's start (or the date it gave). */
+        static UserView of(AppUser u, boolean everContract, boolean underContract) {
             return new UserView(u.getId(), u.getEmail(), u.getRegistrationNo(), u.getPhone(), u.getFirstName(),
                     u.getLastName(), u.getSite() == null ? null : u.getSite().getId(),
                     u.getSite() == null ? null : u.getSite().getName(), u.getStatus(), u.roleCodes(),
                     u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt(), u.getManagerId(),
-                    u.getGradeCategoryId(), u.getHireDate(), null, null, u.getMiddleName(), u.fullName());
+                    u.getGradeCategoryId(), everContract ? u.getHireDate() : null, null, null, u.getMiddleName(),
+                    u.fullName(), u.isNotEmployee(), underContract);
         }
 
         UserView withUnit(Long unitId, String unitName) {
             return new UserView(id, email, registrationNo, phone, firstName, lastName, siteId, siteName, status, roles,
                     hasPassword, lastLoginAt, createdAt, managerId, gradeCategoryId, hireDate, unitId, unitName,
-                    middleName, fullName);
+                    middleName, fullName, notEmployee, underContract);
         }
     }
 
@@ -95,6 +99,17 @@ public class UserController {
         this.org = org;
     }
 
+    private Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContracts(Contracts contracts) {
+        this.contracts = contracts;
+    }
+
+    private UserView view(AppUser u) {
+        return UserView.of(u, contracts.any(u.getId()), contracts.on(u.getId(), org.today()));
+    }
+
     public UserController(UserRepository users, UserService service) {
         this.users = users;
         this.service = service;
@@ -105,6 +120,7 @@ public class UserController {
     @Transactional(readOnly = true)
     public UserPage list(@RequestParam(required = false) String q,
                          @RequestParam(required = false) Long unitId,
+                         @RequestParam(defaultValue = "false") boolean noContract,
                          @RequestParam(defaultValue = "0") int page,
                          @RequestParam(defaultValue = "25") int size) {
         String query = q == null || q.isBlank() ? null : q.trim();
@@ -112,16 +128,26 @@ public class UserController {
         var unitOf = org.unitsOn(org.today());
         var units = org.placementsOfUnits();
         Page<AppUser> result;
+        List<Long> ids = null;
         if (unitId != null) {
             // The unit and everything below it.
             Set<Long> branch = org.branch(unitId);
-            List<Long> ids = unitOf.entrySet().stream().filter(e -> branch.contains(e.getValue())).map(java.util.Map.Entry::getKey).toList();
+            ids = unitOf.entrySet().stream().filter(e -> branch.contains(e.getValue())).map(java.util.Map.Entry::getKey).toList();
+        }
+        if (noContract) {
+            // Active employees with no contract today: HR records their contracts.
+            List<Long> missing = contracts.missing(org.today());
+            ids = ids == null ? missing : ids.stream().filter(new java.util.HashSet<>(missing)::contains).toList();
+        }
+        if (ids != null) {
             result = ids.isEmpty() ? Page.empty(paging) : users.searchIn(query, ids, paging);
         } else {
             result = users.search(query, paging);
         }
-        return new UserPage(result.map(u -> withUnit(UserView.of(u), unitOf, units)).toList(), result.getNumber(),
-                result.getSize(), result.getTotalElements());
+        Set<Long> ever = contracts.everUnderContract();
+        Set<Long> now = contracts.underContract(org.today());
+        return new UserPage(result.map(u -> withUnit(UserView.of(u, ever.contains(u.getId()), now.contains(u.getId())),
+                unitOf, units)).toList(), result.getNumber(), result.getSize(), result.getTotalElements());
     }
 
     private static UserView withUnit(UserView v, java.util.Map<Long, Long> unitOf, java.util.Map<Long, cd.hrpay.org.OrgStructure.Placement> units) {
@@ -134,7 +160,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('user.read')")
     @Transactional(readOnly = true)
     public UserView get(@PathVariable Long id) {
-        return withUnit(UserView.of(service.find(id)), org.unitsOn(org.today()), org.placementsOfUnits());
+        return withUnit(view(service.find(id)), org.unitsOn(org.today()), org.placementsOfUnits());
     }
 
     @PostMapping
@@ -145,37 +171,44 @@ public class UserController {
         org.requireOpenUnit(body.orgUnitId());
         AppUser created = service.create(body.user().data(), body.roles(), body.initialPassword());
         org.assign(created.getId(), body.orgUnitId(), null, "HIRE", null);
-        return UserView.of(created);
+        return view(created);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('user.update')")
     public UserView update(@PathVariable Long id, @Valid @RequestBody UserInput body) {
-        return UserView.of(service.update(id, body.data()));
+        return view(service.update(id, body.data()));
     }
 
     @PutMapping("/{id}/manager")
     @PreAuthorize("hasAuthority('user.update')")
     public UserView setManager(@PathVariable Long id, @RequestBody ManagerInput body) {
-        return UserView.of(service.setManager(id, body.managerId()));
+        return view(service.setManager(id, body.managerId()));
     }
 
     @PutMapping("/{id}/employment")
     @PreAuthorize("hasAuthority('user.update')")
     public UserView setEmployment(@PathVariable Long id, @RequestBody EmploymentInput body) {
-        return UserView.of(service.setEmployment(id, body.gradeCategoryId(), body.hireDate()));
+        return view(service.setEmployment(id, body.gradeCategoryId()));
+    }
+
+    /** An account that is not staff needs no contract and never works or is paid here. Administrators only. */
+    @PutMapping("/{id}/not-employee")
+    @PreAuthorize("hasAuthority('role.assign')")
+    public UserView setNotEmployee(@PathVariable Long id, @RequestBody NotEmployeeInput body) {
+        return view(service.setNotEmployee(id, body.notEmployee()));
     }
 
     @PutMapping("/{id}/roles")
     @PreAuthorize("hasAuthority('role.assign')")
     public UserView setRoles(@PathVariable Long id, @Valid @RequestBody RolesInput body) {
-        return UserView.of(service.setRoles(id, body.roles()));
+        return view(service.setRoles(id, body.roles()));
     }
 
     @PostMapping("/{id}/disable")
     @PreAuthorize("hasAuthority('user.disable')")
     public UserView disable(@PathVariable Long id) {
-        UserView view = UserView.of(service.setStatus(id, UserStatus.DISABLED));
+        UserView view = view(service.setStatus(id, UserStatus.DISABLED));
         sessions.endAll(id, null, cd.hrpay.security.CurrentUser.email());
         return view;
     }
@@ -183,7 +216,7 @@ public class UserController {
     @PostMapping("/{id}/enable")
     @PreAuthorize("hasAuthority('user.disable')")
     public UserView enable(@PathVariable Long id) {
-        return UserView.of(service.setStatus(id, UserStatus.ACTIVE));
+        return view(service.setStatus(id, UserStatus.ACTIVE));
     }
 
     @PostMapping("/{id}/password")
