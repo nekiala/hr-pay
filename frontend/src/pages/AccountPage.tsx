@@ -9,6 +9,7 @@ import { Modal } from '../components/Modal'
 import { LanguageCard } from '../components/Language'
 import { RecoveryCodes, TwoStepSetupFlow } from '../components/TwoStep'
 import ChangePasswordPage from './ChangePasswordPage'
+import { MyWhatsApp } from './WhatsAppPage'
 import { locale, plural, t } from '../i18n'
 
 const when = (iso: string) => new Date(iso).toLocaleString(locale(), { dateStyle: 'medium', timeStyle: 'short' })
@@ -43,6 +44,7 @@ export default function AccountPage() {
             </div>
             <LanguageCard me={me} />
             <PhoneCard />
+            <MyWhatsApp />
             <SessionsCard />
             <MyDataCard />
           </>

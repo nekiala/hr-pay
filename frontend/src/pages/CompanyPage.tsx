@@ -111,7 +111,7 @@ export default function CompanyPage() {
 
   return (
     <section>
-      <PageTitle title={t('Company')}><SettingsLink to="/company/email" label={t('Email server')} /></PageTitle>
+      <PageTitle title={t('Company')}><SettingsLink to="/company/whatsapp" label={t('WhatsApp')} /><SettingsLink to="/company/email" label={t('Email server')} /></PageTitle>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <LanguageCard />

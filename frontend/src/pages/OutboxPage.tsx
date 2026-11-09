@@ -7,7 +7,7 @@ import { useAuth } from '../auth'
 import { t, locale } from '../i18n'
 import { levelText, type MailLevel } from './MailServerPage'
 
-type Message = { id: number; createdAt: string; channel: string; recipient: string; subject: string | null; body: string; status: string; error: string | null; via: MailLevel | null }
+type Message = { id: number; createdAt: string; channel: string; recipient: string; subject: string | null; body: string; status: string; error: string | null; via: MailLevel | null; deliveredAt: string | null; readAt: string | null }
 
 const viaText: Record<MailLevel, string> = {
   COMPANY: t('Company'), PLATFORM: t('HR Pay'), ENV: '.env', NONE: t('None'),
@@ -43,7 +43,7 @@ export default function OutboxPage() {
                 <td>{m.channel}</td>
                 <td>{m.recipient}</td>
                 <td>{m.body}</td>
-                <td>{m.status}{m.error ? <span className="error small"> {m.error}</span> : null}</td>
+                <td>{m.status}{m.readAt ? <span className="muted small"> · {t('read')}</span> : m.deliveredAt ? <span className="muted small"> · {t('delivered')}</span> : null}{m.error ? <span className="error small"> {m.error}</span> : null}</td>
                 <td className="small">{m.via ? viaText[m.via] : ''}</td>
               </tr>
             ))}

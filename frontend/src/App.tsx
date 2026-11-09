@@ -62,6 +62,7 @@ import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
 import OrgSettingsPage from './pages/OrgSettingsPage'
 import { CompanyMailServerPage, PlatformMailServerPage } from './pages/MailServerPage'
+import { CompanyWhatsAppPage, PlatformWhatsAppPage } from './pages/WhatsAppPage'
 import CompanyPage from './pages/CompanyPage'
 import SystemPage from './pages/SystemPage'
 import JobsPage from './pages/JobsPage'
@@ -190,6 +191,7 @@ export default function App() {
           <Route path="/platform/support/:id" element={<Guard permission="platform.manage"><TicketPage provider /></Guard>} />
           <Route path="/platform/trials" element={<Guard permission="platform.manage"><TrialsPage /></Guard>} />
           <Route path="/platform/email" element={<Guard permission="platform.manage"><PlatformMailServerPage /></Guard>} />
+          <Route path="/platform/whatsapp" element={<Guard permission="platform.manage"><PlatformWhatsAppPage /></Guard>} />
           <Route path="/platform/legal" element={<Guard permission="platform.manage"><LegalAdminPage /></Guard>} />
           <Route path="/platform/status" element={<Guard permission="platform.manage"><IncidentsPage /></Guard>} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
@@ -261,6 +263,7 @@ export default function App() {
           <Route path="/jobs" element={<JobsPage />} />
           <Route path="/company" element={<Guard permission="company.manage"><CompanyPage /></Guard>} />
           <Route path="/company/email" element={<Guard permission="company.manage"><CompanyMailServerPage /></Guard>} />
+          <Route path="/company/whatsapp" element={<Guard permission="company.manage"><CompanyWhatsAppPage /></Guard>} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/privacy/requests" element={<Guard permission="privacy.manage"><PersonalDataPage /></Guard>} />
           <Route path="/outbox" element={<Guard permission="audit.read"><OutboxPage /></Guard>} />

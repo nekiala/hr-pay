@@ -1273,5 +1273,16 @@
  "A contract already starts on %s: change its grade on the employee file.": "Un contrat commence déjà le %s : modifiez son grade dans le dossier de l'employé.",
  "You cannot change your own contract.": "Vous ne pouvez pas modifier votre propre contrat.",
  "Legal minimum of grade %s (SMIG %s FC x %s x 26 days)": "Minimum légal du grade %s (SMIG %s FC x %s x 26 jours)",
- "Grade %s to %s, same net pay": "Grade %s vers %s, même salaire net"
+ "Grade %s to %s, same net pay": "Grade %s vers %s, même salaire net",
+ "No WhatsApp number is set up yet: enter your own, or ask your provider to set up theirs.": "Aucun numéro WhatsApp n'est configuré : saisissez le vôtre, ou demandez à votre fournisseur de configurer le sien.",
+ "Save the WhatsApp account first.": "Enregistrez d'abord le compte WhatsApp.",
+ "Enter the phone number ID shown in Meta's WhatsApp Manager (digits only).": "Saisissez l'ID du numéro de téléphone affiché dans WhatsApp Manager de Meta (chiffres uniquement).",
+ "Enter the WhatsApp Business Account ID (digits only).": "Saisissez l'ID du compte WhatsApp Business (chiffres uniquement).",
+ "Enter the access token of a Meta system user.": "Saisissez le jeton d'accès d'un utilisateur système Meta.",
+ "Enter the app secret: it proves that delivery reports come from Meta.": "Saisissez la clé secrète de l'app : elle prouve que les accusés de remise viennent de Meta.",
+ "Enter the number as people see it, for example +243 81 234 5678.": "Saisissez le numéro tel que les gens le voient, par exemple +243 81 234 5678.",
+ "Your company does not send messages on WhatsApp.": "Votre entreprise n'envoie pas de messages sur WhatsApp.",
+ "The code could not be sent on WhatsApp to %s. Check the number in your profile.": "Le code n'a pas pu être envoyé sur WhatsApp au %s. Vérifiez le numéro dans votre profil.",
+ "You will no longer receive HR Pay messages on WhatsApp. You can turn them on again in HR Pay, under My account.": "Vous ne recevrez plus les messages HR Pay sur WhatsApp. Vous pouvez les réactiver dans HR Pay, sous Mon compte.",
+ "WhatsApp confirmation": "confirmation WhatsApp"
 }

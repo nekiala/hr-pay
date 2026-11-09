@@ -14,7 +14,6 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
 /**
  * Sends one-time codes by WhatsApp (Meta Cloud API, authentication template) and email. Every attempt is
@@ -33,13 +32,13 @@ public class NotificationService {
     private final MailServers servers;
     private final AppProperties.Notifications settings;
     private final JdbcClient jdbc;
-    private final RestClient whatsapp;
+    private final WhatsApp whatsapp;
 
-    public NotificationService(MailServers servers, AppProperties properties, JdbcClient jdbc) {
+    public NotificationService(MailServers servers, AppProperties properties, JdbcClient jdbc, WhatsApp whatsapp) {
         this.servers = servers;
         this.settings = properties.notifications();
         this.jdbc = jdbc;
-        this.whatsapp = RestClient.builder().baseUrl("https://graph.facebook.com/v21.0").build();
+        this.whatsapp = whatsapp;
     }
 
     /** What a code is for, as the person reads it. */
@@ -50,19 +49,24 @@ public class NotificationService {
             case "TWO_STEP_SETUP" -> Texts.t("second step set-up");
             case "LETTER_SIGN" -> Texts.t("signature");
             case "ADVANCE_SIGN" -> Texts.t("salary advance");
+            case WhatsAppConsent.OTP_PURPOSE -> Texts.t("WhatsApp confirmation");
             default -> purpose.toLowerCase(Locale.ROOT).replace('_', '-');
         };
     }
 
-    /** Sends the code by WhatsApp when configured, and always by email (the fallback the design asks for). */
+    /**
+     * Sends the code by WhatsApp when an account is set up, and always by email (the fallback the design asks for),
+     * except the code that confirms a WhatsApp number: it goes by WhatsApp only.
+     */
     public List<Delivery> sendCode(AppUser user, String code, String purpose) {
         String language = languageOf(user);
         String text = Texts.in(language, () -> Texts.t("Your HR Pay %s code is %s. It expires in 5 minutes.", purpose(purpose), code));
-        Delivery email = send(user, Texts.in(language, () -> Texts.t("HR Pay code: %s", code)), text, true);
-        if (settings != null && settings.whatsappEnabled()) {
-            return List.of(sendWhatsapp(user, code, text, language), email);
+        java.util.Optional<WhatsApp.Account> account = whatsapp.resolve(user.getCompanyId());
+        if (WhatsAppConsent.OTP_PURPOSE.equals(purpose)) {
+            return account.map(a -> List.of(sendWhatsapp(a, user, code, text, language))).orElse(List.of());
         }
-        return List.of(email);
+        Delivery email = send(user, Texts.in(language, () -> Texts.t("HR Pay code: %s", code)), text, true);
+        return account.map(a -> List.of(sendWhatsapp(a, user, code, text, language), email)).orElse(List.of(email));
     }
 
     /** The language a person reads: their own choice, else their company's. */
@@ -153,31 +157,12 @@ public class NotificationService {
         }
     }
 
-    private Delivery sendWhatsapp(AppUser user, String code, String text, String language) {
-        String to = user.getPhone().replace("+", "");
-        Map<String, Object> payload = Map.of(
-                "messaging_product", "whatsapp",
-                "to", to,
-                "type", "template",
-                "template", Map.of(
-                        "name", settings.whatsappTemplate(),
-                        // The template is approved by Meta in each language; French when the person reads French.
-                        "language", Map.of("code", Texts.FR.equals(language) ? "fr" : settings.whatsappLanguage()),
-                        "components", List.of(
-                                Map.of("type", "body", "parameters", List.of(Map.of("type", "text", "text", code))),
-                                Map.of("type", "button", "sub_type", "url", "index", "0",
-                                        "parameters", List.of(Map.of("type", "text", "text", code))))));
-        try {
-            whatsapp.post().uri("/{id}/messages", settings.whatsappPhoneNumberId())
-                    .header("Authorization", "Bearer " + settings.whatsappToken())
-                    .body(payload).retrieve().toBodilessEntity();
-            record(user, Channel.WHATSAPP, user.getPhone(), null, text, "SENT", null, null);
-            return new Delivery(Channel.WHATSAPP, "SENT");
-        } catch (RuntimeException e) {
-            log.warn("WhatsApp to {} failed: {}", user.getPhone(), e.getMessage());
-            record(user, Channel.WHATSAPP, user.getPhone(), null, text, "FAILED", truncate(e.getMessage()), null);
-            return new Delivery(Channel.WHATSAPP, "FAILED");
-        }
+    private Delivery sendWhatsapp(WhatsApp.Account a, AppUser user, String code, String text, String language) {
+        // The template is approved by Meta in each language; French when the person reads French.
+        String lang = Texts.FR.equals(language) ? "fr" : a.level() == WhatsApp.Level.ENV && settings != null
+                && settings.whatsappLanguage() != null ? settings.whatsappLanguage() : "en";
+        WhatsApp.Sent sent = whatsapp.sendTemplate(a, user, user.getPhone(), whatsapp.otpTemplate(), lang, List.of(code), code, text);
+        return new Delivery(Channel.WHATSAPP, sent.ok() ? "SENT" : "FAILED");
     }
 
     private void record(AppUser user, Channel channel, String recipient, String subject, String body, String status,
