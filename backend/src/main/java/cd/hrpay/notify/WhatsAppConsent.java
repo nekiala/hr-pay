@@ -201,10 +201,12 @@ public class WhatsAppConsent {
                 }
                 String body = WhatsAppTemplates.param(p.body());
                 String link = p.link() == null ? "" : p.link().replaceFirst("^/+", "");
-                String text = t.languages().get(language).body().replace("{{1}}", p.firstName()).replace("{{2}}", body);
+                WhatsAppTemplates.Text words = t.languages().get(language);
+                String text = words.body().replace("{{1}}", p.firstName()).replace("{{2}}", body);
                 AppUser user = users.findById(p.userId()).orElse(null);
                 if (whatsapp.sendTemplate(account.get(), user, p.phone(), t.name(), language,
-                        List.of(WhatsAppTemplates.param(p.firstName()), body), link.isEmpty() ? "?from=whatsapp" : link, text).ok()) {
+                        words.takesDetail() ? List.of(WhatsAppTemplates.param(p.firstName()), body)
+                                : List.of(WhatsAppTemplates.param(p.firstName())), link.isEmpty() ? "?from=whatsapp" : link, text).ok()) {
                     sent++;
                 }
             }

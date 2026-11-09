@@ -32,13 +32,14 @@ The button links open `<public URL>/<page>`; the public URL is `PUBLIC_URL`.
 Meta writes the text itself: "*123456* is your verification code. For your security, do not share this code. This code
 expires in 5 minutes." with a **Copy code** button (French: "Copier le code").
 
-### hrpay_payslip_ready (utility): payslip ready
+### hrpay_payslip_available (utility): payslip available
 
-- FR: Bonjour {{1}}, {{2}} Pour protéger vos données, le bulletin s'ouvre uniquement dans HR Pay, après connexion.
+- FR: Bonjour {{1}}, votre bulletin de paie est disponible dans HR Pay. Pour protéger vos données, il s'ouvre uniquement après connexion.
   Button: **Voir le bulletin**
-- EN: Hello {{1}}, {{2}} To protect your data, the payslip only opens in HR Pay, after you sign in.
+- EN: Hello {{1}}, your payslip is available in HR Pay. To protect your data, it only opens after you sign in.
   Button: **View payslip**
-- Example: {{1}} = Marie, {{2}} = "Le bulletin de octobre 2026 peut être consulté dans HR Pay."
+- Example: {{1}} = Marie. Only the first name varies: Meta rejected an earlier version whose sentence was a parameter
+  (INCORRECT_CATEGORY).
 
 ### hrpay_request_update (utility): decisions on leave, salary advances, certificates
 
