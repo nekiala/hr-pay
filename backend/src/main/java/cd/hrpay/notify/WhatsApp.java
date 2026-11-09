@@ -26,6 +26,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -170,9 +171,10 @@ public class WhatsApp {
         String id = null;
         String error = null;
         try {
-            JsonNode r = meta.post().uri("/{id}/messages", a.phoneNumberId())
+            String raw = meta.post().uri("/{id}/messages", a.phoneNumberId())
                     .header("Authorization", "Bearer " + a.token())
-                    .body(payload).retrieve().body(JsonNode.class);
+                    .body(payload).retrieve().body(String.class);
+            JsonNode r = read(raw);
             JsonNode m = r == null ? null : r.path("messages").path(0).path("id");
             id = m == null || m.isMissingNode() ? null : m.asText();
         } catch (RestClientResponseException e) {
@@ -297,8 +299,8 @@ public class WhatsApp {
         for (Map<String, Object> p : payloads) {
             String key = p.get("name") + "|" + p.get("language");
             try {
-                JsonNode r = meta.post().uri("/{waba}/message_templates", a.businessId())
-                        .header("Authorization", "Bearer " + a.token()).body(p).retrieve().body(JsonNode.class);
+                JsonNode r = read(meta.post().uri("/{waba}/message_templates", a.businessId())
+                        .header("Authorization", "Bearer " + a.token()).body(p).retrieve().body(String.class));
                 statuses.put(key, new TemplateStatus(r.path("status").asText("PENDING"), r.path("id").asText(null), null,
                         OffsetDateTime.now()));
             } catch (RestClientResponseException e) {
@@ -307,6 +309,9 @@ public class WhatsApp {
                 if (!error.toLowerCase().contains("already") && !error.contains("2388024") && !error.contains("2388023")) {
                     statuses.put(key, new TemplateStatus("NOT_SUBMITTED", null, cut(error, 300), OffsetDateTime.now()));
                 }
+            } catch (RestClientException e) {
+                // Meta could not be reached: this one stays unsubmitted, the others are still tried.
+                statuses.put(key, new TemplateStatus("NOT_SUBMITTED", null, cut(e.getMessage(), 300), OffsetDateTime.now()));
             }
         }
         saveStatuses(platform, statuses);
@@ -322,8 +327,8 @@ public class WhatsApp {
         Map<String, TemplateStatus> statuses = new LinkedHashMap<>(a.templates());
         java.util.Set<String> ours = WhatsAppTemplates.names(otpTemplate());
         try {
-            JsonNode r = meta.get().uri("/{waba}/message_templates?fields=name,language,status,rejected_reason,id&limit=200",
-                    a.businessId()).header("Authorization", "Bearer " + a.token()).retrieve().body(JsonNode.class);
+            JsonNode r = read(meta.get().uri("/{waba}/message_templates?fields=name,language,status,rejected_reason,id&limit=200",
+                    a.businessId()).header("Authorization", "Bearer " + a.token()).retrieve().body(String.class));
             for (JsonNode t : r.path("data")) {
                 String name = t.path("name").asText();
                 if (!ours.contains(name)) {
@@ -335,6 +340,8 @@ public class WhatsApp {
             }
         } catch (RestClientResponseException e) {
             throw new BusinessRuleException("Meta refused: " + cut(metaError(e), 300));
+        } catch (RestClientException e) {
+            throw new BusinessRuleException("Meta could not be reached: " + cut(e.getMessage(), 300));
         }
         saveStatuses(platform, statuses);
         return platform ? platform() : company().own();
@@ -491,6 +498,11 @@ public class WhatsApp {
         byte[] b = new byte[24];
         random.nextBytes(b);
         return HexFormat.of().formatHex(b);
+    }
+
+    /** Meta's answers are JSON, though Graph API sometimes labels them text/javascript: read the text and parse it. */
+    private JsonNode read(String body) {
+        return body == null || body.isBlank() ? json.missingNode() : json.readTree(body);
     }
 
     private static String metaError(RestClientResponseException e) {

@@ -76,7 +76,7 @@ class WhatsAppIT extends IntegrationTest {
                 answer = "{\"data\":[" + data + "]}";
             }
             byte[] out = answer.getBytes(StandardCharsets.UTF_8);
-            ex.getResponseHeaders().add("Content-Type", "application/json");
+            ex.getResponseHeaders().add("Content-Type", "text/javascript; charset=UTF-8");
             ex.sendResponseHeaders(200, out.length);
             ex.getResponseBody().write(out);
             ex.close();
