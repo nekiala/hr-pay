@@ -35,15 +35,25 @@ public class Payments {
 
     public record Batch(long id, String method, String provider, String currency, int lineCount, BigDecimal total,
                         String status, String createdBy, OffsetDateTime createdAt, LocalDate paidOn, String reference,
-                        String paidBy, String cancelReason) {}
+                        String paidBy, String cancelReason, String ntpayBatchCode, String ntpayStatus,
+                        boolean ntpayFinished, Boolean ntpayTest, OffsetDateTime ntpayScheduledFor, OffsetDateTime ntpaySentAt,
+                        String ntpayError) {
+
+        /** NTPay may still pay this file: the batch is waiting for approval, scheduled, running, or its answer was lost. */
+        public boolean ntpayLive() {
+            return ntpayStatus != null && !ntpayFinished
+                    && java.util.Set.of("pending_approval", "scheduled", "approved", "UNKNOWN").contains(ntpayStatus);
+        }
+    }
 
     public record Line(long payslipId, long userId, String beneficiary, String registrationNo, String account,
-                       BigDecimal amount, String currency, Long unitId, String directionName, String unitName) {
+                       BigDecimal amount, String currency, Long unitId, String directionName, String unitName,
+                       String ntpayStatus, String ntpayPayoutReference, String ntpayError) {
 
         Line placed(java.util.Map<Long, cd.hrpay.org.OrgStructure.Placement> units) {
             var p = unitId == null ? null : units.get(unitId);
             return p == null ? this : new Line(payslipId, userId, beneficiary, registrationNo, account, amount, currency,
-                    unitId, p.directionName(), p.unitName());
+                    unitId, p.directionName(), p.unitName(), ntpayStatus, ntpayPayoutReference, ntpayError);
         }
     }
 
@@ -73,7 +83,8 @@ public class Payments {
 
     private static final String BATCH_SELECT = """
             select id, method, provider, trim(currency) as currency, line_count, total, status, created_by, created_at,
-                   paid_on, reference, paid_by, cancel_reason from payment_batch""";
+                   paid_on, reference, paid_by, cancel_reason, ntpay_batch_code, ntpay_status, ntpay_finished, ntpay_test,
+                   ntpay_scheduled_for, ntpay_sent_at, ntpay_error from payment_batch""";
 
     private final JdbcClient jdbc;
     private final cd.hrpay.security.DataCrypto crypto;
@@ -300,7 +311,8 @@ public class Payments {
         List<Line> lines = jdbc.sql("""
                 select coalesce(l.payslip_id, l.quinzaine_line_id, l.advance_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
                        l.account, l.amount, trim(l.currency) as currency,
-                       coalesce(p.unit_id, q.unit_id, a.unit_id) as unit_id, null as direction_name, null as unit_name
+                       coalesce(p.unit_id, q.unit_id, a.unit_id) as unit_id, null as direction_name, null as unit_name,
+                       l.ntpay_status, l.ntpay_payout_reference, l.ntpay_error
                 from payment_line l left join payslip p on p.id = l.payslip_id left join quinzaine_line q on q.id = l.quinzaine_line_id
                 left join salary_advance a on a.id = l.advance_id
                 where l.batch_id = ? order by l.beneficiary""")
@@ -325,12 +337,20 @@ public class Payments {
         if (!b.method().equals("CASH") && (reference == null || reference.isBlank())) {
             throw new BusinessRuleException("Enter the bank or operator reference of the payment.");
         }
-        jdbc.sql("""
-                update payment_batch set status = 'PAID', paid_on = ?, reference = ?, paid_by = ?, paid_at = now()
-                where id = ?""").params(paidOn, reference == null || reference.isBlank() ? null : reference.trim(),
-                CurrentUser.email(), id).update();
+        if (b.ntpayLive()) {
+            throw new ConflictException("This file was sent with NTPay: it is marked paid when NTPay finishes it.");
+        }
+        settle(id, paidOn, reference == null || reference.isBlank() ? null : reference.trim(), CurrentUser.email());
         audit.record("payment.paid", "payment_batch", id, Map.of("paidOn", paidOn.toString(),
                 "reference", reference == null ? "" : reference.trim(), "total", b.total()));
+        return batch(id);
+    }
+
+    /** Records a file as paid, and what follows: a quinzaine paid in full, salary advances paid. */
+    void settle(long id, LocalDate paidOn, String reference, String by) {
+        jdbc.sql("""
+                update payment_batch set status = 'PAID', paid_on = ?, reference = ?, paid_by = ?, paid_at = now()
+                where id = ?""").params(paidOn, reference, by, id).update();
         // A quinzaine is paid once every receipt is in a paid file.
         jdbc.sql("""
                 update quinzaine_run q set status = 'PAID'
@@ -342,7 +362,6 @@ public class Payments {
         jdbc.sql("""
                 update salary_advance a set status = 'PAID'
                 from payment_line l where l.batch_id = ? and l.advance_id = a.id and a.status = 'APPROVED'""").param(id).update();
-        return batch(id);
     }
 
     /** Withdraws a file that was not paid, for instance after correcting an account number. Its payslips can be paid again. */
@@ -351,6 +370,9 @@ public class Payments {
         Batch b = batch(id).batch();
         if (!b.status().equals("PREPARED")) {
             throw new ConflictException("Only a file not yet paid can be cancelled.");
+        }
+        if (b.ntpayLive()) {
+            throw new ConflictException("This file was sent with NTPay: cancel the NTPay batch first.");
         }
         jdbc.sql("delete from payment_line where batch_id = ?").param(id).update();
         jdbc.sql("""
