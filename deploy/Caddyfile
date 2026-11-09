@@ -1,6 +1,16 @@
 # HTTPS in front of HR Pay. With TLS_MODE set to an email address, Caddy gets and renews a Let's Encrypt
 # certificate for DOMAIN by itself (ports 80 and 443 must reach this server from the internet). On a server the
 # internet cannot reach, set TLS_MODE=internal: Caddy then makes its own certificate, which browsers must trust.
+#
+# Behind a CDN or another proxy (Cloudflare...), set TRUSTED_PROXIES to its address ranges and CLIENT_IP_HEADER to the
+# header that carries the visitor's address (CF-Connecting-IP for Cloudflare): the app then sees the visitor's real
+# address for the site and time clock IP rules, not the proxy's. Only those ranges may set that header.
+{
+	servers {
+		trusted_proxies static {$TRUSTED_PROXIES:127.0.0.1/32}
+		client_ip_headers {$CLIENT_IP_HEADER:X-Forwarded-For}
+	}
+}
 
 {$DOMAIN} {
 	tls {$TLS_MODE}
@@ -11,6 +21,7 @@
 	respond @internal 404
 
 	reverse_proxy app:8082 {
+		header_up X-Forwarded-For {client_ip}
 		health_uri /actuator/health/readiness
 		health_interval 5s
 	}
@@ -30,7 +41,9 @@
 http://{$DOMAIN} {
 	@clock path /iclock/*
 	handle @clock {
-		reverse_proxy app:8082
+		reverse_proxy app:8082 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 	handle {
 		redir https://{host}{uri} permanent
