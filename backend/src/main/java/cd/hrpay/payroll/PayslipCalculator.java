@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
  */
 public final class PayslipCalculator {
 
+    /** How the warning about a basic pay below the legal minimum starts; PayrollChecks blocks approval on it. */
+    static final String BELOW_MINIMUM = "The basic salary";
+
+
     /**
      * The month's rates. {@code usdCdf} is the price of one US dollar in the local currency ({@code local}: CDF in
      * the DRC, XAF in the Republic of the Congo); {@code country} picks the rules (CD or CG); {@code more} holds the
@@ -348,7 +352,7 @@ public final class PayslipCalculator {
         if (r.congo()) {
             BigDecimal smig = r.more().get("SMIG_MONTHLY");
             if (smig != null && convert(in.basicMonthly(), cur, local, r.usdCdf()).compareTo(smig) < 0) {
-                warnings.add("The basic salary is below the monthly minimum wage (SMIG).");
+                warnings.add(BELOW_MINIMUM + " is below the monthly minimum wage (SMIG).");
             }
         } else if (r.smigDailyCdf() != null) {
             // Décret 25/22 art. 4 and 7: the grade's minimum is the SMIG times its coefficient, 26 days a month.
@@ -357,7 +361,7 @@ public final class PayslipCalculator {
             BigDecimal basicLocal = convert(in.basicMonthly(), cur, local, r.usdCdf());
             if (basicLocal.compareTo(minimum) < 0) {
                 warnings.add(String.format(java.util.Locale.UK,
-                        "The basic salary (%s %s) is below the legal minimum of the grade (SMIG %s x coefficient %s x 26 days = %s %s).",
+                        BELOW_MINIMUM + " (%s %s) is below the legal minimum of the grade (SMIG %s x coefficient %s x 26 days = %s %s).",
                         plain(basicLocal), local, plain(r.smigDailyCdf()), plain(coefficient), plain(minimum), local));
             }
             // Décret 25/22 art. 5: family allowances are at least 1/27 of the daily SMIG per child and day.
