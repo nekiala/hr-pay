@@ -98,7 +98,7 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
       {saved && <p className="success">{saved}</p>}
       {view && <ContractIssues issues={view.issues} />}
       <Form onSubmit={submit}>
-        <div className="grid">
+        <div className="grid2">
           <label>{t('Trial period (months)')}
             <input type="number" min={0} max={form.unskilledLabourer ? 1 : 6} value={form.trialMonths} onChange={(e) => set({ trialMonths: e.target.value })} required />
           </label>

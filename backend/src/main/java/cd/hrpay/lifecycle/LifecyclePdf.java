@@ -92,20 +92,27 @@ public class LifecyclePdf {
         return bytes.toByteArray();
     }
 
+    /** The text: a heading is kept on the same page as the paragraph after it. */
     private static void body(Document doc, String body, Font font, float leading) {
-        for (ContractSheet.Block b : ContractSheet.blocks(body)) {
-            Paragraph p;
+        List<ContractSheet.Block> blocks = ContractSheet.blocks(body);
+        for (int i = 0; i < blocks.size(); i++) {
+            ContractSheet.Block b = blocks.get(i);
+            Paragraph p = new Paragraph();
+            p.setLeading(leading);
+            p.setAlignment(Element.ALIGN_JUSTIFIED);
             if (b.heading()) {
-                p = new Paragraph(b.text(), HEADING);
-                p.setSpacingBefore(6);
-                p.setSpacingAfter(3);
-                p.setKeepTogether(true);
+                p.setSpacingBefore(5);
+                if (i + 1 < blocks.size() && !blocks.get(i + 1).heading()) {
+                    p.add(new org.openpdf.text.Chunk(b.text() + "\n", HEADING));
+                    p.add(new org.openpdf.text.Chunk(blocks.get(++i).text(), font));
+                    p.setKeepTogether(true);
+                } else {
+                    p.add(new org.openpdf.text.Chunk(b.text(), HEADING));
+                }
             } else {
-                p = new Paragraph(b.text(), font);
-                p.setLeading(leading);
-                p.setSpacingAfter(leading * 0.55f);
-                p.setAlignment(Element.ALIGN_JUSTIFIED);
+                p.add(new org.openpdf.text.Chunk(b.text(), font));
             }
+            p.setSpacingAfter(leading * 0.45f);
             doc.add(p);
         }
     }
@@ -236,7 +243,7 @@ public class LifecyclePdf {
     private static PdfPTable section(String heading, List<Line> lines) {
         PdfPTable table = new PdfPTable(new float[] {1.3f, 3f});
         table.setWidthPercentage(100);
-        table.setSpacingAfter(10);
+        table.setSpacingAfter(7);
         table.setKeepTogether(true);
         PdfPCell h = new PdfPCell(new Phrase(heading, BOLD));
         h.setColspan(2);
@@ -248,12 +255,12 @@ public class LifecyclePdf {
             PdfPCell k = new PdfPCell(new Phrase(l.label(), LABEL));
             k.setBorder(Rectangle.BOTTOM);
             k.setBorderColor(new java.awt.Color(0xe3, 0xe6, 0xea));
-            k.setPadding(3);
+            k.setPadding(2);
             table.addCell(k);
             PdfPCell v = new PdfPCell(new Phrase(l.value() == null ? "—" : l.value(), VALUE));
             v.setBorder(Rectangle.BOTTOM);
             v.setBorderColor(new java.awt.Color(0xe3, 0xe6, 0xea));
-            v.setPadding(3);
+            v.setPadding(2);
             table.addCell(v);
         }
         return table;
@@ -280,7 +287,7 @@ public class LifecyclePdf {
             float x = document.right() - width - 14;
             float y = document.getPageSize().getHeight() - 22;
             org.openpdf.text.pdf.ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, new Phrase(text, SMALL), x, y, 0);
-            cb.addTemplate(total, x + width, y);
+            cb.addTemplate(total, x + width + 2, y);
         }
 
         @Override
