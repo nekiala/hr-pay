@@ -214,6 +214,10 @@ public class Declarations {
     @Transactional
     public Declaration unfile(YearMonth month, String kind) {
         requireKind(kind);
+        if (jdbc.sql("select count(*) from declaration where month = ? and kind = ? and paid_on is not null")
+                .params(month.atDay(1), kind).query(Integer.class).single() > 0) {
+            throw new BusinessRuleException("Remove the payment first: it is recorded on this declaration.");
+        }
         int n = jdbc.sql("delete from declaration where month = ? and kind = ?").params(month.atDay(1), kind).update();
         if (n == 0) {
             throw new NotFoundException("The " + kind + " declaration for " + month + " is not recorded.");

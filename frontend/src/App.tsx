@@ -60,6 +60,7 @@ import EvaluationSettingsPage from './pages/EvaluationSettingsPage'
 import PaymentsPage from './pages/PaymentsPage'
 import PaymentFilePage from './pages/PaymentFilePage'
 import DeclarationsPage from './pages/DeclarationsPage'
+import DeclarationCalendarPage from './pages/DeclarationCalendarPage'
 import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
@@ -239,6 +240,7 @@ export default function App() {
           <Route path="/payroll/payments" element={<PaymentsRoute />} />
           <Route path="/payroll/payments/files/:id" element={<PaymentsRoute file />} />
           <Route path="/payroll/declarations" element={<Guard permission="declaration.manage"><DeclarationsPage /></Guard>} />
+          <Route path="/payroll/declarations/calendar" element={<Guard permission="declaration.manage"><DeclarationCalendarPage /></Guard>} />
           <Route path="/payroll/year" element={<Guard permission="payslip.read.all"><YearSummariesPage /></Guard>} />
           <Route path="/payroll/year/:userId" element={<Guard permission="payslip.read.all"><AnnualStatementPage /></Guard>} />
           <Route path="/my/year" element={<Guard permission="payslip.read.own"><AnnualStatementPage /></Guard>} />

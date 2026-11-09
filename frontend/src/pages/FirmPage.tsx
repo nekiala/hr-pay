@@ -13,7 +13,7 @@ type Client = {
   id: number; clientId: number; clientName: string; countryCode: string; status: 'INVITED' | 'ACTIVE'
   roleNames: string[]; billing: Billing | null; invitedBy: string; invitedAt: string; employees: number
   lastRun: { month: string; status: string } | null; openChecks: number | null; openInvoices: number; overdue: boolean
-  companyStatus: string; staff: number[]
+  companyStatus: string; staff: number[]; nextDeadline: { month: string; kind: string; due: string; late: boolean } | null
 }
 type Staff = { id: number; name: string; email: string; admin: boolean }
 type FirmInvoice = { id: number; clientName: string; number: string; issuedOn: string; dueOn: string; currency: string; total: number; discountPercent: number; status: string; overdue: boolean }
@@ -92,7 +92,7 @@ export default function FirmPage() {
         {active.length > 0 && (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{t('Client')}</th><th>{t('Employees')}</th><th>{t('Last payroll')}</th><th>{t('Checks')}</th><th>{t('Invoices')}</th>{page?.admin && <th>{t('Paid by')}</th>}<th></th></tr></thead>
+              <thead><tr><th>{t('Client')}</th><th>{t('Employees')}</th><th>{t('Last payroll')}</th><th>{t('Checks')}</th><th>{t('Next declaration')}</th><th>{t('Invoices')}</th>{page?.admin && <th>{t('Paid by')}</th>}<th></th></tr></thead>
               <tbody>
                 {active.map((c) => (
                   <tr key={c.id}>
@@ -104,6 +104,9 @@ export default function FirmPage() {
                     <td>{c.openChecks === null ? '—' : c.openChecks === 0
                       ? <span className="badge ok">{t('Clear')}</span>
                       : <span className="badge warn">{t('{a} open', { a: c.openChecks })}</span>}</td>
+                    <td className="small">{c.nextDeadline
+                      ? <><span className={c.nextDeadline.late ? 'error' : undefined}>{longDay(c.nextDeadline.due)}{c.nextDeadline.late && ` · ${t('late')}`}</span>
+                        <div className="muted">{c.nextDeadline.kind} · {c.nextDeadline.month}</div></> : '—'}</td>
                     <td>{c.openInvoices === 0 ? '—' : <span className={`badge ${c.overdue ? 'off' : 'warn'}`}>{t('{a} to pay', { a: c.openInvoices })}</span>}</td>
                     {page?.admin && <td className="small">{c.billing === 'WHOLESALE' ? t('Your firm') : t('The client')}</td>}
                     <td>

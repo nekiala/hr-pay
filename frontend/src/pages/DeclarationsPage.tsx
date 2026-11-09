@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ApiError, api, money } from '../api'
+import { ApiError, api, longDay, money } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { localCurrency, t } from '../i18n'
+import { PayDeclarationModal, STATUS_BADGE, statusLabel, type CalendarItem } from '../components/DeclarationStatus'
 
 type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE' | 'TUS'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
@@ -55,22 +56,24 @@ function ByDirection({ rows }: { rows: Row[] }) {
 
 export default function DeclarationsPage() {
   const ask = useAsk()
-  const { can } = useAuth()
+  const { can, me } = useAuth()
   const [params, setParams] = useSearchParams()
   const month = params.get('month') ?? lastMonth()
   const kind = (params.get('kind') ?? 'CNSS') as Kind
   const [summary, setSummary] = useState<Summary[] | null>(null)
   const [employer, setEmployer] = useState<Employer | null>(null)
   const [decl, setDecl] = useState<Declaration | null>(null)
+  const [calendar, setCalendar] = useState<CalendarItem[]>([])
+  const [paying, setPaying] = useState<CalendarItem | null>(null)
   const [filing, setFiling] = useState<{ filedOn: string; reference: string; note: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = () => {
     setError(null)
-    api<{ company: Employer; declarations: Summary[] }>(`/api/declarations/${month}`)
-      .then((r) => { setSummary(r.declarations); setEmployer(r.company) })
-      .catch((e) => { setSummary(null); setDecl(null); setError(e instanceof ApiError && e.status === 404 ? t('No payroll for {a} yet.', { a: month }) : (e as Error).message) })
+    api<{ company: Employer; declarations: Summary[]; calendar: CalendarItem[] }>(`/api/declarations/${month}`)
+      .then((r) => { setSummary(r.declarations); setEmployer(r.company); setCalendar(r.calendar ?? []) })
+      .catch((e) => { setSummary(null); setDecl(null); setCalendar([]); setError(e instanceof ApiError && e.status === 404 ? t('No payroll for {a} yet.', { a: month }) : (e as Error).message) })
     api<Declaration>(`/api/declarations/${month}/${kind}`).then(setDecl).catch(() => setDecl(null))
   }
   useEffect(load, [month, kind]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -90,13 +93,18 @@ export default function DeclarationsPage() {
   }
 
   const employeeCol = kind === 'CNSS' || kind === 'IPR'
+  const item = (k: string) => calendar.find((c) => c.kind === k)
+  const current = item(kind)
   const employerCol = kind !== 'IPR'
 
   return (
     <section>
       <div className="row space no-print">
         <h2>{t('Declarations')}</h2>
-        {can('company.manage') && <Link className="button secondary" to="/company">{t('Employer details')}</Link>}
+        <div className="row">
+          <Link className="button secondary" to="/payroll/declarations/calendar">{t('Calendar')}</Link>
+          {can('company.manage') && <Link className="button secondary" to="/company">{t('Employer details')}</Link>}
+        </div>
       </div>
       <label className="month-pick no-print">{t('Month')}{' '}<input type="month" value={month} onChange={(e) => e.target.value && setParams({ month: e.target.value, kind })} /></label>
       <ErrorText error={error} />
@@ -106,12 +114,14 @@ export default function DeclarationsPage() {
         <div className="card no-print">
           <div className="table-wrap">
             <table>
-              <thead><tr><th>{t('Declaration')}</th><th>{t('To')}</th><th>{t('Employees')}</th><th>{t('Total')}</th><th>{t('Filed')}</th><th></th></tr></thead>
+              <thead><tr><th>{t('Declaration')}</th><th>{t('To')}</th><th>{t('Employees')}</th><th>{t('Total')}</th><th>{t('Due')}</th><th>{t('Status')}</th><th></th></tr></thead>
               <tbody>
                 {summary.map((s) => (
                   <tr key={s.kind} className={s.kind === kind ? 'selected' : undefined}>
                     <td>{KIND[s.kind].name}</td><td>{KIND[s.kind].to}</td><td>{s.employees}</td><td>{cdf(s.totalCdf)}</td>
-                    <td>{s.filed ? `${s.filed.filedOn}${s.filed.reference ? ` · ${s.filed.reference}` : ''}` : <span className="muted">{t('Not yet')}</span>}</td>
+                    <td className="small">{item(s.kind) ? longDay(item(s.kind)!.nextDue) : '—'}</td>
+                    <td>{item(s.kind) ? <span className={`badge ${item(s.kind)!.late && item(s.kind)!.status !== 'PAID' ? 'off' : STATUS_BADGE[item(s.kind)!.status]}`}>{statusLabel(item(s.kind)!)}</span>
+                      : s.filed ? `${s.filed.filedOn}${s.filed.reference ? ` · ${s.filed.reference}` : ''}` : <span className="muted">{t('Not yet')}</span>}</td>
                     <td><Button className="link" onClick={() => setParams({ month, kind: s.kind })}>{t('Open')}</Button></td>
                   </tr>
                 ))}
@@ -148,13 +158,23 @@ export default function DeclarationsPage() {
             </div>
           )}
           <ByDirection rows={decl.rows} />
+          {current?.paid && <p>{t('Paid on {a}: {b}', { a: longDay(current.paid.paidOn), b: money(current.paid.amount, localCurrency()) })}{current.paid.reference && t(', reference {a}', { a: current.paid.reference })}.</p>}
+          {current?.penalty && current.penalty.total > 0 && <p className="notice small no-print">{t('Penalty estimate: {a}.', { a: money(current.penalty.total, localCurrency()) })}{' '}{current.penalty.how.join(' ')}</p>}
+          {current?.annual && <p className="notice small no-print">{current.annual}</p>}
           {decl.filed && <p>{t('Filed on')}{' '}{decl.filed.filedOn}{decl.filed.reference && t(', reference {a}', { a: decl.filed.reference })}{decl.filed.note && ` (${decl.filed.note})`}{t('. Recorded by')}{' '}{decl.filed.filedBy}.</p>}
           <div className="row no-print">
             <a className="button secondary" href={`/api/declarations/${month}/${kind}/file.csv`}>{t('Download CSV')}</a>
             <Button className="secondary" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
+            {kind === 'CNSS' && me?.company?.country === 'CD' && <>
+              <a className="button secondary" href={`/api/declarations/${month}/CNSS/mod-dc.pdf`} target="_blank" rel="noreferrer">{t('MOD. DC form')}</a>
+              {decl.filed && <a className="button secondary" href={`/api/declarations/${month}/CNSS/mod-dcc.pdf`} target="_blank" rel="noreferrer">{t('MOD. DCC form')}</a>}
+            </>}
+            {current?.status === 'DECLARED' && <Button onClick={() => setPaying(current)}>{t('Record payment')}</Button>}
             {decl.runStatus === 'CLOSED' && !decl.filed && !filing && <Button onClick={() => setFiling({ filedOn: new Date().toISOString().slice(0, 10), reference: '', note: '' })}>{t('Record as filed')}</Button>}
-            {decl.filed && <Button className="link" onClick={() => ask({ title: t('Remove the filing record?'), confirmLabel: t('Remove'), danger: true, onConfirm: () => run(() => api(`/api/declarations/${month}/${kind}/filed`, { method: 'DELETE' }), t('Filing record removed.')) })}>{t('Undo filing')}</Button>}
+            {decl.filed && !current?.paid && <Button className="link" onClick={() => ask({ title: t('Remove the filing record?'), confirmLabel: t('Remove'), danger: true, onConfirm: () => run(() => api(`/api/declarations/${month}/${kind}/filed`, { method: 'DELETE' }), t('Filing record removed.')) })}>{t('Undo filing')}</Button>}
           </div>
+          {paying && <PayDeclarationModal item={paying} currency={localCurrency()} onClose={() => setPaying(null)}
+            onSave={(body) => run(async () => { await api(`/api/declarations/${paying.month}/${paying.kind}/paid`, { method: 'POST', body }); setPaying(null) }, t('Payment recorded.'))} />}
           {filing && (
             <Modal title={t('Record {a} for {b} as filed', { a: kind, b: month })} size="sm" onClose={() => setFiling(null)}>
               <Form onSubmit={() => run(async () => { await api(`/api/declarations/${month}/${kind}/filed`, { method: 'POST', body: { filedOn: filing.filedOn, reference: filing.reference || null, note: filing.note || null } }); setFiling(null) }, t('{a} for {b} recorded as filed.', { a: kind, b: month }))}>

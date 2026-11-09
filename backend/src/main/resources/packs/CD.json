@@ -1584,6 +1584,14 @@
      "value": 2500.0,
      "note": "DGI, IRPP sur les revenus salariaux",
      "created_by": "system"
+    },
+    {
+     "id": 21,
+     "code": "ONEM",
+     "effective_from": "2025-10-01",
+     "value": 0.5,
+     "note": "Arrêté 028/CAB/MIN.ET/FMM/RK/09/2025 du 24 septembre 2025",
+     "created_by": "system"
     }
    ]
   },
@@ -2358,6 +2366,97 @@
     {
      "role_id": 1,
      "permission_code": "firm.manage"
+    }
+   ]
+  },
+  {
+   "table": "declaration_rule",
+   "refs": {},
+   "rows": [
+    {
+     "kind": "CNSS",
+     "authority": "CNSS",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": null,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_flat": null,
+     "late_payment_percent_flat_later": null,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": 0.5,
+     "daily_from_day": 21,
+     "legal_basis": "Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; majoration de 0,5 % par jour à partir du 21 (CNSS, à confirmer)",
+     "verified": false
+    },
+    {
+     "kind": "IPR",
+     "authority": "DGI",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": 25,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_flat": null,
+     "late_payment_percent_flat_later": null,
+     "late_payment_percent_month": 2,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "Loi 004/2003 art. 17 (déclaration et versement dans les 15 jours, même néant), art. 89 (+25 %), art. 91 (2 % par mois commencé)",
+     "verified": true
+    },
+    {
+     "kind": "INPP",
+     "authority": "INPP",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": null,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_flat": null,
+     "late_payment_percent_flat_later": null,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; pénalités à confirmer",
+     "verified": false
+    },
+    {
+     "kind": "ONEM",
+     "authority": "ONEM",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": null,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_flat": null,
+     "late_payment_percent_flat_later": null,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": 0.5,
+     "daily_from_day": null,
+     "legal_basis": "Guichet unique (arrêté interministériel du 12 mai 2015): déclaration dans les 15 jours; 0,5 % par jour de retard (à confirmer)",
+     "verified": false
+    },
+    {
+     "kind": "IERE",
+     "authority": "DGI",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": 25,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_flat": null,
+     "late_payment_percent_flat_later": null,
+     "late_payment_percent_month": 2,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "Loi 004/2003 art. 17, 89 et 91",
+     "verified": true
     }
    ]
   }
