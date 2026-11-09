@@ -312,10 +312,25 @@ function Templates() {
           <details>
             <summary className="small">{t('Fields filled in for each person')}</summary>
             <p className="small muted">{t('A blank line starts a new paragraph; a line starting with ## is a heading.')}</p>
+            {draft.kind === 'CONTRACT' && <p className="small muted">{t('In a contract, the text after a line with only --- is printed in small print after the signatures. The parties\' full identity and family are added in an annex.')}</p>}
             <div className="table-wrap"><table><tbody>
               {Object.entries(fields).map(([k, label]) => <tr key={k}><td><code>{`{{${k}}}`}</code></td><td className="small">{label}</td></tr>)}
             </tbody></table></div>
           </details>
+          {draft.kind === 'CONTRACT' && (
+            <fieldset>
+              <legend>{t('Document control (printed in the annex)')}</legend>
+              <div className="grid">
+                <label>{t('Document code')}<input maxLength={20} placeholder="RH-04" value={draft.docCode ?? ''} onChange={(e) => setDraft({ ...draft, docCode: e.target.value })} /></label>
+                <label>{t('Version')}<input maxLength={20} placeholder="2.1" value={draft.docVersion ?? ''} onChange={(e) => setDraft({ ...draft, docVersion: e.target.value })} /></label>
+                <label>{t('Classification')}<input maxLength={60} placeholder={t('Internal - Confidential')} value={draft.docClassification ?? ''} onChange={(e) => setDraft({ ...draft, docClassification: e.target.value })} /></label>
+                <label>{t('Document owner')}<input maxLength={100} value={draft.docOwner ?? ''} onChange={(e) => setDraft({ ...draft, docOwner: e.target.value })} /></label>
+                <label>{t('Approver')}<input maxLength={100} value={draft.docApprover ?? ''} onChange={(e) => setDraft({ ...draft, docApprover: e.target.value })} /></label>
+                <label>{t('Date of adoption')}<input type="date" value={draft.docAdoptedOn ?? ''} onChange={(e) => setDraft({ ...draft, docAdoptedOn: e.target.value || null })} /></label>
+                <label>{t('Date in force')}<input type="date" value={draft.docEffectiveOn ?? ''} onChange={(e) => setDraft({ ...draft, docEffectiveOn: e.target.value || null })} /></label>
+              </div>
+            </fieldset>
+          )}
           <label className="check"><input type="checkbox" checked={draft.requiresSignature} onChange={(e) => setDraft({ ...draft, requiresSignature: e.target.checked })} />{t('The employee signs it with a one-time code')}</label>
           <label className="check"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('Active')}</label>
           <ErrorText error={formError} />
@@ -331,7 +346,7 @@ function Templates() {
     <div className="card">
       <div className="row between">
         <h3>{t('Contracts and letters')}</h3>
-        <Button onClick={() => { setFormError(null); setDraft({ code: '', name: '', kind: 'LETTER', body: '', requiresSignature: true, documentTypeId: null, active: true }) }}>{t('New template')}</Button>
+        <Button onClick={() => { setFormError(null); setDraft({ code: '', name: '', kind: 'LETTER', body: '', requiresSignature: true, documentTypeId: null, active: true, docCode: null, docVersion: null, docClassification: null, docOwner: null, docApprover: null, docAdoptedOn: null, docEffectiveOn: null }) }}>{t('New template')}</Button>
       </div>
       <p className="small muted">{t('The starting texts are drafts: have them checked by your lawyer before using them.')}</p>
       <ErrorText error={error} />

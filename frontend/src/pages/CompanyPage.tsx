@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, COUNTRY_NAMES, fileToBase64, type Employer, type PayslipSettings } from '../api'
+import { ApiError, api, COUNTRY_NAMES, fileToBase64, type CompanyRepresentative, type Employer, type PayslipSettings } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
 import { useAuth } from '../auth'
@@ -24,6 +24,42 @@ const TEMPLATES: { code: PayslipSettings['template']; name: string; about: strin
 ]
 
 /** The employer: name, address and legal numbers, the logo, and how payslips look. */
+
+/** Who signs contracts for the employer (its legal representative), and the town documents are signed in. */
+function RepresentativeCard() {
+  const [value, setValue] = useState<CompanyRepresentative | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  useEffect(() => { api<CompanyRepresentative>('/api/company/representative').then(setValue).catch((e: Error) => setError(e.message)) }, [])
+  if (!value) return <ErrorText error={error} />
+  const save = async (e: FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setSaved(false)
+    try {
+      setValue(await api<CompanyRepresentative>('/api/company/representative', { method: 'PUT', body: value }))
+      setSaved(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('Could not save.'))
+    }
+  }
+  return (
+    <div className="card">
+      <h3>{t('Signing contracts')}</h3>
+      <Form onSubmit={save}>
+        <div className="grid">
+          <label>{t('Signs for the employer')}<input value={value.name ?? ''} maxLength={150} placeholder="KIALA NTONA" onChange={(e) => setValue({ ...value, name: e.target.value })} /></label>
+          <label>{t('Capacity')}<input value={value.title ?? ''} maxLength={100} placeholder={t('Manager')} onChange={(e) => setValue({ ...value, title: e.target.value })} /></label>
+          <label>{t('Town where documents are signed')}<input value={value.signingPlace ?? ''} maxLength={100} placeholder="Kinshasa" onChange={(e) => setValue({ ...value, signingPlace: e.target.value })} /></label>
+        </div>
+        <p className="hint">{t('Printed on employment contracts: "represented by", the employer\'s signature block and "Done at … on …".')}</p>
+        {saved && <p className="success">{t('Saved.')}</p>}
+        <ErrorText error={error} />
+        <Button type="submit">{t('Save')}</Button>
+      </Form>
+    </div>
+  )
+}
 
 /** The company's language: the one its people see unless they choose their own, and its documents are written in. */
 function LanguageCard() {
@@ -116,6 +152,7 @@ export default function CompanyPage() {
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <LanguageCard />
+      <RepresentativeCard />
 
       <Form className="card" onSubmit={saveEmployer}>
         <h3>{t('Name, address and legal information')}</h3>

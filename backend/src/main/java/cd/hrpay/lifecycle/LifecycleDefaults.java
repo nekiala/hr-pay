@@ -196,6 +196,54 @@ public class LifecycleDefaults {
                 log.error("Starting documents and checklists for company {} could not be made", id, e);
             }
         }
+        List<Long> all = tenants.callAsPlatform(() -> jdbc.sql("select id from company where lifecycle_seeded").query(Long.class).list());
+        for (Long id : all) {
+            try {
+                tenants.runAs(id, this::addContractModels);
+            } catch (RuntimeException e) {
+                log.error("The contract models for company {} could not be added", id, e);
+            }
+        }
+    }
+
+    /** The full contract models (from NTOPROG's model, 32 articles, with an annex), once per company. */
+    public static final List<String> FULL_MODELS = List.of("CONTRACT_CDD_FULL", "CONTRACT_CDI_FULL");
+
+    /**
+     * Adds the full CDD and CDI models when the company does not have them; the short samples nobody changed are
+     * then put aside (still there, inactive).
+     */
+    @Transactional
+    public void addContractModels() {
+        boolean fr = "fr".equals(jdbc.sql("select language from company where id = current_company_id()").query(String.class)
+                .optional().orElse("fr"));
+        Long type = jdbc.sql("select id from document_type where code = 'CONTRACT'").query(Long.class).optional().orElse(null);
+        int added = 0;
+        for (String code : FULL_MODELS) {
+            boolean cdd = code.contains("CDD");
+            String name = fr ? (cdd ? "Contrat de travail à durée déterminée (CDD)" : "Contrat de travail à durée indéterminée (CDI)")
+                    : (cdd ? "Fixed-term employment contract (CDD)" : "Permanent employment contract (CDI)");
+            String body = model((cdd ? "contract-cdd." : "contract-cdi.") + (fr ? "fr" : "en") + ".txt");
+            added += jdbc.sql("""
+                    insert into letter_template (code, name, kind, body, requires_signature, document_type_id, updated_by)
+                    values (?, ?, 'CONTRACT', ?, true, ?, 'system') on conflict do nothing""")
+                    .params(code, name, body, type).update();
+        }
+        if (added > 0) {
+            jdbc.sql("update letter_template set active = false where code in ('CONTRACT_CDI', 'CONTRACT_CDD') and updated_by = 'system'")
+                    .update();
+        }
+    }
+
+    static String model(String file) {
+        try (var in = LifecycleDefaults.class.getResourceAsStream("/lifecycle/" + file)) {
+            if (in == null) {
+                throw new IllegalStateException("Missing contract model " + file);
+            }
+            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).strip();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Contract model " + file + " cannot be read", e);
+        }
     }
 
     /** Fills the current company once; does nothing when it was done before. */
@@ -229,6 +277,7 @@ public class LifecycleDefaults {
                     values (?, ?, ?, ?, true, ?, 'system') on conflict do nothing""")
                     .params(l.code(), fr ? l.fr() : l.en(), l.kind(), (fr ? l.bodyFr() : l.bodyEn()).strip(), type).update();
         }
+        addContractModels();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

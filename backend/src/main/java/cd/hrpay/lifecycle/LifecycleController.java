@@ -40,7 +40,21 @@ public class LifecycleController {
 
     public record TemplateInput(@NotBlank @Size(max = 40) String code, @NotBlank @Size(max = 100) String name, @NotBlank String kind,
                                 @NotBlank @Size(max = 50_000) String body, boolean requiresSignature, Long documentTypeId,
-                                boolean active) {}
+                                boolean active, @Size(max = 20) String docCode, @Size(max = 20) String docVersion,
+                                @Size(max = 60) String docClassification, @Size(max = 100) String docOwner,
+                                @Size(max = 100) String docApprover, LocalDate docAdoptedOn, LocalDate docEffectiveOn) {
+
+        Letters.Control control() {
+            return new Letters.Control(docCode, docVersion, docClassification, docOwner, docApprover, docAdoptedOn, docEffectiveOn);
+        }
+    }
+
+    public record TermsInput(@jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(6) Integer trialMonths,
+                             Boolean unskilledLabourer, @Size(max = 16) String fixedTermReason,
+                             @Size(max = 200) String fixedTermDetail, Boolean permanentJob, @Size(max = 200) String workPlace,
+                             @Size(max = 150) String supervisor, @Size(max = 100) String signedPlace, LocalDate signedOn,
+                             LocalDate draftGivenOn, LocalDate medicalFitOn, @Size(max = 150) String medicalDoctor,
+                             @Size(max = 40) String onemVisaNo, LocalDate onemVisaOn) {}
 
     public record StartInput(@NotBlank String kind, LocalDate dueOn) {}
 
@@ -56,10 +70,10 @@ public class LifecycleController {
 
     public record ReturnInput(@NotNull LocalDate on, @Size(max = 300) String note) {}
 
-    public record PreviewInput(@NotNull Long templateId) {}
+    public record PreviewInput(@NotNull Long templateId, Long contractId) {}
 
     public record LetterInput(Long templateId, @NotBlank @Size(max = 150) String title, @NotBlank @Size(max = 50_000) String body,
-                              String kind, boolean requiresSignature) {}
+                              String kind, boolean requiresSignature, Long contractId) {}
 
     public record CertificateInput(@NotBlank String kind, @Size(max = 200) String purpose) {}
 
@@ -74,6 +88,12 @@ public class LifecycleController {
     private final Checklists checklists;
     private final Documents documents;
     private final Letters letters;
+    private ContractTerms contractTerms;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setContractTerms(ContractTerms contractTerms) {
+        this.contractTerms = contractTerms;
+    }
     private final Certificates certificates;
 
     public LifecycleController(Checklists checklists, Documents documents, Letters letters, Certificates certificates) {
@@ -146,12 +166,14 @@ public class LifecycleController {
     @PostMapping("/templates")
     @ResponseStatus(HttpStatus.CREATED)
     public Letters.Template addTemplate(@Valid @RequestBody TemplateInput in) {
-        return letters.saveTemplate(null, in.code(), in.name(), in.kind(), in.body(), in.requiresSignature(), in.documentTypeId(), in.active());
+        return letters.saveTemplate(null, in.code(), in.name(), in.kind(), in.body(), in.requiresSignature(), in.documentTypeId(), in.active(),
+                in.control());
     }
 
     @PutMapping("/templates/{id}")
     public Letters.Template updateTemplate(@PathVariable long id, @Valid @RequestBody TemplateInput in) {
-        return letters.saveTemplate(id, in.code(), in.name(), in.kind(), in.body(), in.requiresSignature(), in.documentTypeId(), in.active());
+        return letters.saveTemplate(id, in.code(), in.name(), in.kind(), in.body(), in.requiresSignature(), in.documentTypeId(), in.active(),
+                in.control());
     }
 
     // ---- one person -----------------------------------------------------------------------------------------------
@@ -215,13 +237,13 @@ public class LifecycleController {
 
     @PostMapping("/people/{userId}/letters/preview")
     public Letters.Draft preview(@PathVariable long userId, @Valid @RequestBody PreviewInput in) {
-        return letters.preview(userId, in.templateId());
+        return letters.preview(userId, in.templateId(), in.contractId());
     }
 
     @PostMapping("/people/{userId}/letters")
     @ResponseStatus(HttpStatus.CREATED)
     public Letters.Letter createLetter(@PathVariable long userId, @Valid @RequestBody LetterInput in) {
-        return letters.create(userId, in.templateId(), in.title(), in.body(), in.kind(), in.requiresSignature());
+        return letters.create(userId, in.templateId(), in.title(), in.body(), in.kind(), in.requiresSignature(), in.contractId());
     }
 
     @PutMapping("/letters/{id}")
@@ -237,6 +259,28 @@ public class LifecycleController {
     @PostMapping("/letters/{id}/cancel")
     public Letters.Letter cancel(@PathVariable long id) {
         return letters.cancel(id);
+    }
+
+    @GetMapping("/letters/{id}/word")
+    public ResponseEntity<byte[]> wordCopy(@PathVariable long id) {
+        Letters.Letter l = letters.find(id);
+        String name = (l.number() == null ? "draft-" + id : l.number()) + ".docx";
+        return Files.attachment(name, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", letters.wordCopy(id));
+    }
+
+    // ---- what a contract states beyond its kind, dates and grade ------------------------------------------------
+
+    @GetMapping("/people/{userId}/contracts/{contractId}/terms")
+    public ContractTerms.View terms(@PathVariable long userId, @PathVariable long contractId) {
+        return contractTerms.view(userId, contractId);
+    }
+
+    @PutMapping("/people/{userId}/contracts/{contractId}/terms")
+    public ContractTerms.View saveTerms(@PathVariable long userId, @PathVariable long contractId, @Valid @RequestBody TermsInput in) {
+        return contractTerms.save(userId, contractId, new ContractTerms.Terms(contractId,
+                in.trialMonths() == null ? 0 : in.trialMonths(), Boolean.TRUE.equals(in.unskilledLabourer()),
+                in.fixedTermReason(), in.fixedTermDetail(), Boolean.TRUE.equals(in.permanentJob()), in.workPlace(), in.supervisor(), in.signedPlace(),
+                in.signedOn(), in.draftGivenOn(), in.medicalFitOn(), in.medicalDoctor(), in.onemVisaNo(), in.onemVisaOn(), null, null));
     }
 
     @GetMapping("/letters/{id}/file")

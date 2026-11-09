@@ -994,13 +994,32 @@ export const LETTER_STATUS: Record<LetterStatus, [string, string]> = {
   DRAFT: [t('Draft'), 'badge'], SENT: [t('Waiting for the signature'), 'badge warn'], SIGNED: [t('Signed'), 'badge ok'],
   DECLINED: [t('Refused'), 'badge off'], CANCELLED: [t('Cancelled'), 'badge'],
 }
-export type LetterTemplate = { id: number; code: string; name: string; kind: LetterKind; body: string; requiresSignature: boolean; documentTypeId: number | null; active: boolean; updatedBy: string | null; updatedAt: string }
+export type LetterTemplate = {
+  id: number; code: string; name: string; kind: LetterKind; body: string; requiresSignature: boolean; documentTypeId: number | null; active: boolean; updatedBy: string | null; updatedAt: string
+  docCode: string | null; docVersion: string | null; docClassification: string | null; docOwner: string | null; docApprover: string | null; docAdoptedOn: string | null; docEffectiveOn: string | null
+}
 export type Letter = {
   id: number; userId: number; employeeName: string; templateId: number | null; kind: LetterKind; number: string | null; title: string; body: string | null
   requiresSignature: boolean; status: LetterStatus; sha256: string | null; sentBy: string | null; sentByName: string | null; sentAt: string | null
   signedSha256: string | null; signedAt: string | null; signedName: string | null; signedIp: string | null; declinedReason: string | null; documentId: number | null; createdBy: string | null; createdAt: string
+  contractId: number | null; signableFrom: string | null
 }
-export type LetterDraft = { title: string; body: string; missing: string[] }
+export type ContractIssue = { level: 'BLOCK' | 'WARN'; code: string; message: string }
+export type LetterDraft = { title: string; body: string; missing: string[]; issues: ContractIssue[] }
+export type FixedTermReason = 'TEMPORARY_NEED' | 'REPLACEMENT' | 'SPECIFIC_WORK' | 'SEASONAL' | 'WORKS' | 'PROJECT' | 'HUMANITARIAN' | 'PART_TIME' | 'AWAITING_HOLDER' | 'ACTIVITY_PEAK'
+export const FIXED_TERM_REASONS: Record<FixedTermReason, string> = {
+  TEMPORARY_NEED: t('Temporary need of the business'), REPLACEMENT: t('Replacement of a worker temporarily absent'), SPECIFIC_WORK: t('A defined piece of work'),
+  SEASONAL: t('Seasonal work (arrêté 063/2011)'), WORKS: t('Building or public works (arrêté 063/2011)'), PROJECT: t('Programme or project of fixed duration (arrêté 063/2011)'),
+  HUMANITARIAN: t('Humanitarian activities (arrêté 063/2011)'), PART_TIME: t('Provisional part-time work (arrêté 063/2011)'),
+  AWAITING_HOLDER: t('Awaiting the recruited holder (arrêté 063/2011)'), ACTIVITY_PEAK: t('Temporary increase in activity (arrêté 063/2011)'),
+}
+export type ContractTermsData = {
+  contractId: number; trialMonths: number; unskilledLabourer: boolean; fixedTermReason: FixedTermReason | null; fixedTermDetail: string | null; permanentJob: boolean
+  workPlace: string | null; supervisor: string | null; signedPlace: string | null; signedOn: string | null; draftGivenOn: string | null
+  medicalFitOn: string | null; medicalDoctor: string | null; onemVisaNo: string | null; onemVisaOn: string | null; updatedBy: string | null; updatedAt: string | null
+}
+export type ContractTermsView = { terms: ContractTermsData; defaultWorkPlace: string | null; defaultSupervisor: string | null; defaultSignedPlace: string | null; issues: ContractIssue[] }
+export type CompanyRepresentative = { name: string | null; title: string | null; signingPlace: string | null }
 export type CodeSent = { challengeId: string; channels: string[]; expiresAt: string }
 
 export type CertificateKind = 'WORK' | 'SALARY'

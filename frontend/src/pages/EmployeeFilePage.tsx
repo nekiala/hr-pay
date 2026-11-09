@@ -8,6 +8,7 @@ import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { GradeChangeModal } from '../components/GradeChange'
+import { ContractDocumentModal } from '../components/ContractDocument'
 import { t } from '../i18n'
 
 export default function EmployeeFilePage() {
@@ -16,6 +17,7 @@ export default function EmployeeFilePage() {
   const [gradeMode, setGradeMode] = useState<'change' | 'correct' | null>(null)
   const [addingItem, setAddingItem] = useState(false)
   const [contracting, setContracting] = useState(false)
+  const [documentFor, setDocumentFor] = useState<number | null>(null)
   const ask = useAsk()
   const { id } = useParams()
   const { can, me } = useAuth()
@@ -135,6 +137,7 @@ export default function EmployeeFilePage() {
           <p key={c.id}>
             <strong>{CONTRACT_TYPES[c.contractType]}</strong> · {c.gradeName} ({c.gradeCode}){c.occupationName ? ` · ${c.occupationName}` : ''}{c.expatriate ? t(' · expatriate') : ''}
             <br /><span className="muted">{t('from')}{' '}{c.startDate}{c.endDate ? t(' to {a}', { a: c.endDate }) : ''}{c.note ? ` · ${c.note}` : ''}</span>
+            {can('lifecycle.manage') && <>{' '}<Button className="secondary small" onClick={() => setDocumentFor(c.id)}>{t('Contract document')}</Button></>}
           </p>
         ))}
         {editable && (
@@ -143,6 +146,9 @@ export default function EmployeeFilePage() {
             {currentContract && <Button className="secondary" onClick={() => setGradeMode('change')}>{t('Change grade')}</Button>}
             {latestContract && <Button className="secondary void" onClick={() => setGradeMode('correct')}>{t('Correct the grade')}</Button>}
           </div>
+        )}
+        {documentFor !== null && file?.contracts.find((c) => c.id === documentFor) && (
+          <ContractDocumentModal userId={id!} contract={file.contracts.find((c) => c.id === documentFor)!} onClose={() => setDocumentFor(null)} />
         )}
         {editable && gradeMode && (gradeMode === 'change' ? currentContract : latestContract) && (
           <GradeChangeModal userId={id!} contract={(gradeMode === 'change' ? currentContract : latestContract)!} mode={gradeMode}
