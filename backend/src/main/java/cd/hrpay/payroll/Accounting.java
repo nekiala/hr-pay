@@ -216,11 +216,15 @@ public class Accounting {
             throw new BusinessRuleException("A pay element has no account: set it on the accounting page.");
         }
         String key = account + "|" + (centre == null ? "" : centre) + "|" + label;
-        // One line per account (and cost centre): the first element's name labels it.
+        // One line per account (and cost centre), labelled with the names of every element posted to it.
         String existing = keys.keySet().stream().filter(k -> k.startsWith(account + "|" + (centre == null ? "" : centre) + "|"))
                 .findFirst().orElse(null);
         if (existing != null) {
             key = existing;
+            String[] k = keys.get(existing);
+            if (!java.util.Arrays.asList(k[1].split(" \\+ ")).contains(label)) {
+                k[1] = k[1] + " + " + label;
+            }
         } else {
             keys.put(key, new String[] {account, label, centre});
         }

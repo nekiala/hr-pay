@@ -942,7 +942,7 @@
     {
      "id": 10,
      "code": "IPR",
-     "name": "IPR (income tax)",
+     "name": "IRPP (income tax)",
      "kind": "DEDUCTION",
      "method": "COMPUTED",
      "default_amount": null,
@@ -1755,7 +1755,7 @@
    "rows": [
     {
      "key": "INPP_BAND",
-     "value": "LARGE"
+     "value": "AUTO"
     },
     {
      "key": "RATE_DAY",

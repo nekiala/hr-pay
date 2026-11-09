@@ -13,7 +13,7 @@ type Band = { lowerBound: number; upperBound: number | null; ratePercent: number
 type Contribution = { code: string; side: 'EMPLOYEE' | 'EMPLOYER'; base: string; rate: number | null; ceiling: number | null; exempt: number | null; scale: string | null; beforeTax: boolean }
 type ScaleBand = { lower: number; upper: number | null; amount: number }
 type Rules = { contributions: Contribution[]; scales: Record<string, ScaleBand[]>; professionalPercent: number; professionalCapYearly: number | null; yearlyAllowance: number; exemptBelowMonthly: number; maxParts: number | null }
-type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string>; rules: Rules | null }
+type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string>; rules: Rules | null; staff: number; inppBand: string }
 
 const BASE: Record<string, string> = {
   CNSS: t('earnings subject to social security'), GROSS: t('gross pay'), TAXABLE: t('taxable earnings'),
@@ -284,12 +284,17 @@ export default function StatutoryRatesPage() {
 
       <div className="card">
         <h3>{t('Settings')}</h3>
-        {!congo && <label>{t('Company size for INPP')}<select value={data?.settings.INPP_BAND ?? 'LARGE'} disabled={!editable}
+        {!congo && <label>{t('Company size for INPP')}<select value={data?.settings.INPP_BAND ?? 'AUTO'} disabled={!editable}
             onChange={(e) => void run(() => api('/api/statutory/settings/INPP_BAND', { method: 'PUT', body: { value: e.target.value } }), t('Saved.'))}>
+            <option value="AUTO">{t('From the number of people under contract')}</option>
             <option value="SMALL">{t('Up to 50 employees')}</option>
             <option value="MEDIUM">{t('51 to 300 employees')}</option>
             <option value="LARGE">{t('More than 300 employees')}</option>
           </select>
+          {data && data.settings.INPP_BAND === 'AUTO' && <span className="hint">
+            {t('{n} people under contract today: {band}.', { n: data.staff,
+              band: t(data.inppBand === 'SMALL' ? 'Up to 50 employees' : data.inppBand === 'MEDIUM' ? '51 to 300 employees' : 'More than 300 employees') })}
+          </span>}
         </label>}
         <label>{t('Exchange rate used by a payroll run')}<select value={data?.settings.RATE_DAY ?? 'LAST_OF_MONTH'} disabled={!editable}
             onChange={(e) => void run(() => api('/api/statutory/settings/RATE_DAY', { method: 'PUT', body: { value: e.target.value } }), t('Saved.'))}>

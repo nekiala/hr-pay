@@ -78,6 +78,11 @@ class PayrollChecksIT extends IntegrationTest {
             }
         });
 
+        // A leave the manager approved that still waits for HR.
+        tenants.runAs(1L, () -> jdbc.sql("""
+                insert into leave_request (user_id, leave_type_id, start_date, end_date, working_days, status, requested_by)
+                values (?, (select id from leave_type where code = 'SICK'), '2025-09-22', '2025-09-23', 2, 'AWAITING_HR', 'test')""")
+                .param(two).update());
         mvc.perform(post("/api/payroll/runs/2025-09/calculate").session(hr).with(csrf())).andExpect(status().isOk());
         // A rate dated in the month, added after the calculation (same value, so nothing else moves).
         tenants.runAs(1L, () -> jdbc.sql("""
@@ -93,6 +98,10 @@ class PayrollChecksIT extends IntegrationTest {
                 .andExpect(jsonPath("$.checks[?(@.code == 'SHARED_ACCOUNT' && @.userId == %d)]".formatted(one)).exists())
                 .andExpect(jsonPath("$.checks[?(@.code == 'SHARED_ACCOUNT' && @.userId == %d)]".formatted(two)).exists())
                 .andExpect(jsonPath("$.checks[?(@.code == 'RATE_OLD')].userId").value(org.hamcrest.Matchers.contains((Object) null)))
+                // Calculated long after September, the rate's age counts to the month's end, not to today.
+                .andExpect(jsonPath("$.checks[?(@.code == 'RATE_OLD')].message").value(
+                        org.hamcrest.Matchers.contains(org.hamcrest.Matchers.containsString("10 days before the end of the month"))))
+                .andExpect(jsonPath("$.checks[?(@.code == 'LEAVE_PENDING' && @.userId == %d)]".formatted(two)).exists())
                 .andReturn().getResponse().getContentAsString();
         assertThat(JsonPath.<Integer>read(report, "$.legal")).isZero();
 

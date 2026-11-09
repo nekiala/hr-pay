@@ -37,7 +37,8 @@ let terms: [RegExp, string][] = []
 
 function applyTerms(country: string | null, local: string | null) {
   terms = country === 'CG' ? [[/\bCDF\b/g, local || 'XAF'], [/\bIPR\b/g, 'ITS']]
-    : country === 'CM' || country === 'GA' ? [[/\bCDF\b/g, local || 'XAF'], [/\bIPR\b/g, 'IRPP'], [/\bITS\b/g, 'IRPP']] : []
+    : country === 'CM' || country === 'GA' ? [[/\bCDF\b/g, local || 'XAF'], [/\bIPR\b/g, 'IRPP'], [/\bITS\b/g, 'IRPP']]
+    : [[/\bIPR\b/g, 'IRPP']]
 }
 
 try {

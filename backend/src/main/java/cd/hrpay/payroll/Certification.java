@@ -220,7 +220,7 @@ public class Certification {
                 "A basic salary below the monthly SMIG shows a warning.")
                 : List.of(
                 "CNSS employee share = rate × earnings subject to CNSS.",
-                "IPR: monthly taxable income = taxable earnings − employee CNSS, converted to CDF; the yearly bands apply to it × 12, the result ÷ 12; less the reduction per dependant (up to the maximum number); at most the cap % of the taxable income.",
+                "IRPP: monthly taxable income = taxable earnings − employee CNSS, converted to CDF; the yearly bands apply to it × 12, the result ÷ 12; less the reduction per dependant (up to the maximum number); at most the cap % of the taxable income.",
                 "Employer charges: CNSS employer share on earnings subject to CNSS; INPP at the rate of the company's size band; ONEM; IERE on expatriates' pay.",
                 "A basic salary below the daily SMIG times the days of the month shows a warning.");
         List<String> all = new java.util.ArrayList<>(common);

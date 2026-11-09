@@ -226,7 +226,12 @@ public class PaymentController {
                 }
             }
         }
-        Csv.row(out, "", "", "Total", b.method().equals("BANK") ? "" : b.total(), b.method().equals("BANK") ? "" : b.currency());
+        if (b.method().equals("BANK")) {
+            // The total sits under Amount, as in the lines above.
+            Csv.row(out, "", "", "Total", "", "", b.total(), b.currency());
+        } else {
+            Csv.row(out, "", "", "Total", b.total(), b.currency());
+        }
         out.flush();
         audit.record("payment.file_downloaded", "payment_batch", id, Map.of("lines", v.lines().size()));
     }
