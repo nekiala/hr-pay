@@ -79,10 +79,30 @@ To restore on a new server: install as above, copy the backup file into `deploy/
 start only the database and backup services (`docker compose up -d db backup`), restore, then
 `docker compose up -d`.
 
+## Behind Cloudflare
+
+With the DNS record proxied by Cloudflare (orange cloud): set SSL/TLS to **Full (strict)** (Flexible makes an endless
+redirect), keep ports 80 and 443 open (Cloudflare lets the Let's Encrypt check through), and uncomment
+`TRUSTED_PROXIES` and `CLIENT_IP_HEADER` in `.env`. Without them every visitor seems to come from Cloudflare, and the
+site and time clock IP rules see Cloudflare's addresses instead of the office's.
+
+## Email through Google Workspace
+
+Google's SMTP relay can accept this server by its IP address, with no password: in the Google Admin console, Apps >
+Google Workspace > Gmail > Routing > SMTP relay service, allow the server's IP address, "Only addresses in my
+domains", and require TLS. Then in `.env`: `SMTP_HOST=smtp-relay.gmail.com`, `SMTP_PORT=587`, `SMTP_AUTH=false`,
+`SMTP_EHLO=<DOMAIN>`, `MAIL_FROM` an address of your Google domain, and leave `SMTP_USERNAME` and `SMTP_PASSWORD` empty.
+
 ## Upgrading
 
 ```bash
 cd hr-pay/deploy
+./upgrade.sh                             # backup, git pull, rebuild, restart, wait until the app is healthy
+```
+
+It does the same as:
+
+```bash
 docker compose exec backup backup.sh     # always a fresh backup first
 git pull
 docker compose up -d --build             # the app updates the database by itself when it starts

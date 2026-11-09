@@ -51,6 +51,8 @@ services:
       SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD:-}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SMTP_AUTH:-true}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS:-true}
+      # Name this server gives the mail server when it connects (EHLO); some relays, such as Google's, require a real one.
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_LOCALHOST: ${SMTP_EHLO:-}
       MAIL_FROM: ${MAIL_FROM:-HR Pay <no-reply@example.com>}
       WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
@@ -96,6 +98,8 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-X-Forwarded-For}
       TLS_MODE: "${TLS_MODE:?Set TLS_MODE in .env to an email address for Let's Encrypt, or to internal}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

@@ -6,6 +6,8 @@
 #   KEEP_MONTHLY  months for which the first backup of the month is also kept (default 12)
 #   RCLONE_REMOTE optional rclone destination, for example offsite:hrpay-backups
 set -u
+# Backups hold everyone's pay and personal data: readable by their owner only.
+umask 077
 : "${BACKUP_DIR:=/backups}" "${KEEP_DAILY:=14}" "${KEEP_MONTHLY:=12}" "${RCLONE_REMOTE:=}"
 
 mkdir -p "$BACKUP_DIR"
