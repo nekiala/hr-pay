@@ -274,7 +274,7 @@ public final class PayslipCalculator {
         if (netBeforeLoans.signum() < 0) {
             for (int i = 0; i < lines.size() && netBeforeLoans.signum() < 0; i++) {
                 Line l = lines.get(i);
-                if (!l.code().equals("QUINZAINE")) {
+                if (!TAKEN_BACK_FIRST.contains(l.code())) {
                     continue;
                 }
                 BigDecimal keep = l.amount().add(netBeforeLoans).max(BigDecimal.ZERO);
@@ -282,18 +282,36 @@ public final class PayslipCalculator {
                 lines.set(i, new Line(l.code(), l.label(), l.kind(), l.base(), l.rate(), keep, l.order(), l.loanId()));
                 deductions = deductions.subtract(left);
                 netBeforeLoans = netBeforeLoans.add(left);
-                warnings.add("Quinzaine: only " + keep.toPlainString() + " of " + l.amount().toPlainString() + " " + cur
+                warnings.add((l.code().equals("QUINZAINE") ? "Quinzaine" : "Salary advance") + ": only " + keep.toPlainString()
+                        + " of " + l.amount().toPlainString() + " " + cur
                         + " could be taken back; the rest is carried to next month as an advance when the month closes.");
             }
         }
+        // DRC Code du travail art. 114: pay may be assigned or seized for debts up to 1/5 of the part not above five times
+        // the monthly SMIG of the worker's category and 1/3 of the rest, after tax and social deductions. Elsewhere, the
+        // company's DEBT_MAX_SHARE of the net, which also applies in the DRC when it is stricter.
+        BigDecimal debtCeiling = null;
         BigDecimal room = money(netBeforeLoans.max(BigDecimal.ZERO).multiply(r.debtMaxShare()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+        if (!r.congo() && r.smigDailyCdf() != null) {
+            BigDecimal coefficient = in.smigCoefficient() == null ? HUNDRED : in.smigCoefficient();
+            BigDecimal ceiling = convert(minimumMonthly(r.smigDailyCdf(), coefficient), r.local(), cur, r.usdCdf())
+                    .multiply(BigDecimal.valueOf(5));
+            BigDecimal legal = assignable(netBeforeLoans.max(BigDecimal.ZERO), ceiling);
+            if (legal.compareTo(room) < 0) {
+                room = legal;
+                debtCeiling = ceiling;
+            }
+        }
         for (LoanDue loan : in.loans().stream().sorted(Comparator.comparingLong(LoanDue::loanId)).toList()) {
             BigDecimal due = convert(loan.installment().min(loan.balance()), loan.currency(), cur, r.usdCdf());
             BigDecimal take = due.min(room);
             if (take.compareTo(due) < 0) {
                 warnings.add((loan.kind().equals("LOAN") ? "Loan" : "Advance") + " #" + loan.loanId()
                         + ": only " + take.toPlainString() + " of " + due.toPlainString() + " " + cur
-                        + " taken, to stay within " + r.debtMaxShare().stripTrailingZeros().toPlainString() + "% of net pay.");
+                        + (debtCeiling != null
+                                ? " taken, to stay within the share of pay that may be withheld for debts (Code du travail art. 114: 1/5 up to "
+                                        + plain(debtCeiling) + " " + cur + ", 1/3 above)."
+                                : " taken, to stay within " + r.debtMaxShare().stripTrailingZeros().toPlainString() + "% of net pay."));
             }
             if (take.signum() > 0) {
                 PayElements.Element e = byCode.get(loan.kind());
@@ -363,6 +381,16 @@ public final class PayslipCalculator {
         lines.sort(Comparator.comparingInt(Line::order));
         return new Result(cur, List.copyOf(lines), gross, cnssBase, taxableBase, taxableCdf, deductions, net,
                 employer, List.copyOf(warnings));
+    }
+
+    /** Deductions the payslip takes in full before any loan: advances on this month's own pay. */
+    static final java.util.Set<String> TAKEN_BACK_FIRST = java.util.Set.of("QUINZAINE", "EARNED_ADVANCE");
+
+    /** Art. 114: 1/5 of the net up to the ceiling (five times the category's monthly SMIG), 1/3 of the part above. */
+    public static BigDecimal assignable(BigDecimal net, BigDecimal ceiling) {
+        BigDecimal low = net.min(ceiling);
+        BigDecimal high = net.subtract(ceiling).max(BigDecimal.ZERO);
+        return low.divide(BigDecimal.valueOf(5), 2, RoundingMode.DOWN).add(high.divide(BigDecimal.valueOf(3), 2, RoundingMode.DOWN));
     }
 
     /** Décret 25/22 art. 7: monthly values are 26 times the daily ones. */

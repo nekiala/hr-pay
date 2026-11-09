@@ -50,7 +50,7 @@ public class Payments {
     public record Overview(String month, String runStatus, List<Group> toPay, List<Payee> problems,
                            List<Batch> batches, int payslips, int paid) {}
 
-    /** kind: PAYROLL (the month-end net pay) or QUINZAINE (the mid-month advance). */
+    /** kind: PAYROLL (the month-end net pay), QUINZAINE (the mid-month advance) or ADVANCE (salary advances on demand). */
     public record BatchView(Batch batch, String month, String kind, List<Line> lines, String warning) {}
 
     /** DRC Code du travail art. 99: a monthly salary is paid at the latest 6 days after the end of the month. */
@@ -69,6 +69,7 @@ public class Payments {
 
     public static final String PAYROLL = "PAYROLL";
     public static final String QUINZAINE = "QUINZAINE";
+    public static final String ADVANCE = "ADVANCE";
 
     private static final String BATCH_SELECT = """
             select id, method, provider, trim(currency) as currency, line_count, total, status, created_by, created_at,
@@ -121,6 +122,12 @@ public class Payments {
     }
 
     private RunRow run(YearMonth month, String kind) {
+        if (ADVANCE.equals(kind)) {
+            // Approved advances are paid as they come: the month's advances are always ready to pay.
+            return jdbc.sql("select id, 'CLOSED' as status from advance_run where month = ?").param(month.atDay(1))
+                    .query(RunRow.class).optional()
+                    .orElseThrow(() -> new NotFoundException("No salary advance for " + month + " yet."));
+        }
         if (!QUINZAINE.equals(kind)) {
             return run(month);
         }
@@ -130,7 +137,11 @@ public class Payments {
     }
 
     private static String runColumn(String kind) {
-        return QUINZAINE.equals(kind) ? "quinzaine_run_id" : "run_id";
+        return QUINZAINE.equals(kind) ? "quinzaine_run_id" : ADVANCE.equals(kind) ? "advance_run_id" : "run_id";
+    }
+
+    private static String lineColumn(String kind) {
+        return QUINZAINE.equals(kind) ? "quinzaine_line_id" : ADVANCE.equals(kind) ? "advance_id" : "payslip_id";
     }
 
     /**
@@ -138,7 +149,15 @@ public class Payments {
      * today.
      */
     private List<Payee> unpaid(long runId, String kind) {
-        String sql = QUINZAINE.equals(kind) ? """
+        String sql = ADVANCE.equals(kind) ? """
+                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                       trim(p.currency) as currency, p.amount as net,
+                       coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
+                       f.mobile_money_operator, f.mobile_money_number
+                from salary_advance p join app_user u on u.id = p.user_id
+                left join employee_profile f on f.user_id = p.user_id
+                where p.run_id = ? and p.status = 'APPROVED' and not exists (select 1 from payment_line l where l.advance_id = p.id)
+                order by u.last_name, u.first_name""" : QUINZAINE.equals(kind) ? """
                 select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
                        trim(p.currency) as currency, p.amount as net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
@@ -211,7 +230,10 @@ public class Payments {
         List<Group> toPay = groups.values().stream()
                 .sorted(java.util.Comparator.comparing(Group::method).thenComparing(Group::provider).thenComparing(Group::currency))
                 .toList();
-        int payslips = QUINZAINE.equals(kind)
+        int payslips = ADVANCE.equals(kind)
+                ? jdbc.sql("select count(*) from salary_advance where run_id = ? and status in ('APPROVED', 'PAID')").param(run.id())
+                        .query(Integer.class).single()
+                : QUINZAINE.equals(kind)
                 ? jdbc.sql("select count(*) from quinzaine_line where run_id = ?").param(run.id()).query(Integer.class).single()
                 : jdbc.sql("select count(*) from payslip where run_id = ? and net > 0 and (kind = 'REGULAR' or number is not null)").param(run.id()).query(Integer.class).single();
         int paid = jdbc.sql("""
@@ -231,12 +253,13 @@ public class Payments {
     @Transactional
     public BatchView prepare(YearMonth month, String kind, String method, String provider, String currency) {
         boolean quinzaine = QUINZAINE.equals(kind);
+        boolean advance = ADVANCE.equals(kind);
         RunRow run = run(month, kind);
         if (!run.status().equals("CLOSED")) {
             throw new BusinessRuleException(quinzaine ? "Close the quinzaine of " + month + " before making payment files."
                     : "Close the " + month + " payroll before making payment files.");
         }
-        jdbc.sql("select id from " + (quinzaine ? "quinzaine_run" : "payroll_run") + " where id = ? for update")
+        jdbc.sql("select id from " + (quinzaine ? "quinzaine_run" : advance ? "advance_run" : "payroll_run") + " where id = ? for update")
                 .param(run.id()).query(Long.class).single();
         List<Payee> payees = unpaid(run.id(), kind).stream()
                 .filter(p -> p.problem() == null && p.method().equals(method) && p.provider().equals(provider)
@@ -254,33 +277,37 @@ public class Payments {
         for (Payee p : payees) {
             jdbc.sql("""
                     insert into payment_line (batch_id, %s, user_id, beneficiary, registration_no, account, amount, currency)
-                    values (?, ?, ?, ?, ?, ?, ?, ?)""".formatted(quinzaine ? "quinzaine_line_id" : "payslip_id"))
+                    values (?, ?, ?, ?, ?, ?, ?, ?)""".formatted(lineColumn(kind)))
                     .params(id, p.payslipId(), p.userId(), p.name(), p.registrationNo(), p.account(), p.amount(), currency)
                     .update();
         }
         audit.record("payment.prepared", "payment_batch", id, Map.of("month", month.toString(), "method", method,
-                "provider", provider, "currency", currency, "count", payees.size(), "total", total, "kind", quinzaine ? QUINZAINE : PAYROLL));
+                "provider", provider, "currency", currency, "count", payees.size(), "total", total, "kind", quinzaine ? QUINZAINE : advance ? ADVANCE : PAYROLL));
         return batch(id);
     }
 
     public BatchView batch(long id) {
         Batch b = jdbc.sql(BATCH_SELECT + " where id = ?").param(id).query(Batch.class).optional()
                 .orElseThrow(() -> new NotFoundException("Payment file not found."));
-        record Source(String month, boolean quinzaine) {}
+        record Source(String month, String kind) {}
         Source src = jdbc.sql("""
-                select to_char(coalesce(r.month, q.month), 'YYYY-MM') as month, b.quinzaine_run_id is not null as quinzaine
+                select to_char(coalesce(r.month, q.month, a.month), 'YYYY-MM') as month,
+                       case when b.quinzaine_run_id is not null then 'QUINZAINE' when b.advance_run_id is not null then 'ADVANCE'
+                            else 'PAYROLL' end as kind
                 from payment_batch b left join payroll_run r on r.id = b.run_id left join quinzaine_run q on q.id = b.quinzaine_run_id
+                left join advance_run a on a.id = b.advance_run_id
                 where b.id = ?""").param(id).query(Source.class).single();
         List<Line> lines = jdbc.sql("""
-                select coalesce(l.payslip_id, l.quinzaine_line_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
+                select coalesce(l.payslip_id, l.quinzaine_line_id, l.advance_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
                        l.account, l.amount, trim(l.currency) as currency,
-                       coalesce(p.unit_id, q.unit_id) as unit_id, null as direction_name, null as unit_name
+                       coalesce(p.unit_id, q.unit_id, a.unit_id) as unit_id, null as direction_name, null as unit_name
                 from payment_line l left join payslip p on p.id = l.payslip_id left join quinzaine_line q on q.id = l.quinzaine_line_id
+                left join salary_advance a on a.id = l.advance_id
                 where l.batch_id = ? order by l.beneficiary""")
                 .param(id).query(Line.class).list();
         var units = org.placementsOfUnits();
         lines = lines.stream().map(l -> l.placed(units)).toList();
-        String kind = src.quinzaine() ? QUINZAINE : PAYROLL;
+        String kind = src.kind();
         String country = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
                 .optional().orElse("CD");
         return new BatchView(b, src.month(), kind, lines, lateWarning(country, kind, src.month(), b.paidOn()));
@@ -311,6 +338,10 @@ public class Payments {
                   and not exists (select 1 from quinzaine_line l where l.run_id = q.id and not exists (
                       select 1 from payment_line p join payment_batch pb on pb.id = p.batch_id
                       where p.quinzaine_line_id = l.id and pb.status = 'PAID'))""").param(id).update();
+        // Salary advances in the file are paid.
+        jdbc.sql("""
+                update salary_advance a set status = 'PAID'
+                from payment_line l where l.batch_id = ? and l.advance_id = a.id and a.status = 'APPROVED'""").param(id).update();
         return batch(id);
     }
 

@@ -27,9 +27,10 @@ export default function PaymentsPage() {
   const { can } = useAuth()
   const canPay = can('payroll.pay')
   const [params, setParams] = useSearchParams()
-  const month = params.get('month') ?? lastMonth()
-  const kind = params.get('kind') === 'QUINZAINE' ? 'QUINZAINE' : 'PAYROLL'
+  const kind = params.get('kind') === 'QUINZAINE' ? 'QUINZAINE' : params.get('kind') === 'ADVANCE' ? 'ADVANCE' : 'PAYROLL'
   const quinzaine = kind === 'QUINZAINE'
+  const advance = kind === 'ADVANCE'
+  const month = params.get('month') ?? (advance ? new Date().toISOString().slice(0, 7) : lastMonth())
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState<{ id: number; paidOn: string; reference: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +38,7 @@ export default function PaymentsPage() {
 
   const load = () => api<Overview>(`/api/payments/${month}?kind=${kind}`).then(setData).catch((e) => {
     setData(null)
-    setError(e instanceof ApiError && e.status === 404 ? (quinzaine ? t('No quinzaine for {a} yet.', { a: month }) : t('No payroll for {a} yet.', { a: month })) : (e as Error).message)
+    setError(e instanceof ApiError && e.status === 404 ? (quinzaine ? t('No quinzaine for {a} yet.', { a: month }) : advance ? t('No salary advance for {a} yet.', { a: month }) : t('No payroll for {a} yet.', { a: month })) : (e as Error).message)
   })
   useEffect(() => { setError(null); void load() }, [month, kind]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -65,6 +66,7 @@ export default function PaymentsPage() {
         <label className="month-pick">{t('Pay')}{' '}<select className="auto-width" value={kind} onChange={(e) => setParams({ month, kind: e.target.value })}>
           <option value="PAYROLL">{t('Month-end pay')}</option>
           <option value="QUINZAINE">{t('Quinzaine')}</option>
+          <option value="ADVANCE">{t('Salary advances')}</option>
         </select></label>
       </div>
       <ErrorText error={error} />
@@ -73,7 +75,7 @@ export default function PaymentsPage() {
       {data && (
         <>
           <p className="muted">{data.paid}{' '}{t('of')}{' '}{data.payslips}{' '}{t('net pays recorded as paid.')}</p>
-          {!closed && !quinzaine && <p className="notice">{t('The')}{' '}{month}{' '}{t('payroll is not closed yet. Payment files can be made once HR closes it.')}</p>}
+          {!closed && !quinzaine && !advance && <p className="notice">{t('The')}{' '}{month}{' '}{t('payroll is not closed yet. Payment files can be made once HR closes it.')}</p>}
           {!closed && quinzaine && data.runStatus !== 'PAID' && <p className="notice">{t('The quinzaine of {a} is not closed yet. Payment files can be made once HR closes it.', { a: month })}</p>}
 
           <div className="card">

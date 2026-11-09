@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculateur de salaire net RDC 2026 · HR Pay</title>
+<meta name="description" content="Calculez le salaire net en RDC à partir du brut, ou le brut à partir du net : CNSS, IPR barème 2026, INPP, ONEM et coût employeur, en CDF ou en USD. Gratuit.">
+<link rel="canonical" href="https://www.example.com/calculateur-salaire-rdc.html">
+<meta property="og:title" content="Calculateur de salaire net RDC 2026 · HR Pay">
+<meta property="og:description" content="Calculez le salaire net en RDC à partir du brut, ou le brut à partir du net : CNSS, IPR barème 2026, INPP, ONEM et coût employeur, en CDF ou en USD. Gratuit.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Calculateur de salaire net RDC 2026","applicationCategory":"FinanceApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"inLanguage":"fr"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Le calcul est-il officiel ?","acceptedAnswer":{"@type":"Answer","text":"Il applique les taux publiés (Code du travail, Décret 25/22 sur le SMIG, loi fiscale sur l'IRPP, CNSS). C'est une estimation pour un mois complet : le bulletin réel dépend des heures, absences et éléments variables."}},{"@type":"Question","name":"Puis-je calculer en dollars ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Le montant est converti en francs congolais au taux de la Banque Centrale du Congo pour l'IPR, puis le résultat est rendu en dollars."}},{"@type":"Question","name":"Comment trouver le brut pour un net donné ?","acceptedAnswer":{"@type":"Answer","text":"Choisissez « Du net au brut » et saisissez le net souhaité : le calculateur cherche le salaire de base qui donne exactement ce net."}},{"@type":"Question","name":"Que coûte un salarié à l'employeur ?","acceptedAnswer":{"@type":"Answer","text":"Le coût employeur est le salaire brut plus la CNSS patronale, l'INPP, l'ONEM et, pour un expatrié, l'IERE."}}]}</script>
+</head>
+<!-- Set the addresses once, as on index.html: the app and the demo server. -->
+<body data-app="https://app.example.com" data-demo="https://demo.example.com">
+<div class="wrap">
+<header>
+  <a class="brand" href="index.html"><img src="favicon.svg" alt="">HR Pay</a>
+  <nav>
+    <span class="links"><a href="calculateur-salaire-rdc.html"><span lang="fr">Calculateurs</span><span lang="en" hidden>Calculators</span></a><a href="articles/index.html">Articles</a></span>
+    <button class="lang" type="button" data-switch>English</button>
+    <a class="btn" data-app-path="/login"><span lang="fr">Se connecter</span><span lang="en" hidden>Sign in</span></a>
+    <a class="btn primary" data-app-path="/trial"><span lang="fr">Essai gratuit</span><span lang="en" hidden>Free trial</span></a>
+  </nav>
+</header>
+
+<main>
+  <div class="page-head">
+    <h1><span lang="fr">Calculateur de salaire net en RDC</span><span lang="en" hidden>DR Congo net salary calculator</span></h1>
+    <p><span lang="fr">Du brut au net ou du net au brut, avec la CNSS, l'IPR au barème 2026 et le coût pour l'employeur. En francs congolais ou en dollars, au taux de la BCC.</span><span lang="en" hidden>Gross to net or net to gross, with CNSS, the 2026 IPR scale and the cost for the employer. In Congolese francs or US dollars, at the BCC rate.</span></p>
+  </div>
+  <div id="calculator" data-country="CD" data-countries="CD" data-focus="net"></div>
+  <noscript><p class="alert">Le calculateur a besoin de JavaScript.</p></noscript>
+
+  <section>
+    <div lang="fr"><h2>Comment le net est calculé</h2>
+    <ul class="ticks">
+      <li>La CNSS salariale (5 %) est retenue sur le salaire de base, les primes et les autres éléments soumis.</li>
+      <li>L'IPR se calcule sur l'imposable diminué de la CNSS, au barème annuel 2026 (3 %, 15 %, 30 %, 40 %), avec une réduction par personne à charge et un plafond.</li>
+      <li>Les indemnités de logement, de transport et les allocations familiales ne sont ni soumises à la CNSS ni à l'IPR dans ce calcul.</li>
+      <li>L'employeur paie en plus la CNSS patronale (13 %), l'INPP selon la taille de l'entreprise et l'ONEM ; l'IERE pour un expatrié.</li>
+      <li>Le salaire de base est comparé au SMIG 2026 (21 500 FC par jour, 26 jours par mois).</li>
+    </ul>
+    <p class="note">Voir aussi : <a href="articles/irpp-2026-rdc.html">le barème IPR 2026</a>, <a href="articles/smig-2026-rdc.html">le SMIG 2026</a>, <a href="articles/cnss-rdc.html">les cotisations CNSS</a>.</p></div>
+    <div lang="en" hidden><h2>How the net is worked out</h2>
+    <ul class="ticks">
+      <li>Employee CNSS (5%) is withheld from the basic salary, bonuses and other elements subject to it.</li>
+      <li>IPR is charged on the taxable pay less CNSS, at the 2026 annual scale (3%, 15%, 30%, 40%), with a reduction per dependant and a cap.</li>
+      <li>Housing, transport and family allowances are neither subject to CNSS nor to IPR in this calculation.</li>
+      <li>The employer also pays employer CNSS (13%), INPP by company size and ONEM; IERE for an expatriate.</li>
+      <li>The basic salary is checked against the 2026 minimum wage (21,500 FC a day, 26 days a month).</li>
+    </ul></div>
+  </section>
+
+  <section lang="fr">
+    <h2>Questions fréquentes</h2>
+    <div class="faq">
+      <div class="card"><h3>Le calcul est-il officiel ?</h3><p>Il applique les taux publiés (Code du travail, Décret 25/22 sur le SMIG, loi fiscale sur l'IRPP, CNSS). C'est une estimation pour un mois complet : le bulletin réel dépend des heures, absences et éléments variables.</p></div>
+      <div class="card"><h3>Puis-je calculer en dollars ?</h3><p>Oui. Le montant est converti en francs congolais au taux de la Banque Centrale du Congo pour l'IPR, puis le résultat est rendu en dollars.</p></div>
+      <div class="card"><h3>Comment trouver le brut pour un net donné ?</h3><p>Choisissez « Du net au brut » et saisissez le net souhaité : le calculateur cherche le salaire de base qui donne exactement ce net.</p></div>
+      <div class="card"><h3>Que coûte un salarié à l'employeur ?</h3><p>Le coût employeur est le salaire brut plus la CNSS patronale, l'INPP, l'ONEM et, pour un expatrié, l'IERE.</p></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div>
+    <a href="calculateur-salaire-rdc.html"><span lang="fr">Salaire net RDC</span><span lang="en" hidden>DRC net salary</span></a>
+    <a href="calculateur-salaire-congo.html"><span lang="fr">Salaire net Congo</span><span lang="en" hidden>Congo net salary</span></a>
+    <a href="cout-employeur.html"><span lang="fr">Coût employeur</span><span lang="en" hidden>Employer cost</span></a>
+    <a href="articles/index.html">Articles</a>
+    <a data-app-path="/legal/privacy-policy"><span lang="fr">Confidentialité</span><span lang="en" hidden>Privacy policy</span></a>
+  </div>
+  <div>© HR Pay</div>
+</footer>
+</div>
+<script src="site.js"></script>
+<script src="calculator.js"></script>
+</body>
+</html>

@@ -18,7 +18,8 @@
      "notice_base_unit": "MONTHS",
      "notice_days_per_year": 0.0,
      "notice_day_kind": "CALENDAR",
-     "notice_resignation_share": 1.0
+     "notice_resignation_share": 1.0,
+     "advance_percent": 50.0
     },
     {
      "id": 2,
@@ -32,7 +33,8 @@
      "notice_base_unit": "MONTHS",
      "notice_days_per_year": 0.0,
      "notice_day_kind": "CALENDAR",
-     "notice_resignation_share": 1.0
+     "notice_resignation_share": 1.0,
+     "advance_percent": 50.0
     },
     {
      "id": 3,
@@ -46,7 +48,8 @@
      "notice_base_unit": "MONTHS",
      "notice_days_per_year": 0.0,
      "notice_day_kind": "CALENDAR",
-     "notice_resignation_share": 1.0
+     "notice_resignation_share": 1.0,
+     "advance_percent": 50.0
     }
    ]
   },
@@ -1064,6 +1067,24 @@
      "system": true,
      "display_order": 143,
      "active": true
+    },
+    {
+     "id": 33,
+     "code": "EARNED_ADVANCE",
+     "name": "Salary advance on demand",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 144,
+     "active": true
     }
    ]
   },
@@ -1487,6 +1508,30 @@
     },
     {
      "key": "QUINZAINE_MAX_DEBT_MONTHS",
+     "value": "3"
+    },
+    {
+     "key": "ADVANCE_ENABLED",
+     "value": "false"
+    },
+    {
+     "key": "ADVANCE_APPROVAL",
+     "value": "AUTO"
+    },
+    {
+     "key": "ADVANCE_MAX_PER_MONTH",
+     "value": "2"
+    },
+    {
+     "key": "ADVANCE_CLOSING_DAYS",
+     "value": "5"
+    },
+    {
+     "key": "ADVANCE_MIN_SERVICE_DAYS",
+     "value": "30"
+    },
+    {
+     "key": "ADVANCE_MAX_DEBT_MONTHS",
      "value": "3"
     }
    ]

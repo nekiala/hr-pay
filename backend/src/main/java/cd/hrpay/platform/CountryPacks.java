@@ -105,6 +105,11 @@ public class CountryPacks {
         }
     }
 
+    /** The country's pack as it ships, read-only (the public calculator takes its rates from it). */
+    public JsonNode pack(String country) {
+        return read(country);
+    }
+
     private JsonNode read(String country) {
         if (!COUNTRIES.containsKey(country)) {
             throw new cd.hrpay.common.BusinessRuleException("There is no set-up for this country yet.");

@@ -655,3 +655,7 @@ select.auto-width { width: auto; min-width: 0; }
 .timeline .when { font-size: 12px; color: var(--muted); }
 .row > label.month-pick { flex: 0 0 auto; }
 .row > label.month-pick input { width: auto; flex: 0 0 auto; }
+
+/* Salary advance on demand */
+.big-figure { font-size: 2rem; margin: 4px 0 8px; font-variant-numeric: tabular-nums; }
+.receipt { margin: 12px 0; padding: 12px 16px; border-left: 3px solid var(--warn-border); background: var(--warn-soft); border-radius: 6px; line-height: 1.5; }

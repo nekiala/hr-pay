@@ -117,7 +117,7 @@ public class PayrollReports {
 
     private static final Set<String> BASIC = Set.of("BASIC", "COMPLEMENT");
     private static final Set<String> FAMILY = Set.of("FAMILY_ALLOWANCE");
-    private static final Set<String> ADVANCES = Set.of("QUINZAINE", "ADVANCE", "LEAVE_ADVANCE");
+    private static final Set<String> ADVANCES = Set.of("QUINZAINE", "ADVANCE", "LEAVE_ADVANCE", "EARNED_ADVANCE");
     private static final Set<String> COMPENSATION = Set.of("NOTICE_OWED");
 
     private final JdbcClient jdbc;

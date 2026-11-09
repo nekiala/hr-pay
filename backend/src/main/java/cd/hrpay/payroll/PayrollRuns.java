@@ -670,13 +670,18 @@ public class PayrollRuns {
      * from the next month, so the whole quinzaine is always taken back.
      */
     private void carryQuinzaine(Run run, YearMonth month) {
+        carry(run, month, "QUINZAINE", "Quinzaine of %s not fully taken back", "quinzaine.carried");
+        carry(run, month, SalaryAdvances.ELEMENT, "Salary advances of %s not fully taken back", "advance.carried");
+    }
+
+    private void carry(Run run, YearMonth month, String code, String note, String event) {
         record Shortfall(long userId, String currency, BigDecimal entry, String entryCurrency, BigDecimal taken) {}
         List<Shortfall> rows = jdbc.sql("""
                 select p.user_id, trim(p.currency) as currency, e.amount as entry, trim(e.currency) as entry_currency,
-                       coalesce((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = 'QUINZAINE'), 0) as taken
+                       coalesce((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = x.code), 0) as taken
                 from payslip p join pay_entry e on e.user_id = p.user_id and e.month = ?
-                join pay_element x on x.id = e.element_id and x.code = 'QUINZAINE'
-                where p.run_id = ? and p.kind = 'REGULAR'""").params(month.atDay(1), run.id()).query(Shortfall.class).list();
+                join pay_element x on x.id = e.element_id and x.code = ?
+                where p.run_id = ? and p.kind = 'REGULAR'""").params(month.atDay(1), code, run.id()).query(Shortfall.class).list();
         for (Shortfall r : rows) {
             BigDecimal due = ExchangeRates.convert(r.entry(), r.entryCurrency(), r.currency(), run.usdCdf())
                     .setScale(2, java.math.RoundingMode.HALF_UP);
@@ -688,9 +693,9 @@ public class PayrollRuns {
                     insert into loan (user_id, kind, principal, currency, installment, start_month, granted_on, note, created_by)
                     values (?, 'ADVANCE', ?, ?, ?, ?, ?, ?, ?) returning id""")
                     .params(r.userId(), left, r.currency(), left, month.plusMonths(1).atDay(1), month.atEndOfMonth(),
-                            cd.hrpay.i18n.Texts.t("Quinzaine of %s not fully taken back", month.toString()), CurrentUser.email())
+                            cd.hrpay.i18n.Texts.t(note, month.toString()), CurrentUser.email())
                     .query(Long.class).single();
-            audit.record("quinzaine.carried", "user", r.userId(), Map.of("loan", id, "amount", left.toPlainString(),
+            audit.record(event, "user", r.userId(), Map.of("loan", id, "amount", left.toPlainString(),
                     "month", month.toString()));
         }
     }
