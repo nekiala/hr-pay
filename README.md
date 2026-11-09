@@ -24,7 +24,7 @@ The design is in the project design document. Delivery is in five phases:
 docker compose up -d                       # PostgreSQL on :5432 (databases hrpay and hrpay_test)
 
 cd backend
-SAMPLE_DATA=true ./gradlew bootRun         # API on :8081, loads demo users (needs JDK 26)
+SAMPLE_DATA=true ./gradlew bootRun         # API on :8082, loads demo users (needs JDK 26)
 
 cd ../frontend
 npm install && npm run dev                 # app on http://localhost:5173

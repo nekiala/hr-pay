@@ -22,4 +22,4 @@ Put the folder on any static host (the Caddy in `deploy/` can serve it with `fil
   changes.
 - Before publishing, replace `https://www.example.com` in `sitemap.xml`, `robots.txt` and each page's canonical link.
 - Opened from `localhost` (for instance `python3 -m http.server 8090` in this folder), the pages use the local app
-  (API on 8081, app on 5173).
+  (API on 8082, app on 5173).
