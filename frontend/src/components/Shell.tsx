@@ -5,7 +5,7 @@ import {
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
-  BriefcaseBusiness, Handshake, Smartphone,
+  BriefcaseBusiness, Handshake, Smartphone, ListTree,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -93,6 +93,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/company/accountant', label: t('Accounting firm'), icon: BriefcaseBusiness, show: can('firm.manage') && !me?.firmMember },
         { to: '/billing', label: t('Billing'), icon: CreditCard, show: can('subscription.manage') && !can('platform.manage') },
         { to: '/payroll/settings', label: t('Grades'), icon: Layers, show: can('masterdata.manage') },
+        { to: '/reference-lists', label: t('Reference lists'), icon: ListTree, show: any('masterdata.manage', 'platform.manage') && can('salary.read') },
         { to: '/payroll/elements', label: t('Pay elements'), icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/rates', label: t('Rates'), icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/sector', label: t('Sector agreement'), icon: Handshake, show: pay && can('masterdata.manage') },

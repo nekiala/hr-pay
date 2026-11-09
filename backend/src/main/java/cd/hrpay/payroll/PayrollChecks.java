@@ -69,6 +69,12 @@ public class PayrollChecks {
     private final AuditService audit;
     private final JsonMapper json = JsonMapper.builder().build();
     private boolean required;
+    private cd.hrpay.reference.References refs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setRefs(cd.hrpay.reference.References refs) {
+        this.refs = refs;
+    }
 
     public PayrollChecks(JdbcClient jdbc, DataCrypto crypto, AuditService audit,
                          @org.springframework.beans.factory.annotation.Value("${app.payroll.checks-required:true}") boolean required) {
@@ -274,6 +280,24 @@ public class PayrollChecks {
                 add.add("MISSING_DETAILS", s, Texts.t("Missing in the file: %s.", String.join(", ", missing)));
             }
         }
+        // Values typed before the reference lists: HR picks them from the lists.
+        Map<Long, List<String>> typed = new LinkedHashMap<>();
+        for (cd.hrpay.reference.References.ToPick t : refs.toPick()) {
+            typed.computeIfAbsent(t.userId(), k -> new ArrayList<>()).add(switch (t.field()) {
+                case "NATIONALITY" -> Texts.t("nationality");
+                case "COMMUNE" -> Texts.t("commune");
+                case "BANK" -> Texts.t("bank");
+                default -> Texts.t("mobile money operator");
+            } + " « " + t.value() + " »");
+        }
+        for (Slip s : slips) {
+            List<String> fields = typed.get(s.userId());
+            if (fields != null) {
+                add.add("NOT_FROM_LIST", s, Texts.t("Typed, not picked from the lists: %s. Pick them in the employee file.",
+                        String.join(", ", fields)));
+            }
+        }
+
         accounts.values().stream().filter(l -> l.size() > 1).forEach(group -> {
             for (Slip s : group) {
                 String others = group.stream().filter(o -> o != s).map(Slip::name).collect(Collectors.joining(", "));

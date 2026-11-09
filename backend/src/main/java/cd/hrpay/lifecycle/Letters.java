@@ -59,6 +59,8 @@ public class Letters {
         m.put("employee.registration_no", "Registration no.");
         m.put("employee.birth_date", "Date of birth");
         m.put("employee.nationality", "Nationality");
+        m.put("employee.birth_place", "Place of birth");
+        m.put("employee.address", "Address");
         m.put("employee.email", "Email");
         m.put("employee.phone", "Phone");
         m.put("employee.hire_date", "Hire date");
@@ -203,7 +205,9 @@ public class Letters {
         if (p.birthDate() != null) {
             v.put("employee.birth_date", Texts.day(p.birthDate()));
         }
-        v.put("employee.nationality", p.nationality());
+        v.put("employee.nationality", files.nationality(p));
+        v.put("employee.birth_place", files.birthPlace(p));
+        v.put("employee.address", files.address(p));
         var contracts = files.contracts(userId);
         LocalDate hired = u.getHireDate() != null ? u.getHireDate()
                 : contracts.stream().map(EmployeeFile.Contract::startDate).min(LocalDate::compareTo).orElse(null);

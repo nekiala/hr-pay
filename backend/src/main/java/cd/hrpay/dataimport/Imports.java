@@ -70,16 +70,16 @@ public class Imports {
                 col("clock_pin", "Time clock number", false, "The number the person is enrolled under on the time clock. Empty: the registration number."),
                 col("birth_date", "Birth date", false, null),
                 col("gender", "Gender", false, "F or M."),
-                col("nationality", "Nationality", false, null),
+                col("nationality", "Nationality", false, "A country or nationality from the lists: Congolaise, RDC, Française, or the country code (CD, FR)."),
                 col("postnom", "Postnom", false, "The middle name, as on the identity card."),
-                col("commune", "Commune or territory", false, "Where the person lives, as the tax declaration asks."),
+                col("commune", "Commune or territory", false, "Where the person lives, from the lists of places. Two places with the same name: add the town, as in Kalamu (Boma)."),
                 col("marital_status", "Marital status", false, "Single, married, divorced or widowed."),
                 col("cnss_number", "CNSS number", false, null),
                 col("tax_number", "Tax number", false, null),
                 col("payment_method", "Payment method", false, "Bank, mobile money or cash."),
-                col("bank_name", "Bank", false, null),
+                col("bank_name", "Bank", false, "A bank from the lists: its name or short name (Rawbank, Equity BCDC, TMB)."),
                 col("bank_account", "Bank account", false, null),
-                col("mobile_money_operator", "Mobile money operator", false, "M-Pesa, Orange Money or Airtel Money."),
+                col("mobile_money_operator", "Mobile money operator", false, "An operator from the lists: M-Pesa, Orange Money, Airtel Money, Afrimoney."),
                 col("mobile_money_number", "Mobile money number", false, null)));
         COLUMNS.put(Kind.CONTRACTS, List.of(
                 col("registration_no", "Registration no.", true, null),
@@ -151,6 +151,9 @@ public class Imports {
 
     @org.springframework.beans.factory.annotation.Autowired
     private cd.hrpay.user.Contracts contracts;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.reference.References refs;
 
     public Imports(JdbcClient jdbc, UserService users, UserRepository userRepository, SiteRepository sites, OrgStructure org,
                    EmployeeFile employees, MasterData masterData, SalaryService salaries, LeaveService leave,
@@ -451,6 +454,44 @@ public class Imports {
         if (!row.errors.isEmpty()) {
             throw new RowFailed();
         }
+        // Nationality, bank, operator and commune come from the reference lists.
+        String home = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
+                .optional().orElse("CD");
+        String nationalityCode = p.nationalityCode();
+        if (row.text("nationality") != null) {
+            nationalityCode = refs.matchCountry(row.text("nationality"), home).orElse(null);
+            if (nationalityCode == null) {
+                row.errors.add(Texts.t("%s: %s is not in the list of countries.", row.header("nationality"), row.text("nationality")));
+            }
+        }
+        Long bankId = p.bankId();
+        if (row.text("bank_name") != null) {
+            bankId = refs.matchInstitution(row.text("bank_name"), home, "BANK").map(cd.hrpay.reference.References.Institution::id).orElse(null);
+            if (bankId == null) {
+                row.errors.add(Texts.t("%s: %s is not in the list of banks. Add it on the Reference lists page first.",
+                        row.header("bank_name"), row.text("bank_name")));
+            }
+        }
+        Long operatorId = p.mobileMoneyOperatorId();
+        if (row.text("mobile_money_operator") != null) {
+            operatorId = refs.matchInstitution(row.text("mobile_money_operator"), home, "MOBILE_MONEY")
+                    .map(cd.hrpay.reference.References.Institution::id).orElse(null);
+            if (operatorId == null) {
+                row.errors.add(Texts.t("%s: %s is not in the list of mobile money operators.", row.header("mobile_money_operator"),
+                        row.text("mobile_money_operator")));
+            }
+        }
+        Long addressPlaceId = p.addressPlaceId();
+        if (row.text("commune") != null) {
+            addressPlaceId = refs.matchPlace(row.text("commune"), home).map(cd.hrpay.reference.References.Place::id).orElse(null);
+            if (addressPlaceId == null) {
+                row.errors.add(Texts.t("%s: %s is not in the list of places, or two places have this name (add the town: Kalamu (Boma)).",
+                        row.header("commune"), row.text("commune")));
+            }
+        }
+        if (!row.errors.isEmpty()) {
+            throw new RowFailed();
+        }
         LocalDate birth = row.text("birth_date") == null ? p.birthDate() : row.date("birth_date");
         String bank = or(row.text("bank_name"), p.bankName());
         String account = or(row.text("bank_account"), p.bankAccount());
@@ -467,10 +508,12 @@ public class Imports {
                 method = "CASH";
             }
         }
-        employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, or(row.text("nationality"), p.nationality()),
+        employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, p.nationality(),
                 marital == null ? "SINGLE" : marital, or(row.text("cnss_number"), p.cnssNumber()), or(row.text("tax_number"), p.taxNumber()),
-                method, bank, account, operator, number, or(row.text("commune"), p.commune()),
-                p.nursingBreakUntil()));
+                method, bankId == null ? p.bankName() : null, account, operatorId == null ? p.mobileMoneyOperator() : null, number,
+                addressPlaceId == null ? p.commune() : null, p.nursingBreakUntil(), nationalityCode, p.birthCountryCode(),
+                p.birthPlaceId(), p.birthPlaceText(), addressPlaceId, p.addressQuarter(), p.addressStreet(), bankId, operatorId,
+                p.idDocumentType(), p.idDocumentNumber(), p.idDocumentIssuedOn(), p.idDocumentIssuedAt()));
     }
 
     private RowResult managerOf(Row row, RowResult r, Context ctx) {

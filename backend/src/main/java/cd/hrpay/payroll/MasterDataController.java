@@ -65,14 +65,25 @@ public class MasterDataController {
                                @Size(max = 40) String mobileMoneyOperator,
                                @Pattern(regexp = "\\+?[0-9 ]{8,20}") String mobileMoneyNumber,
                                @Size(max = 100) String commune,
-                               LocalDate nursingBreakUntil) {}
+                               LocalDate nursingBreakUntil,
+                               @Pattern(regexp = "[A-Za-z]{2}") String nationalityCode,
+                               @Pattern(regexp = "[A-Za-z]{2}") String birthCountryCode, Long birthPlaceId,
+                               @Size(max = 100) String birthPlaceText, Long addressPlaceId,
+                               @Size(max = 100) String addressQuarter, @Size(max = 200) String addressStreet,
+                               Long bankId, Long mobileMoneyOperatorId,
+                               @Pattern(regexp = "NATIONAL_ID|ELECTOR_CARD|PASSPORT|RESIDENCE_PERMIT|DRIVING_LICENCE|OTHER") String idDocumentType,
+                               @Size(max = 40) String idDocumentNumber, LocalDate idDocumentIssuedOn,
+                               @Size(max = 100) String idDocumentIssuedAt) {}
 
     public record DependantInput(@NotBlank @Size(max = 150) String fullName,
                                  @NotNull @Pattern(regexp = "SPOUSE|CHILD") String relationship, LocalDate birthDate,
                                  boolean inCharge, Boolean student, Boolean disabled, @Size(max = 300) String note) {}
 
+    /** The file, with the places picked (the top one first) so the lists open where they were left. */
     public record EmployeeFileView(List<EmployeeFile.Contract> contracts, EmployeeFile.Profile profile,
-                                   List<EmployeeFile.DependantRow> dependants) {}
+                                   List<EmployeeFile.DependantRow> dependants,
+                                   List<cd.hrpay.reference.References.Place> birthPlacePath,
+                                   List<cd.hrpay.reference.References.Place> addressPlacePath) {}
 
     private final MasterData masterData;
     private final EmployeeFile files;
@@ -82,6 +93,13 @@ public class MasterDataController {
     @org.springframework.beans.factory.annotation.Autowired
     void setClock(java.time.Clock clock) {
         this.clock = clock;
+    }
+
+    private cd.hrpay.reference.References refs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setRefs(cd.hrpay.reference.References refs) {
+        this.refs = refs;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -151,8 +169,10 @@ public class MasterDataController {
     @GetMapping("/users/{userId}/file")
     @PreAuthorize("hasAuthority('salary.read')")
     public EmployeeFileView file(@PathVariable long userId) {
-        return new EmployeeFileView(files.contracts(userId), files.profile(userId),
-                files.dependantRows(userId, java.time.LocalDate.now(clock)));
+        EmployeeFile.Profile profile = files.profile(userId);
+        return new EmployeeFileView(files.contracts(userId), profile,
+                files.dependantRows(userId, java.time.LocalDate.now(clock)), refs.path(profile.birthPlaceId()),
+                refs.path(profile.addressPlaceId()));
     }
 
     @PostMapping("/users/{userId}/contracts")
@@ -187,7 +207,10 @@ public class MasterDataController {
     public EmployeeFile.Profile saveProfile(@PathVariable long userId, @Valid @RequestBody ProfileInput b) {
         return files.saveProfile(userId, new EmployeeFile.Profile(b.birthDate(), b.gender(), b.nationality(),
                 b.maritalStatus(), b.cnssNumber(), b.taxNumber(), b.paymentMethod(), b.bankName(), b.bankAccount(),
-                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.commune(), b.nursingBreakUntil()));
+                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.commune(), b.nursingBreakUntil(), b.nationalityCode(),
+                b.birthCountryCode(), b.birthPlaceId(), b.birthPlaceText(), b.addressPlaceId(), b.addressQuarter(),
+                b.addressStreet(), b.bankId(), b.mobileMoneyOperatorId(), b.idDocumentType(), b.idDocumentNumber(),
+                b.idDocumentIssuedOn(), b.idDocumentIssuedAt()));
     }
 
     @PostMapping("/users/{userId}/dependants")
