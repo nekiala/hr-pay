@@ -1239,6 +1239,20 @@
      "unit": "XAF",
      "description": "Tax a year, at least, of a person paid below the minimum wage (CGI art. 116 G).",
      "display_order": 86
+    },
+    {
+     "code": "CHILD_AGE_LIMIT",
+     "name": "Child in charge, age limit",
+     "unit": "COUNT",
+     "description": "A child stops counting for family allowances and the tax reduction at this age, unless studying full time or disabled. Empty: no age check.",
+     "display_order": 320
+    },
+    {
+     "code": "CHILD_STUDENT_AGE_LIMIT",
+     "name": "Child studying full time, age limit",
+     "unit": "COUNT",
+     "description": "A child who studies full time counts until this age. A disabled child counts without age limit.",
+     "display_order": 321
     }
    ]
   },

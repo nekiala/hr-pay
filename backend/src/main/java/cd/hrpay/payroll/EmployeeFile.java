@@ -4,6 +4,7 @@ import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.BusinessRuleException;
 import cd.hrpay.common.ConflictException;
 import cd.hrpay.common.NotFoundException;
+import cd.hrpay.i18n.Texts;
 import cd.hrpay.salary.SalaryService;
 import cd.hrpay.security.CurrentUser;
 import cd.hrpay.user.AppUser;
@@ -34,7 +35,24 @@ public class EmployeeFile {
                           String commune, LocalDate nursingBreakUntil) {}
 
     public record Dependant(long id, String fullName, String relationship, LocalDate birthDate, boolean inCharge,
-                            String note) {}
+                            boolean student, boolean disabled, String note) {}
+
+    /**
+     * Whether a dependant counts for family allowances and the tax reduction on a day, until when, and why not. The
+     * worker's family is the spouse and the unmarried children until majority, until 25 if they study full time, and
+     * without age limit if a disability stops them earning a living (DRC Code du travail art. 7 point 11). The ages
+     * are the company's rates CHILD_AGE_LIMIT and CHILD_STUDENT_AGE_LIMIT; with no age limit set, a child in charge
+     * always counts.
+     */
+    public record Eligibility(boolean counts, LocalDate until, String reason) {}
+
+    /** A dependant as the employee file shows it, with whether they count today. */
+    public record DependantRow(long id, String fullName, String relationship, LocalDate birthDate, boolean inCharge,
+                               boolean student, boolean disabled, String note, Integer age, boolean counts,
+                               LocalDate countsUntil, String reason) {}
+
+    /** The children and all the dependants that count for a payroll month (on its first day). */
+    public record Counted(int children, int dependants) {}
 
     private static final String CONTRACT_SELECT = """
             select c.id, c.user_id, c.contract_type, c.start_date, c.end_date, c.grade_id, g.code as grade_code,
@@ -49,10 +67,12 @@ public class EmployeeFile {
     private final MasterData masterData;
     private final SalaryService salaries;
     private final AuditService audit;
+    private final StatutoryRates statutory;
 
     public EmployeeFile(JdbcClient jdbc, UserService users, MasterData masterData, SalaryService salaries,
-                        AuditService audit, cd.hrpay.security.DataCrypto crypto) {
+                        AuditService audit, cd.hrpay.security.DataCrypto crypto, StatutoryRates statutory) {
         this.jdbc = jdbc;
+        this.statutory = statutory;
         this.crypto = crypto;
         this.users = users;
         this.masterData = masterData;
@@ -119,6 +139,54 @@ public class EmployeeFile {
         return contracts(userId).stream().filter(c -> c.id() == id).findFirst().orElseThrow();
     }
 
+    /** Refuses a change from a day whose payroll month is approved or closed. */
+    void requireOpen(LocalDate from) {
+        PayrollRuns.requireOpen(jdbc, java.time.YearMonth.from(from));
+    }
+
+    /**
+     * Fixes the grade of the latest contract, typed wrongly: allowed while no closed payslip of the person covers the
+     * contract. The basic recorded at the contract's start follows when it was the old grade's.
+     */
+    @Transactional
+    public Contract correctGrade(long userId, long contractId, long gradeId) {
+        AppUser user = users.find(userId);
+        if (java.util.Objects.equals(userId, CurrentUser.id())) {
+            throw new org.springframework.security.access.AccessDeniedException("You cannot change your own contract.");
+        }
+        List<Contract> all = contracts(userId);
+        Contract c = all.stream().filter(x -> x.id() == contractId).findFirst()
+                .orElseThrow(() -> new NotFoundException("Contract not found."));
+        if (all.get(0).id() != contractId) {
+            throw new BusinessRuleException("Only the latest contract can be corrected. To change the grade from a date, use Change grade.");
+        }
+        MasterData.Grade old = masterData.grade(c.gradeId());
+        MasterData.Grade grade = masterData.grade(gradeId);
+        if (!grade.active()) {
+            throw new BusinessRuleException("This grade is no longer in use.");
+        }
+        if (gradeId == c.gradeId()) {
+            return c;
+        }
+        long closed = jdbc.sql("""
+                select count(*) from payslip p join payroll_run r on r.id = p.run_id
+                where p.user_id = ? and r.status <> 'CALCULATED' and r.month >= ?""")
+                .params(userId, c.startDate().withDayOfMonth(1)).query(Long.class).single();
+        if (closed > 0) {
+            throw new BusinessRuleException("A payroll already approved or closed uses this contract: use Change grade from a later date instead.");
+        }
+        jdbc.sql("update employee_contract set grade_id = ? where id = ?").params(gradeId, contractId).update();
+        user.setGradeCategoryId(grade.categoryId());
+        salaries.history(userId).stream()
+                .filter(s -> s.effectiveFrom().equals(c.startDate()) && s.grossMonthly().compareTo(old.baseSalary()) == 0
+                        && s.currency().equals(old.currency()))
+                .findFirst().ifPresent(s -> jdbc.sql("update employee_salary set gross_monthly = ?, currency = ?, note = ? where id = ?")
+                        .params(grade.baseSalary(), grade.currency(), "Grade " + grade.code() + " basic (corrected)", s.id()).update());
+        audit.record("contract.grade_corrected", "user", userId, Map.of("contractId", contractId, "from", old.code(),
+                "to", grade.code()));
+        return contracts(userId).stream().filter(x -> x.id() == contractId).findFirst().orElseThrow();
+    }
+
     public Profile profile(long userId) {
         return jdbc.sql("""
                 select birth_date, gender, nationality, marital_status, cnss_number, tax_number, payment_method,
@@ -166,33 +234,123 @@ public class EmployeeFile {
     }
 
     public List<Dependant> dependants(long userId) {
-        return jdbc.sql("select id, full_name, relationship, birth_date, in_charge, note from dependant where user_id = ? order by relationship desc, birth_date")
+        return jdbc.sql("""
+                select id, full_name, relationship, birth_date, in_charge, student, disabled, note from dependant
+                where user_id = ? order by relationship desc, birth_date""")
                 .param(userId).query(Dependant.class).list();
+    }
+
+    /** The dependants with whether each counts on a day. */
+    public List<DependantRow> dependantRows(long userId, LocalDate on) {
+        Integer[] limits = childLimits(on);
+        return dependants(userId).stream().map(d -> {
+            Eligibility e = eligibility(d, on, limits[0], limits[1]);
+            Integer age = d.birthDate() == null ? null : java.time.Period.between(d.birthDate(), on).getYears();
+            return new DependantRow(d.id(), d.fullName(), d.relationship(), d.birthDate(), d.inCharge(), d.student(),
+                    d.disabled(), d.note(), age, e.counts(), e.until(), e.reason());
+        }).toList();
+    }
+
+    /** The children and dependants that count for family allowances and the tax reduction in a month. */
+    public Counted counted(long userId, java.time.YearMonth month) {
+        LocalDate on = month.atDay(1);
+        Integer[] limits = childLimits(on);
+        int children = 0;
+        int all = 0;
+        for (Dependant d : dependants(userId)) {
+            if (eligibility(d, on, limits[0], limits[1]).counts()) {
+                all++;
+                if (d.relationship().equals("CHILD")) {
+                    children++;
+                }
+            }
+        }
+        return new Counted(children, all);
+    }
+
+    private Integer[] childLimits(LocalDate on) {
+        BigDecimal age = statutory.rateOrNull("CHILD_AGE_LIMIT", on);
+        BigDecimal student = statutory.rateOrNull("CHILD_STUDENT_AGE_LIMIT", on);
+        return new Integer[] {age == null || age.signum() <= 0 ? null : age.intValue(),
+                student == null || student.signum() <= 0 ? null : student.intValue()};
+    }
+
+    /** Whether a dependant counts on a day, given the age limits (null: none). */
+    static Eligibility eligibility(Dependant d, LocalDate on, Integer ageLimit, Integer studentLimit) {
+        if (!d.inCharge()) {
+            return new Eligibility(false, null, "Not in the employee's charge.");
+        }
+        if (d.relationship().equals("SPOUSE") || d.birthDate() == null || ageLimit == null) {
+            return new Eligibility(true, null, null);
+        }
+        if (d.disabled()) {
+            return new Eligibility(true, null, "Disabled: no age limit.");
+        }
+        LocalDate adult = d.birthDate().plusYears(ageLimit);
+        if (on.isBefore(adult)) {
+            LocalDate until = d.student() && studentLimit != null && studentLimit > ageLimit
+                    ? d.birthDate().plusYears(studentLimit).minusDays(1) : adult.minusDays(1);
+            return new Eligibility(true, until, null);
+        }
+        if (d.student() && studentLimit != null) {
+            LocalDate end = d.birthDate().plusYears(studentLimit);
+            if (on.isBefore(end)) {
+                return new Eligibility(true, end.minusDays(1), null);
+            }
+            return new Eligibility(false, null, Texts.t("Reached %s years.", studentLimit));
+        }
+        return new Eligibility(false, null, Texts.t("Reached %s years and does not study full time.", ageLimit));
     }
 
     @Transactional
     public Dependant addDependant(long userId, String name, String relationship, LocalDate birth, boolean inCharge,
-                                  String note) {
+                                  boolean student, boolean disabled, String note) {
         users.find(userId);
-        if (relationship.equals("SPOUSE") && dependants(userId).stream().anyMatch(d -> d.relationship().equals("SPOUSE"))) {
-            throw new ConflictException("A spouse is already recorded.");
-        }
-        if (relationship.equals("CHILD") && birth == null) {
-            throw new BusinessRuleException("Enter the child's date of birth; allowances depend on age.");
-        }
-        long id = jdbc.sql("insert into dependant (user_id, full_name, relationship, birth_date, in_charge, note) values (?, ?, ?, ?, ?, ?) returning id")
-                .params(userId, name.trim(), relationship, birth, inCharge, trim(note)).query(Long.class).single();
+        check(userId, null, relationship, birth);
+        long id = jdbc.sql("""
+                insert into dependant (user_id, full_name, relationship, birth_date, in_charge, student, disabled, note)
+                values (?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                .params(userId, name.trim(), relationship, birth, inCharge, child(relationship) && student,
+                        child(relationship) && disabled, trim(note)).query(Long.class).single();
         audit.record("dependant.added", "user", userId, Map.of("relationship", relationship, "name", name.trim()));
         return dependants(userId).stream().filter(d -> d.id() == id).findFirst().orElseThrow();
     }
 
     @Transactional
-    public void updateDependant(long userId, long id, boolean inCharge, String note) {
-        if (jdbc.sql("update dependant set in_charge = ?, note = ? where id = ? and user_id = ?")
-                .params(inCharge, trim(note), id, userId).update() == 0) {
-            throw new NotFoundException("Dependant not found.");
+    public void updateDependant(long userId, long id, String name, String relationship, LocalDate birth,
+                                boolean inCharge, boolean student, boolean disabled, String note) {
+        Dependant before = dependants(userId).stream().filter(d -> d.id() == id).findFirst()
+                .orElseThrow(() -> new NotFoundException("Dependant not found."));
+        check(userId, id, relationship, birth);
+        jdbc.sql("""
+                update dependant set full_name = ?, relationship = ?, birth_date = ?, in_charge = ?, student = ?,
+                                     disabled = ?, note = ?
+                where id = ? and user_id = ?""")
+                .params(name.trim(), relationship, birth, inCharge, child(relationship) && student,
+                        child(relationship) && disabled, trim(note), id, userId).update();
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("dependantId", id);
+        if (!before.fullName().equals(name.trim())) changes.put("name", name.trim());
+        if (!before.relationship().equals(relationship)) changes.put("relationship", relationship);
+        if (!java.util.Objects.equals(before.birthDate(), birth)) changes.put("birthDate", String.valueOf(birth));
+        changes.put("inCharge", inCharge);
+        changes.put("student", child(relationship) && student);
+        changes.put("disabled", child(relationship) && disabled);
+        audit.record("dependant.updated", "user", userId, changes);
+    }
+
+    private void check(long userId, Long self, String relationship, LocalDate birth) {
+        if (relationship.equals("SPOUSE") && dependants(userId).stream()
+                .anyMatch(d -> d.relationship().equals("SPOUSE") && !java.util.Objects.equals(d.id(), self))) {
+            throw new ConflictException("A spouse is already recorded.");
         }
-        audit.record("dependant.updated", "user", userId, Map.of("dependantId", id, "inCharge", inCharge));
+        if (child(relationship) && birth == null) {
+            throw new BusinessRuleException("Enter the child's date of birth; allowances depend on age.");
+        }
+    }
+
+    private static boolean child(String relationship) {
+        return relationship.equals("CHILD");
     }
 
     @Transactional

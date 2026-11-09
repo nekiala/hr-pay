@@ -1327,6 +1327,20 @@
      "unit": "PERCENT",
      "description": "Loan and advance installments together may take at most this share of the net pay; the rest waits.",
      "display_order": 110
+    },
+    {
+     "code": "CHILD_AGE_LIMIT",
+     "name": "Child in charge, age limit",
+     "unit": "COUNT",
+     "description": "A child stops counting for family allowances and the tax reduction at this age, unless studying full time or disabled. Empty: no age check.",
+     "display_order": 320
+    },
+    {
+     "code": "CHILD_STUDENT_AGE_LIMIT",
+     "name": "Child studying full time, age limit",
+     "unit": "COUNT",
+     "description": "A child who studies full time counts until this age. A disabled child counts without age limit.",
+     "display_order": 321
     }
    ]
   },

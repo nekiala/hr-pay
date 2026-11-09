@@ -95,9 +95,22 @@ public class UserService {
         return user;
     }
 
+    private org.springframework.jdbc.core.simple.JdbcClient jdbc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setJdbc(org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        this.jdbc = jdbc;
+    }
+
     @Transactional
     public AppUser setEmployment(Long id, Long gradeCategoryId, java.time.LocalDate hireDate) {
         AppUser user = find(id);
+        // With a contract, the category is the one of the contract's grade: it changes with the grade.
+        if (jdbc != null && !Objects.equals(gradeCategoryId, user.getGradeCategoryId())
+                && jdbc.sql("select exists (select 1 from employee_contract where user_id = ?)").param(id)
+                        .query(Boolean.class).single()) {
+            throw new BusinessRuleException("The grade category follows the grade of the contract: change the grade instead.");
+        }
         Map<String, Object> changes = new LinkedHashMap<>();
         track(changes, "gradeCategoryId", user.getGradeCategoryId(), gradeCategoryId);
         track(changes, "hireDate", user.getHireDate(), hireDate);

@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, download, days, money, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
+import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
+import { GradeChangeModal } from '../components/GradeChange'
 import { locale, plural, t } from '../i18n'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
@@ -400,19 +401,38 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
 }
 
 function EmploymentCard({ user, editable, onChange }: { user: User; editable: boolean; onChange: (u: User) => void }) {
+  const { can } = useAuth()
   const [categories, setCategories] = useState<GradeCategory[]>([])
+  const [contracts, setContracts] = useState<Contract[] | null>(null)
+  const [grades, setGrades] = useState<Grade[]>([])
   const [categoryId, setCategoryId] = useState(user.gradeCategoryId ? String(user.gradeCategoryId) : '')
   const [hireDate, setHireDate] = useState(user.hireDate ?? '')
+  const [gradeMode, setGradeMode] = useState<'change' | 'correct' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
-  useEffect(() => { api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch(() => undefined) }, [])
+  const loadContracts = () => can('salary.read')
+    ? api<EmployeeFileView>(`/api/users/${user.id}/file`).then((f) => setContracts(f.contracts)).catch(() => setContracts(null))
+    : Promise.resolve()
+  useEffect(() => {
+    api<GradeCategory[]>('/api/leave/categories').then(setCategories).catch(() => undefined)
+    api<Grade[]>('/api/grades').then(setGrades).catch(() => undefined)
+    loadContracts()
+  }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const today = new Date().toISOString().slice(0, 10)
+  const current = contracts?.find((c) => c.startDate <= today && (!c.endDate || c.endDate >= today)) ?? contracts?.[0] ?? null
+  const latest = contracts?.[0] ?? null
+  const grade = current ? grades.find((g) => g.id === current.gradeId) : undefined
+  const upcoming = contracts?.find((c) => c.startDate > today)
+  // With a contract, the category is the one of its grade.
+  const categoryFollowsGrade = (contracts?.length ?? 0) > 0
 
   const save = async () => {
     setError(null)
     setMessage(null)
     try {
       onChange(await api<User>(`/api/users/${user.id}/employment`, {
-        method: 'PUT', body: { gradeCategoryId: categoryId ? Number(categoryId) : null, hireDate: hireDate || null },
+        method: 'PUT', body: { gradeCategoryId: categoryFollowsGrade ? user.gradeCategoryId : categoryId ? Number(categoryId) : null, hireDate: hireDate || null },
       }))
       setMessage(t('Saved.'))
     } catch (e) {
@@ -420,18 +440,45 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
     }
   }
 
+  const gradeSaved = async () => {
+    setGradeMode(null)
+    setMessage(t('Grade saved.'))
+    await loadContracts()
+    onChange(await api<User>(`/api/users/${user.id}`))
+  }
+
   return (
     <div className="card">
       <h3>{t('Employment')}</h3>
+      {contracts !== null && (
+        <div className="row">
+          <span>
+            {t('Grade')}:{' '}
+            {current
+              ? <><strong>{current.gradeCode}</strong> · {current.gradeName}{grade ? <span className="muted"> · {grade.categoryName} · {t('basic')} {money(grade.baseSalary, grade.currency)}</span> : null}</>
+              : <span className="muted">{t('No contract yet: the grade is set with the contract.')}</span>}
+            {upcoming && upcoming !== current && <span className="badge info" style={{ marginLeft: 8 }}>{t('{g} from {d}', { g: upcoming.gradeCode, d: upcoming.startDate })}</span>}
+          </span>
+          {can('salary.write') && current && <Button className="secondary" onClick={() => setGradeMode('change')}>{t('Change grade')}</Button>}
+          {can('salary.write') && latest && <Button className="secondary void" onClick={() => setGradeMode('correct')}>{t('Correct')}</Button>}
+          {can('salary.write') && !current && <Link className="button secondary" to={`/users/${user.id}/file`}>{t('Start a contract')}</Link>}
+        </div>
+      )}
+      {gradeMode && (gradeMode === 'change' ? current : latest) && (
+        <GradeChangeModal userId={user.id} contract={(gradeMode === 'change' ? current : latest)!} mode={gradeMode}
+          onClose={() => setGradeMode(null)} onDone={() => gradeSaved()} />
+      )}
       <div className="grid2">
-        <label>{t('Grade category')}<select value={categoryId} disabled={!editable} onChange={(e) => setCategoryId(e.target.value)}>
+        <label>{t('Grade category')}<select value={categoryFollowsGrade ? String(user.gradeCategoryId ?? '') : categoryId} disabled={!editable || categoryFollowsGrade} onChange={(e) => setCategoryId(e.target.value)}>
             <option value="">{t('None')}</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)}{' '}{t('leave)')}</option>)}
           </select>
         </label>
         <label>{t('Hire date')}<input type="date" value={hireDate} disabled={!editable} onChange={(e) => setHireDate(e.target.value)} /></label>
       </div>
-      <p className="hint">{t('The grade category sets the yearly annual leave. Grades and pay scales come with payroll.')}</p>
+      <p className="hint">{categoryFollowsGrade
+        ? t('The grade category follows the grade of the contract and sets the yearly annual leave.')
+        : t('The grade category sets the yearly annual leave. Once a contract is recorded, it follows the contract\'s grade.')}</p>
       {editable && <Button className="secondary" onClick={() => save()}>{t('Save employment')}</Button>}
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}

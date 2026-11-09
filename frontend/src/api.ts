@@ -713,7 +713,12 @@ export type Profile = {
   mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; postnom: string | null; commune: string | null
   nursingBreakUntil?: string | null
 }
-export type Dependant = { id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean; note: string | null }
+export type Dependant = {
+  id: number; fullName: string; relationship: 'SPOUSE' | 'CHILD'; birthDate: string | null; inCharge: boolean
+  student: boolean; disabled: boolean; note: string | null
+  /** Whether the person counts today for family allowances and the tax reduction (Code du travail art. 7). */
+  age: number | null; counts: boolean; countsUntil: string | null; reason: string | null
+}
 export type EmployeeFileView = { contracts: Contract[]; profile: Profile; dependants: Dependant[] }
 export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant') }
 

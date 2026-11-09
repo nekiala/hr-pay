@@ -274,9 +274,9 @@ public class LeaveAllowances {
         List<PayElements.Element> plain = pay.elements().stream().map(e -> new PayElements.Element(e.id(), e.code(), e.name(),
                 e.kind(), e.method(), e.defaultAmount(), e.defaultCurrency(), e.percent(), e.subjectToCnss(), e.taxableIpr(),
                 e.iprExemptCapPercent(), e.prorated(), false, e.system(), e.displayOrder(), e.active())).toList();
-        List<EmployeeFile.Dependant> deps = files.dependants(d.userId());
-        int children = (int) deps.stream().filter(x -> x.inCharge() && x.relationship().equals("CHILD")).count();
-        int inCharge = (int) deps.stream().filter(EmployeeFile.Dependant::inCharge).count();
+        EmployeeFile.Counted counted = files.counted(d.userId(), ym);
+        int children = counted.children();
+        int inCharge = counted.dependants();
         boolean expatriate = files.contractOn(d.userId(), start).map(EmployeeFile.Contract::expatriate).orElse(false);
         PayslipCalculator.Result r = PayslipCalculator.calculate(new PayslipCalculator.Input(cur, BigDecimal.ZERO, 1, 1, 1, 0,
                 BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, plain, List.of(), entries, List.of(), rates));
