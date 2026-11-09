@@ -10,7 +10,7 @@
 	@internal path /actuator/*
 	respond @internal 404
 
-	reverse_proxy app:8081 {
+	reverse_proxy app:8082 {
 		health_uri /actuator/health/readiness
 		health_interval 5s
 	}
@@ -30,7 +30,7 @@
 http://{$DOMAIN} {
 	@clock path /iclock/*
 	handle @clock {
-		reverse_proxy app:8081
+		reverse_proxy app:8082
 	}
 	handle {
 		redir https://{host}{uri} permanent

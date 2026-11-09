@@ -1,9 +1,9 @@
 (function () {
   // The app's address (sign-in, trial form, status, terms) and the demo server's, set once on <body>. Opened from a
-  // developer's machine, the page uses the local app instead (frontend on 5173, API on 8081).
+  // developer's machine, the page uses the local app instead (frontend on 5173, API on 8082).
   var local = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   var app = local ? 'http://localhost:5173' : document.body.dataset.app;
-  var api = local ? 'http://localhost:8081' : (document.body.dataset.api || document.body.dataset.app);
+  var api = local ? 'http://localhost:8082' : (document.body.dataset.api || document.body.dataset.app);
   var demo = document.body.dataset.demo;
   var lang = /(^|[?&])lang=en/.test(location.search) ? 'en'
     : /(^|[?&])lang=fr/.test(location.search) ? 'fr'

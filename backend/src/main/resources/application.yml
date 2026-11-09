@@ -26,7 +26,7 @@ spring:
       cleanup-cron: "0 */5 * * * *"
 
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:8082}
   # Set to "native" behind a reverse proxy so the client IP (used for site checks) comes from X-Forwarded-For.
   forward-headers-strategy: ${FORWARD_HEADERS:none}
   servlet:
