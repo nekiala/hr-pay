@@ -109,6 +109,22 @@ public class PaymentController {
                 b.rccm(), b.inppNumber(), b.onemNumber(), b.bankName(), b.bankAccount(), b.bankId()));
     }
 
+    public record RepresentativeInput(@jakarta.validation.constraints.Size(max = 150) String name,
+                                      @jakarta.validation.constraints.Size(max = 100) String title,
+                                      @jakarta.validation.constraints.Size(max = 100) String signingPlace) {}
+
+    @GetMapping("/company/representative")
+    @PreAuthorize("hasAuthority('company.manage') or hasAuthority('lifecycle.manage')")
+    public Company.Representative representative() {
+        return company.representative();
+    }
+
+    @PutMapping("/company/representative")
+    @PreAuthorize("hasAuthority('company.manage')")
+    public Company.Representative saveRepresentative(@Valid @RequestBody RepresentativeInput b) {
+        return company.saveRepresentative(new Company.Representative(b.name(), b.title(), b.signingPlace()));
+    }
+
     @GetMapping("/company/payslip-settings")
     @PreAuthorize("isAuthenticated()")
     public Company.PayslipSettings payslipSettings() {

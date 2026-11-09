@@ -66,7 +66,7 @@ public class MyDocumentsController {
     private static Letters.Letter withoutBody(Letters.Letter l) {
         return new Letters.Letter(l.id(), l.userId(), l.employeeName(), l.templateId(), l.kind(), l.number(), l.title(), null,
                 l.requiresSignature(), l.status(), l.sha256(), null, l.sentByName(), l.sentAt(), l.signedSha256(), l.signedAt(),
-                l.signedName(), null, l.declinedReason(), l.documentId(), null, l.createdAt());
+                l.signedName(), null, l.declinedReason(), l.documentId(), null, l.createdAt(), l.contractId(), l.signableFrom());
     }
 
     @GetMapping("/documents/{id}/file")

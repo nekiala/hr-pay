@@ -21,6 +21,9 @@ public class Company {
 
     public record Logo(String contentType, byte[] data) {}
 
+    /** Who signs contracts for the employer (its legal representative), and the town documents are signed in. */
+    public record Representative(String name, String title, String signingPlace) {}
+
     private static final java.util.Set<String> LOGO_TYPES = java.util.Set.of("image/png", "image/jpeg");
     private static final int LOGO_MAX_BYTES = 512 * 1024;
 
@@ -74,6 +77,22 @@ public class Company {
                 .update();
         audit.record("company.updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("name", d.name().trim()));
         return get();
+    }
+
+    public Representative representative() {
+        return jdbc.sql("select representative_name as name, representative_title as title, signing_place "
+                        + "from company where id = current_company_id()").query(Representative.class).optional()
+                .orElse(new Representative(null, null, null));
+    }
+
+    @Transactional
+    public Representative saveRepresentative(Representative r) {
+        jdbc.sql("update company set representative_name = ?, representative_title = ?, signing_place = ?, updated_by = ?, "
+                        + "updated_at = now() where id = current_company_id()")
+                .params(blank(r.name()), blank(r.title()), blank(r.signingPlace()), CurrentUser.email()).update();
+        audit.record("company.representative_updated", "company", cd.hrpay.tenancy.TenantContext.companyId(),
+                Map.of("name", r.name() == null ? "" : r.name()));
+        return representative();
     }
 
     public PayslipSettings payslipSettings() {

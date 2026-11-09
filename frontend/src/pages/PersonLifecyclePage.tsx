@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
-  api, CERTIFICATE_KINDS, CERTIFICATE_STATUS, CHECKLIST_KINDS, DOC_SOURCES, fileSize, fileToBase64, LETTER_KINDS, LETTER_STATUS, longDay, openFile,
-  type CertificateKind, type Checklist, type ChecklistKind, type DocumentType, type Letter, type LetterDraft, type LetterKind, type LetterTemplate,
+  api, CERTIFICATE_KINDS, CERTIFICATE_STATUS, CHECKLIST_KINDS, DOC_SOURCES, download, fileSize, fileToBase64, LETTER_KINDS, LETTER_STATUS, longDay, openFile,
+  type CertificateKind, type ContractIssue, type Checklist, type ChecklistKind, type DocumentType, type Letter, type LetterDraft, type LetterKind, type LetterTemplate,
   type PersonLifecycle, type User,
   personName,
 } from '../api'
@@ -10,6 +10,7 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
+import { ContractIssues } from '../components/ContractDocument'
 import { t } from '../i18n'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -26,7 +27,7 @@ export default function PersonLifecyclePage() {
   const [info, setInfo] = useState<string | null>(null)
   const [upload, setUpload] = useState(false)
   const [lend, setLend] = useState(false)
-  const [letter, setLetter] = useState<{ id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[] } | null>(null)
+  const [letter, setLetter] = useState<{ id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[]; issues?: ContractIssue[] } | null>(null)
 
   const load = () => api<PersonLifecycle>(`/api/lifecycle/people/${userId}`).then(setData).catch((e: Error) => setError(e.message))
   useEffect(() => {
@@ -207,7 +208,7 @@ function ChecklistCard({ checklist: c, onChange, onError }: { checklist: Checkli
 function LettersCard({ letters, userId, onOpen, onRun, onEdit }: {
   letters: Letter[]; userId: number; onOpen: (path: string) => void
   onRun: (f: () => Promise<unknown>, done?: string) => Promise<void>
-  onEdit: (d: { id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[] }) => void
+  onEdit: (d: { id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[]; issues?: ContractIssue[] }) => void
 }) {
   const ask = useAsk()
   const [templates, setTemplates] = useState<LetterTemplate[]>([])
@@ -221,7 +222,7 @@ function LettersCard({ letters, userId, onOpen, onRun, onEdit }: {
     }
     const d = await api<LetterDraft>(`/api/lifecycle/people/${userId}/letters/preview`, { method: 'POST', body: { templateId: tpl.id } })
     // The template's own text is kept, with its fields: they are filled in when it is sent.
-    onEdit({ templateId: tpl.id, title: tpl.name, body: tpl.body, kind: tpl.kind, requiresSignature: tpl.requiresSignature, missing: d.missing })
+    onEdit({ templateId: tpl.id, title: tpl.name, body: tpl.body, kind: tpl.kind, requiresSignature: tpl.requiresSignature, missing: d.missing, issues: d.issues })
   }
   return (
     <div className="card">
@@ -245,12 +246,14 @@ function LettersCard({ letters, userId, onOpen, onRun, onEdit }: {
                 <td>{l.title} <span className="small muted">{LETTER_KINDS[l.kind]}</span>
                   {l.status === 'SIGNED' && <div className="small muted">{t('Signed {a} as “{b}”', { a: longDay(l.signedAt), b: l.signedName })}</div>}
                   {l.status === 'DECLINED' && l.declinedReason && <div className="small muted">{l.declinedReason}</div>}
+                  {l.status === 'SENT' && l.signableFrom && <div className="small muted">{t('Can be signed from {a} (two working days to read the draft).', { a: longDay(l.signableFrom) })}</div>}
                 </td>
                 <td>{l.number ?? '—'}</td>
                 <td><span className={LETTER_STATUS[l.status][1]}>{l.requiresSignature || l.status !== 'SENT' ? LETTER_STATUS[l.status][0] : t('Sent')}</span></td>
                 <td>
                   <div className="row">
                     <Button className="secondary" onClick={() => onOpen(`/api/lifecycle/letters/${l.id}/file`)}>{l.status === 'DRAFT' ? t('Preview') : t('PDF')}</Button>
+                    <Button className="secondary" onClick={() => download(`/api/lifecycle/letters/${l.id}/word`, `${l.number ?? 'draft-' + l.id}.docx`)}>{t('Word')}</Button>
                     {l.status === 'DRAFT' && <Button className="secondary" onClick={() => onEdit({ id: l.id, templateId: l.templateId, title: l.title, body: l.body ?? '', kind: l.kind, requiresSignature: l.requiresSignature, missing: [] })}>{t('Edit')}</Button>}
                     {l.status === 'DRAFT' && <Button onClick={() => ask({
                       title: t('Send {a}?', { a: l.title }),
@@ -372,7 +375,7 @@ function LendModal({ userId, onClose, onDone }: { userId: number; onClose: () =>
 
 function LetterModal({ userId, draft, onClose, onDone }: {
   userId: number
-  draft: { id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[] }
+  draft: { id?: number; templateId: number | null; title: string; body: string; kind: LetterKind; requiresSignature: boolean; missing: string[]; issues?: ContractIssue[] }
   onClose: () => void; onDone: () => Promise<void>
 }) {
   const [form, setForm] = useState(draft)
@@ -401,6 +404,7 @@ function LetterModal({ userId, draft, onClose, onDone }: {
           )}
         </div>
         <label>{t('Text')}<textarea className="template" required maxLength={50_000} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
+        {form.kind === 'CONTRACT' && form.issues && <ContractIssues issues={form.issues} />}
         {form.missing.length > 0 && (
           <p className="notice small">{t('Not known yet for this person, fill in their file or replace in the text before sending: {a}.', { a: form.missing.map((k) => fields[k] ?? k).join(', ') })}</p>
         )}

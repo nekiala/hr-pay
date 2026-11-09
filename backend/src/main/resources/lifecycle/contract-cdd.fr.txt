@@ -1,0 +1,108 @@
+## Parties
+Entre {{company.name}}, RCCM {{company.rccm}}, Identification nationale {{company.national_id}}, dont le siège est situé {{company.address}}, représentée par {{company.representative}}, {{company.representative_title}}, ci-après « l'Employeur »,
+
+et {{employee.civility}} {{employee.name}}, matricule {{employee.registration_no}}, {{employee.born}} le {{employee.birth_date}} à {{employee.birth_place}}, de nationalité {{employee.nationality}}, ci-après « le Travailleur ». Son identité complète et sa situation familiale figurent à l'annexe du présent contrat.
+
+## Article 1 - Objet et fonction
+L'Employeur engage le Travailleur en qualité de {{job.title}}, au sein de {{unit.path}}, sous l'autorité du supérieur hiérarchique : {{contract.supervisor}}. Les responsabilités figurent dans la fiche de poste.
+
+## Article 2 - Durée et terme
+Le présent contrat est conclu pour une durée déterminée de {{contract.duration}}, pour le motif suivant : {{contract.reason}}. Il prend effet le {{contract.start}} et prend fin le {{contract.end}}. Il prend automatiquement fin à l'arrivée de son terme, sauf renouvellement ou prolongation expressément convenu par écrit entre les parties, conformément aux dispositions légales et réglementaires applicables.
+
+## Article 3 - Renouvellement
+Aucun renouvellement n'est automatique. Tout renouvellement doit être juridiquement admissible, documenté et formalisé par écrit avant l'expiration du contrat, dans les limites de l'article 41 du Code du travail et de l'arrêté ministériel n° 063/CAB/PVPM/ETPS/2011.
+
+## Article 4 - Période d'essai
+Le contrat comporte une période d'essai de {{contract.trial}}, expressément stipulée et limitée conformément à l'article 43 du Code du travail.
+
+## Article 5 - Catégorie et grade
+Catégorie professionnelle : {{job.category}}. Grade : {{job.grade_code}}, échelon : {{job.echelon}}. Toute modification substantielle est documentée conformément au droit applicable.
+
+## Article 6 - Lieu de travail et mobilité
+Le lieu principal de travail est {{contract.work_place}}. Le Travailleur peut être appelé à travailler dans tout bureau ou représentation de l'Employeur, chez un client, en télétravail, en province ou à l'étranger dans le cadre d'une mission.
+
+## Article 7 - Télétravail
+Le télétravail peut être autorisé selon le poste et les nécessités du service. Il demeure soumis aux horaires, exigences de disponibilité, performance, confidentialité et cybersécurité définies par les politiques de l'Employeur.
+
+## Article 8 - Durée et horaires de travail
+La durée normale du travail est de {{contract.hours}}. Les heures supplémentaires autorisées sont traitées conformément à la législation.
+
+## Article 9 - Rémunération
+La rémunération mensuelle convenue est de {{salary.gross}}, soit un salaire de base de {{salary.basic}} et un complément de salaire de {{salary.complement}}. Elle est détaillée dans la fiche individuelle de rémunération. S'y ajoutent les allocations familiales et les avantages prévus par la loi.
+
+## Article 10 - Paiement
+La rémunération est payée mensuellement, normalement par virement bancaire. Un autre moyen légal et traçable peut être utilisé lorsque les circonstances le justifient. Un bulletin de paie est remis au Travailleur.
+
+## Article 11 - Primes et avantages
+Le Travailleur peut bénéficier de transport, logement, prime de fonction, prime de performance, bonus, avantages professionnels et autres éléments prévus dans sa fiche de rémunération ou les politiques applicables.
+
+## Article 12 - Obligations fiscales et sociales
+L'Employeur effectue les formalités d'affiliation, déclarations, retenues et cotisations sociales, fiscales et administratives requises, notamment auprès de la CNSS et des organismes compétents.
+
+## Article 13 - Congés de circonstance et absences
+Le Travailleur bénéficie des congés de circonstance prévus par la loi et par les politiques de l'Employeur. Toute absence doit être signalée et justifiée.
+
+## Article 14 - Maternité, maladie et incapacité
+La travailleuse bénéficie du congé de maternité légal de quatorze semaines consécutives, ainsi que des protections liées à la grossesse, à l'accouchement et à l'allaitement prévues par la législation. La maladie, les accidents et l'incapacité sont traités conformément au droit applicable et aux dispositions plus favorables de l'Employeur.
+
+## Article 15 - Soins de santé
+L'Employeur assure les obligations légales de prise en charge médicale du Travailleur et des bénéficiaires reconnus, complétées le cas échéant par sa politique de prise en charge médicale. Aptitude au travail : {{contract.medical}}.
+
+## Article 16 - Missions et frais professionnels
+Le Travailleur peut être envoyé en mission en RDC ou à l'étranger. Les per diem, transports, logements et autres frais sont régis par la politique de missions en vigueur.
+
+## Article 17 - Matériel professionnel
+L'Employeur peut remettre ordinateur, téléphone, carte SIM, modem, casque, badge, équipements de protection, licences, comptes ou véhicule. Ces biens restent la propriété de l'Employeur ou du tiers propriétaire et font l'objet d'une fiche de remise.
+
+## Article 18 - Confidentialité
+Le Travailleur protège toute information non publique, notamment données clients, code source, bases de données, architectures, contrats, prix, informations financières et RH, identifiants, secrets et informations stratégiques. Cette obligation survit à la fin du contrat lorsque sa nature le justifie.
+
+## Article 19 - Propriété intellectuelle
+Les créations réalisées dans le cadre des fonctions ou projets professionnels sont régies par la législation et les accords de l'Employeur en matière de propriété intellectuelle. Le Travailleur ne peut exploiter à titre personnel les actifs intellectuels de l'Employeur ou de ses clients.
+
+## Article 20 - Cybersécurité, cloud et intelligence artificielle
+Le Travailleur respecte la charte informatique, les règles de cybersécurité et la politique d'usage de l'intelligence artificielle. Il est notamment interdit de divulguer mots de passe, clés, données confidentielles ou code source à des services non autorisés.
+
+## Article 21 - Exclusivité et conflits d'intérêts
+Sauf autorisation écrite préalable, le Travailleur ne peut exercer un second emploi, du freelancing, du consulting ou une activité concurrente ou incompatible. Il déclare tout conflit d'intérêts et ne peut détourner clientèle, collaborateurs ou opportunités.
+
+## Article 22 - Évaluation professionnelle
+Les performances sont évaluées périodiquement sur la base des objectifs, indicateurs, qualité, délais, compétences, collaboration, respect des procédures et autres critères pertinents.
+
+## Article 23 - Discipline
+Le Travailleur est soumis au règlement d'entreprise. Toute procédure disciplinaire respecte la législation, le principe de proportionnalité, les droits d'explication et les sanctions légalement admissibles.
+
+## Article 24 - Arrivée du terme et préavis
+Sous réserve des dispositions impératives, le contrat prend fin à l'échéance convenue. Préavis : {{contract.notice}}. L'Employeur accomplit les formalités de sortie et règle les droits légalement dus.
+
+## Article 25 - Rupture avant terme
+La cessation anticipée du contrat n'est admise que dans les cas et conditions prévus par la législation. Toute cessation anticipée est formalisée par écrit.
+
+## Article 26 - Poursuite au-delà du terme
+Avant l'échéance, l'Employeur détermine si la relation prend fin, si un renouvellement légal est possible ou si un contrat à durée indéterminée est justifié. La poursuite informelle du travail au-delà du terme doit être évitée.
+
+## Article 27 - Absence de promesse de contrat à durée indéterminée
+Le présent contrat ne constitue pas une promesse de contrat à durée indéterminée, sans préjudice de toute conséquence ou requalification imposée par la législation.
+
+## Article 28 - Restitution et départ
+À la cessation des fonctions, le Travailleur assure la passation raisonnablement nécessaire et restitue biens, équipements, documents et données. Les accès sont désactivés ; aucun mot de passe personnel ne doit être transmis.
+
+## Article 29 - Données personnelles
+L'Employeur traite les données personnelles nécessaires à la relation de travail dans le respect du cadre applicable, avec un accès limité aux personnes habilitées et des mesures de sécurité appropriées.
+
+## Article 30 - Documents de référence
+Le contrat est complété notamment par la fiche individuelle, la fiche de poste, la fiche de classification, la fiche de rémunération, le règlement d'entreprise et les politiques applicables de l'Employeur. Le Travailleur reconnaît en avoir reçu communication.
+
+## Article 31 - Droit applicable et différends
+Le contrat est régi par le droit de la République Démocratique du Congo. Les parties privilégient la résolution amiable avant, le cas échéant, la saisine des mécanismes administratifs ou juridictionnels compétents.
+
+## Article 32 - Clause de sauvegarde
+Toute disposition moins favorable qu'une règle impérative est remplacée par cette dernière. La nullité d'une clause n'entraîne pas celle de l'ensemble du contrat. Le contrat est établi en quatre exemplaires, dont un projet remis au Travailleur au moins deux jours ouvrables avant sa signature, et soumis au visa de l'ONEM dans les quinze jours de sa signature.
+
+---
+
+Références juridiques principales : Loi n° 015/2002 du 16 octobre 2002 portant Code du travail, telle que modifiée et complétée par la Loi n° 16/010 du 15 juillet 2016 ; arrêtés ministériels n° 062/CAB/PVPM/ETPS/2011 (forme, preuve et visa du contrat) et n° 063/CAB/PVPM/ETPS/2011 (renouvellement du contrat à durée déterminée) ; Acte uniforme OHADA relatif au droit des sociétés commerciales et du GIE pour la qualité et les pouvoirs du représentant.
+
+Règle de contrôle CDD : avant signature ou renouvellement, les RH vérifient que le besoin n'est pas un emploi permanent, que la durée et le nombre de contrats à durée déterminée restent dans les limites légales, et qu'aucune clause de préavis ordinaire ne permet une rupture anticipée contraire au Code du travail.
+
+Signatures et preuve : le présent contrat est signé par les parties sur support papier ou au moyen d'un procédé de signature électronique permettant d'identifier le signataire et de garantir l'intégrité du document. Une copie durable est remise à chaque partie.

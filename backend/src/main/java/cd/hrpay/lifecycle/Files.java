@@ -21,6 +21,14 @@ final class Files {
                 .body(data);
     }
 
+    /** Downloaded, with its name. */
+    static ResponseEntity<byte[]> attachment(String name, String contentType, byte[] data) {
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(name, StandardCharsets.UTF_8).build().toString())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(data);
+    }
+
     static byte[] decode(String base64) {
         try {
             String b = base64.contains(",") && base64.startsWith("data:") ? base64.substring(base64.indexOf(',') + 1) : base64;

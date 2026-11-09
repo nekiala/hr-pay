@@ -138,6 +138,7 @@ function SignModal({ letter, onOpen, onClose, onDone }: { letter: Letter; onOpen
   }
   const channels = (sent?.channels ?? []).map((c) => (c === 'EMAIL' ? t('email') : c === 'WHATSAPP' ? 'WhatsApp' : c)).join(t(' and '))
 
+  const early = !!letter.signableFrom && letter.signableFrom > new Date().toISOString().slice(0, 10)
   return (
     <Modal title={letter.title} onClose={onClose}>
       <p className="small muted">{t('No. {a}', { a: letter.number })} · {t('sent {a} by {b}', { a: longDay(letter.sentAt), b: letter.sentByName })}</p>
@@ -147,7 +148,9 @@ function SignModal({ letter, onOpen, onClose, onDone }: { letter: Letter; onOpen
         </li>
         {!declining && (
           <li>
-            {!sent ? (
+            {early ? (
+              <p className="notice">{t('You can sign from {a}: the law gives you two working days to read the draft of your contract (Labour Code art. 46).', { a: longDay(letter.signableFrom) })}</p>
+            ) : !sent ? (
               <Button disabled={!read} onClick={askCode}>{t('Send me a code to sign')}</Button>
             ) : (
               <Form onSubmit={sign} className="stack">

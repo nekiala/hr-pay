@@ -1,0 +1,106 @@
+## Parties
+Between {{company.name}}, RCCM {{company.rccm}}, national identification {{company.national_id}}, whose registered office is at {{company.address}}, represented by {{company.representative}}, {{company.representative_title}}, hereafter "the Employer",
+
+and {{employee.civility}} {{employee.name}}, registration no. {{employee.registration_no}}, born on {{employee.birth_date}} in {{employee.birth_place}}, of {{employee.nationality}} nationality, hereafter "the Employee". The Employee's full identity and family situation are set out in the annex to this contract.
+
+## Article 1 - Purpose and position
+The Employer engages the Employee as {{job.title}}, in {{unit.path}}, reporting to: {{contract.supervisor}}. The responsibilities are set out in the job description.
+
+## Article 2 - Duration
+This contract is concluded for an indefinite period. It takes effect on {{contract.start}}.
+
+## Article 3 - Seniority
+The Employee's seniority runs from {{employee.hire_date}}.
+
+## Article 4 - Trial period
+The contract includes a trial period of {{contract.trial}}, expressly stipulated and limited in accordance with article 43 of the Labour Code.
+
+## Article 5 - Category and grade
+Professional category: {{job.category}}. Grade: {{job.grade_code}}, step: {{job.echelon}}. Any substantial change is documented in accordance with the applicable law.
+
+## Article 6 - Place of work and mobility
+The main place of work is {{contract.work_place}}. The Employee may be asked to work in any office of the Employer, at a client's premises, remotely, in the provinces or abroad on a mission.
+
+## Article 7 - Remote work
+Remote work may be allowed depending on the position and the needs of the service. It remains subject to the working hours, availability, performance, confidentiality and cybersecurity requirements set by the Employer's policies.
+
+## Article 8 - Working time
+Normal working time is {{contract.hours}}. Authorised overtime is handled in accordance with the law.
+
+## Article 9 - Pay
+The agreed monthly pay is {{salary.gross}}, made of a basic salary of {{salary.basic}} and a salary complement of {{salary.complement}}. It is detailed in the individual pay sheet. Family allowances and the benefits provided by law are added.
+
+## Article 10 - Payment
+Pay is paid monthly, normally by bank transfer. Another lawful and traceable means may be used when circumstances justify it. A payslip is given to the Employee.
+
+## Article 11 - Bonuses and benefits
+The Employee may receive transport, housing, position allowance, performance bonus, other bonuses, professional benefits and other items set out in the pay sheet or the applicable policies.
+
+## Article 12 - Tax and social obligations
+The Employer carries out the registrations, declarations, withholdings and social, tax and administrative contributions required, in particular with the CNSS and the competent bodies.
+
+## Article 13 - Special leave and absences
+The Employee is entitled to the special leave provided by law and by the Employer's policies. Any absence must be reported and justified.
+
+## Article 14 - Maternity, illness and incapacity
+A female employee is entitled to the statutory maternity leave of fourteen consecutive weeks, and to the protections of pregnancy, childbirth and breastfeeding provided by law. Illness, accidents and incapacity are handled under the applicable law and any more favourable provisions of the Employer.
+
+## Article 15 - Health care
+The Employer meets the legal obligations of medical care for the Employee and the recognised beneficiaries, completed where applicable by its medical care policy. Fitness for work: {{contract.medical}}.
+
+## Article 16 - Missions and business expenses
+The Employee may be sent on missions in the DRC or abroad. Per diems, transport, accommodation and other expenses follow the missions policy in force.
+
+## Article 17 - Work equipment
+The Employer may hand over a computer, phone, SIM card, modem, headset, badge, protective equipment, licences, accounts or a vehicle. These remain the property of the Employer or of the third-party owner and are recorded on a hand-over sheet.
+
+## Article 18 - Confidentiality
+The Employee protects all non-public information, in particular client data, source code, databases, architectures, contracts, prices, financial and HR information, credentials, secrets and strategic information. This obligation survives the end of the contract where its nature warrants.
+
+## Article 19 - Intellectual property
+Works created in the course of the Employee's duties or projects are governed by the law and the Employer's intellectual property agreements. The Employee may not use the intellectual assets of the Employer or its clients for personal purposes.
+
+## Article 20 - Cybersecurity, cloud and artificial intelligence
+The Employee complies with the IT charter, the cybersecurity rules and the artificial intelligence policy. In particular, disclosing passwords, keys, confidential data or source code to unauthorised services is forbidden.
+
+## Article 21 - Exclusivity and conflicts of interest
+Without prior written authorisation, the Employee may not hold a second job, freelance, consult or carry on a competing or incompatible activity. The Employee declares any conflict of interest and may not divert clients, colleagues or opportunities.
+
+## Article 22 - Performance review
+Performance is reviewed periodically against objectives, indicators, quality, deadlines, skills, collaboration, compliance with procedures and other relevant criteria.
+
+## Article 23 - Discipline
+The Employee is subject to the company rules. Any disciplinary procedure respects the law, proportionality, the right to explain and the sanctions allowed by law.
+
+## Article 24 - Termination and notice
+Either party may end the contract under the conditions of the Labour Code. The notice for dismissal is {{contract.notice}}; the notice owed by an Employee who resigns is reduced in accordance with article 64 of the Labour Code. Termination is notified in writing, with reasons where the law requires.
+
+## Article 25 - During the notice
+During the notice, the Employee is entitled to the days off provided by article 65 of the Labour Code to look for a new job. The party that does not observe the notice pays the indemnity provided by law.
+
+## Article 26 - Gross misconduct
+In case of gross misconduct, the contract may be ended without notice under the conditions and time limits of the Labour Code.
+
+## Article 27 - End of the contract
+When the contract ends, the Employer issues the certificate of employment and pays the amounts due within the time limits set by law.
+
+## Article 28 - Return of property and departure
+When the duties end, the Employee ensures a reasonable hand-over and returns property, equipment, documents and data. Access is closed; no personal password may be passed on.
+
+## Article 29 - Personal data
+The Employer processes the personal data needed for the employment relationship in accordance with the applicable rules, with access limited to authorised persons and appropriate security measures.
+
+## Article 30 - Reference documents
+The contract is completed in particular by the individual sheet, job description, classification sheet, pay sheet, company rules and the Employer's applicable policies, which the Employee acknowledges having received.
+
+## Article 31 - Governing law and disputes
+The contract is governed by the law of the Democratic Republic of the Congo. The parties seek an amicable settlement before, where needed, referring the matter to the competent administrative or judicial bodies.
+
+## Article 32 - Saving clause
+Any provision less favourable than a mandatory rule is replaced by that rule. The nullity of one clause does not void the whole contract. The contract is made in four copies, a draft of which is given to the Employee at least two working days before signing, and is submitted to the ONEM visa within fifteen days of signing.
+
+---
+
+Main legal references: Law no. 015/2002 of 16 October 2002 on the Labour Code, as amended by Law no. 16/010 of 15 July 2016; ministerial order no. 062/CAB/PVPM/ETPS/2011 (form, proof and visa of the contract); OHADA Uniform Act on commercial companies for the representative's capacity and powers.
+
+Signatures and proof: this contract is signed by the parties on paper or by an electronic signature process that identifies the signatory and guarantees the integrity of the document. A durable copy is given to each party.
