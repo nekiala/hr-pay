@@ -33,3 +33,7 @@ app:
   payroll:
     # Every test payroll goes through the threads, as a large one does.
     parallel-from: 1
+  whatsapp:
+    # WhatsAppIT answers as Meta on this port; nothing sends in the background.
+    api-url: http://127.0.0.1:18099/v21.0
+    every: PT10H

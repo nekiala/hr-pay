@@ -4,7 +4,7 @@ import {
   Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, Gift, Banknote, PiggyBank, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
-  ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning,
+  ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -114,6 +114,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/platform/support', label: t('Support desk'), icon: Headset, show: can('platform.manage') },
         { to: '/platform/trials', label: t('Trial requests'), icon: Inbox, show: can('platform.manage') && me?.company?.mode === 'SAAS' },
         { to: '/platform/email', label: t('Email server'), icon: Mail, show: can('platform.manage') },
+        { to: '/platform/whatsapp', label: t('WhatsApp'), icon: MessageCircle, show: can('platform.manage') },
         { to: '/platform/legal', label: t('Terms and policies'), icon: Scale, show: can('platform.manage') },
         { to: '/platform/status', label: t('Service status'), icon: Siren, show: can('platform.manage') },
         { to: '/system', label: t('System'), icon: Activity, show: can('system.monitor') },

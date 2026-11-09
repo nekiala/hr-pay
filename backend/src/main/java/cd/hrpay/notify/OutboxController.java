@@ -14,7 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class OutboxController {
 
     public record Message(long id, OffsetDateTime createdAt, String channel, String recipient, String subject,
-                          String body, String status, String error, String via) {}
+                          String body, String status, String error, String via,
+                          OffsetDateTime deliveredAt, OffsetDateTime readAt) {}
 
     public record Server(MailServers.Level inUse) {}
 
@@ -37,11 +38,12 @@ public class OutboxController {
     @PreAuthorize("hasAuthority('audit.read')")
     public List<Message> latest() {
         return jdbc.sql("""
-                select id, created_at, channel, recipient, subject, body, status, error, via
+                select id, created_at, channel, recipient, subject, body, status, error, via, delivered_at, read_at
                 from outbox_message order by id desc limit 100""")
                 .query((rs, n) -> new Message(rs.getLong("id"), rs.getObject("created_at", OffsetDateTime.class),
                         rs.getString("channel"), rs.getString("recipient"), rs.getString("subject"),
-                        rs.getString("body"), rs.getString("status"), rs.getString("error"), rs.getString("via")))
+                        rs.getString("body"), rs.getString("status"), rs.getString("error"), rs.getString("via"),
+                        rs.getObject("delivered_at", OffsetDateTime.class), rs.getObject("read_at", OffsetDateTime.class)))
                 .list();
     }
 }
