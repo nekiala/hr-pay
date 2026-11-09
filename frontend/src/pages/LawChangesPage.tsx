@@ -15,7 +15,9 @@ export type LawChange = {
   summaryEn: string; summaryFr: string; reference: string; sourceUrl: string | null; inApp: 'APPLIED' | 'COMING' | 'INFO'
   inAppNoteEn: string | null; inAppNoteFr: string | null; verifiedBy: string | null; verifiedOn: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'WITHDRAWN'; publishedAt: string | null; appliedTo: number; rates: Rate[]
+  sectorPackCode: string | null; sectorNameEn: string | null; sectorNameFr: string | null
 }
+type PackName = { code: string; countryCode: string; nameEn: string; nameFr: string; status: string }
 
 const COUNTRY: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }
 const CATEGORY: Record<string, string> = {
@@ -32,7 +34,7 @@ function ChangeCard({ c }: { c: LawChange }) {
   const note = fr() ? c.inAppNoteFr : c.inAppNoteEn
   return (
     <article className="card" id={String(c.id)}>
-      <p className="small muted">{COUNTRY[c.countryCode]} · {CATEGORY[c.category] ?? c.category} · {t('in force from {a}', { a: longDay(c.effectiveFrom) })}</p>
+      <p className="small muted">{COUNTRY[c.countryCode]}{c.sectorPackCode && <> · {t('Sector: {a}', { a: (fr() ? c.sectorNameFr : c.sectorNameEn) ?? c.sectorPackCode })}</>} · {CATEGORY[c.category] ?? c.category} · {t('in force from {a}', { a: longDay(c.effectiveFrom) })}</p>
       <h3>{title(c)}</h3>
       <p>{fr() ? c.summaryFr : c.summaryEn}</p>
       <p className="small"><strong>{t('Reference')}:</strong> {c.sourceUrl ? <a href={c.sourceUrl} target="_blank" rel="noreferrer">{c.reference}</a> : c.reference}</p>
@@ -88,10 +90,11 @@ export function RecentChangesBanner() {
   )
 }
 
-type Draft = Omit<LawChange, 'id' | 'status' | 'publishedAt' | 'appliedTo'>
+type Draft = Omit<LawChange, 'id' | 'status' | 'publishedAt' | 'appliedTo' | 'sectorNameEn' | 'sectorNameFr'>
 const empty = (): Draft => ({
   countryCode: 'CD', effectiveFrom: new Date().toISOString().slice(0, 10), category: 'TAX', titleEn: '', titleFr: '', summaryEn: '', summaryFr: '',
   reference: '', sourceUrl: '', inApp: 'APPLIED', inAppNoteEn: '', inAppNoteFr: '', verifiedBy: '', verifiedOn: null, rates: [],
+  sectorPackCode: null,
 })
 
 /** The provider writes, publishes and withdraws the changes; publishing adds their rates to the companies. */
@@ -102,8 +105,9 @@ export function LawChangesAdminPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ id: number | null; status: string; d: Draft } | null>(null)
 
+  const [packs, setPacks] = useState<PackName[]>([])
   const load = () => api<LawChange[]>('/api/platform/changes').then(setList).catch((e) => setError(fail(e)))
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load(); api<PackName[]>('/api/platform/sector-packs').then(setPacks).catch(() => setPacks([])) }, [])
   const run = async (work: () => Promise<unknown>, done: string) => {
     setError(null)
     setMessage(null)
@@ -117,6 +121,7 @@ export function LawChangesAdminPage() {
       <div className="row space">
         <h2>{t('Law and rate changes')}</h2>
         <div className="row">
+          <Link className="button secondary" to="/platform/sector-packs">{t('Sector packs')}</Link>
           <Link className="button secondary" to="/changes" target="_blank">{t('Public page')}</Link>
           <Button onClick={() => setEditing({ id: null, status: 'DRAFT', d: empty() })}>{t('New change')}</Button>
         </div>
@@ -130,7 +135,7 @@ export function LawChangesAdminPage() {
             <tbody>
               {list?.map((c) => (
                 <tr key={c.id}>
-                  <td>{longDay(c.effectiveFrom)}</td><td>{c.countryCode}</td>
+                  <td>{longDay(c.effectiveFrom)}</td><td>{c.countryCode}{c.sectorPackCode && <div className="small muted">{c.sectorPackCode}</div>}</td>
                   <td><strong>{title(c)}</strong><div className="small muted">{c.reference}</div>
                     {!c.verifiedBy && <span className="badge warn">{t('To confirm')}</span>}</td>
                   <td className="small">{c.rates.map((r) => `${r.code} ${r.value} (${r.effectiveFrom})`).join(', ') || '—'}</td>
@@ -140,7 +145,8 @@ export function LawChangesAdminPage() {
                     {c.status !== 'WITHDRAWN' && <Button className="link" onClick={() => setEditing({ id: c.id, status: c.status, d: { ...c } })}>{t('Edit')}</Button>}
                     {c.status === 'DRAFT' && <>{' '}<Button className="link" onClick={() => ask({
                       title: t('Publish “{a}”?', { a: title(c) }), confirmLabel: t('Publish'),
-                      message: c.rates.length ? t('It goes on the public page, and its rates are added to every company in {a} that has no value of its own for that date. Their payroll staff are told.', { a: COUNTRY[c.countryCode] }) : t('It goes on the public page.'),
+                      message: c.sectorPackCode ? t('It goes on the public page; the companies on the sector pack {a} get its rates and are told to review the pack.', { a: c.sectorPackCode })
+                        : c.rates.length ? t('It goes on the public page, and its rates are added to every company in {a} that has no value of its own for that date. Their payroll staff are told.', { a: COUNTRY[c.countryCode] }) : t('It goes on the public page.'),
                       onConfirm: () => run(() => api(`/api/platform/changes/${c.id}/publish`, { method: 'POST' }), t('Published.')),
                     })}>{t('Publish')}</Button>{' '}
                       <Button className="link" onClick={() => ask({ title: t('Delete this draft?'), confirmLabel: t('Delete'), danger: true,
@@ -166,6 +172,10 @@ export function LawChangesAdminPage() {
             <div className="grid2">
               <label>{t('Country')}<select disabled={ratesLocked} value={editing.d.countryCode} onChange={(e) => set({ countryCode: e.target.value as Draft['countryCode'] })}>
                 <option value="CD">{COUNTRY.CD}</option><option value="CG">{COUNTRY.CG}</option></select></label>
+              <label>{t('Sector')}<select disabled={ratesLocked} value={editing.d.sectorPackCode ?? ''} onChange={(e) => set({ sectorPackCode: e.target.value || null })}>
+                <option value="">{t('All companies of the country')}</option>
+                {packs.filter((p) => p.countryCode === editing.d.countryCode && p.status !== 'RETIRED').map((p) => <option key={p.code} value={p.code}>{fr() ? p.nameFr : p.nameEn}</option>)}
+              </select></label>
               <label>{t('In force from')}<input type="date" required value={editing.d.effectiveFrom} onChange={(e) => set({ effectiveFrom: e.target.value })} /></label>
               <label>{t('Kind')}<select value={editing.d.category} onChange={(e) => set({ category: e.target.value })}>
                 {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>

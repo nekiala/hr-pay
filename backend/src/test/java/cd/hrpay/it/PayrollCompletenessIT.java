@@ -41,6 +41,37 @@ class PayrollCompletenessIT extends IntegrationTest {
     }
 
     @Test
+    void retirementAddsTheAgreementsEndOfCareerPayment() throws Exception {
+        MockHttpSession hr = login(HR);
+        long esther = id("employee2@demo.hrpay.cd");
+        java.time.LocalDate hired = jdbc.sql("select hire_date from app_user where id = ?").param(esther).query(java.time.LocalDate.class).single();
+        jdbc.sql("update app_user set hire_date = '2016-06-01' where id = ?").param(esther).update();
+        try {
+            mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-05-31","reason":"RETIREMENT"}"""))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.endOfCareerAmount").value(0.0));
+            mvc.perform(json(put("/api/statutory/settings/END_OF_CAREER_DAYS_PER_YEAR").session(hr), "{\"value\":\"abc\"}"))
+                    .andExpect(status().is(422));
+            mvc.perform(json(put("/api/statutory/settings/END_OF_CAREER_DAYS_PER_YEAR").session(hr), "{\"value\":\"15\"}"))
+                    .andExpect(status().isOk());
+            mvc.perform(json(put("/api/statutory/settings/END_OF_CAREER_MAX_MONTHS").session(hr), "{\"value\":\"3\"}"))
+                    .andExpect(status().isOk());
+            // 15 days a year for 10 years is 150 days, capped at 3 months of pay.
+            String d = mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-05-31","reason":"RETIREMENT"}"""))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            double monthly = ((Number) JsonPath.read(d, "$.basicMonthly")).doubleValue();
+            assertThat(((Number) JsonPath.read(d, "$.endOfCareerAmount")).doubleValue()).isEqualTo(monthly * 3, org.assertj.core.data.Offset.offset(0.01));
+            mvc.perform(json(post("/api/users/" + esther + "/departure/propose").session(hr), """
+                            {"lastDay":"2026-05-31","reason":"RESIGNATION"}"""))
+                    .andExpect(jsonPath("$.endOfCareerAmount").value(0.0));
+        } finally {
+            jdbc.sql("update app_user set hire_date = ? where id = ?").params(hired, esther).update();
+            jdbc.sql("update payroll_setting set value = '0' where key in ('END_OF_CAREER_DAYS_PER_YEAR', 'END_OF_CAREER_MAX_MONTHS')").update();
+        }
+    }
+
+    @Test
     void theNoticeFollowsTheGradeCategoryAndWhoGaveIt() throws Exception {
         MockHttpSession hr = login(HR);
         long esther = id("employee2@demo.hrpay.cd");

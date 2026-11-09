@@ -192,10 +192,11 @@ public class NegotiatedPay {
         final int children;
         final int dependants;
         final Basis basis;
+        final BigDecimal seniorityPercent;
 
         Month(PayslipCalculator.Rates rates, ExchangeRates.Rate usd, List<PayElements.Element> elements,
               List<PayElements.Assignment> standing, PayElements.Element complement, int scheduledMinutes,
-              int scheduledDays, int daysWorked, int children, int dependants, Basis basis) {
+              int scheduledDays, int daysWorked, int children, int dependants, Basis basis, BigDecimal seniorityPercent) {
             this.rates = rates;
             this.usd = usd;
             this.elements = elements;
@@ -207,6 +208,7 @@ public class NegotiatedPay {
             this.children = children;
             this.dependants = dependants;
             this.basis = basis;
+            this.seniorityPercent = seniorityPercent;
         }
 
         PayslipCalculator.Result result(BigDecimal amount) {
@@ -218,7 +220,7 @@ public class NegotiatedPay {
             return PayslipCalculator.calculate(new PayslipCalculator.Input(basis.grade().currency(),
                     basis.grade().baseSalary(), scheduledMinutes, scheduledMinutes, scheduledDays, daysWorked,
                     BigDecimal.ZERO, 0, null, null, children, dependants, basis.expatriate(), elements, items, List.of(),
-                    List.of(), rates));
+                    List.of(), rates, 0, null, null, seniorityPercent));
         }
 
         BigDecimal net(BigDecimal amount) {
@@ -248,7 +250,8 @@ public class NegotiatedPay {
         List<EmployeeFile.Dependant> deps = files.dependants(userId);
         int children = (int) deps.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
         int inCharge = (int) deps.stream().filter(EmployeeFile.Dependant::inCharge).count();
-        return new Month(rates, usd, pay.elements(), standing, complement, minutes, days, worked, children, inCharge, b);
+        return new Month(rates, usd, pay.elements(), standing, complement, minutes, days, worked, children, inCharge, b,
+                seniorityPercent(userId, last));
     }
 
     /**
@@ -278,7 +281,7 @@ public class NegotiatedPay {
         boolean expatriate = files.contractOn(userId, on).map(EmployeeFile.Contract::expatriate).orElse(false);
         return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), salary.grossMonthly(), minutes,
                 minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, pay.elements(),
-                pay.standingFor(userId, ym), List.of(), List.of(), rates));
+                pay.standingFor(userId, ym), List.of(), List.of(), rates, 0, null, null, seniorityPercent(userId, last)));
     }
 
     private Plan plan(long userId, LocalDate from, Basis b, Month m, BigDecimal complement, BigDecimal target) {
@@ -288,6 +291,15 @@ public class NegotiatedPay {
         BigDecimal base = b.grade().baseSalary();
         return new Plan(userId, from, b.grade().code(), b.grade().currency(), base, complement, base.add(complement),
                 r.gross(), cnss, tax, r.net(), target, m.usd.cdfPerUnit(), m.usd.rateDate());
+    }
+
+    /** The seniority bonus of the company's agreement, from the hire date (or the first contract). */
+    private BigDecimal seniorityPercent(long userId, LocalDate on) {
+        LocalDate hired = users.findById(userId).map(u -> u.getHireDate()).orElse(null);
+        if (hired == null) {
+            hired = files.contracts(userId).stream().map(EmployeeFile.Contract::startDate).min(LocalDate::compareTo).orElse(null);
+        }
+        return runs.seniority().percent(hired, on);
     }
 
     private static BigDecimal line(PayslipCalculator.Result r, String code) {

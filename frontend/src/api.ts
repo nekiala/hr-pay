@@ -781,7 +781,7 @@ export type Departure = {
   id: number | null; userId: number; name: string; registrationNo: string; hireDate: string | null; lastDay: string
   reason: DepartureReason; noticeDate: string | null; noticeGivenBy: NoticeGivenBy | null; noticeEnd: string | null
   notice: Notice; currency: string; basicMonthly: number; dailyRate: number; serviceYears: number
-  noticeDays: number; noticeAmount: number; noticeOwed: number; leaveDays: number; leaveAmount: number; severanceAmount: number
+  noticeDays: number; noticeAmount: number; noticeOwed: number; leaveDays: number; leaveAmount: number; severanceAmount: number; endOfCareerAmount: number
   thirteenthAmount: number; total: number; loanBalance: number | null; note: string | null; status: 'DRAFT' | 'CONFIRMED'
   createdBy: string | null; confirmedBy: string | null; confirmedAt: string | null; certificateNo: string | null
   monthStatus: 'OPEN' | PayrollRun['status']; explanation: string[]

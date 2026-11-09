@@ -180,6 +180,10 @@ public class StatutoryRates {
             case "QUINZAINE_MAX_DEBT_MONTHS" -> value.matches("\\d{1,2}(\\.\\d{1,2})?");
             case "QUINZAINE_DAY" -> value.matches("[1-9]|1\\d|2[0-8]");
             case "REPORT_VARIANCE_PERCENT" -> value.matches("\\d{1,2}(\\.\\d{1,2})?|100");
+            case "SENIORITY_BONUS_PERCENT_PER_YEAR" -> value.matches("\\d{1,2}(\\.\\d{1,2})?");
+            case "SENIORITY_BONUS_MAX_PERCENT" -> value.matches("\\d{1,3}(\\.\\d{1,2})?") && new BigDecimal(value).compareTo(BigDecimal.valueOf(100)) <= 0;
+            case "SENIORITY_BONUS_FROM_YEARS", "END_OF_CAREER_MAX_MONTHS" -> value.matches("\\d{1,2}");
+            case "END_OF_CAREER_DAYS_PER_YEAR" -> value.matches("\\d{1,3}(\\.\\d{1,2})?");
             default -> throw new NotFoundException("Unknown setting " + key + ".");
         };
         if (!valid) {

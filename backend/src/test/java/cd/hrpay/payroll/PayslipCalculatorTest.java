@@ -213,4 +213,34 @@ class PayslipCalculatorTest {
         var r = PayslipCalculator.calculate(graded("300", null, RATES_2026));
         assertThat(line(r, "IPR").multiply(d("2000"))).isGreaterThanOrEqualTo(d("2500"));
     }
+
+    @Test
+    void theSeniorityBonusIsAShareOfTheBasicEarnedAndCountsForCnssAndTax() {
+        var elements = new java.util.ArrayList<>(ELEMENTS);
+        elements.add(el(40, "SENIORITY_BONUS", "EARNING", "COMPUTED", null, null, true, true, true, false, 16));
+        var plain = input(5280, List.of(), List.of(), List.of(), false);
+        var in = new PayslipCalculator.Input(plain.currency(), plain.basicMonthly(), plain.scheduledMinutes(), plain.paidMinutes(),
+                plain.scheduledDays(), plain.daysWorked(), plain.overtimeAmount(), plain.overtimeMinutes(), null, null,
+                plain.childrenInCharge(), plain.dependantsInCharge(), false, elements, List.of(), List.of(), List.of(),
+                RATES, 0, null, null, d("6"));
+        var r = PayslipCalculator.calculate(in);
+        // Half the month paid: 6 % of the 500 earned.
+        assertThat(line(r, "SENIORITY_BONUS")).isEqualByComparingTo("30.00");
+        var without = PayslipCalculator.calculate(new PayslipCalculator.Input(plain.currency(), plain.basicMonthly(),
+                plain.scheduledMinutes(), plain.paidMinutes(), plain.scheduledDays(), plain.daysWorked(), plain.overtimeAmount(),
+                plain.overtimeMinutes(), null, null, plain.childrenInCharge(), plain.dependantsInCharge(), false, elements,
+                List.of(), List.of(), List.of(), RATES, 0, null, null, null));
+        assertThat(r.cnssBase().subtract(without.cnssBase())).isEqualByComparingTo("30.00");
+        assertThat(line(without, "SENIORITY_BONUS")).isZero();
+    }
+
+    @Test
+    void theSeniorityRuleCountsFullYearsFromItsStartUpToItsCeiling() {
+        var rule = new SeniorityBonus.Rule(d("2"), d("25"), 3);
+        java.time.LocalDate hired = java.time.LocalDate.of(2020, 3, 15);
+        assertThat(SeniorityBonus.percent(rule, hired, java.time.LocalDate.of(2023, 3, 14))).isNull();
+        assertThat(SeniorityBonus.percent(rule, hired, java.time.LocalDate.of(2023, 3, 31))).isEqualByComparingTo("6");
+        assertThat(SeniorityBonus.percent(rule, hired, java.time.LocalDate.of(2040, 1, 31))).isEqualByComparingTo("25");
+        assertThat(SeniorityBonus.percent(new SeniorityBonus.Rule(d("0"), d("0"), 0), hired, java.time.LocalDate.of(2030, 1, 1))).isNull();
+    }
 }

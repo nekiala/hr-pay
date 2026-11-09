@@ -151,6 +151,10 @@ export default function DeparturePage() {
                     <td>{t('Severance pay')}</td><td />
                     <td className="num"><input className="narrow-input" inputMode="decimal" value={draft.severanceAmount || String(shown.severanceAmount)} onChange={set('severanceAmount')} onBlur={() => void propose(draft)} disabled={confirmed || !edit} /></td>
                   </tr>
+                  {Number(shown.endOfCareerAmount) > 0 && <tr>
+                    <td>{t('End-of-career payment (agreement)')}</td><td />
+                    <td className="num">{money(shown.endOfCareerAmount, cur)}</td>
+                  </tr>}
                   <tr>
                     <td>{t('13th month, share of the year')}</td><td />
                     <td className="num"><input className="narrow-input" inputMode="decimal" value={draft.thirteenthAmount || String(shown.thirteenthAmount)} onChange={set('thirteenthAmount')} onBlur={() => void propose(draft)} disabled={confirmed || !edit} /></td>
