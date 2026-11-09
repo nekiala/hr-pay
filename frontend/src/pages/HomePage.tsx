@@ -7,6 +7,7 @@ import { api, money, type HolidayOccurrence, type PayrollRun, type RunView } fro
 import { useAuth } from '../auth'
 import MonthView from '../components/MonthView'
 import { SetupGuideCard } from './SetupPage'
+import { RecentChangesBanner } from './LawChangesPage'
 import { locale, plural, t } from '../i18n'
 
 type Presence = { date: string; counts: Record<string, number> }
@@ -92,6 +93,8 @@ export default function HomePage() {
       </div>
 
       {can('company.manage') && !me.support && <SetupGuideCard home />}
+
+      {any('payroll.run', 'masterdata.manage', 'declaration.manage') && <RecentChangesBanner />}
 
       {r && r.status !== 'CLOSED' && (
         <div className="banner">

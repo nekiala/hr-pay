@@ -19,10 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class StatutoryRates {
 
     public record RateType(String code, String name, String unit, String description, BigDecimal value,
-                           LocalDate effectiveFrom, LocalDate nextChange, BigDecimal nextValue) {}
+                           LocalDate effectiveFrom, LocalDate nextChange, BigDecimal nextValue, Long lawChangeId,
+                           Long nextLawChangeId) {}
 
     public record RateEntry(long id, String code, LocalDate effectiveFrom, BigDecimal value, String note,
-                            String createdBy, OffsetDateTime createdAt) {}
+                            String createdBy, OffsetDateTime createdAt, Long lawChangeId) {}
 
     public record BracketSet(LocalDate effectiveFrom, List<IprCalculator.Bracket> brackets) {}
 
@@ -42,18 +43,19 @@ public class StatutoryRates {
         return jdbc.sql("""
                 select t.code, t.name, t.unit, t.description,
                        cur.value, cur.effective_from,
-                       nxt.effective_from as next_change, nxt.value as next_value
+                       nxt.effective_from as next_change, nxt.value as next_value,
+                       cur.law_change_id, nxt.law_change_id as next_law_change_id
                 from statutory_rate_type t
-                left join lateral (select value, effective_from from statutory_rate r
+                left join lateral (select value, effective_from, law_change_id from statutory_rate r
                                    where r.code = t.code and r.effective_from <= ? order by effective_from desc limit 1) cur on true
-                left join lateral (select value, effective_from from statutory_rate r
+                left join lateral (select value, effective_from, law_change_id from statutory_rate r
                                    where r.code = t.code and r.effective_from > ? order by effective_from limit 1) nxt on true
                 order by t.display_order""").params(on, on).query(RateType.class).list();
     }
 
     public List<RateEntry> history(String code) {
         return jdbc.sql("""
-                select id, code, effective_from, value, note, created_by, created_at from statutory_rate
+                select id, code, effective_from, value, note, created_by, created_at, law_change_id from statutory_rate
                 where code = ? order by effective_from desc""").param(code).query(RateEntry.class).list();
     }
 

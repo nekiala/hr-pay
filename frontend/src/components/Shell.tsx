@@ -121,6 +121,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/platform/whatsapp', label: t('WhatsApp'), icon: MessageCircle, show: can('platform.manage') },
         { to: '/platform/legal', label: t('Terms and policies'), icon: Scale, show: can('platform.manage') },
         { to: '/platform/status', label: t('Service status'), icon: Siren, show: can('platform.manage') },
+        { to: '/platform/changes', label: t('Law changes'), icon: Scale, show: can('platform.manage') },
         { to: '/system', label: t('System'), icon: Activity, show: can('system.monitor') },
         { to: '/audit', label: t('Audit log'), icon: ScrollText, show: can('audit.read') },
         { to: '/outbox', label: t('Messages'), icon: Mail, show: can('audit.read') },

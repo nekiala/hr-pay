@@ -1381,5 +1381,18 @@
  "pay": "payer",
  "Declarations due soon": "Déclarations bientôt dues",
  "Declarations late": "Déclarations en retard",
- "Late payment: %s %% of the amount.": "Paiement tardif : %s %% du montant."
+ "Late payment: %s %% of the amount.": "Paiement tardif : %s %% du montant.",
+ "New rate: %s": "Nouveau taux : %s",
+ "From %s. %s Payrolls already closed do not change; recalculate an open month it concerns.": "À partir du %s. %s Les paies déjà clôturées ne changent pas ; recalculez un mois ouvert concerné.",
+ "Changed since this payroll was calculated: %s. Recalculate it.": "Modifié depuis le calcul de cette paie : %s. Recalculez-la.",
+ "Change not found.": "Changement introuvable.",
+ "Choose the country: DR Congo or Republic of the Congo.": "Choisissez le pays : RDC ou République du Congo.",
+ "Choose the kind of change and what HR Pay does about it.": "Choisissez le type de changement et ce que HR Pay en fait.",
+ "A change needs its date, a title and a summary in both languages, and its legal reference.": "Un changement doit avoir sa date, un titre et un résumé dans les deux langues, et sa référence légale.",
+ "The source link must start with https://.": "Le lien de la source doit commencer par https://.",
+ "Each rate needs its code, its date and a value of zero or more.": "Chaque taux doit avoir son code, sa date et une valeur positive ou nulle.",
+ "A published change keeps its country and its rates; withdraw it and write a new one.": "Un changement publié garde son pays et ses taux ; retirez-le et écrivez-en un nouveau.",
+ "Only a draft can be deleted; withdraw a published change.": "Seul un brouillon peut être supprimé ; retirez un changement publié.",
+ "Only a published change can be withdrawn.": "Seul un changement publié peut être retiré.",
+ "This change is already published.": "Ce changement est déjà publié."
 }

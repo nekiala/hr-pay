@@ -79,7 +79,15 @@ class PayrollChecksIT extends IntegrationTest {
         });
 
         mvc.perform(post("/api/payroll/runs/2025-09/calculate").session(hr).with(csrf())).andExpect(status().isOk());
+        // A rate dated in the month, added after the calculation (same value, so nothing else moves).
+        tenants.runAs(1L, () -> jdbc.sql("""
+                insert into statutory_rate (code, effective_from, value, note)
+                select 'IERE', '2025-09-01', value, 'Test: added after the calculation' from statutory_rate
+                where code = 'IERE' and effective_from <= '2025-09-01' order by effective_from desc limit 1
+                on conflict do nothing""").update());
         String report = mvc.perform(get("/api/payroll/runs/2025-09/checks").session(finance)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.checks[?(@.code == 'RATE_CHANGED')].message").value(
+                        org.hamcrest.Matchers.contains(org.hamcrest.Matchers.containsString("IERE"))))
                 .andExpect(jsonPath("$.clear").value(false))
                 .andExpect(jsonPath("$.settings.netChangePercent").value(20))
                 .andExpect(jsonPath("$.checks[?(@.code == 'SHARED_ACCOUNT' && @.userId == %d)]".formatted(one)).exists())

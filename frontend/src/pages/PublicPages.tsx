@@ -15,7 +15,7 @@ export const LEGAL_PATHS: Record<LegalDoc['kind'], string> = { TERMS: 'terms', D
 const KIND_OF: Record<string, LegalDoc['kind']> = { terms: 'TERMS', dpa: 'DPA', 'privacy-policy': 'PRIVACY', sla: 'SLA' }
 
 /** The frame of the pages anyone can open: brand, content, the public links. */
-function Public({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+export function Public({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="public">
       <header className="public-head">
@@ -31,6 +31,7 @@ function Public({ children, wide = false }: { children: ReactNode; wide?: boolea
 export function PublicLinks() {
   return (
     <footer className="public-links small">
+      <Link to="/changes">{t('Law and rate changes')}</Link>
       <Link to="/status">{t('Service status')}</Link>
       <Link to="/legal/terms">{t('Terms of service')}</Link>
       <Link to="/legal/privacy-policy">{t('Privacy policy')}</Link>

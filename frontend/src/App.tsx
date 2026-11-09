@@ -61,6 +61,7 @@ import PaymentsPage from './pages/PaymentsPage'
 import PaymentFilePage from './pages/PaymentFilePage'
 import DeclarationsPage from './pages/DeclarationsPage'
 import DeclarationCalendarPage from './pages/DeclarationCalendarPage'
+import { LawChangesAdminPage, LawChangesPublicPage } from './pages/LawChangesPage'
 import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
@@ -168,10 +169,11 @@ export default function App() {
   // The page an emailed link opens: it works signed out, and setting the password signs every browser out.
   if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
   // Pages anyone can open, signed in or not: the status page, the terms and the trial request.
-  if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname.startsWith('/legal/')) {
+  if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname === '/changes' || location.pathname.startsWith('/legal/')) {
     return (
       <Routes>
         <Route path="/status" element={<StatusPage />} />
+        <Route path="/changes" element={<LawChangesPublicPage />} />
         <Route path="/trial" element={<TrialPage />} />
         <Route path="/legal/:kind" element={<LegalPage />} />
       </Routes>
@@ -206,6 +208,7 @@ export default function App() {
           <Route path="/platform/whatsapp" element={<Guard permission="platform.manage"><PlatformWhatsAppPage /></Guard>} />
           <Route path="/platform/legal" element={<Guard permission="platform.manage"><LegalAdminPage /></Guard>} />
           <Route path="/platform/status" element={<Guard permission="platform.manage"><IncidentsPage /></Guard>} />
+          <Route path="/platform/changes" element={<Guard permission="platform.manage"><LawChangesAdminPage /></Guard>} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
