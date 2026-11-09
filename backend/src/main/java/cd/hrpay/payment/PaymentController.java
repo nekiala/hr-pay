@@ -54,6 +54,9 @@ public class PaymentController {
 
     public record CancelInput(@NotBlank @Size(max = 300) String reason) {}
 
+    public record DeclarationPaidInput(@NotNull LocalDate paidOn, @NotNull java.math.BigDecimal amount, @Size(max = 100) String reference,
+                            @Size(max = 8) String mode) {}
+
     public record FiledInput(@NotNull LocalDate filedOn, @Size(max = 100) String reference, @Size(max = 300) String note) {}
 
     private final Company company;
@@ -63,6 +66,14 @@ public class PaymentController {
     private final AuditService audit;
     private final Clock clock;
     private cd.hrpay.payroll.PayslipPdf payslipPdf;
+    private DeclarationCalendar calendar;
+    private CnssForms cnssForms;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setDeclarationParts(DeclarationCalendar calendar, CnssForms cnssForms) {
+        this.calendar = calendar;
+        this.cnssForms = cnssForms;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setPayslipPdf(cd.hrpay.payroll.PayslipPdf payslipPdf) {
@@ -234,10 +245,43 @@ public class PaymentController {
 
     // ---- declarations ------------------------------------------------------------------------------------------
 
+    /** The calendar: each declaration of the last months, when it is due, where it stands, what lateness costs. */
+    @GetMapping("/declarations/calendar")
+    @PreAuthorize("hasAuthority('declaration.manage')")
+    public DeclarationCalendar.Page calendar(@RequestParam(defaultValue = "12") int months) {
+        return calendar.page(Math.min(36, Math.max(1, months)));
+    }
+
     @GetMapping("/declarations/{month}")
     @PreAuthorize("hasAuthority('declaration.manage')")
     public Map<String, Object> declarationSummary(@PathVariable YearMonth month) {
-        return Map.of("month", month.toString(), "company", company.get(), "declarations", declarations.summary(month));
+        return Map.of("month", month.toString(), "company", company.get(), "declarations", declarations.summary(month),
+                "calendar", calendar.items(month, month));
+    }
+
+    @PostMapping("/declarations/{month}/{kind}/paid")
+    @PreAuthorize("hasAuthority('declaration.manage')")
+    public DeclarationCalendar.Item paid(@PathVariable YearMonth month, @PathVariable String kind, @Valid @RequestBody DeclarationPaidInput b) {
+        return calendar.pay(month, kind.toUpperCase(), b.paidOn(), b.amount(), b.reference(), b.mode());
+    }
+
+    @DeleteMapping("/declarations/{month}/{kind}/paid")
+    @PreAuthorize("hasAuthority('declaration.manage')")
+    public DeclarationCalendar.Item unpaid(@PathVariable YearMonth month, @PathVariable String kind) {
+        return calendar.unpay(month, kind.toUpperCase());
+    }
+
+    /** The CNSS forms MOD. DC and MOD. DCC, filled (DR Congo, employers outside the guichet unique). */
+    @GetMapping("/declarations/{month}/CNSS/{form:mod-dc|mod-dcc}.pdf")
+    @PreAuthorize("hasAuthority('declaration.manage')")
+    public org.springframework.http.ResponseEntity<byte[]> cnssForm(@PathVariable YearMonth month, @PathVariable String form) {
+        byte[] pdf = form.equals("mod-dc") ? cnssForms.modDc(month) : cnssForms.modDcc(month);
+        audit.record("declaration.exported", "declaration", month + " CNSS", Map.of("form", form));
+        return org.springframework.http.ResponseEntity.ok()
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "inline; filename=\"" + form + "-" + month + ".pdf\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(pdf);
     }
 
     @GetMapping("/declarations/{month}/{kind}")

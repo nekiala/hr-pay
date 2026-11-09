@@ -15,14 +15,14 @@ class StatutoryRatesIT extends IntegrationTest {
     void ratesAreDatedAndTheOldValueStaysForEarlierDates() throws Exception {
         MockHttpSession hr = login(HR);
         mvc.perform(json(post("/api/statutory/rates/ONEM").session(hr), """
-                        {"effectiveFrom":"2031-01-01","value":0.5,"note":"Test change"}"""))
+                        {"effectiveFrom":"2031-01-01","value":0.7,"note":"Test change"}"""))
                 .andExpect(status().isCreated());
         mvc.perform(get("/api/statutory").param("on", "2030-12-31").session(hr))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].value").value(0.2))
-                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].nextValue").value(0.5));
+                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].value").value(0.5))
+                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].nextValue").value(0.7));
         mvc.perform(get("/api/statutory").param("on", "2031-01-01").session(hr))
-                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].value").value(0.5));
+                .andExpect(jsonPath("$.rates[?(@.code=='ONEM')].value").value(0.7));
         mvc.perform(json(post("/api/statutory/rates/ONEM").session(hr), """
                         {"effectiveFrom":"2031-01-01","value":0.6}"""))
                 .andExpect(status().isConflict());

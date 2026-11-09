@@ -2069,6 +2069,57 @@
      "permission_code": "firm.manage"
     }
    ]
+  },
+  {
+   "table": "declaration_rule",
+   "refs": {},
+   "rows": [
+    {
+     "kind": "CNSS",
+     "authority": "CNSS",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": 20,
+     "late_declaration_percent": null,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "Déclaration mensuelle au plus tard le 15; trimestrielle jusqu'à 20 travailleurs (à confirmer)",
+     "verified": false
+    },
+    {
+     "kind": "IPR",
+     "authority": "Impôts",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": 50,
+     "late_declaration_percent_later": 100,
+     "later_after_months": 2,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "ITS: déclaration et versement au plus tard le 15 (e-Tax); CGI art. 512: 50 %, 100 % au-delà de deux mois (à confirmer)",
+     "verified": false
+    },
+    {
+     "kind": "TUS",
+     "authority": "Impôts",
+     "declare_day": 15,
+     "pay_day": 15,
+     "quarterly_up_to_staff": null,
+     "late_declaration_percent": null,
+     "late_declaration_percent_later": null,
+     "later_after_months": null,
+     "late_payment_percent_month": null,
+     "late_payment_percent_day": null,
+     "daily_from_day": null,
+     "legal_basis": "TUS: déclaration et versement au plus tard le 15 (à confirmer)",
+     "verified": false
+    }
+   ]
   }
  ]
 }

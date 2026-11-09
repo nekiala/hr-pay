@@ -141,7 +141,28 @@ class PaymentsIT extends IntegrationTest {
             mvc.perform(get("/api/declarations/2026-08").session(hr))
                     .andExpect(jsonPath("$.declarations[0].kind").value("CNSS"))
                     .andExpect(jsonPath("$.declarations[0].filed.filedOn").value("2026-09-10"))
-                    .andExpect(jsonPath("$.declarations[1].filed").doesNotExist());
+                    .andExpect(jsonPath("$.declarations[1].filed").doesNotExist())
+                    .andExpect(jsonPath("$.calendar[?(@.kind=='CNSS')].status").value(org.hamcrest.Matchers.contains("DECLARED")))
+                    .andExpect(jsonPath("$.calendar[?(@.kind=='CNSS')].declareDue").value(org.hamcrest.Matchers.contains("2026-09-15")))
+                    .andExpect(jsonPath("$.calendar[?(@.kind=='IERE')].status").value(org.hamcrest.Matchers.contains("NIL")));
+
+            // Paid apart from declared; then the filled CNSS form; the filing cannot be undone while paid.
+            mvc.perform(json(post("/api/declarations/2026-08/IPR/paid").session(finance), "{\"paidOn\":\"2026-09-12\",\"amount\":1}"))
+                    .andExpect(status().isUnprocessableEntity());
+            mvc.perform(json(post("/api/declarations/2026-08/CNSS/paid").session(finance),
+                            "{\"paidOn\":\"2026-09-20\",\"amount\":12345.5,\"reference\":\"OV-1\",\"mode\":\"OV\"}"))
+                    .andExpect(jsonPath("$.status").value("PAID"))
+                    .andExpect(jsonPath("$.late").value(true))
+                    .andExpect(jsonPath("$.paid.reference").value("OV-1"));
+            mvc.perform(get("/api/declarations/calendar?months=36").session(finance)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.items[?(@.month=='2026-08' && @.kind=='CNSS')].status").value(org.hamcrest.Matchers.contains("PAID")))
+                    .andExpect(jsonPath("$.rules.length()").value(5));
+            byte[] dc = mvc.perform(get("/api/declarations/2026-08/CNSS/mod-dc.pdf").session(finance)).andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsByteArray();
+            assertThat(new String(dc, 0, 5)).isEqualTo("%PDF-");
+            mvc.perform(get("/api/declarations/2026-08/CNSS/mod-dcc.pdf").session(finance)).andExpect(status().isUnprocessableEntity());
+            mvc.perform(delete("/api/declarations/2026-08/CNSS/filed").session(hr).with(csrf())).andExpect(status().isUnprocessableEntity());
+            mvc.perform(delete("/api/declarations/2026-08/CNSS/paid").session(hr).with(csrf())).andExpect(jsonPath("$.status").value("DECLARED"));
             mvc.perform(delete("/api/declarations/2026-08/CNSS/filed").session(hr).with(csrf()))
                     .andExpect(jsonPath("$.filed").doesNotExist());
             mvc.perform(get("/api/declarations/2026-08").session(login(EMPLOYEE))).andExpect(status().isForbidden());

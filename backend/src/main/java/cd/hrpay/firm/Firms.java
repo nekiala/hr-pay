@@ -64,7 +64,10 @@ public class Firms {
     public record FirmSide(long id, long clientId, String clientName, String countryCode, String status,
                            List<String> roleNames, String billing, String invitedBy, OffsetDateTime invitedAt,
                            int employees, Run lastRun, Integer openChecks, int openInvoices, boolean overdue,
-                           String companyStatus, List<Long> staff) {}
+                           String companyStatus, List<Long> staff, Deadline nextDeadline) {}
+
+    /** The client's declaration that falls due first among those still open. */
+    public record Deadline(String month, String kind, java.time.LocalDate due, boolean late) {}
 
     public record Run(String month, String status) {}
 
@@ -91,6 +94,13 @@ public class Firms {
     private final AuditService audit;
     private final Notifications notifications;
     private final PayrollChecks checks;
+
+    private cd.hrpay.payment.DeclarationCalendar calendar;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setCalendar(cd.hrpay.payment.DeclarationCalendar calendar) {
+        this.calendar = calendar;
+    }
 
     public Firms(JdbcClient jdbc, Tenants tenants, AuditService audit, Notifications notifications, PayrollChecks checks) {
         this.jdbc = jdbc;
@@ -272,13 +282,14 @@ public class Firms {
         for (Row r : rows) {
             List<Long> staff = tenants.callAsPlatform(() -> jdbc.sql("select user_id from firm_client_staff where link_id = ? order by user_id")
                     .param(r.id()).query(Long.class).list());
-            record Summary(int employees, Run run, Integer checks, int openInvoices, boolean overdue, List<String> roles) {}
+            record Summary(int employees, Run run, Integer checks, int openInvoices, boolean overdue, List<String> roles,
+                           Deadline deadline) {}
             Summary s = tenants.callAs(r.clientId(), () -> {
                 int employees = jdbc.sql("select count(*) from app_user where status = 'ACTIVE'").query(Integer.class).single();
                 List<String> roles = jdbc.sql("select name from role where code = any(?) order by name")
                         .param(r.roleCodes().split(",")).query(String.class).list();
                 if (!"ACTIVE".equals(r.status())) {
-                    return new Summary(employees, null, null, 0, false, roles);
+                    return new Summary(employees, null, null, 0, false, roles, null);
                 }
                 Run run = jdbc.sql("select to_char(month, 'YYYY-MM') as month, status from payroll_run order by month desc limit 1")
                         .query(Run.class).optional().orElse(null);
@@ -294,11 +305,19 @@ public class Firms {
                 int invoices = jdbc.sql("select count(*) from invoice where status = 'OPEN'").query(Integer.class).single();
                 boolean overdue = jdbc.sql("select count(*) from invoice where status = 'OPEN' and due_on < current_date")
                         .query(Integer.class).single() > 0;
-                return new Summary(employees, run, open, invoices, overdue, roles);
+                Deadline deadline = null;
+                if (calendar != null) {
+                    try {
+                        deadline = calendar.next().map(i -> new Deadline(i.month(), i.kind(), i.nextDue(), i.late())).orElse(null);
+                    } catch (RuntimeException e) {
+                        log.warn("Declarations of company {} not read: {}", r.clientId(), e.getMessage());
+                    }
+                }
+                return new Summary(employees, run, open, invoices, overdue, roles, deadline);
             });
             out.add(new FirmSide(r.id(), r.clientId(), r.clientName(), r.countryCode(), r.status(), s.roles(), r.billing(),
                     r.invitedBy(), r.invitedAt(), s.employees(), s.run(), s.checks(), s.openInvoices(), s.overdue(),
-                    r.companyStatus(), staff));
+                    r.companyStatus(), staff, s.deadline()));
         }
         return out;
     }
@@ -438,6 +457,22 @@ public class Firms {
         Map<String, Object> details = reason == null || reason.isBlank() ? Map.of() : Map.of("reason", reason.trim());
         tenants.runAs(client, () -> audit.recordAs(by, "firm.ended", "firm_client", linkId, details));
         tenants.runAs(firm, () -> audit.recordAs(by, "firm.ended", "firm_client", linkId, details));
+    }
+
+    /** Tells the firms working for a client: their administrators and the staff assigned to that client. */
+    public void tellFirmsOf(long clientId, String kind, java.util.function.Supplier<String> title, java.util.function.Supplier<String> body) {
+        record Link(long id, long firmId) {}
+        List<Link> links = tenants.callAsPlatform(() -> jdbc.sql("select id, firm_id from firm_client where client_id = ? and status = 'ACTIVE'")
+                .param(clientId).query(Link.class).list());
+        for (Link l : links) {
+            List<Long> staff = tenants.callAsPlatform(() -> jdbc.sql("select user_id from firm_client_staff where link_id = ?")
+                    .param(l.id()).query(Long.class).list());
+            tenants.runAs(l.firmId(), () -> {
+                java.util.Set<Long> to = new java.util.LinkedHashSet<>(notifications.holders("firm.manage"));
+                to.addAll(staff);
+                to.forEach(id -> notifications.send(id, kind, title, body, "/firm"));
+            });
+        }
     }
 
     private void tellFirmAdmins(java.util.function.Supplier<String> title, java.util.function.Supplier<String> body) {
