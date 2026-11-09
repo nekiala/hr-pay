@@ -63,6 +63,7 @@ import DeclarationsPage from './pages/DeclarationsPage'
 import DeclarationCalendarPage from './pages/DeclarationCalendarPage'
 import { LawChangesAdminPage, LawChangesPublicPage } from './pages/LawChangesPage'
 import { SectorPacksAdminPage, SectorPage } from './pages/SectorPacksPage'
+import { NtpaySettingsPage } from './pages/NtpayPage'
 import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
@@ -244,6 +245,7 @@ export default function App() {
           <Route path="/payroll/reports" element={<Guard permission="payroll.report"><PayrollReportsPage /></Guard>} />
           <Route path="/payroll/payments" element={<PaymentsRoute />} />
           <Route path="/payroll/payments/files/:id" element={<PaymentsRoute file />} />
+          <Route path="/payroll/payments/ntpay" element={<NtpaySettingsPage />} />
           <Route path="/payroll/declarations" element={<Guard permission="declaration.manage"><DeclarationsPage /></Guard>} />
           <Route path="/payroll/declarations/calendar" element={<Guard permission="declaration.manage"><DeclarationCalendarPage /></Guard>} />
           <Route path="/payroll/year" element={<Guard permission="payslip.read.all"><YearSummariesPage /></Guard>} />

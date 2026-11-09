@@ -7,12 +7,14 @@ import { Button } from '../components/Button'
 import { t } from '../i18n'
 import { useAuth } from '../auth'
 import { LayoutDownload } from './ExportLayoutsPage'
+import { LINE_STATUS, NtpayPanel, type NtpayBatch } from './NtpayPage'
 
 type Line = { payslipId: number; userId: number; beneficiary: string; registrationNo: string | null; account: string | null; amount: number; currency: string
-  unitId: number | null; directionName: string | null; unitName: string | null }
+  unitId: number | null; directionName: string | null; unitName: string | null
+  ntpayStatus: string | null; ntpayPayoutReference: string | null; ntpayError: string | null }
 type View = {
   month: string; kind: 'PAYROLL' | 'QUINZAINE'
-  batch: { id: number; method: PayMethodKind; provider: string; currency: string; total: number; status: string; paidOn: string | null; reference: string | null }
+  batch: NtpayBatch & { id: number; method: PayMethodKind; provider: string; currency: string; total: number; status: string; paidOn: string | null; reference: string | null }
   lines: Line[]
   warning?: string | null
 }
@@ -26,8 +28,9 @@ export default function PaymentFilePage() {
   const [employer, setEmployer] = useState<Employer | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [direction, setDirection] = useState('')
+  const reload = () => api<View>(`/api/payment-batches/${id}`).then(setView).catch((e: Error) => setError(e.message))
   useEffect(() => {
-    api<View>(`/api/payment-batches/${id}`).then(setView).catch((e: Error) => setError(e.message))
+    void reload()
     api<Employer>('/api/company').then(setEmployer).catch(() => undefined)
   }, [id])
 
@@ -63,18 +66,22 @@ export default function PaymentFilePage() {
         {direction && <p><strong>{direction}</strong>{' '}{t('only:')}{' '}{lines.length}{' '}{t('of')}{' '}{view.lines.length}{' '}{t('people. The file sent to the provider holds everyone.')}</p>}
         <p className="muted">{t('File #')}{b.id} · {METHOD[b.method]}{!cash && <> · {b.provider}</>} · {b.status === 'PAID' ? t('paid on {a}{b}', { a: b.paidOn, b: b.reference ? `, ref. ${b.reference}` : '' }) : b.status.toLowerCase()}</p>
         {view.warning && <p className="notice no-print">{view.warning}</p>}
+        <NtpayPanel batch={b} onChange={reload} />
         {!cash && b.method === 'BANK' && employer?.bankAccount && <p className="small">{t('Debit account:')}{' '}{employer.bankName} {employer.bankAccount}</p>}
         <table>
-          <thead><tr><th>{t('No')}</th><th>{t('Employee')}</th><th>{cash ? t('Reg. no') : b.method === 'BANK' ? t('Account') : t('Number')}</th><th>{t('Amount')}</th>{cash && <th className="signature">{t('Signature')}</th>}</tr></thead>
+          <thead><tr><th>{t('No')}</th><th>{t('Employee')}</th><th>{cash ? t('Reg. no') : b.method === 'BANK' ? t('Account') : t('Number')}</th><th>{t('Amount')}</th>{cash && <th className="signature">{t('Signature')}</th>}{b.ntpayStatus && <th className="no-print">{t('NTPay')}</th>}</tr></thead>
           <tbody>
             {lines.map((l, i) => (
               <tr key={l.payslipId}>
                 <td>{i + 1}</td><td>{l.beneficiary}</td><td>{cash ? l.registrationNo : l.account}</td><td>{money(l.amount, l.currency)}</td>
                 {cash && <td className="signature"></td>}
+                {b.ntpayStatus && <td className="no-print">{l.ntpayStatus && <span className={`badge ${LINE_STATUS[l.ntpayStatus]?.[1] ?? ''}`}>{LINE_STATUS[l.ntpayStatus]?.[0] ?? l.ntpayStatus}</span>}
+                  {l.ntpayPayoutReference && <div className="small muted">{l.ntpayPayoutReference}</div>}
+                  {l.ntpayError && <div className="small warn-text">{l.ntpayError}</div>}</td>}
               </tr>
             ))}
           </tbody>
-          <tfoot><tr><td></td><td><strong>{t('Total (')}{lines.length})</strong></td><td></td><td><strong>{money(direction ? shownTotal : b.total, b.currency)}</strong></td>{cash && <td></td>}</tr></tfoot>
+          <tfoot><tr><td></td><td><strong>{t('Total (')}{lines.length})</strong></td><td></td><td><strong>{money(direction ? shownTotal : b.total, b.currency)}</strong></td>{cash && <td></td>}{b.ntpayStatus && <td className="no-print"></td>}</tr></tfoot>
         </table>
         {!direction && directions.length > 1 && (
           <table className="no-print">

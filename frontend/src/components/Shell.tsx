@@ -5,7 +5,7 @@ import {
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
-  BriefcaseBusiness, Handshake,
+  BriefcaseBusiness, Handshake, Smartphone,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -96,6 +96,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/elements', label: t('Pay elements'), icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/rates', label: t('Rates'), icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/sector', label: t('Sector agreement'), icon: Handshake, show: pay && can('masterdata.manage') },
+        { to: '/payroll/payments/ntpay', label: t('Mobile money (NTPay)'), icon: Smartphone, show: pay && any('company.manage', 'payroll.pay') },
         { to: '/overtime', label: t('Overtime rules'), icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/leave/settings', label: t('Leave settings'), icon: CalendarDays, show: can('leave.manage') },
         { to: '/payroll/quinzaine/settings', label: t('Quinzaine settings'), icon: CalendarRange, show: pay && can('masterdata.manage') },
