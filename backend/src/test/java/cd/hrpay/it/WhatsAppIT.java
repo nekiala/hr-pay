@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cd.hrpay.i18n.Texts;
+import cd.hrpay.notify.Announcements;
 import cd.hrpay.notify.Notifications;
 import cd.hrpay.notify.WhatsAppConsent;
 import com.jayway.jsonpath.JsonPath;
@@ -48,6 +49,9 @@ class WhatsAppIT extends IntegrationTest {
     @Autowired
     WhatsAppConsent consent;
 
+    @Autowired
+    Announcements announcements;
+
     HttpServer meta;
     final List<String> requests = new CopyOnWriteArrayList<>();
     final AtomicInteger ids = new AtomicInteger();
@@ -67,10 +71,11 @@ class WhatsAppIT extends IntegrationTest {
             } else {
                 StringBuilder data = new StringBuilder();
                 for (String name : List.of("hrpay_otp", "hrpay_payslip_available", "hrpay_request_update", "hrpay_action_needed",
-                        "hrpay_checkout_reminder", "someone_elses")) {
+                        "hrpay_checkout_pending", "hrpay_announcement", "someone_elses")) {
                     for (String lang : List.of("fr", "en")) {
                         data.append(data.isEmpty() ? "" : ",").append(
-                                "{\"name\":\"%s\",\"language\":\"%s\",\"status\":\"APPROVED\",\"id\":\"1\"}".formatted(name, lang));
+                                "{\"name\":\"%s\",\"language\":\"%s\",\"status\":\"APPROVED\",\"id\":\"1\",\"category\":\"%s\"}"
+                                        .formatted(name, lang, name.equals("hrpay_checkout_pending") ? "MARKETING" : "UTILITY"));
                     }
                 }
                 answer = "{\"data\":[" + data + "]}";
@@ -87,6 +92,7 @@ class WhatsAppIT extends IntegrationTest {
     @AfterEach
     void stopMeta() {
         meta.stop(0);
+        jdbc.sql("delete from announcement").update();
         jdbc.sql("delete from platform_whatsapp").update();
         jdbc.sql("delete from company_whatsapp").update();
         jdbc.sql("update app_user set whatsapp_phone = null, whatsapp_opt_in_at = null").update();
@@ -104,6 +110,21 @@ class WhatsAppIT extends IntegrationTest {
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
         return "sha256=" + HexFormat.of().formatHex(mac.doFinal(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    /** A message the person sends to the HR Pay number, as Meta passes it on. */
+    void says(String phone, String text) throws Exception {
+        String body = """
+                {"entry":[{"changes":[{"value":{"metadata":{"phone_number_id":"1234567"},
+                 "messages":[{"from":"%s","type":"text","text":{"body":"%s"}}]}}]}]}""".formatted(phone.replace("+", ""), text);
+        mvc.perform(post("/api/public/whatsapp/webhook").contentType(MediaType.APPLICATION_JSON).content(body)
+                .header("X-Hub-Signature-256", sign(body))).andExpect(status().isOk());
+    }
+
+    /** The free-text answers sent to a number. */
+    List<String> answers(String phone) {
+        return requests.stream().filter(r -> r.contains("/messages") && r.contains("\"text\":{\"body\"")
+                && r.contains("\"to\":\"" + phone.replace("+", "") + "\"")).toList();
     }
 
     List<String> sent(String template) {
@@ -143,7 +164,11 @@ class WhatsAppIT extends IntegrationTest {
         mvc.perform(post("/api/platform/whatsapp/templates/submit").session(admin).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.settings.templates[?(@.status != 'APPROVED')]").isEmpty());
-        assertThat(requests.stream().filter(r -> r.startsWith("POST /v21.0/7654321/message_templates"))).hasSize(10)
+        mvc.perform(get("/api/platform/whatsapp").session(admin))
+                .andExpect(jsonPath("$.settings.templates[?(@.name == 'hrpay_checkout_pending' && @.language == 'fr')].category").value("MARKETING"))
+                .andExpect(jsonPath("$.settings.templates[?(@.name == 'hrpay_checkout_pending' && @.language == 'fr')].reason").value(
+                        org.hamcrest.Matchers.contains(org.hamcrest.Matchers.containsString("MARKETING"))));
+        assertThat(requests.stream().filter(r -> r.startsWith("POST /v21.0/7654321/message_templates"))).hasSize(12)
                 .anyMatch(r -> r.contains("\"AUTHENTICATION\"")).anyMatch(r -> r.contains("Voir le bulletin"));
 
         // The company turns it on for decisions only.
@@ -201,6 +226,47 @@ class WhatsAppIT extends IntegrationTest {
                 .header("X-Hub-Signature-256", sign(delivered))).andExpect(status().isOk());
         assertThat(jdbc.sql("select read_at is not null and delivered_at is not null from outbox_message where provider_id = ?")
                 .param(wamid).query(Boolean.class).single()).isTrue();
+
+        // Words sent to the number get their answer at once; pay figures stay in HR Pay (links only).
+        says(myPhone, "Solde");
+        assertThat(answers(myPhone)).hasSize(1).last().asString().contains("/leave");
+        says(myPhone, "présence ?");
+        assertThat(answers(myPhone)).hasSize(2).last().asString().contains("/check-in");
+        says(myPhone, "bulletin stp");
+        assertThat(answers(myPhone)).hasSize(3).last().asString().contains("/my/payslips");
+        says(myPhone, "AVANCE");
+        assertThat(answers(myPhone)).hasSize(4).last().asString().contains("/my/advance");
+        says(myPhone, "Bonjour");
+        assertThat(answers(myPhone)).hasSize(5).last().asString().contains("SOLDE").contains("STOP");
+        // Someone who did not agree gets no answer.
+        String hrPhone = phone(HR);
+        jdbc.sql("update app_user set whatsapp_phone = phone_e164 where email = ?").param(HR).update();
+        says(hrPhone, "Solde");
+        assertThat(answers(hrPhone)).isEmpty();
+
+        // HR sends an announcement to everyone: a WhatsApp notice to who agreed, an email to the others.
+        mvc.perform(json(post("/api/announcements/preview").session(me), "{\"audience\":\"ALL\",\"whatsapp\":true}"))
+                .andExpect(status().isForbidden());
+        String preview = mvc.perform(json(post("/api/announcements/preview").session(hr), "{\"audience\":\"ALL\",\"whatsapp\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.byWhatsapp").value(1))
+                .andExpect(jsonPath("$.templateApproved").value(true))
+                .andReturn().getResponse().getContentAsString();
+        int recipients = JsonPath.read(preview, "$.recipients");
+        int byEmail = JsonPath.read(preview, "$.byEmail");
+        assertThat(recipients).isGreaterThan(2);
+        String sentAnnouncement = mvc.perform(json(post("/api/announcements").session(hr),
+                        "{\"title\":\"Fermeture le 30 juin\",\"body\":\"Les bureaux seront fermés le 30 juin.\",\"audience\":\"ALL\",\"whatsapp\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.recipients").value(recipients))
+                .andReturn().getResponse().getContentAsString();
+        int announcementId = JsonPath.read(sentAnnouncement, "$.id");
+        assertThat(consent.sendPending()).isEqualTo(1);
+        assertThat(sent("hrpay_announcement")).hasSize(1).first().asString().contains("announcements/" + announcementId);
+        assertThat(announcements.sendEmails()).isEqualTo(byEmail);
+        assertThat(announcements.sendEmails()).isZero();
+        mvc.perform(get("/api/announcements/mine").session(me)).andExpect(jsonPath("$[0].title").value("Fermeture le 30 juin"));
+        mvc.perform(get("/api/announcements/" + announcementId).session(me)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.body").value("Les bureaux seront fermés le 30 juin."));
+        mvc.perform(get("/api/announcements").session(me)).andExpect(status().isForbidden());
 
         // Replying STOP ends the agreement and gets a confirmation.
         String stop = """

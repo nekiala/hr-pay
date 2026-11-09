@@ -63,6 +63,7 @@ import OrgUnitPage from './pages/OrgUnitPage'
 import OrgSettingsPage from './pages/OrgSettingsPage'
 import { CompanyMailServerPage, PlatformMailServerPage } from './pages/MailServerPage'
 import { CompanyWhatsAppPage, PlatformWhatsAppPage } from './pages/WhatsAppPage'
+import AnnouncementsPage, { AnnouncementPage } from './pages/AnnouncementsPage'
 import CompanyPage from './pages/CompanyPage'
 import SystemPage from './pages/SystemPage'
 import JobsPage from './pages/JobsPage'
@@ -202,6 +203,8 @@ export default function App() {
           <Route path="/lifecycle" element={<Guard permission="lifecycle.manage"><LifecyclePage /></Guard>} />
           <Route path="/lifecycle/settings" element={<Guard permission="lifecycle.manage"><LifecycleSettingsPage /></Guard>} />
           <Route path="/my/documents" element={<MyDocumentsPage />} />
+          <Route path="/announcements" element={<AnnouncementsPage />} />
+          <Route path="/announcements/:id" element={<AnnouncementPage />} />
           <Route path="/my/advance" element={<MyAdvancePage />} />
           <Route path="/payroll/advances" element={<AdvancesRoute />} />
           <Route path="/users/:id/departure" element={<PayrollStaff><DeparturePage /></PayrollStaff>} />

@@ -4,7 +4,7 @@ import {
   Activity, BadgeCheck, FolderOpen, ClipboardList, Fingerprint, FileUp, Plug, Columns3, BookOpenCheck, DoorOpen, Gift, Banknote, PiggyBank, Building, Briefcase, Building2, Calculator, CalendarClock, CreditCard, LifeBuoy, CalendarDays, ChartColumn, ChevronDown, Clock,
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
-  ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle,
+  ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -44,6 +44,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
         { to: '/my/advance', label: t('My salary advance'), icon: PiggyBank, show: pay && advances },
         { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
+        { to: '/announcements', label: t('Announcements'), icon: Megaphone, show: true },
         { to: '/jobs', label: t('My jobs'), icon: ListChecks, show: true },
       ],
     },

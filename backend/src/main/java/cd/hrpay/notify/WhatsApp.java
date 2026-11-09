@@ -3,6 +3,7 @@ package cd.hrpay.notify;
 import cd.hrpay.audit.AuditService;
 import cd.hrpay.common.AppProperties;
 import cd.hrpay.common.BusinessRuleException;
+import cd.hrpay.i18n.Texts;
 import cd.hrpay.security.DataCrypto;
 import cd.hrpay.tenancy.TenantContext;
 import cd.hrpay.tenancy.Tenants;
@@ -55,7 +56,13 @@ public class WhatsApp {
         }
     }
 
-    public record TemplateStatus(String status, String id, String reason, OffsetDateTime checkedAt) {}
+    /** {@code category} is the one Meta gave the template, which can differ from the one asked for. */
+    public record TemplateStatus(String status, String id, String reason, OffsetDateTime checkedAt, String category) {
+
+        TemplateStatus(String status, String id, String reason, OffsetDateTime checkedAt) {
+            this(status, id, reason, checkedAt, null);
+        }
+    }
 
     /** The settings as pages show them: secrets never leave the server, only whether one is set. */
     public record Settings(boolean enabled, String phoneNumberId, String businessId, String displayNumber,
@@ -136,6 +143,11 @@ public class WhatsApp {
     /** Whether this company sends notifications on WhatsApp, and which kinds. */
     public List<String> enabledKinds(long companyId) {
         return companyRow(companyId).filter(CompanyRow::enabled).map(r -> kinds(r.kinds())).orElse(List.of());
+    }
+
+    /** Whether the company turned WhatsApp on and a number can send for it. */
+    public boolean usable(long companyId) {
+        return companyRow(companyId).filter(CompanyRow::enabled).isPresent() && resolve(companyId).isPresent();
     }
 
     private Account account(Level level, Long companyId, Row r) {
@@ -245,9 +257,7 @@ public class WhatsApp {
         long companyId = TenantContext.companyId();
         List<String> kinds = in.kinds() == null ? List.of() : in.kinds().stream().distinct().toList();
         for (String k : kinds) {
-            try {
-                WhatsAppTemplates.Group.valueOf(k);
-            } catch (IllegalArgumentException e) {
+            if (WhatsAppTemplates.CHOSEN_BY_COMPANY.stream().noneMatch(g -> g.name().equals(k))) {
                 throw new BusinessRuleException("Unknown kind of message: " + k + ".");
             }
         }
@@ -327,7 +337,7 @@ public class WhatsApp {
         Map<String, TemplateStatus> statuses = new LinkedHashMap<>(a.templates());
         java.util.Set<String> ours = WhatsAppTemplates.names(otpTemplate());
         try {
-            JsonNode r = read(meta.get().uri("/{waba}/message_templates?fields=name,language,status,rejected_reason,id&limit=200",
+            JsonNode r = read(meta.get().uri("/{waba}/message_templates?fields=name,language,status,category,rejected_reason,id&limit=200",
                     a.businessId()).header("Authorization", "Bearer " + a.token()).retrieve().body(String.class));
             for (JsonNode t : r.path("data")) {
                 String name = t.path("name").asText();
@@ -336,7 +346,8 @@ public class WhatsApp {
                 }
                 String reason = t.path("rejected_reason").asText(null);
                 statuses.put(name + "|" + t.path("language").asText(), new TemplateStatus(t.path("status").asText(),
-                        t.path("id").asText(null), reason == null || reason.equals("NONE") ? null : reason, OffsetDateTime.now()));
+                        t.path("id").asText(null), reason == null || reason.equals("NONE") ? null : reason, OffsetDateTime.now(),
+                        t.path("category").asText(null)));
             }
         } catch (RestClientResponseException e) {
             throw new BusinessRuleException("Meta refused: " + cut(metaError(e), 300));
@@ -452,8 +463,14 @@ public class WhatsApp {
         for (String name : WhatsAppTemplates.names(otpTemplate())) {
             for (String lang : WhatsAppTemplates.LANGUAGES) {
                 TemplateStatus t = s.get(name + "|" + lang);
-                rows.add(new TemplateRow(name, lang, name.equals(otpTemplate()) ? "AUTHENTICATION" : "UTILITY",
-                        t == null ? "NOT_SUBMITTED" : t.status(), t == null ? null : t.reason(), t == null ? null : t.checkedAt()));
+                String asked = name.equals(otpTemplate()) ? "AUTHENTICATION" : "UTILITY";
+                String category = t == null || t.category() == null ? asked : t.category();
+                String reason = t == null ? null : t.reason();
+                if (!category.equals(asked) && reason == null) {
+                    reason = Texts.t("Meta changed the category to %s: these messages cost more.", category);
+                }
+                rows.add(new TemplateRow(name, lang, category, t == null ? "NOT_SUBMITTED" : t.status(), reason,
+                        t == null ? null : t.checkedAt()));
             }
         }
         String base = properties.publicUrl() == null ? "" : properties.publicUrl().replaceAll("/+$", "");
@@ -471,7 +488,8 @@ public class WhatsApp {
         for (var e : n.properties()) {
             JsonNode v = e.getValue();
             out.put(e.getKey(), new TemplateStatus(v.path("status").asText(null), v.path("id").asText(null),
-                    v.path("reason").asText(null), v.hasNonNull("checkedAt") ? OffsetDateTime.parse(v.path("checkedAt").asText()) : null));
+                    v.path("reason").asText(null), v.hasNonNull("checkedAt") ? OffsetDateTime.parse(v.path("checkedAt").asText()) : null,
+                    v.path("category").asText(null)));
         }
         return out;
     }
