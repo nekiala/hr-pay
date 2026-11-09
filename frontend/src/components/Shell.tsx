@@ -5,7 +5,7 @@ import {
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
-  BriefcaseBusiness,
+  BriefcaseBusiness, Handshake,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -95,6 +95,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/settings', label: t('Grades'), icon: Layers, show: can('masterdata.manage') },
         { to: '/payroll/elements', label: t('Pay elements'), icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
         { to: '/payroll/rates', label: t('Rates'), icon: Percent, show: pay && any('salary.read', 'masterdata.manage') },
+        { to: '/payroll/sector', label: t('Sector agreement'), icon: Handshake, show: pay && can('masterdata.manage') },
         { to: '/overtime', label: t('Overtime rules'), icon: Timer, end: true, show: att && can('overtime_policy.manage') },
         { to: '/leave/settings', label: t('Leave settings'), icon: CalendarDays, show: can('leave.manage') },
         { to: '/payroll/quinzaine/settings', label: t('Quinzaine settings'), icon: CalendarRange, show: pay && can('masterdata.manage') },
@@ -122,6 +123,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/platform/legal', label: t('Terms and policies'), icon: Scale, show: can('platform.manage') },
         { to: '/platform/status', label: t('Service status'), icon: Siren, show: can('platform.manage') },
         { to: '/platform/changes', label: t('Law changes'), icon: Scale, show: can('platform.manage') },
+        { to: '/platform/sector-packs', label: t('Sector packs'), icon: Handshake, show: can('platform.manage') },
         { to: '/system', label: t('System'), icon: Activity, show: can('system.monitor') },
         { to: '/audit', label: t('Audit log'), icon: ScrollText, show: can('audit.read') },
         { to: '/outbox', label: t('Messages'), icon: Mail, show: can('audit.read') },

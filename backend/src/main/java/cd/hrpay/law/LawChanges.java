@@ -35,21 +35,26 @@ public class LawChanges {
     public record Change(long id, String countryCode, LocalDate effectiveFrom, String category, String titleEn, String titleFr,
                          String summaryEn, String summaryFr, String reference, String sourceUrl, String inApp,
                          String inAppNoteEn, String inAppNoteFr, String verifiedBy, LocalDate verifiedOn, String status,
-                         OffsetDateTime publishedAt, int appliedTo, List<Rate> rates) {}
+                         OffsetDateTime publishedAt, int appliedTo, List<Rate> rates, String sectorPackCode,
+                         String sectorNameEn, String sectorNameFr) {}
 
     /** What the provider writes. */
     public record Draft(String countryCode, LocalDate effectiveFrom, String category, String titleEn, String titleFr,
                         String summaryEn, String summaryFr, String reference, String sourceUrl, String inApp,
-                        String inAppNoteEn, String inAppNoteFr, String verifiedBy, LocalDate verifiedOn, List<Rate> rates) {}
+                        String inAppNoteEn, String inAppNoteFr, String verifiedBy, LocalDate verifiedOn, List<Rate> rates,
+                        String sectorPackCode) {}
 
     private record Row(long id, String countryCode, LocalDate effectiveFrom, String category, String titleEn, String titleFr,
                        String summaryEn, String summaryFr, String reference, String sourceUrl, String inApp,
                        String inAppNoteEn, String inAppNoteFr, String verifiedBy, LocalDate verifiedOn, String status,
-                       OffsetDateTime publishedAt, int appliedTo) {}
+                       OffsetDateTime publishedAt, int appliedTo, String sectorPackCode, String sectorNameEn,
+                       String sectorNameFr) {}
 
     private static final String COLUMNS = """
             id, country_code, effective_from, category, title_en, title_fr, summary_en, summary_fr, reference, source_url,
-            in_app, in_app_note_en, in_app_note_fr, verified_by, verified_on, status, published_at, applied_to""";
+            in_app, in_app_note_en, in_app_note_fr, verified_by, verified_on, status, published_at, applied_to,
+            sector_pack_code, (select s.name_en from sector_pack s where s.code = law_change.sector_pack_code) as sector_name_en,
+            (select s.name_fr from sector_pack s where s.code = law_change.sector_pack_code) as sector_name_fr""";
 
     private final JdbcClient jdbc;
     private final Tenants tenants;
@@ -83,14 +88,15 @@ public class LawChanges {
 
     /** The changes published for the current company's country in the last days, for its home page. */
     public List<Change> recentForCompany(int days) {
-        String country = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
-                .optional().orElse(null);
-        if (country == null) {
+        String[] company = jdbc.sql("select country_code, sector_pack_code from company where id = current_company_id()")
+                .query((rs, i) -> new String[] {rs.getString(1), rs.getString(2)}).optional().orElse(null);
+        if (company == null) {
             return List.of();
         }
         return tenants.callAsPlatform(() -> withRates(jdbc.sql("select " + COLUMNS + " " + """
                  from law_change where status = 'PUBLISHED' and country_code = ? and published_at > now() - make_interval(days => ?)
-                order by published_at desc""").params(country, days).query(Row.class).list()));
+                  and (sector_pack_code is null or sector_pack_code = ?)
+                order by published_at desc""").params(company[0], days, company[1]).query(Row.class).list()));
     }
 
     public Change get(long id) {
@@ -106,7 +112,8 @@ public class LawChanges {
                     .param(r.id()).query(Rate.class).list();
             out.add(new Change(r.id(), r.countryCode(), r.effectiveFrom(), r.category(), r.titleEn(), r.titleFr(), r.summaryEn(),
                     r.summaryFr(), r.reference(), r.sourceUrl(), r.inApp(), r.inAppNoteEn(), r.inAppNoteFr(), r.verifiedBy(),
-                    r.verifiedOn(), r.status(), r.publishedAt(), r.appliedTo(), rates));
+                    r.verifiedOn(), r.status(), r.publishedAt(), r.appliedTo(), rates, r.sectorPackCode(), r.sectorNameEn(),
+                    r.sectorNameFr()));
         }
         return out;
     }
@@ -127,6 +134,9 @@ public class LawChanges {
         if (d.sourceUrl() != null && !d.sourceUrl().isBlank() && !d.sourceUrl().startsWith("https://")) {
             throw new BusinessRuleException("The source link must start with https://.");
         }
+        if (d.sectorPackCode() != null && !d.sectorPackCode().isBlank() && !d.sectorPackCode().matches("[A-Z0-9_]{2,40}")) {
+            throw new BusinessRuleException("Unknown sector pack.");
+        }
         for (Rate r : d.rates() == null ? List.<Rate>of() : d.rates()) {
             if (r.code() == null || !r.code().matches("[A-Z0-9_]{2,40}") || r.effectiveFrom() == null || r.value() == null
                     || r.value().signum() < 0) {
@@ -135,16 +145,30 @@ public class LawChanges {
         }
     }
 
+    private String sector(Draft d) {
+        if (d.sectorPackCode() == null || d.sectorPackCode().isBlank()) {
+            return null;
+        }
+        String country = tenants.callAsPlatform(() -> jdbc.sql("select country_code from sector_pack where code = ?")
+                .param(d.sectorPackCode()).query(String.class).optional().orElse(null));
+        if (country == null || !country.equals(d.countryCode())) {
+            throw new BusinessRuleException("Unknown sector pack for this country.");
+        }
+        return d.sectorPackCode();
+    }
+
     public Change create(Draft d, String by) {
         check(d);
+        String sector = sector(d);
         long id = tenants.callAsPlatform(() -> tx.execute(s -> {
             long n = jdbc.sql("""
                     insert into law_change (country_code, effective_from, category, title_en, title_fr, summary_en, summary_fr,
-                        reference, source_url, in_app, in_app_note_en, in_app_note_fr, verified_by, verified_on, created_by)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                        reference, source_url, in_app, in_app_note_en, in_app_note_fr, verified_by, verified_on, created_by,
+                        sector_pack_code)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                     .params(d.countryCode(), d.effectiveFrom(), d.category(), d.titleEn().trim(), d.titleFr().trim(),
                             d.summaryEn().trim(), d.summaryFr().trim(), d.reference().trim(), trim(d.sourceUrl()), d.inApp(),
-                            trim(d.inAppNoteEn()), trim(d.inAppNoteFr()), trim(d.verifiedBy()), d.verifiedOn(), by)
+                            trim(d.inAppNoteEn()), trim(d.inAppNoteFr()), trim(d.verifiedBy()), d.verifiedOn(), by, sector)
                     .query(Long.class).single();
             saveRates(n, d.rates());
             return n;
@@ -156,19 +180,21 @@ public class LawChanges {
     /** A draft can change freely; a published change only its words, its source and who verified it. */
     public Change update(long id, Draft d, String by) {
         check(d);
+        String sector = sector(d);
         Change old = get(id);
         if (!old.status().equals("DRAFT") && (!old.countryCode().equals(d.countryCode())
-                || !sameRates(old.rates(), d.rates() == null ? List.of() : d.rates()))) {
-            throw new BusinessRuleException("A published change keeps its country and its rates; withdraw it and write a new one.");
+                || !sameRates(old.rates(), d.rates() == null ? List.of() : d.rates())
+                || !java.util.Objects.equals(old.sectorPackCode(), sector))) {
+            throw new BusinessRuleException("A published change keeps its country, its sector and its rates; withdraw it and write a new one.");
         }
         tenants.callAsPlatform(() -> tx.execute(s -> {
             jdbc.sql("""
                     update law_change set country_code = ?, effective_from = ?, category = ?, title_en = ?, title_fr = ?,
                         summary_en = ?, summary_fr = ?, reference = ?, source_url = ?, in_app = ?, in_app_note_en = ?,
-                        in_app_note_fr = ?, verified_by = ?, verified_on = ?, updated_at = now() where id = ?""")
+                        in_app_note_fr = ?, verified_by = ?, verified_on = ?, sector_pack_code = ?, updated_at = now() where id = ?""")
                     .params(d.countryCode(), d.effectiveFrom(), d.category(), d.titleEn().trim(), d.titleFr().trim(),
                             d.summaryEn().trim(), d.summaryFr().trim(), d.reference().trim(), trim(d.sourceUrl()), d.inApp(),
-                            trim(d.inAppNoteEn()), trim(d.inAppNoteFr()), trim(d.verifiedBy()), d.verifiedOn(), id).update();
+                            trim(d.inAppNoteEn()), trim(d.inAppNoteFr()), trim(d.verifiedBy()), d.verifiedOn(), sector, id).update();
             if (old.status().equals("DRAFT")) {
                 jdbc.sql("delete from law_change_rate where change_id = ?").param(id).update();
                 saveRates(id, d.rates());
@@ -228,9 +254,12 @@ public class LawChanges {
         tenants.callAsPlatform(() -> jdbc.sql("update law_change set status = 'PUBLISHED', published_by = ?, published_at = now(), updated_at = now() where id = ?")
                 .params(by, id).update());
         int applied = 0;
-        if (!c.rates().isEmpty()) {
-            List<Long> companies = tenants.callAsPlatform(() -> jdbc.sql("select id from company where country_code = ? and kind = 'COMPANY' order by id")
-                    .param(c.countryCode()).query(Long.class).list());
+        if (!c.rates().isEmpty() || c.sectorPackCode() != null) {
+            // A sector's change reaches only the companies on that sector pack.
+            List<Long> companies = tenants.callAsPlatform(() -> jdbc.sql("""
+                    select id from company where country_code = ? and kind = 'COMPANY'
+                      and (cast(? as text) is null or sector_pack_code = ?) order by id""")
+                    .params(c.countryCode(), c.sectorPackCode(), c.sectorPackCode()).query(Long.class).list());
             for (long company : companies) {
                 if (tenants.callAs(company, () -> applyHere(c))) {
                     applied++;
@@ -264,6 +293,14 @@ public class LawChanges {
             }
             return n > 0;
         });
+        if (c.sectorPackCode() != null) {
+            // The company's agreement changed: those who keep the settings review the pack and apply it again.
+            for (Long user : notifications.holders("masterdata.manage")) {
+                notifications.send(user, "law.sector", () -> Texts.t("Your sector agreement changed: %s", title(c)),
+                        () -> Texts.t("From %s. %s Review the sector pack and apply it again.", Texts.day(c.effectiveFrom()),
+                                c.reference()), "/payroll/sector");
+            }
+        }
         if (Boolean.TRUE.equals(added)) {
             for (Long user : notifications.holders("payroll.run")) {
                 notifications.send(user, "law.change", () -> Texts.t("New rate: %s", title(c)),
@@ -280,7 +317,7 @@ public class LawChanges {
             return;
         }
         for (Change c : published(country)) {
-            if (!c.rates().isEmpty()) {
+            if (!c.rates().isEmpty() && c.sectorPackCode() == null) {
                 tx.execute(s -> {
                     for (Rate r : c.rates()) {
                         jdbc.sql("""

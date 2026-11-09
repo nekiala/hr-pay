@@ -62,6 +62,7 @@ import PaymentFilePage from './pages/PaymentFilePage'
 import DeclarationsPage from './pages/DeclarationsPage'
 import DeclarationCalendarPage from './pages/DeclarationCalendarPage'
 import { LawChangesAdminPage, LawChangesPublicPage } from './pages/LawChangesPage'
+import { SectorPacksAdminPage, SectorPage } from './pages/SectorPacksPage'
 import { AnnualStatementPage, YearSummariesPage } from './pages/YearSummaryPage'
 import OrgChartPage from './pages/OrgChartPage'
 import OrgUnitPage from './pages/OrgUnitPage'
@@ -209,6 +210,7 @@ export default function App() {
           <Route path="/platform/legal" element={<Guard permission="platform.manage"><LegalAdminPage /></Guard>} />
           <Route path="/platform/status" element={<Guard permission="platform.manage"><IncidentsPage /></Guard>} />
           <Route path="/platform/changes" element={<Guard permission="platform.manage"><LawChangesAdminPage /></Guard>} />
+          <Route path="/platform/sector-packs" element={<Guard permission="platform.manage"><SectorPacksAdminPage /></Guard>} />
           <Route path="/users" element={<Guard permission="user.read"><UsersPage /></Guard>} />
           <Route path="/users/new" element={<Guard permission="user.create"><UserFormPage /></Guard>} />
           <Route path="/users/:id/file" element={<Guard permission="salary.read"><EmployeeFilePage /></Guard>} />
@@ -266,6 +268,7 @@ export default function App() {
           <Route path="/payroll/elements" element={<PayElementsRoute />} />
           <Route path="/payroll/rates" element={<PayElementsRoute page="rates" />} />
           <Route path="/payroll/settings" element={<Guard permission="masterdata.manage"><PayrollSettingsPage /></Guard>} />
+          <Route path="/payroll/sector" element={<Guard permission="masterdata.manage"><SectorPage /></Guard>} />
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
           <Route path="/evaluations" element={<EvaluationsPage />} />
           <Route path="/evaluations/settings" element={<Guard permission="evaluation.manage"><EvaluationSettingsPage /></Guard>} />

@@ -170,5 +170,7 @@
  "ITS, flat amount of the first band, per part and year": "ITS, montant fixe de la première tranche, par part et par an",
  "Tax per part on the first band of the yearly pay, whatever the amount in it (CGI art. 116 G).": "Impôt par part sur la première tranche du revenu annuel, quel qu'en soit le montant (CGI art. 116 G).",
  "ITS minimum per year when the pay is below the SMIG": "ITS minimum par an quand le salaire est inférieur au SMIG",
- "Tax a year, at least, of a person paid below the minimum wage (CGI art. 116 G).": "Impôt annuel minimum d'une personne payée en dessous du SMIG (CGI art. 116 G)."
+ "Tax a year, at least, of a person paid below the minimum wage (CGI art. 116 G).": "Impôt annuel minimum d'une personne payée en dessous du SMIG (CGI art. 116 G).",
+ "Seniority bonus": "Prime d'ancienneté",
+ "End-of-career payment": "Indemnité de fin de carrière"
 }

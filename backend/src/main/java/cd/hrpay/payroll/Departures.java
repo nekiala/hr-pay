@@ -67,7 +67,7 @@ public class Departures {
                             BigDecimal dailyRate, BigDecimal serviceYears, BigDecimal noticeDays, BigDecimal noticeAmount,
                             BigDecimal noticeOwed,
                             BigDecimal leaveDays, BigDecimal leaveAmount, BigDecimal severanceAmount,
-                            BigDecimal thirteenthAmount, BigDecimal total, BigDecimal loanBalance, String note,
+                            BigDecimal endOfCareerAmount, BigDecimal thirteenthAmount, BigDecimal total, BigDecimal loanBalance, String note,
                             String status, String createdBy, String confirmedBy, OffsetDateTime confirmedAt,
                             String certificateNo, String monthStatus, List<String> explanation) {}
 
@@ -171,6 +171,22 @@ public class Departures {
             }
         }
 
+        // End-of-career payment of a collective agreement, on retirement: days of pay per year of service, up to a ceiling.
+        BigDecimal endOfCareer = BigDecimal.ZERO.setScale(2);
+        if ("RETIREMENT".equals(in.reason())) {
+            BigDecimal careerDays = payrollSetting("END_OF_CAREER_DAYS_PER_YEAR");
+            if (careerDays.signum() > 0) {
+                endOfCareer = money(daily.multiply(careerDays).multiply(years));
+                BigDecimal maxMonths = payrollSetting("END_OF_CAREER_MAX_MONTHS");
+                if (maxMonths.signum() > 0) {
+                    endOfCareer = endOfCareer.min(money(salary.grossMonthly().multiply(maxMonths)));
+                }
+                why.add(Texts.t("End-of-career payment (agreement): %s days per year × %s years%s.",
+                        careerDays.stripTrailingZeros().toPlainString(), years.toPlainString(),
+                        maxMonths.signum() > 0 ? Texts.t(", at most %s months", maxMonths.stripTrailingZeros().toPlainString()) : ""));
+            }
+        }
+
         BigDecimal thirteenth = in.thirteenthAmount();
         if (thirteenth == null) {
             thirteenth = BigDecimal.ZERO.setScale(2);
@@ -196,7 +212,7 @@ public class Departures {
             why.add(Texts.t("Loans and advances still due (%s %s) are taken from the last payslip, within the allowed share of net pay.",
                     money(loanBalance).toPlainString(), salary.currency()));
         }
-        BigDecimal total = noticeAmount.add(leaveAmount).add(severance).add(thirteenth).subtract(noticeOwed);
+        BigDecimal total = noticeAmount.add(leaveAmount).add(severance).add(endOfCareer).add(thirteenth).subtract(noticeOwed);
         if ("CD".equals(company.country())) {
             why.add(Texts.t("Pay the settlement within 2 working days of the last day (art. 100), and give the certificate of employment within 2 working days (art. 79)."));
         }
@@ -204,7 +220,7 @@ public class Departures {
         return new Departure(saved == null ? null : saved.id(), userId, u.getFirstName() + " " + u.getLastName(),
                 u.getRegistrationNo(), hiredOn, on, in.reason(), in.noticeDate(), n.givenBy(), n.end(), notice,
                 salary.currency(), salary.grossMonthly(), daily, years, noticeDays, noticeAmount, noticeOwed, leaveDays,
-                leaveAmount, severance, thirteenth, total, money(loanBalance),
+                leaveAmount, severance, endOfCareer, thirteenth, total, money(loanBalance),
                 in.note(), saved == null ? "DRAFT" : saved.status(), saved == null ? null : saved.createdBy(),
                 saved == null ? null : saved.confirmedBy(), saved == null ? null : saved.confirmedAt(),
                 saved == null ? null : saved.certificateNo(), monthStatus(YearMonth.from(on)), why);
@@ -366,14 +382,15 @@ public class Departures {
 
     private record Row(long id, long userId, LocalDate lastDay, String reason, LocalDate noticeDate, String noticeGivenBy,
                        LocalDate noticeEnd, String notice, BigDecimal noticeDays,
-                       BigDecimal leaveDays, BigDecimal severanceAmount, BigDecimal thirteenthAmount, String note,
+                       BigDecimal leaveDays, BigDecimal severanceAmount, BigDecimal endOfCareerAmount,
+                       BigDecimal thirteenthAmount, String note,
                        String status, String createdBy, String confirmedBy, OffsetDateTime confirmedAt,
                        String certificateNo, LocalDate contractEndBefore) {}
 
     private Optional<Row> row(long userId) {
         return jdbc.sql("""
                 select id, user_id, last_day, reason, notice_date, notice_given_by, notice_end, notice, notice_days, leave_days,
-                       severance_amount, thirteenth_amount,
+                       severance_amount, end_of_career_amount, thirteenth_amount,
                        note, status, created_by, confirmed_by, confirmed_at, certificate_no, contract_end_before
                 from departure where user_id = ?""").param(userId).query(Row.class).optional();
     }
@@ -387,13 +404,14 @@ public class Departures {
                     from departure where id = ?""").param(r.id())
                     .query((rs, i) -> new Object[] {rs.getString(1), rs.getBigDecimal(2), rs.getBigDecimal(3),
                             rs.getBigDecimal(4), rs.getBigDecimal(5), rs.getBigDecimal(6), rs.getBigDecimal(7)}).single();
-            BigDecimal total = ((BigDecimal) d[4]).add((BigDecimal) d[5]).add(r.severanceAmount()).add(r.thirteenthAmount())
+            BigDecimal total = ((BigDecimal) d[4]).add((BigDecimal) d[5]).add(r.severanceAmount()).add(r.endOfCareerAmount())
+                    .add(r.thirteenthAmount())
                     .subtract((BigDecimal) d[6]);
             return new Departure(r.id(), userId, u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), hired(u),
                     r.lastDay(), r.reason(), r.noticeDate(), r.noticeGivenBy(), r.noticeEnd(), r.notice(), (String) d[0],
                     (BigDecimal) d[1], (BigDecimal) d[2], (BigDecimal) d[3], r.noticeDays(), (BigDecimal) d[4],
                     (BigDecimal) d[6], r.leaveDays(), (BigDecimal) d[5],
-                    r.severanceAmount(), r.thirteenthAmount(), total, null, r.note(), r.status(), r.createdBy(),
+                    r.severanceAmount(), r.endOfCareerAmount(), r.thirteenthAmount(), total, null, r.note(), r.status(), r.createdBy(),
                     r.confirmedBy(), r.confirmedAt(), r.certificateNo(), monthStatus(YearMonth.from(r.lastDay())), List.of());
         });
     }
@@ -401,7 +419,7 @@ public class Departures {
     public List<Summary> list() {
         return jdbc.sql("""
                 select d.id, d.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, d.last_day, d.reason,
-                       d.status, d.currency, d.notice_amount + d.leave_amount + d.severance_amount + d.thirteenth_amount - d.notice_owed as total
+                       d.status, d.currency, d.notice_amount + d.leave_amount + d.severance_amount + d.end_of_career_amount + d.thirteenth_amount - d.notice_owed as total
                 from departure d join app_user u on u.id = d.user_id order by d.last_day desc limit 200""")
                 .query(Summary.class).list();
     }
@@ -418,11 +436,12 @@ public class Departures {
             jdbc.sql("""
                     insert into departure (user_id, last_day, reason, notice_date, notice_given_by, notice_end, notice, currency,
                         basic_monthly, daily_rate, service_years, notice_days, notice_amount, notice_owed, leave_days,
-                        leave_amount, severance_amount, thirteenth_amount, note, created_by)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
+                        leave_amount, severance_amount, end_of_career_amount, thirteenth_amount, note, created_by)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
                     .params(userId, d.lastDay(), d.reason(), d.noticeDate(), d.noticeGivenBy(), d.noticeEnd(), d.notice(),
                             d.currency(), d.basicMonthly(), d.dailyRate(), d.serviceYears(), d.noticeDays(), d.noticeAmount(),
-                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.thirteenthAmount(),
+                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.endOfCareerAmount(),
+                            d.thirteenthAmount(),
                             blank(in.note()), CurrentUser.email())
                     .update();
         } else {
@@ -430,16 +449,22 @@ public class Departures {
                     update departure set last_day = ?, reason = ?, notice_date = ?, notice_given_by = ?, notice_end = ?,
                         notice = ?, currency = ?, basic_monthly = ?, daily_rate = ?, service_years = ?, notice_days = ?,
                         notice_amount = ?, notice_owed = ?, leave_days = ?, leave_amount = ?, severance_amount = ?,
-                        thirteenth_amount = ?, note = ? where id = ?""")
+                        end_of_career_amount = ?, thirteenth_amount = ?, note = ? where id = ?""")
                     .params(d.lastDay(), d.reason(), d.noticeDate(), d.noticeGivenBy(), d.noticeEnd(), d.notice(),
                             d.currency(), d.basicMonthly(), d.dailyRate(), d.serviceYears(), d.noticeDays(), d.noticeAmount(),
-                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.thirteenthAmount(),
+                            d.noticeOwed(), d.leaveDays(), d.leaveAmount(), d.severanceAmount(), d.endOfCareerAmount(),
+                            d.thirteenthAmount(),
                             blank(in.note()), existing.id())
                     .update();
         }
         audit.record("departure.saved", "user", userId, Map.of("lastDay", d.lastDay().toString(), "reason", d.reason(),
                 "total", d.total().toPlainString(), "currency", d.currency()));
         return find(userId).orElseThrow();
+    }
+
+    private BigDecimal payrollSetting(String key) {
+        return jdbc.sql("select value from payroll_setting where key = ?").param(key).query(String.class).optional()
+                .map(BigDecimal::new).orElse(BigDecimal.ZERO);
     }
 
     private static String blank(String s) {
@@ -475,6 +500,9 @@ public class Departures {
         writeEntry(userId, "LEAVE_PAYOUT", month, d.leaveAmount(), d.currency(),
                 Texts.t("%s days", d.leaveDays().stripTrailingZeros().toPlainString()));
         writeEntry(userId, "SEVERANCE", month, d.severanceAmount(), d.currency(), note);
+        if (d.endOfCareerAmount().signum() > 0) {
+            writeEntry(userId, "END_OF_CAREER", month, d.endOfCareerAmount(), d.currency(), note);
+        }
         writeEntry(userId, "THIRTEENTH_MONTH", month, d.thirteenthAmount(), d.currency(), note);
         if (d.leaveDays().signum() > 0) {
             jdbc.sql("""
@@ -493,7 +521,7 @@ public class Departures {
                 .params(CurrentUser.email(), contract == null ? null : contract.endDate(), r.id()).update();
         audit.record("departure.confirmed", "user", userId, Map.of("lastDay", d.lastDay().toString(), "reason", d.reason(),
                 "notice", d.noticeAmount().toPlainString(), "noticeOwed", d.noticeOwed().toPlainString(), "leave", d.leaveAmount().toPlainString(),
-                "severance", d.severanceAmount().toPlainString(), "thirteenth", d.thirteenthAmount().toPlainString(),
+                "severance", d.severanceAmount().toPlainString(), "endOfCareer", d.endOfCareerAmount().toPlainString(), "thirteenth", d.thirteenthAmount().toPlainString(),
                 "currency", d.currency()));
         return find(userId).orElseThrow();
     }
@@ -519,9 +547,9 @@ public class Departures {
         if (r.status().equals("CONFIRMED")) {
             YearMonth month = YearMonth.from(r.lastDay());
             PayrollRuns.requireOpen(jdbc, month);
-            for (String code : List.of("NOTICE_PAY", "NOTICE_OWED", "LEAVE_PAYOUT", "SEVERANCE", "THIRTEENTH_MONTH")) {
-                jdbc.sql("delete from pay_entry where user_id = ? and element_id = ? and month = ?")
-                        .params(userId, elementId(code), month.atDay(1)).update();
+            for (String code : List.of("NOTICE_PAY", "NOTICE_OWED", "LEAVE_PAYOUT", "SEVERANCE", "END_OF_CAREER", "THIRTEENTH_MONTH")) {
+                jdbc.sql("delete from pay_entry where user_id = ? and month = ? and element_id = (select id from pay_element where code = ?)")
+                        .params(userId, month.atDay(1), code).update();
             }
             jdbc.sql("delete from leave_ledger where user_id = ? and kind = 'PAYOUT' and entry_date = ? and note = 'departure'")
                     .params(userId, r.lastDay()).update();

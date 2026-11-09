@@ -1316,6 +1316,42 @@
      "system": true,
      "display_order": 144,
      "active": true
+    },
+    {
+     "id": 31,
+     "code": "SENIORITY_BONUS",
+     "name": "Seniority bonus",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": true,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 16,
+     "active": true
+    },
+    {
+     "id": 32,
+     "code": "END_OF_CAREER",
+     "name": "End-of-career payment",
+     "kind": "EARNING",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 85,
+     "active": true
     }
    ]
   },
@@ -1832,6 +1868,26 @@
     {
      "key": "LEAVE_CIRCUMSTANCE_YEAR_MAX",
      "value": "15"
+    },
+    {
+     "key": "SENIORITY_BONUS_PERCENT_PER_YEAR",
+     "value": "0"
+    },
+    {
+     "key": "SENIORITY_BONUS_MAX_PERCENT",
+     "value": "0"
+    },
+    {
+     "key": "SENIORITY_BONUS_FROM_YEARS",
+     "value": "0"
+    },
+    {
+     "key": "END_OF_CAREER_DAYS_PER_YEAR",
+     "value": "0"
+    },
+    {
+     "key": "END_OF_CAREER_MAX_MONTHS",
+     "value": "0"
     }
    ]
   },

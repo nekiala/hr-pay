@@ -1394,5 +1394,9 @@
  "A published change keeps its country and its rates; withdraw it and write a new one.": "Un changement publié garde son pays et ses taux ; retirez-le et écrivez-en un nouveau.",
  "Only a draft can be deleted; withdraw a published change.": "Seul un brouillon peut être supprimé ; retirez un changement publié.",
  "Only a published change can be withdrawn.": "Seul un changement publié peut être retiré.",
- "This change is already published.": "Ce changement est déjà publié."
+ "This change is already published.": "Ce changement est déjà publié.",
+ "End-of-career payment (agreement): %s days per year × %s years%s.": "Indemnité de fin de carrière (convention) : %s jours par année × %s années%s.",
+ ", at most %s months": ", au plus %s mois",
+ "Your sector agreement changed: %s": "Votre convention de branche a changé : %s",
+ "From %s. %s Review the sector pack and apply it again.": "À partir du %s. %s Revoyez le pack de branche et appliquez-le à nouveau."
 }

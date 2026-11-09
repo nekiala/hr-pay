@@ -64,7 +64,20 @@ public final class PayslipCalculator {
                         int childrenInCharge, int dependantsInCharge, boolean expatriate,
                         List<PayElements.Element> elements, List<PayElements.Assignment> standing,
                         List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes,
-                        BigDecimal smigCoefficient, String maritalStatus) {
+                        BigDecimal smigCoefficient, String maritalStatus, BigDecimal seniorityPercent) {
+
+        /** Without a seniority bonus. */
+        public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
+                     int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
+                     BigDecimal thirteenthMonth, String thirteenthMonthNote,
+                     int childrenInCharge, int dependantsInCharge, boolean expatriate,
+                     List<PayElements.Element> elements, List<PayElements.Assignment> standing,
+                     List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes,
+                     BigDecimal smigCoefficient, String maritalStatus) {
+            this(currency, basicMonthly, scheduledMinutes, paidMinutes, scheduledDays, daysWorked, overtimeAmount,
+                    overtimeMinutes, thirteenthMonth, thirteenthMonthNote, childrenInCharge, dependantsInCharge, expatriate,
+                    elements, standing, entries, loans, rates, allocatedLeaveMinutes, smigCoefficient, maritalStatus, null);
+        }
 
         /**
          * Without the grade's minimum-wage coefficient (100 = the manœuvre ordinaire) or the marital status: the
@@ -204,6 +217,17 @@ public final class PayslipCalculator {
                 continue;
             }
             lines.add(new Line(e.code(), e.name(), e.kind(), base, rate, value, e.displayOrder(), null));
+        }
+
+        // 3b. The seniority bonus of a collective agreement: a share of the basic salary earned this month.
+        PayElements.Element seniority = byCode.get("SENIORITY_BONUS");
+        if (in.seniorityPercent() != null && in.seniorityPercent().signum() > 0 && seniority != null && seniority.active()) {
+            BigDecimal base = seniority.prorated() ? basic : in.basicMonthly();
+            BigDecimal value = money(base.multiply(in.seniorityPercent()).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+            if (value.signum() > 0) {
+                lines.add(new Line("SENIORITY_BONUS", seniority.name(), "EARNING", base, in.seniorityPercent(), value,
+                        seniority.displayOrder(), null));
+            }
         }
 
         // 4. One-off entries for the month.

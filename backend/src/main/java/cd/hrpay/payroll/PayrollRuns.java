@@ -91,6 +91,7 @@ public class PayrollRuns {
     private final AuditService audit;
     private final Clock clock;
     private final JsonMapper json = JsonMapper.builder().build();
+    private final SeniorityBonus seniority;
 
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entities;
@@ -130,6 +131,7 @@ public class PayrollRuns {
     public PayrollRuns(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, SalaryService salaries,
                        EmployeeFile files, PayElements pay, StatutoryRates statutory, ExchangeRates exchange, Loans loans,
                        Thirteenths thirteenths, AuditService audit, Clock clock, cd.hrpay.security.DataCrypto crypto) {
+        this.seniority = new SeniorityBonus(jdbc);
         this.thirteenths = thirteenths;
         this.jdbc = jdbc;
         this.crypto = crypto;
@@ -146,6 +148,11 @@ public class PayrollRuns {
     }
 
     /** Refuses a change to pay data of a month whose payroll is approved or closed. */
+    /** The same, for other packages. */
+    public static void requireOpenMonth(JdbcClient jdbc, YearMonth month) {
+        requireOpen(jdbc, month);
+    }
+
     static void requireOpen(JdbcClient jdbc, YearMonth month) {
         jdbc.sql("select status from payroll_run where month = ?").param(month.atDay(1)).query(String.class).optional()
                 .filter(s -> !s.equals("CALCULATED"))
@@ -254,6 +261,10 @@ public class PayrollRuns {
                 .params(userId, month.atDay(1), month.atEndOfMonth()).query(LocalDate.class).optional();
     }
 
+    SeniorityBonus seniority() {
+        return seniority;
+    }
+
     /**
      * Works out one person's payslip for the context's month from today's data. {@code withLoans} false leaves loan
      * repayments out (a correction of a closed month: its repayments are already recorded).
@@ -333,7 +344,9 @@ public class PayrollRuns {
                 thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(), ctx.elements(),
                 pay.standingFor(userId, month),
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
-                allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus()));
+                allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus(),
+                seniority.percent(user.getHireDate() != null ? user.getHireDate() : contract.startDate(),
+                        leaves != null && leaves.isBefore(last) ? leaves : last)));
         List<String> warnings = new ArrayList<>(r.warnings());
         if (summary.overtimePendingMinutes() > 0) {
             warnings.add(summary.overtimePendingMinutes() / 60 + " h " + summary.overtimePendingMinutes() % 60
