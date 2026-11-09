@@ -94,7 +94,10 @@ public class TwoStep {
         }
         return jdbc.sql("""
                 select count(*) from user_role ur join role r on r.id = ur.role_id
-                where ur.user_id = ? and r.two_step_required""").param(user.getId()).query(Integer.class).single() > 0;
+                where ur.user_id = ? and r.two_step_required""").param(user.getId()).query(Integer.class).single() > 0
+                // An accounting firm's staff work on other companies' payroll: always with a second step.
+                || jdbc.sql("select count(*) from company where id = ? and kind = 'FIRM'").param(user.getCompanyId())
+                        .query(Integer.class).single() > 0;
     }
 
     private record Row(String method, String totpSecret, String pendingSecret, Long lastStep, String[] recoveryCodes,

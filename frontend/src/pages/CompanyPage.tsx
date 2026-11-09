@@ -62,7 +62,7 @@ function LanguageCard() {
 }
 
 export default function CompanyPage() {
-  const { me } = useAuth()
+  const { me, can } = useAuth()
   const drc = (me?.company?.country ?? 'CD') === 'CD'
   const [employer, setEmployer] = useState<Employer | null>(null)
   const [settings, setSettings] = useState<PayslipSettings | null>(null)
@@ -111,7 +111,7 @@ export default function CompanyPage() {
 
   return (
     <section>
-      <PageTitle title={t('Company')}><SettingsLink to="/company/whatsapp" label={t('WhatsApp')} /><SettingsLink to="/company/email" label={t('Email server')} /></PageTitle>
+      <PageTitle title={t('Company')}><SettingsLink to="/company/whatsapp" label={t('WhatsApp')} /><SettingsLink to="/company/email" label={t('Email server')} />{can('firm.manage') && !me?.firmMember && <SettingsLink to="/company/accountant" label={t('Accounting firm')} />}</PageTitle>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
       <LanguageCard />

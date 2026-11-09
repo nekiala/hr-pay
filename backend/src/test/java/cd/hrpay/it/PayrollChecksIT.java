@@ -126,10 +126,11 @@ class PayrollChecksIT extends IntegrationTest {
 
         // Calculating again fixes the payslip and starts the acceptances over.
         mvc.perform(post("/api/payroll/runs/2025-09/calculate").session(hr).with(csrf())).andExpect(status().isOk());
-        mvc.perform(get("/api/payroll/runs/2025-09/checks").session(hr))
+        String fresh = mvc.perform(get("/api/payroll/runs/2025-09/checks").session(hr))
                 .andExpect(jsonPath("$.legal").value(0))
-                .andExpect(jsonPath("$.accepted").value(0));
-        for (String code : codes) {
+                .andExpect(jsonPath("$.accepted").value(0))
+                .andReturn().getResponse().getContentAsString();
+        for (String code : new LinkedHashSet<String>(JsonPath.read(fresh, "$.checks[?(@.level == 'WARNING')].code"))) {
             mvc.perform(json(post("/api/payroll/runs/2025-09/checks/accept").session(hr),
                     "{\"code\":\"%s\",\"reason\":\"Checked with the team\"}".formatted(code))).andExpect(status().isOk());
         }

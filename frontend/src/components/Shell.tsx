@@ -5,6 +5,7 @@ import {
   FileSpreadsheet, Coins, Flag, HandCoins, House, KeyRound, Landmark, Layers, LogOut, Mail, MapPin, Menu, Monitor, Moon, Network,
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
+  BriefcaseBusiness,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module } from '../api'
@@ -37,6 +38,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: t('My work'),
       items: [
         { to: '/', label: t('Home'), icon: House, end: true, show: true },
+        { to: '/firm', label: t('Clients'), icon: BriefcaseBusiness, show: !!me?.firmMember && !me?.firm },
         { to: '/check-in', label: t('Check in'), icon: Clock, show: att },
         { to: '/leave', label: t('Leave'), icon: CalendarDays, end: true, show: any('leave.request', 'leave.manage', 'leave.approve.team') },
         { to: '/missions', label: t('Missions'), icon: Briefcase, show: att && any('mission.request', 'mission.approve.all', 'mission.approve.team') },
@@ -88,6 +90,7 @@ function useNav(): { title: string; items: Item[] }[] {
       title: t('Settings'),
       items: [
         { to: '/company', label: t('Company'), icon: Building2, show: can('company.manage') },
+        { to: '/company/accountant', label: t('Accounting firm'), icon: BriefcaseBusiness, show: can('firm.manage') && !me?.firmMember },
         { to: '/billing', label: t('Billing'), icon: CreditCard, show: can('subscription.manage') && !can('platform.manage') },
         { to: '/payroll/settings', label: t('Grades'), icon: Layers, show: can('masterdata.manage') },
         { to: '/payroll/elements', label: t('Pay elements'), icon: SlidersHorizontal, show: pay && any('salary.read', 'masterdata.manage') },
@@ -150,6 +153,11 @@ export function Shell({ children }: { children: ReactNode }) {
     await api('/api/support/end', { method: 'POST' }).catch(() => undefined)
     await refresh()
     navigate(company ? `/platform/companies/${company}` : '/')
+  }
+  const endFirmVisit = async () => {
+    await api('/api/firm/visit/end', { method: 'POST' }).catch(() => undefined)
+    await refresh()
+    navigate('/firm')
   }
   const [navOpen, setNavOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -253,6 +261,12 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="support-bar no-print" role="status">
               <span><LifeBuoy size={16} aria-hidden /> <strong>{t('Support visit:')}{' '}{me.support.companyName}.</strong>{' '}{t('You see what its users see, read-only, until')}{' '}{longDay(me.support.expiresAt)}{t('. Every page you open is shown to the company.')}</span>
               <button type="button" className="secondary" onClick={() => void endSupport()}>{t('End the visit')}</button>
+            </div>
+          )}
+          {me.firm && (
+            <div className="support-bar no-print" role="status">
+              <span><BriefcaseBusiness size={16} aria-hidden /> <strong>{t('Working for {a}', { a: me.firm.clientName })}</strong>{' '}{t('as {a}, with the rights the client gave your firm. Every page you open and every change is shown to the client.', { a: me.firm.firmName })}</span>
+              <button type="button" className="secondary" onClick={() => void endFirmVisit()}>{t('Back to my firm')}</button>
             </div>
           )}
           {me.company?.readOnly && !me.support && <p className="error no-print">{me.company.readOnly}</p>}

@@ -53,7 +53,7 @@ public class PlatformController {
                               OffsetDateTime createdAt, boolean provider, String suspendedReason,
                               String subscriptionStatus, String cycle, java.time.LocalDate trialEnds,
                               java.time.LocalDate nextInvoiceOn, int openInvoices, int overdueInvoices,
-                              OffsetDateTime lastSignIn, boolean supportOpen) {}
+                              OffsetDateTime lastSignIn, boolean supportOpen, String kind) {}
 
     public record AdminInput(@NotBlank @Size(max = 100) String firstName, @NotBlank @Size(max = 100) String lastName,
                              @NotBlank @Email @Size(max = 320) String email, @NotBlank String phone) {}
@@ -216,7 +216,7 @@ public class PlatformController {
     }
 
     private static final String SELECT = """
-            select c.id, c.name, c.country_code, c.plan_code, p.name as plan_name, p.max_employees, c.modules, c.status,
+            select c.id, c.name, c.kind, c.country_code, c.plan_code, p.name as plan_name, p.max_employees, c.modules, c.status,
                    (select count(*) from app_user u where u.company_id = c.id and u.status = 'ACTIVE') as employees,
                    c.created_at, c.suspended_reason, s.status as subscription_status, s.cycle, s.trial_ends,
                    s.next_invoice_on,
@@ -237,7 +237,8 @@ public class PlatformController {
                 rs.getString("subscription_status"), rs.getString("cycle"),
                 rs.getObject("trial_ends", java.time.LocalDate.class), rs.getObject("next_invoice_on", java.time.LocalDate.class),
                 rs.getInt("open_invoices"), rs.getInt("overdue_invoices"),
-                rs.getObject("last_sign_in", OffsetDateTime.class), rs.getBoolean("support_open"));
+                rs.getObject("last_sign_in", OffsetDateTime.class), rs.getBoolean("support_open"),
+                rs.getString("kind"));
     }
 
     private CompanyView find(long id) {

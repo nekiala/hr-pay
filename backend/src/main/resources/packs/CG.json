@@ -2063,6 +2063,10 @@
     {
      "role_id": 2,
      "permission_code": "announcement.send"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "firm.manage"
     }
    ]
   }

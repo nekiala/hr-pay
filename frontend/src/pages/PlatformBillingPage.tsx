@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api, type BillingSettings, type Invoice, type PlanPrice } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { InvoiceTable } from '../components/Invoices'
+import { FirmTermsCard } from '../components/FirmTermsCard'
 import { Button, Form } from '../components/Button'
 import { t } from '../i18n'
 
@@ -118,6 +119,7 @@ export default function PlatformBillingPage() {
           </div>
         )}
       </div>
+      {view?.mode !== 'ON_PREMISE' && <FirmTermsCard />}
     </section>
   )
 }

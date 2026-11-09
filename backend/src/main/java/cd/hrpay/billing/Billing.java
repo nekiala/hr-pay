@@ -80,6 +80,12 @@ public class Billing {
     private final AuditService audit;
     private final UserRepository users;
     private final NotificationService notifications;
+    private cd.hrpay.firm.Firms firms;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setFirms(cd.hrpay.firm.Firms firms) {
+        this.firms = firms;
+    }
 
     public Billing(JdbcClient jdbc, Tenants tenants, ExchangeRates rates, AuditService audit, UserRepository users,
                    NotificationService notifications) {
@@ -271,6 +277,12 @@ public class Billing {
         LocalDate from = s.nextInvoiceOn();
         LocalDate to = ("YEARLY".equals(s.cycle()) ? from.plusYears(1) : from.plusMonths(1)).minusDays(1);
         BigDecimal priceUsd = "YEARLY".equals(s.cycle()) ? c.yearlyPrice() : c.monthlyPrice();
+        // A client whose accounting firm pays HR Pay for it: the firm is billed, at the wholesale price.
+        java.util.Optional<cd.hrpay.firm.Firms.Wholesale> wholesale = firms == null ? java.util.Optional.empty()
+                : firms.wholesaleFor(companyId);
+        if (wholesale.isPresent()) {
+            priceUsd = cd.hrpay.firm.Firms.discounted(priceUsd, wholesale.get().discountPercent());
+        }
         BigDecimal rate = null;
         BigDecimal subtotal = money(priceUsd);
         if ("CDF".equals(s.currency())) {
@@ -283,6 +295,10 @@ public class Billing {
         String number = nextNumber(settings.invoicePrefix(), today.getYear());
         BigDecimal usdCdf = rate;
         BigDecimal sub = subtotal;
+        BigDecimal price = priceUsd;
+        String customerName = wholesale.map(cd.hrpay.firm.Firms.Wholesale::firmName).orElse(c.name());
+        String customerAddress = wholesale.isPresent() ? wholesale.get().address() : c.address();
+        String customerTax = wholesale.isPresent() ? wholesale.get().taxNumber() : c.taxNumber();
         boolean issued = tenants.callAsPlatform(() -> jdbc.sql("""
                 select count(*) from invoice where company_id = ? and period_from = ? and status <> 'VOID'""")
                 .params(companyId, from).query(Integer.class).single()) > 0;
@@ -294,11 +310,14 @@ public class Billing {
             id = tenants.callAsPlatform(() -> jdbc.sql("""
                     insert into invoice (company_id, number, issued_on, due_on, period_from, period_to, plan_code, plan_name,
                         cycle, currency, usd_cdf, price_usd, subtotal, tax_label, tax_rate, tax, total, customer_name,
-                        customer_address, customer_tax_number, created_by)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                        customer_address, customer_tax_number, created_by, paid_by_firm_id, firm_discount_percent, client_name)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                     .params(companyId, number, today, today.plusDays(settings.paymentDays()), from, to, c.planCode(),
-                            c.planName(), s.cycle(), s.currency(), usdCdf, money(priceUsd), sub, settings.taxLabel(),
-                            settings.taxRate(), tax, total, c.name(), c.address(), c.taxNumber(), by)
+                            c.planName(), s.cycle(), s.currency(), usdCdf, money(price), sub, settings.taxLabel(),
+                            settings.taxRate(), tax, total, customerName, customerAddress, customerTax, by,
+                            wholesale.map(cd.hrpay.firm.Firms.Wholesale::firmId).orElse(null),
+                            wholesale.map(cd.hrpay.firm.Firms.Wholesale::discountPercent).orElse(null),
+                            wholesale.isPresent() ? c.name() : null)
                     .query(Long.class).single());
         } catch (DuplicateKeyException e) {
             throw new ConflictException("The invoice for the period from " + from + " is already issued.");
@@ -311,7 +330,8 @@ public class Billing {
         audit.record("invoice.issued", "invoice", id, details);
         tenants.runAs(companyId, () -> audit.recordAs(by, "invoice.issued", "invoice", id, details));
         Invoice invoice = invoice(id);
-        tellAdmins(companyId, () -> Texts.t("Invoice %s from HR Pay", number), () -> Texts.t("""
+        wholesale.ifPresent(w -> tenants.runAs(w.firmId(), () -> audit.recordAs(by, "invoice.issued", "invoice", id, details)));
+        tellAdmins(wholesale.map(cd.hrpay.firm.Firms.Wholesale::firmId).orElse(companyId), () -> Texts.t("Invoice %s from HR Pay", number), () -> Texts.t("""
                 Invoice %s for %s, %s to %s, is issued: %s %s, to pay by %s.
 
                 Pay by bank transfer or mobile money with the reference %s. The invoice and the payment details are \
@@ -373,6 +393,9 @@ public class Billing {
         audit.record("invoice.payment_recorded", "invoice_payment", paymentId, details);
         tenants.runAs(i.companyId(), () -> audit.recordAs(by, "invoice.payment_recorded", "invoice_payment", paymentId, details));
         if (full) {
+            if (firms != null) {
+                firms.commissionOnPaid(i.id());
+            }
             liftIfPaid(i.companyId(), today, by);
             tellAdmins(i.companyId(), () -> Texts.t("Invoice %s is paid", i.number()),
                     () -> Texts.t("Thank you: invoice %s (%s %s) is paid in full.", i.number(), amount(i.total()), i.currency()));
