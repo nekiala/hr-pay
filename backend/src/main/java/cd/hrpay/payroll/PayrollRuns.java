@@ -324,9 +324,10 @@ public class PayrollRuns {
         int scheduledDays = (int) summary.days().stream().filter(d -> d.scheduledMinutes() > 0).count();
         BigDecimal overtime = summary.earnings() == null ? BigDecimal.ZERO
                 : ExchangeRates.convert(summary.earnings().overtimeEarned(), summary.earnings().currency(), salary.currency(), usdLocal);
-        List<EmployeeFile.Dependant> dependants = files.dependants(userId);
-        int children = (int) dependants.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
-        int inCharge = (int) dependants.stream().filter(EmployeeFile.Dependant::inCharge).count();
+        // Only the dependants who count this month: in charge, and children within the age limits (art. 7).
+        EmployeeFile.Counted counted = files.counted(userId, month);
+        int children = counted.children();
+        int inCharge = counted.dependants();
         // The 13th month comes from its own approved run for this payroll month.
         Thirteenths.Due thirteenth = ctx.thirteenth().get(userId);
         List<PayslipCalculator.LoanDue> loansDue = !withLoans ? List.of() : leaves == null ? loans.dueFor(userId, month)

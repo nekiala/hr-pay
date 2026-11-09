@@ -1461,5 +1461,16 @@
  "No contributions are set for this country.": "Aucune cotisation n'est définie pour ce pays.",
  "The exchange rate used is from %s, %s days before the end of the month.": "Le taux de change utilisé date du %s, %s jours avant la fin du mois.",
  "IRPP: monthly taxable income = taxable earnings − employee CNSS, converted to CDF; the yearly bands apply to it × 12, the result ÷ 12; less the reduction per dependant (up to the maximum number); at most the cap % of the taxable income.": "IRPP : revenu imposable mensuel = gains imposables − CNSS salariale, converti en CDF ; le barème annuel s'applique à ce montant × 12, le résultat ÷ 12 ; moins la réduction par personne à charge (jusqu'au nombre maximum) ; au plus le % plafond du revenu imposable.",
- "IRPP (income tax)": "IRPP (impôt sur le revenu)"
+ "IRPP (income tax)": "IRPP (impôt sur le revenu)",
+ "Not in the employee's charge.": "Pas à la charge de l'employé.",
+ "Disabled: no age limit.": "Handicapé : pas de limite d'âge.",
+ "Reached %s years.": "A atteint %s ans.",
+ "Reached %s years and does not study full time.": "A atteint %s ans et n'étudie pas à plein temps.",
+ "The employee is already in this grade.": "L'employé est déjà à ce grade.",
+ "The contract starts that day: use Correct to fix its grade.": "Le contrat commence ce jour-là : utilisez Corriger pour rectifier son grade.",
+ "Grade change: %s to %s": "Changement de grade : %s vers %s",
+ "Only the latest contract can be corrected. To change the grade from a date, use Change grade.": "Seul le dernier contrat peut être corrigé. Pour changer de grade à partir d'une date, utilisez Changer de grade.",
+ "A payroll already approved or closed uses this contract: use Change grade from a later date instead.": "Une paie déjà approuvée ou clôturée utilise ce contrat : utilisez plutôt Changer de grade à partir d'une date ultérieure.",
+ "The grade category follows the grade of the contract: change the grade instead.": "La catégorie suit le grade du contrat : changez plutôt le grade.",
+ "Contract not found.": "Contrat introuvable."
 }

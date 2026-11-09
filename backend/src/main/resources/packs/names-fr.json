@@ -230,5 +230,9 @@
  "Withheld on top of the IRPP, as a share of it.": "Retenue en plus de l'IRPP, en pourcentage de celui-ci.",
  "Women's Rights Day": "Journée des droits de la femme",
  "Youth Day": "Fête de la jeunesse",
- "IRPP (income tax)": "IRPP (impôt sur le revenu)"
+ "IRPP (income tax)": "IRPP (impôt sur le revenu)",
+ "Child in charge, age limit": "Enfant à charge, âge limite",
+ "Child studying full time, age limit": "Enfant aux études à plein temps, âge limite",
+ "A child stops counting for family allowances and the tax reduction at this age, unless studying full time or disabled. Empty: no age check.": "Un enfant cesse de compter pour les allocations familiales et la réduction d'impôt à cet âge, sauf études à plein temps ou handicap. Vide : pas de contrôle d'âge.",
+ "A child who studies full time counts until this age. A disabled child counts without age limit.": "Un enfant aux études à plein temps compte jusqu'à cet âge. Un enfant handicapé compte sans limite d'âge."
 }

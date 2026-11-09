@@ -68,16 +68,20 @@ public class MasterDataController {
 
     public record DependantInput(@NotBlank @Size(max = 150) String fullName,
                                  @NotNull @Pattern(regexp = "SPOUSE|CHILD") String relationship, LocalDate birthDate,
-                                 boolean inCharge, @Size(max = 300) String note) {}
-
-    public record DependantUpdate(boolean inCharge, @Size(max = 300) String note) {}
+                                 boolean inCharge, Boolean student, Boolean disabled, @Size(max = 300) String note) {}
 
     public record EmployeeFileView(List<EmployeeFile.Contract> contracts, EmployeeFile.Profile profile,
-                                   List<EmployeeFile.Dependant> dependants) {}
+                                   List<EmployeeFile.DependantRow> dependants) {}
 
     private final MasterData masterData;
     private final EmployeeFile files;
     private NegotiatedPay negotiated;
+    private java.time.Clock clock = java.time.Clock.systemDefaultZone();
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setClock(java.time.Clock clock) {
+        this.clock = clock;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setNegotiated(NegotiatedPay negotiated) {
@@ -146,7 +150,8 @@ public class MasterDataController {
     @GetMapping("/users/{userId}/file")
     @PreAuthorize("hasAuthority('salary.read')")
     public EmployeeFileView file(@PathVariable long userId) {
-        return new EmployeeFileView(files.contracts(userId), files.profile(userId), files.dependants(userId));
+        return new EmployeeFileView(files.contracts(userId), files.profile(userId),
+                files.dependantRows(userId, java.time.LocalDate.now(clock)));
     }
 
     @PostMapping("/users/{userId}/contracts")
@@ -156,6 +161,24 @@ public class MasterDataController {
         // The agreed salary (negotiatedBasic) or net: the basic stays the grade's, the rest is the complement.
         return negotiated.startContract(userId, b.contractType(), b.startDate(), b.endDate(), b.gradeId(), b.occupationId(),
                 b.expatriate(), b.negotiatedBasic(), b.agreedNet(), b.note());
+    }
+
+    public record GradeChangeInput(@NotNull Long gradeId, @NotNull LocalDate from, Boolean keepNet,
+                                   @Size(max = 300) String note) {}
+
+    public record GradeCorrectionInput(@NotNull Long gradeId) {}
+
+    @PostMapping("/users/{userId}/grade-change")
+    @PreAuthorize("hasAuthority('salary.write')")
+    public EmployeeFile.Contract changeGrade(@PathVariable long userId, @Valid @RequestBody GradeChangeInput b) {
+        return negotiated.changeGrade(userId, b.gradeId(), b.from(), Boolean.TRUE.equals(b.keepNet()), b.note());
+    }
+
+    @PutMapping("/users/{userId}/contracts/{contractId}/grade")
+    @PreAuthorize("hasAuthority('salary.write')")
+    public EmployeeFile.Contract correctGrade(@PathVariable long userId, @PathVariable long contractId,
+                                              @Valid @RequestBody GradeCorrectionInput b) {
+        return files.correctGrade(userId, contractId, b.gradeId());
     }
 
     @PutMapping("/users/{userId}/profile")
@@ -170,21 +193,23 @@ public class MasterDataController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('salary.write')")
     public EmployeeFile.Dependant addDependant(@PathVariable long userId, @Valid @RequestBody DependantInput b) {
-        return files.addDependant(userId, b.fullName(), b.relationship(), b.birthDate(), b.inCharge(), b.note());
+        return files.addDependant(userId, b.fullName(), b.relationship(), b.birthDate(), b.inCharge(),
+                Boolean.TRUE.equals(b.student()), Boolean.TRUE.equals(b.disabled()), b.note());
     }
 
     @PutMapping("/users/{userId}/dependants/{id}")
     @PreAuthorize("hasAuthority('salary.write')")
-    public List<EmployeeFile.Dependant> updateDependant(@PathVariable long userId, @PathVariable long id,
-                                                        @Valid @RequestBody DependantUpdate b) {
-        files.updateDependant(userId, id, b.inCharge(), b.note());
-        return files.dependants(userId);
+    public List<EmployeeFile.DependantRow> updateDependant(@PathVariable long userId, @PathVariable long id,
+                                                           @Valid @RequestBody DependantInput b) {
+        files.updateDependant(userId, id, b.fullName(), b.relationship(), b.birthDate(), b.inCharge(),
+                Boolean.TRUE.equals(b.student()), Boolean.TRUE.equals(b.disabled()), b.note());
+        return files.dependantRows(userId, java.time.LocalDate.now(clock));
     }
 
     @DeleteMapping("/users/{userId}/dependants/{id}")
     @PreAuthorize("hasAuthority('salary.write')")
-    public List<EmployeeFile.Dependant> removeDependant(@PathVariable long userId, @PathVariable long id) {
+    public List<EmployeeFile.DependantRow> removeDependant(@PathVariable long userId, @PathVariable long id) {
         files.removeDependant(userId, id);
-        return files.dependants(userId);
+        return files.dependantRows(userId, java.time.LocalDate.now(clock));
     }
 }

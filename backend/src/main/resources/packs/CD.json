@@ -1470,6 +1470,20 @@
      "unit": "CDF",
      "description": "The tax withheld is never less than this amount when tax is due.",
      "display_order": 55
+    },
+    {
+     "code": "CHILD_AGE_LIMIT",
+     "name": "Child in charge, age limit",
+     "unit": "COUNT",
+     "description": "A child stops counting for family allowances and the tax reduction at this age, unless studying full time or disabled. Empty: no age check.",
+     "display_order": 320
+    },
+    {
+     "code": "CHILD_STUDENT_AGE_LIMIT",
+     "name": "Child studying full time, age limit",
+     "unit": "COUNT",
+     "description": "A child who studies full time counts until this age. A disabled child counts without age limit.",
+     "display_order": 321
     }
    ]
   },
@@ -1627,6 +1641,22 @@
      "effective_from": "2025-10-01",
      "value": 0.5,
      "note": "Arrêté 028/CAB/MIN.ET/FMM/RK/09/2025 du 24 septembre 2025",
+     "created_by": "system"
+    },
+    {
+     "id": 22,
+     "code": "CHILD_AGE_LIMIT",
+     "effective_from": "2002-10-16",
+     "value": 18.0,
+     "note": "Code du travail art. 7 point 11",
+     "created_by": "system"
+    },
+    {
+     "id": 23,
+     "code": "CHILD_STUDENT_AGE_LIMIT",
+     "effective_from": "2002-10-16",
+     "value": 25.0,
+     "note": "Code du travail art. 7 point 11",
      "created_by": "system"
     }
    ]

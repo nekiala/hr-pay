@@ -178,6 +178,35 @@ public class NegotiatedPay {
         return c;
     }
 
+    /**
+     * Moves the person to another grade from a date (a promotion or a reclassification): the contract goes on under
+     * the new grade, the previous record ending the day before, and the basic becomes the new grade's. The salary
+     * complement stays as it is, or, with keepNet, is worked out again so that a normal month's net does not change.
+     */
+    @Transactional
+    public EmployeeFile.Contract changeGrade(long userId, long gradeId, LocalDate from, boolean keepNet, String note) {
+        EmployeeFile.Contract current = files.contractOn(userId, from).orElseThrow(() -> new BusinessRuleException(
+                Texts.t("There is no contract on %s: start one first, its grade gives the basic salary.", from)));
+        if (current.gradeId() == gradeId) {
+            throw new BusinessRuleException("The employee is already in this grade.");
+        }
+        if (current.startDate().equals(from)) {
+            throw new BusinessRuleException("The contract starts that day: use Correct to fix its grade.");
+        }
+        files.requireOpen(from);
+        BigDecimal net = keepNet ? normalMonth(userId, from).net() : null;
+        MasterData.Grade old = masterData.grade(current.gradeId());
+        MasterData.Grade grade = masterData.grade(gradeId);
+        String text = note == null || note.isBlank()
+                ? Texts.t("Grade change: %s to %s", old.code(), grade.code()) : note.trim();
+        EmployeeFile.Contract c = files.startContract(userId, current.contractType(), from, current.endDate(), gradeId,
+                current.occupationId(), current.expatriate(), null, text);
+        if (net != null) {
+            apply(fromNet(userId, from, net, gradeId), text);
+        }
+        return c;
+    }
+
     // ---- a normal month ---------------------------------------------------------------------------------------
 
     private final class Month {
@@ -247,9 +276,9 @@ public class NegotiatedPay {
             days = 22;
             worked = 22;
         }
-        List<EmployeeFile.Dependant> deps = files.dependants(userId);
-        int children = (int) deps.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
-        int inCharge = (int) deps.stream().filter(EmployeeFile.Dependant::inCharge).count();
+        EmployeeFile.Counted counted = files.counted(userId, ym);
+        int children = counted.children();
+        int inCharge = counted.dependants();
         return new Month(rates, usd, pay.elements(), standing, complement, minutes, days, worked, children, inCharge, b,
                 seniorityPercent(userId, last));
     }
@@ -275,9 +304,9 @@ public class NegotiatedPay {
             days = 22;
             worked = 22;
         }
-        List<EmployeeFile.Dependant> deps = files.dependants(userId);
-        int children = (int) deps.stream().filter(d -> d.inCharge() && d.relationship().equals("CHILD")).count();
-        int inCharge = (int) deps.stream().filter(EmployeeFile.Dependant::inCharge).count();
+        EmployeeFile.Counted counted = files.counted(userId, ym);
+        int children = counted.children();
+        int inCharge = counted.dependants();
         boolean expatriate = files.contractOn(userId, on).map(EmployeeFile.Contract::expatriate).orElse(false);
         return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), salary.grossMonthly(), minutes,
                 minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, pay.elements(),

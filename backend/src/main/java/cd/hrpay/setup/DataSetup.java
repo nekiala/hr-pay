@@ -255,9 +255,9 @@ public class DataSetup implements ApplicationRunner {
                         "Congolese", married ? "MARRIED" : "SINGLE", "CNSS-" + s.registrationNo(), "NIF-" + s.registrationNo(),
                         "BANK", "Rawbank (sample)", "0001-" + s.registrationNo(), null, null, null, "Gombe", null));
                 if (married) {
-                    files.addDependant(u.getId(), "Spouse of " + s.firstName(), "SPOUSE", LocalDate.of(1990, 3, 2), true, null);
-                    files.addDependant(u.getId(), "First child", "CHILD", LocalDate.of(2015, 9, 1), true, null);
-                    files.addDependant(u.getId(), "Second child", "CHILD", LocalDate.of(2019, 2, 20), true, null);
+                    files.addDependant(u.getId(), "Spouse of " + s.firstName(), "SPOUSE", LocalDate.of(1990, 3, 2), true, false, false, null);
+                    files.addDependant(u.getId(), "First child", "CHILD", LocalDate.of(2015, 9, 1), true, false, false, null);
+                    files.addDependant(u.getId(), "Second child", "CHILD", LocalDate.of(2019, 2, 20), true, false, false, null);
                 }
             });
         }

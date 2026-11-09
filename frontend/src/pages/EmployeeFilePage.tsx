@@ -1,22 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, CONTRACT_TYPES, api, money, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User } from '../api'
+import { ApiError, CONTRACT_TYPES, api, money, type Dependant, type EmployeeFileView, type Grade, type Occupation, type PayAssignment, type PayElement, type Profile, type User } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { GradeChangeModal } from '../components/GradeChange'
 import { t } from '../i18n'
 
-const age = (birth: string | null) => {
-  if (!birth) return ''
-  const b = new Date(birth)
-  const n = new Date()
-  return String(n.getFullYear() - b.getFullYear() - (n < new Date(n.getFullYear(), b.getMonth(), b.getDate()) ? 1 : 0))
-}
-
 export default function EmployeeFilePage() {
-  const [addingDependant, setAddingDependant] = useState(false)
+  // null: closed; 0: adding; an id: editing that person.
+  const [editingDependant, setEditingDependant] = useState<number | null>(null)
+  const [gradeMode, setGradeMode] = useState<'change' | 'correct' | null>(null)
   const [addingItem, setAddingItem] = useState(false)
   const [contracting, setContracting] = useState(false)
   const ask = useAsk()
@@ -29,7 +25,8 @@ export default function EmployeeFilePage() {
   const [occupations, setOccupations] = useState<Occupation[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [contract, setContract] = useState({ contractType: 'PERMANENT', startDate: '', endDate: '', gradeId: '', occupationId: '', expatriate: false, agreedNet: '', note: '' })
-  const [dependant, setDependant] = useState({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
+  const emptyDependant = { fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, student: false, disabled: false, note: '' }
+  const [dependant, setDependant] = useState(emptyDependant)
   const [elements, setElements] = useState<PayElement[]>([])
   const [items, setItems] = useState<PayAssignment[]>([])
   const [item, setItem] = useState({ elementId: '', mode: 'amount', amount: '', currency: 'USD', percent: '', startMonth: new Date().toISOString().slice(0, 7), endMonth: '', note: '' })
@@ -63,6 +60,9 @@ export default function EmployeeFilePage() {
   }
 
   const grade = grades.find((g) => g.id === Number(contract.gradeId))
+  const today = new Date().toISOString().slice(0, 10)
+  const latestContract = file?.contracts[0] ?? null
+  const currentContract = file?.contracts.find((c) => c.startDate <= today && (!c.endDate || c.endDate >= today)) ?? latestContract
 
   const startContract = (e: FormEvent) => {
     e.preventDefault()
@@ -80,12 +80,18 @@ export default function EmployeeFilePage() {
     return run(() => api(`/api/users/${id}/profile`, { method: 'PUT', body: profile }), t('Details saved.'))
   }
 
-  const addDependant = (e: FormEvent) => {
+  const openDependant = (d: Dependant | null) => {
+    setDependant(d ? { fullName: d.fullName, relationship: d.relationship, birthDate: d.birthDate ?? '', inCharge: d.inCharge,
+      student: d.student, disabled: d.disabled, note: d.note ?? '' } : emptyDependant)
+    setEditingDependant(d ? d.id : 0)
+  }
+
+  const saveDependant = (e: FormEvent) => {
     e.preventDefault()
-    return run(async () => {
-      await api(`/api/users/${id}/dependants`, { method: 'POST', body: { ...dependant, birthDate: dependant.birthDate || null } })
-      setDependant({ fullName: '', relationship: 'CHILD', birthDate: '', inCharge: true, note: '' })
-    }, t('Added.'))
+    const body = { ...dependant, birthDate: dependant.birthDate || null, note: dependant.note || null }
+    return editingDependant
+      ? run(() => api(`/api/users/${id}/dependants/${editingDependant}`, { method: 'PUT', body }), t('Updated.'))
+      : run(() => api(`/api/users/${id}/dependants`, { method: 'POST', body }), t('Added.'))
   }
 
   const addItem = (e: FormEvent) => {
@@ -126,7 +132,17 @@ export default function EmployeeFilePage() {
             <br /><span className="muted">{t('from')}{' '}{c.startDate}{c.endDate ? t(' to {a}', { a: c.endDate }) : ''}{c.note ? ` · ${c.note}` : ''}</span>
           </p>
         ))}
-        {editable && <Button className="secondary" onClick={() => setContracting(true)}>{t('New contract or change')}</Button>}
+        {editable && (
+          <div className="row">
+            <Button className="secondary" onClick={() => setContracting(true)}>{t('New contract or change')}</Button>
+            {currentContract && <Button className="secondary" onClick={() => setGradeMode('change')}>{t('Change grade')}</Button>}
+            {latestContract && <Button className="secondary void" onClick={() => setGradeMode('correct')}>{t('Correct the grade')}</Button>}
+          </div>
+        )}
+        {editable && gradeMode && (gradeMode === 'change' ? currentContract : latestContract) && (
+          <GradeChangeModal userId={id!} contract={(gradeMode === 'change' ? currentContract : latestContract)!} mode={gradeMode}
+            onClose={() => setGradeMode(null)} onDone={() => { setGradeMode(null); setMessage(t('Grade saved.')); load() }} />
+        )}
         {editable && contracting && (
           <Modal title={t('New contract or change')} size="lg" onClose={() => setContracting(false)}>
             <Form onSubmit={async (e) => { if (await startContract(e)) setContracting(false) }}>
@@ -277,35 +293,66 @@ export default function EmployeeFilePage() {
 
       <div className="card">
         <h3>{t('Spouse and children')}</h3>
-        <p className="hint">{t('Dependants in the employee\'s charge count for family allowances and the tax reduction.')}</p>
+        <p className="hint">{t('The spouse and the children in the employee\'s charge count for family allowances and the tax reduction. Payroll checks the children\'s ages each month against the statutory rates (DRC: until 18, until 25 while studying full time, no limit if disabled, Code du travail art. 7).')}</p>
         {file?.dependants.length === 0 && <p className="muted">{t('None recorded.')}</p>}
-        {file?.dependants.map((d) => (
-          <div key={d.id} className="row">
-            <span>{d.relationship === 'SPOUSE' ? t('Spouse') : t('Child')}: <strong>{d.fullName}</strong>{d.birthDate ? t(" · {a} years", { a: age(d.birthDate) }) : ''}{d.inCharge ? '' : t(' · not in charge')}</span>
-            {editable && (
-              <>
-                <Button className="secondary void" onClick={() => run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'PUT', body: { inCharge: !d.inCharge, note: d.note } }), t('Updated.'))}>
-                  {d.inCharge ? t('Mark not in charge') : t('Mark in charge')}
-                </Button>
-                <Button className="secondary void" onClick={() => ask({
-                  title: t('Remove {a}?', { a: d.fullName }), message: t('Family allowances stop counting this person from the next payroll.'), confirmLabel: t('Remove'), danger: true,
-                  onConfirm: () => run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'DELETE' }), t('Removed.')),
-                })}>{t('Remove')}</Button>
-              </>
-            )}
+        {file && file.dependants.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('Relationship')}</th><th>{t('Full name')}</th><th>{t('Date of birth')}</th><th className="num">{t('Age')}</th>
+                  <th>{t('In charge')}</th><th>{t('Counts for allowances')}</th><th>{t('Note')}</th>{editable && <th />}
+                </tr>
+              </thead>
+              <tbody>
+                {file.dependants.map((d) => (
+                  <tr key={d.id}>
+                    <td>{d.relationship === 'SPOUSE' ? t('Spouse') : t('Child')}
+                      {d.student && <span className="badge" style={{ marginLeft: 6 }}>{t('Student')}</span>}
+                      {d.disabled && <span className="badge" style={{ marginLeft: 6 }}>{t('Disabled')}</span>}</td>
+                    <td><strong>{d.fullName}</strong></td>
+                    <td>{d.birthDate ?? <span className="muted">{t('Not given')}</span>}</td>
+                    <td className="num">{d.age ?? ''}</td>
+                    <td>{d.inCharge ? t('Yes') : <span className="muted">{t('Not in charge')}</span>}</td>
+                    <td>{d.counts
+                      ? <span className="badge ok">{d.countsUntil ? t('Yes, until {a}', { a: d.countsUntil }) : t('Yes')}</span>
+                      : <span className="badge warn" title={d.reason ?? ''}>{d.reason ?? t('Not counted')}</span>}</td>
+                    <td className="muted">{d.note ?? ''}</td>
+                    {editable && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <Button className="secondary void" onClick={() => openDependant(d)}>{t('Edit')}</Button>{' '}
+                        <Button className="secondary void" onClick={() => ask({
+                          title: t('Remove {a}?', { a: d.fullName }), message: t('Family allowances stop counting this person from the next payroll.'), confirmLabel: t('Remove'), danger: true,
+                          onConfirm: () => run(() => api(`/api/users/${id}/dependants/${d.id}`, { method: 'DELETE' }), t('Removed.')),
+                        })}>{t('Remove')}</Button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-        {editable && <Button className="secondary" onClick={() => setAddingDependant(true)}>{t('Add a spouse or child')}</Button>}
-        {editable && addingDependant && (
-          <Modal title={t('Add a spouse or child')} size="sm" onClose={() => setAddingDependant(false)}>
-            <Form onSubmit={async (e) => { if (await addDependant(e)) setAddingDependant(false) }}>
+        )}
+        {editable && <Button className="secondary" onClick={() => openDependant(null)}>{t('Add a spouse or child')}</Button>}
+        {editable && editingDependant !== null && (
+          <Modal title={editingDependant ? t('Edit {a}', { a: dependant.fullName || t('family member') }) : t('Add a spouse or child')} size="sm" onClose={() => setEditingDependant(null)}>
+            <Form onSubmit={async (e) => { if (await saveDependant(e)) setEditingDependant(null) }}>
               <label>{t('Relationship')}<select value={dependant.relationship} onChange={(e) => setDependant({ ...dependant, relationship: e.target.value })}>
                 <option value="CHILD">{t('Child')}</option><option value="SPOUSE">{t('Spouse')}</option>
               </select></label>
-              <label>{t('Full name')}<input value={dependant.fullName} onChange={(e) => setDependant({ ...dependant, fullName: e.target.value })} required /></label>
+              <label>{t('Full name')}<input value={dependant.fullName} maxLength={150} onChange={(e) => setDependant({ ...dependant, fullName: e.target.value })} required /></label>
               <label>{t('Date of birth')}<input type="date" value={dependant.birthDate} onChange={(e) => setDependant({ ...dependant, birthDate: e.target.value })} required={dependant.relationship === 'CHILD'} /></label>
+              <label className="check"><input type="checkbox" checked={dependant.inCharge} onChange={(e) => setDependant({ ...dependant, inCharge: e.target.checked })} />{t('In the employee\'s charge')}</label>
+              {dependant.relationship === 'CHILD' && (
+                <>
+                  <label className="check"><input type="checkbox" checked={dependant.student} onChange={(e) => setDependant({ ...dependant, student: e.target.checked })} />{t('Studies full time')}</label>
+                  <label className="check"><input type="checkbox" checked={dependant.disabled} onChange={(e) => setDependant({ ...dependant, disabled: e.target.checked })} />{t('Disabled, cannot earn a living')}</label>
+                </>
+              )}
+              <label>{t('Note')}<input value={dependant.note} maxLength={300} onChange={(e) => setDependant({ ...dependant, note: e.target.value })} /></label>
+              <p className="hint">{t('A minor who works for a normal wage does not count: untick "in charge".')}</p>
               <ErrorText error={error} />
-            <div className="modal-foot"><Button className="secondary" onClick={() => setAddingDependant(false)}>{t('Cancel')}</Button><Button type="submit">{t('Add')}</Button></div>
+            <div className="modal-foot"><Button className="secondary" onClick={() => setEditingDependant(null)}>{t('Cancel')}</Button><Button type="submit">{editingDependant ? t('Save') : t('Add')}</Button></div>
             </Form>
           </Modal>
         )}

@@ -78,4 +78,78 @@ class EmployeeFileIT extends IntegrationTest {
         mvc.perform(json(put(base + "/profile").session(login(EMPLOYEE)), "{\"maritalStatus\":\"SINGLE\",\"paymentMethod\":\"CASH\"}"))
                 .andExpect(status().isForbidden());
     }
+
+    /** A new employee, so that other tests' payrolls do not change. */
+    long freshEmployee() throws Exception {
+        String created = mvc.perform(json(post("/api/users").session(login(ADMIN)), newUser("[\"EMPLOYEE\"]")))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return JsonPath.<Number>read(created, "$.id").longValue();
+    }
+
+    @Test
+    void dependantsCanBeEditedAndChildrenFollowTheAgeLimits() throws Exception {
+        MockHttpSession hr = login(HR);
+        String base = "/api/users/" + freshEmployee();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        String adult = today.minusYears(20).toString();
+        String body = mvc.perform(json(post(base + "/dependants").session(hr), """
+                        {"fullName":"Grown","relationship":"CHILD","birthDate":"%s","inCharge":true}""".formatted(adult)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long child = JsonPath.<Number>read(body, "$.id").longValue();
+        mvc.perform(get(base + "/file").session(hr))
+                .andExpect(jsonPath("$.dependants[?(@.id==" + child + ")].counts").value(false))
+                .andExpect(jsonPath("$.dependants[?(@.id==" + child + ")].age").value(20));
+        mvc.perform(json(put(base + "/dependants/" + child).session(hr), """
+                        {"fullName":"Grown Up","relationship":"CHILD","birthDate":"%s","inCharge":true,"student":true,
+                         "note":"University"}""".formatted(adult)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id==" + child + ")].fullName").value("Grown Up"))
+                .andExpect(jsonPath("$[?(@.id==" + child + ")].student").value(true))
+                .andExpect(jsonPath("$[?(@.id==" + child + ")].counts").value(true))
+                .andExpect(jsonPath("$[?(@.id==" + child + ")].countsUntil").value(today.minusYears(20).plusYears(25).minusDays(1).toString()));
+        mvc.perform(json(put(base + "/dependants/" + child).session(hr), """
+                        {"fullName":"Grown Up","relationship":"CHILD","inCharge":true}"""))
+                .andExpect(status().is(422));
+    }
+
+    @Test
+    void theGradeChangesFromADateOrIsCorrected() throws Exception {
+        MockHttpSession hr = login(HR);
+        String base = "/api/users/" + freshEmployee();
+        mvc.perform(json(post(base + "/contracts").session(hr), """
+                        {"contractType":"PERMANENT","startDate":"%s","gradeId":%d,"expatriate":false}"""
+                        .formatted(java.time.YearMonth.now().minusMonths(1).atDay(1), grade(hr, "E4A"))))
+                .andExpect(status().isCreated());
+        String first = mvc.perform(get(base + "/file").session(hr)).andReturn().getResponse().getContentAsString();
+        long oldContract = JsonPath.<Number>read(first, "$.contracts[0].id").longValue();
+        String from = java.time.YearMonth.now().plusMonths(2).atDay(1).toString();
+        String created = mvc.perform(json(post(base + "/grade-change").session(hr), """
+                        {"gradeId":%d,"from":"%s","keepNet":false}""".formatted(grade(hr, "M1"), from)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gradeCode").value("M1"))
+                .andReturn().getResponse().getContentAsString();
+        long newContract = JsonPath.<Number>read(created, "$.id").longValue();
+        mvc.perform(get(base + "/salaries").session(hr))
+                .andExpect(jsonPath("$[0].effectiveFrom").value(from))
+                .andExpect(jsonPath("$[0].grossMonthly").value(731));
+        mvc.perform(get(base).session(hr)).andExpect(jsonPath("$.gradeCategoryId").value(2));
+        // The category follows the grade: it cannot be set apart.
+        mvc.perform(json(put(base + "/employment").session(hr), "{\"gradeCategoryId\":1}")).andExpect(status().is(422));
+
+        // A wrong grade on the latest contract is corrected, its basic following; the older one cannot be.
+        mvc.perform(json(put(base + "/contracts/" + newContract + "/grade").session(hr), "{\"gradeId\":%d}".formatted(grade(hr, "M2"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gradeCode").value("M2"));
+        mvc.perform(get(base + "/salaries").session(hr))
+                .andExpect(jsonPath("$[0].grossMonthly").value(org.hamcrest.Matchers.not(731)));
+        mvc.perform(json(put(base + "/contracts/" + oldContract + "/grade").session(hr), "{\"gradeId\":%d}".formatted(grade(hr, "M2"))))
+                .andExpect(status().is(422));
+        mvc.perform(json(post(base + "/grade-change").session(hr), """
+                        {"gradeId":%d,"from":"%s","keepNet":false}""".formatted(grade(hr, "M2"), from)))
+                .andExpect(status().is(422));
+        // Out of the way of the other tests (yearly leave grants).
+        mvc.perform(post(base + "/disable").session(login(ADMIN)).with(
+                        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
+                .andExpect(status().isOk());
+    }
 }
