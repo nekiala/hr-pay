@@ -115,6 +115,13 @@ public class PayrollRuns {
         this.parallelFrom = parallelFrom;
     }
 
+    private PayrollChecks checks;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setChecks(PayrollChecks checks) {
+        this.checks = checks;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     void setLeave(cd.hrpay.leave.LeaveService leave) {
         this.leave = leave;
@@ -363,6 +370,14 @@ public class PayrollRuns {
         summary.days().stream().filter(d -> d.status() == DayCalculator.Status.LEAVE && d.leaveType() != null)
                 .forEach(d -> leaveDays.merge(d.leaveType(), 1, Integer::sum));
         snapshot.put("leaveDays", leaveDays);
+        // For the checks before approval (PayrollChecks).
+        snapshot.put("absentDays", summary.absentDays());
+        snapshot.put("overtimePendingMinutes", summary.overtimePendingMinutes());
+        snapshot.put("overtimeWeekMaxMinutes", summary.overtime().stream()
+                .filter(o -> o.status() != AttendanceDays.OvertimeStatus.REJECTED)
+                .collect(java.util.stream.Collectors.groupingBy(o -> o.date().with(java.time.DayOfWeek.MONDAY),
+                        java.util.stream.Collectors.summingInt(AttendanceDays.OvertimeDay::minutes)))
+                .values().stream().mapToInt(Integer::intValue).max().orElse(0));
         snapshot.put("occupation", contract.occupationName());
         snapshot.put("expatriate", contract.expatriate());
         snapshot.put("basicMonthly", salary.grossMonthly());
@@ -471,6 +486,7 @@ public class PayrollRuns {
         } else {
             runId = existing.id();
             jdbc.sql("delete from payslip where run_id = ?").param(runId).update();
+            checks.reset(runId);
             jdbc.sql("""
                     update payroll_run set usd_cdf = ?, rate_date = ?, rate_source = ?, projected = ?, calculated_by = ?,
                            calculated_at = now() where id = ?""")
@@ -599,6 +615,7 @@ public class PayrollRuns {
             throw new BusinessRuleException("This payroll counts the rest of the month as worked. Calculate it again after "
                     + month.atEndOfMonth() + ", or once the attendance is final.");
         }
+        checks.requireClear(month);
         jdbc.sql("update payroll_run set status = 'APPROVED', approved_by = ?, approved_at = now() where id = ?")
                 .params(CurrentUser.email(), run.id()).update();
         audit.record("payroll.approved", "payroll_run", run.id(), Map.of("month", month.toString()));
@@ -625,6 +642,7 @@ public class PayrollRuns {
         }
         Quinzaines.requireSettled(jdbc, month);
         Thirteenths.requireSettled(jdbc, month, run.calculatedAt());
+        checks.requireClear(month);
         List<Long> slips = jdbc.sql("""
                 select p.id from payslip p join app_user u on u.id = p.user_id where p.run_id = ? and p.kind = 'REGULAR'
                 order by u.last_name, u.first_name, p.id""").param(run.id()).query(Long.class).list();

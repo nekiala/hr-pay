@@ -32,6 +32,7 @@ import PayrollSettingsPage from './pages/PayrollSettingsPage'
 import PayElementsPage from './pages/PayElementsPage'
 import PayEntriesPage from './pages/PayEntriesPage'
 import QuinzaineSettingsPage from './pages/QuinzaineSettingsPage'
+import PayrollChecksSettingsPage from './pages/PayrollChecksSettingsPage'
 import StatutoryRatesPage from './pages/StatutoryRatesPage'
 import PayRunsPage from './pages/PayRunsPage'
 import NewPayRunPage from './pages/NewPayRunPage'
@@ -242,6 +243,7 @@ export default function App() {
           <Route path="/payroll/runs/thirteenth/:id" element={<PayrollRoute page="thirteenth" />} />
           <Route path="/payroll/runs/corrections" element={<PayrollStaff><PayrollCorrectionsPage /></PayrollStaff>} />
           <Route path="/payroll/thirteenth-month/settings" element={<PayElementsRoute page="thirteenth" />} />
+          <Route path="/payroll/checks/settings" element={<PayrollStaff><PayrollChecksSettingsPage /></PayrollStaff>} />
           <Route path="/payroll/quinzaine/settings" element={<PayrollStaff><QuinzaineSettingsPage /></PayrollStaff>} />
           <Route path="/payroll/entries" element={<Guard permission="salary.read"><PayEntriesPage /></Guard>} />
           <Route path="/payroll/compare" element={<PayrollStaff><ComparePage /></PayrollStaff>} />

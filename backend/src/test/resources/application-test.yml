@@ -31,6 +31,8 @@ app:
     poll: PT1H
     heartbeat: PT1S
   payroll:
+    # PayrollChecksIT turns the checks before approval on; other tests approve sample months freely.
+    checks-required: false
     # Every test payroll goes through the threads, as a large one does.
     parallel-from: 1
   whatsapp:

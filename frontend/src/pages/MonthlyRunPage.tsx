@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button } from '../components/Button'
+import { PayrollChecksCard, type ChecksReport } from '../components/PayrollChecksCard'
 import { t, locale } from '../i18n'
 
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
@@ -29,6 +30,7 @@ export default function MonthlyRunPage() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [direction, setDirection] = useState('')
+  const [checks, setChecks] = useState<ChecksReport | null>(null)
   const [adjustments, setAdjustments] = useState<HolidayAdjustment[]>([])
   useEffect(() => { api<HolidayAdjustment[]>('/api/payroll/holiday-adjustments').then(setAdjustments).catch(() => undefined) }, [])
 
@@ -125,7 +127,7 @@ export default function MonthlyRunPage() {
             <Button disabled={busy} onClick={() => act('calculate', t('Payroll calculated.'))}>{run ? t('Calculate again') : t('Calculate {a}', { a: month })}</Button>
           )}
           {can('payroll.approve') && run?.status === 'CALCULATED' && (
-            <Button disabled={busy} onClick={() => ask({ title: t('Approve the {a} payroll?', { a: month }), message: t('HR can then close the month.'), confirmLabel: t('Approve'), onConfirm: () => act('approve', t('Payroll approved.')) })}>{t('Approve')}</Button>
+            <Button disabled={busy || checks?.clear === false} title={checks?.clear === false ? t('Fix or accept the checks below first.') : undefined} onClick={() => ask({ title: t('Approve the {a} payroll?', { a: month }), message: t('HR can then close the month.'), confirmLabel: t('Approve'), onConfirm: () => act('approve', t('Payroll approved.')) })}>{t('Approve')}</Button>
           )}
           {(can('payroll.approve') || can('payroll.run')) && run?.status === 'APPROVED' && (
             <Button className="secondary" disabled={busy} onClick={() => ask({
@@ -147,6 +149,10 @@ export default function MonthlyRunPage() {
           )}
         </div>
       </div>
+
+      {run && (can('payroll.run') || can('payroll.approve') || can('payroll.close')) && (
+        <PayrollChecksCard month={month} version={view} onChange={setChecks} />
+      )}
 
       {view && view.skipped.length > 0 && (
         <div className="card">
