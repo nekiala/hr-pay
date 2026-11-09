@@ -53,14 +53,14 @@ public class ParallelRun {
         BigDecimal tol = tolerance == null ? BigDecimal.ONE : tolerance.abs();
         Map<String, Ours> ours = new LinkedHashMap<>();
         jdbc.sql("""
-                select u.registration_no, u.first_name || ' ' || u.last_name as name, trim(min(p.currency)) as currency,
+                select u.registration_no, person_name(u.first_name, u.middle_name, u.last_name) as name, trim(min(p.currency)) as currency,
                        sum(p.gross) as gross,
                        coalesce(sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = 'CNSS_EMPLOYEE')), 0) as cnss,
                        coalesce(sum((select sum(l.amount) from payslip_line l where l.payslip_id = p.id and l.element_code = 'IPR')), 0) as tax,
                        sum(p.net) as net
                 from payslip p join app_user u on u.id = p.user_id
                 where p.run_id = ? and (p.kind = 'REGULAR' or p.number is not null)
-                group by u.registration_no, u.first_name, u.last_name order by u.last_name, u.first_name""")
+                group by u.registration_no, u.first_name, u.middle_name, u.last_name order by u.last_name, u.first_name""")
                 .param(run[0]).query(Ours.class).list()
                 .forEach(o -> ours.put(norm(o.registrationNo()), o));
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User } from '../api'
+import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
@@ -10,8 +10,8 @@ import { useAsk } from '../components/Dialogs'
 import { GradeChangeModal } from '../components/GradeChange'
 import { locale, plural, t } from '../i18n'
 
-type Form = { email: string; registrationNo: string; phone: string; firstName: string; lastName: string; siteId: string }
-const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', lastName: '', siteId: '' }
+type Form = { email: string; registrationNo: string; phone: string; firstName: string; middleName: string; lastName: string; siteId: string }
+const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', middleName: '', lastName: '', siteId: '' }
 
 export default function UserFormPage() {
   const { id } = useParams()
@@ -50,7 +50,7 @@ export default function UserFormPage() {
         setUser(u)
         setSelectedRoles(u.roles)
         setForm({ email: u.email, registrationNo: u.registrationNo, phone: u.phone, firstName: u.firstName,
-          lastName: u.lastName, siteId: u.siteId ? String(u.siteId) : '' })
+          middleName: u.middleName ?? '', lastName: u.lastName, siteId: u.siteId ? String(u.siteId) : '' })
       }).catch((e: Error) => setError(e.message))
     }
   }, [id, can])
@@ -71,7 +71,7 @@ export default function UserFormPage() {
     }
   }
 
-  const payload = () => ({ ...form, siteId: form.siteId ? Number(form.siteId) : null })
+  const payload = () => ({ ...form, middleName: form.middleName.trim() || null, siteId: form.siteId ? Number(form.siteId) : null })
 
   const save = (e: FormEvent) => {
     e.preventDefault()
@@ -106,7 +106,7 @@ export default function UserFormPage() {
   })
 
   const resetTwoStep = () => ask({
-    title: t('Reset the second step of {a} {b}?', { a: user?.firstName, b: user?.lastName }), confirmLabel: t('Reset'), danger: true,
+    title: t('Reset the second step of {a}?', { a: user ? personName(user) : '' }), confirmLabel: t('Reset'), danger: true,
     message: t('Their authenticator and recovery codes stop working, they are signed out everywhere, and they set the second step up again at their next sign-in.'),
     onConfirm: () => handle(async () => {
       await api(`/api/users/${id}/two-step/reset`, { method: 'POST' })
@@ -128,10 +128,10 @@ export default function UserFormPage() {
   const toggleRole = (code: string) =>
     setSelectedRoles(selectedRoles.includes(code) ? selectedRoles.filter((r) => r !== code) : [...selectedRoles, code])
 
-  const field = (key: keyof Form, label: string, type = 'text', hint?: string) => (
+  const field = (key: keyof Form, label: string, type = 'text', hint?: string, required = true) => (
     <label>
       {label}
-      <input type={type} value={form[key]} onChange={set(key)} required disabled={!canEdit} />
+      <input type={type} value={form[key]} onChange={set(key)} required={required} maxLength={type === 'text' ? 100 : undefined} disabled={!canEdit} />
       {hint && <span className="hint">{hint}</span>}
       {fieldErrors[key] && <span className="error">{fieldErrors[key]}</span>}
     </label>
@@ -139,7 +139,8 @@ export default function UserFormPage() {
 
   return (
     <section>
-      <h2>{isNew ? t('New user') : `${form.firstName} ${form.lastName}`}</h2>
+      {!isNew && <p><Link to={`/users/${id}`}>{t('← Back to the person')}</Link></p>}
+      <h2>{isNew ? t('New user') : user ? personName(user) : ''}</h2>
       {user && (
         <p className="muted">
           {user.status === 'ACTIVE' ? t('Active') : t('Disabled')} · {user.hasPassword ? t('Password set') : t('Google sign-in only')}
@@ -147,9 +148,10 @@ export default function UserFormPage() {
         </p>
       )}
       <Form className="card" onSubmit={save}>
-        <div className="grid2">
-          {field('firstName', t('First name'))}
+        <div className="grid3">
           {field('lastName', t('Last name'))}
+          {field('middleName', t('Postnom'), 'text', t('Optional'), false)}
+          {field('firstName', t('First name'))}
         </div>
         {field('email', t('Email'), 'email')}
         <div className="grid2">
@@ -384,14 +386,14 @@ function ManagerCard({ user, editable, onChange }: { user: User; editable: boole
   return (
     <div className="card">
       <h3>{t('Manager set by hand')}</h3>
-      <p>{manager ? `${manager.firstName} ${manager.lastName}` : <span className="muted">{t('None: the head of the unit is used')}</span>}
+      <p>{manager ? personName(manager) : <span className="muted">{t('None: the head of the unit is used')}</span>}
         {editable && manager && <> <Button className="secondary void" onClick={() => save(null)}>{t('Remove')}</Button></>}</p>
       <p className="hint">{t('Leave empty and the unit head approves and evaluates. Set a manager only for an exception.')}</p>
       {editable && (
         <>
           <input placeholder={t('Search by name or registration number')} value={query} onChange={(e) => setQuery(e.target.value)} />
           {results.map((u) => (
-            <p key={u.id}><Button className="secondary void" onClick={() => save(u.id)}>{t('Choose')}</Button> {u.firstName} {u.lastName} <span className="muted">{u.registrationNo}</span></p>
+            <p key={u.id}><Button className="secondary void" onClick={() => save(u.id)}>{t('Choose')}</Button> {personName(u)} <span className="muted">{u.registrationNo}</span></p>
           ))}
         </>
       )}

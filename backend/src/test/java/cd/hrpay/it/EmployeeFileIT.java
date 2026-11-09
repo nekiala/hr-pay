@@ -152,4 +152,19 @@ class EmployeeFileIT extends IntegrationTest {
                         org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void thePostnomIsPartOfTheName() throws Exception {
+        String body = newUser("[\"EMPLOYEE\"]").replace("\"firstName\":\"Test\"", "\"firstName\":\"Kiala\",\"middleName\":\"Ntona\"");
+        String created = mvc.perform(json(post("/api/users").session(login(ADMIN)), body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.middleName").value("Ntona"))
+                .andReturn().getResponse().getContentAsString();
+        long id = JsonPath.<Number>read(created, "$.id").longValue();
+        String last = JsonPath.read(created, "$.lastName");
+        mvc.perform(get("/api/users/" + id).session(login(HR)))
+                .andExpect(jsonPath("$.fullName").value(last.toUpperCase() + " NTONA Kiala"));
+        mvc.perform(get("/api/users").param("q", "ntona").session(login(HR)))
+                .andExpect(jsonPath("$.items[?(@.id==" + id + ")]").isNotEmpty());
+    }
 }

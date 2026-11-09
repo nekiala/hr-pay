@@ -1,5 +1,17 @@
 // French texts of the interface, by their English text. Generated from the t() calls, then edited by hand.
 const fr: Record<string, string> = {
+  '← All users': '← Tous les utilisateurs',
+  'No contract yet': 'Pas encore de contrat',
+  'available': 'disponibles',
+  'Family for allowances': 'Famille pour les allocations',
+  'child': 'enfant',
+  'children': 'enfants',
+  ' and the spouse': ' et le conjoint',
+  'Identity and contact': 'Identité et contact',
+  'Work': 'Travail',
+  'The head of the unit': 'Le chef de l\'unité',
+  'Never signed in': 'Jamais connecté',
+  'Reset the second step of {a}?': 'Réinitialiser la deuxième étape de {a} ?',
   'Not in charge': 'Pas à charge',
   'Not counted': 'Ne compte pas',
   'Change grade': 'Changer de grade',

@@ -97,7 +97,7 @@ public class TicketController {
     public SupportDesk.Thread answer(@PathVariable long id, @Valid @RequestBody MessageInput in) {
         requireProvider();
         AppUser me = me();
-        return desk.answer(id, me.getEmail(), me.getFirstName() + " " + me.getLastName(), in.body());
+        return desk.answer(id, me.getEmail(), me.fullName(), in.body());
     }
 
     @PostMapping("/api/platform/tickets/{id}/close")

@@ -66,7 +66,7 @@ public class LeaveService {
     public record LeaveDay(String type, BigDecimal payPercent, String halfDay) {}
 
     private static final String REQUEST_SELECT = """
-            select r.id, r.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+            select r.id, r.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                    r.leave_type_id, t.name as leave_type, r.start_date, r.end_date, r.working_days, r.reason, r.status,
                    r.requested_at, r.decided_by, r.decided_at, r.decision_note, r.half_day, t.requires_document,
                    (select count(*) from leave_document d where d.leave_request_id = r.id) as documents, r.document_checked_by
@@ -548,7 +548,7 @@ public class LeaveService {
                 if (lapsing.signum() == 0) {
                     continue;
                 }
-                lapses.add(new Lapse(userId, u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), y, left,
+                lapses.add(new Lapse(userId, u.fullName(), u.getRegistrationNo(), y, left,
                         lapsing, left.subtract(lapsing)));
                 if (apply) {
                     jdbc.sql("""
@@ -693,7 +693,7 @@ public class LeaveService {
      */
     public List<Planned> annualPlanning(LocalDate from, LocalDate to) {
         List<Planned> all = jdbc.sql("""
-                select r.id, r.user_id, u.first_name || ' ' || u.last_name as employee_name, u.registration_no,
+                select r.id, r.user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name, u.registration_no,
                        r.start_date, r.end_date, r.working_days, r.status,
                        (select a.status from leave_allowance a where a.leave_request_id = r.id and a.status <> 'CANCELLED'
                         order by a.id desc limit 1) as allowance_status,

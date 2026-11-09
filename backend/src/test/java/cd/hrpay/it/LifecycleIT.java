@@ -172,7 +172,7 @@ class LifecycleIT extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SENT"))
                 .andExpect(jsonPath("$.number").value(Matchers.startsWith("LT-")))
-                .andExpect(jsonPath("$.body").value(Matchers.containsString("Esther Kalala")))
+                .andExpect(jsonPath("$.body").value(Matchers.containsString("KALALA Esther")))
                 .andReturn().getResponse().getContentAsString();
         String sha = JsonPath.read(sent, "$.sha256");
         mvc.perform(get("/api/my/documents").session(me))

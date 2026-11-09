@@ -43,21 +43,21 @@ class StructureEverywhereIT extends IntegrationTest {
                 .andExpect(jsonPath("$.managerId").doesNotExist())
                 .andExpect(jsonPath("$.unitName").value("Service logistique"));
         mvc.perform(get("/api/org/users/" + jean + "/assignments").session(hr))
-                .andExpect(jsonPath("$.manager.userName").value("Sarah Tshibangu"))
+                .andExpect(jsonPath("$.manager.userName").value("TSHIBANGU Sarah"))
                 .andExpect(jsonPath("$.manager.manual").value(false));
 
         // A manager set by hand wins for "reports to"; the head of the branch still sees Jean's requests.
         mvc.perform(json(put("/api/users/" + jean + "/manager").session(login(ADMIN)), "{\"managerId\":" + patrick + "}"))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/org/users/" + jean + "/assignments").session(hr))
-                .andExpect(jsonPath("$.manager.userName").value("Patrick Ilunga"))
+                .andExpect(jsonPath("$.manager.userName").value("ILUNGA Patrick"))
                 .andExpect(jsonPath("$.manager.manual").value(true));
         String people = mvc.perform(get("/api/org/people").session(hr)).andReturn().getResponse().getContentAsString();
-        assertThat(JsonPath.<List<String>>read(people, "$[?(@.userId==" + jean + ")].reportsToName")).containsExactly("Patrick Ilunga");
+        assertThat(JsonPath.<List<String>>read(people, "$[?(@.userId==" + jean + ")].reportsToName")).containsExactly("ILUNGA Patrick");
         mvc.perform(json(put("/api/users/" + jean + "/manager").session(login(ADMIN)), "{\"managerId\":null}"))
                 .andExpect(status().isOk());
         mvc.perform(get("/api/org/users/" + jean + "/assignments").session(hr))
-                .andExpect(jsonPath("$.manager.userName").value("Sarah Tshibangu"));
+                .andExpect(jsonPath("$.manager.userName").value("TSHIBANGU Sarah"));
     }
 
     @Autowired

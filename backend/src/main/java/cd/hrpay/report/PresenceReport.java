@@ -96,7 +96,7 @@ public class PresenceReport {
             DayCalculator.DayResult d = attendance.days(u, day, day).getFirst();
             var p = where.get(u.getId());
             String status = d.mission() && d.workedMinutes() == 0 ? "MISSION" : d.status().name();
-            people.add(new Person(u.getId(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(),
+            people.add(new Person(u.getId(), u.fullName(), u.getRegistrationNo(),
                     p == null ? null : p.directionName(), p == null ? null : p.unitName(),
                     u.getSite() == null ? null : u.getSite().getName(), status, local(d.firstIn()), local(d.lastOut()),
                     d.lateMinutes(), d.mission(), d.leaveType(), d.missingCheckOut()));
@@ -129,7 +129,7 @@ public class PresenceReport {
         List<Issue> rows = new ArrayList<>();
         for (AppUser u : scope(unitId, where)) {
             var p = where.get(u.getId());
-            String name = u.getFirstName() + " " + u.getLastName();
+            String name = u.fullName();
             String dir = p == null ? null : p.directionName();
             String unit = p == null ? null : p.unitName();
             for (DayCalculator.DayResult d : attendance.days(u, from, last)) {

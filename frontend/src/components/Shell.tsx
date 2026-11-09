@@ -8,7 +8,7 @@ import {
   BriefcaseBusiness, Handshake, Smartphone,
 } from 'lucide-react'
 import { useAuth } from '../auth'
-import { api, longDay, type Module } from '../api'
+import { api, longDay, type Module , personName } from '../api'
 import { t } from '../i18n'
 import { NotificationBell } from './NotificationBell'
 import { JobProgress } from './JobProgress'
@@ -239,7 +239,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <div className="user-menu" ref={menuRef}>
               <button type="button" className="user-chip" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                 <span className="avatar">{initials}</span>
-                <span className="user-text"><strong>{me.firstName} {me.lastName}</strong><small>{me.roles.join(' · ')}</small></span>
+                <span className="user-text"><strong>{personName(me)}</strong><small>{me.roles.join(' · ')}</small></span>
                 <ChevronDown size={16} aria-hidden />
               </button>
               {menuOpen && (

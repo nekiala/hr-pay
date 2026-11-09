@@ -63,7 +63,7 @@ public class MasterDataController {
                                @Size(max = 100) String bankName, @Size(max = 60) String bankAccount,
                                @Size(max = 40) String mobileMoneyOperator,
                                @Pattern(regexp = "\\+?[0-9 ]{8,20}") String mobileMoneyNumber,
-                               @Size(max = 100) String postnom, @Size(max = 100) String commune,
+                               @Size(max = 100) String commune,
                                LocalDate nursingBreakUntil) {}
 
     public record DependantInput(@NotBlank @Size(max = 150) String fullName,
@@ -186,7 +186,7 @@ public class MasterDataController {
     public EmployeeFile.Profile saveProfile(@PathVariable long userId, @Valid @RequestBody ProfileInput b) {
         return files.saveProfile(userId, new EmployeeFile.Profile(b.birthDate(), b.gender(), b.nationality(),
                 b.maritalStatus(), b.cnssNumber(), b.taxNumber(), b.paymentMethod(), b.bankName(), b.bankAccount(),
-                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.postnom(), b.commune(), b.nursingBreakUntil()));
+                b.mobileMoneyOperator(), b.mobileMoneyNumber(), b.commune(), b.nursingBreakUntil()));
     }
 
     @PostMapping("/users/{userId}/dependants")

@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, money, type Page, type PayElement, type PayEntry, type User } from '../api'
+import { ApiError, api, money, type Page, type PayElement, type PayEntry, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -95,11 +95,11 @@ export default function PayEntriesPage() {
               <div className="grid3">
                 <label>{t('Employee')}<input list="pay-people" placeholder={t('Type a name or number')} value={entry.userQuery} required
                     onChange={(e) => {
-                      const match = people.find((p) => `${p.firstName} ${p.lastName} (${p.registrationNo ?? p.email})` === e.target.value)
+                      const match = people.find((p) => `${personName(p)} (${p.registrationNo ?? p.email})` === e.target.value)
                       setEntry({ ...entry, userQuery: e.target.value, userId: match ? String(match.id) : '' })
                     }} />
                   <datalist id="pay-people">
-                    {people.map((p) => <option key={p.id} value={`${p.firstName} ${p.lastName} (${p.registrationNo ?? p.email})`} />)}
+                    {people.map((p) => <option key={p.id} value={`${personName(p)} (${p.registrationNo ?? p.email})`} />)}
                   </datalist>
                 </label>
                 <label>{t('Element')}<select value={entry.elementId} required onChange={(e) => setEntry({ ...entry, elementId: e.target.value })}>

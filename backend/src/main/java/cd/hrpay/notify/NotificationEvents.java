@@ -99,7 +99,7 @@ public class NotificationEvents {
     }
 
     private String name(long userId) {
-        return jdbc.sql("select first_name || ' ' || last_name from app_user where id = ?").param(userId)
+        return jdbc.sql("select person_name(first_name, middle_name, last_name) from app_user where id = ?").param(userId)
                 .query(String.class).optional().orElse("?");
     }
 

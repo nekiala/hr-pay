@@ -220,7 +220,7 @@ public class Checklists {
 
     public List<Open> open() {
         return jdbc.sql("""
-                select c.id, c.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, c.kind, c.due_on, c.started_at,
+                select c.id, c.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, c.kind, c.due_on, c.started_at,
                        0 as done, 0 as total
                 from employee_checklist c join app_user u on u.id = c.user_id where c.status = 'OPEN' order by c.due_on nulls last, c.started_at""")
                 .query(Open.class).list().stream().map(o -> {
@@ -241,7 +241,7 @@ public class Checklists {
     /** Everything lent and not back, for the people leaving or gone. */
     public List<Out> outstandingForLeavers() {
         return jdbc.sql("""
-                select e.id, e.user_id, u.first_name || ' ' || u.last_name as name, e.kind, e.description, e.serial_no, e.issued_on
+                select e.id, e.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, e.kind, e.description, e.serial_no, e.issued_on
                 from equipment e join app_user u on u.id = e.user_id
                 where e.returned_on is null and (u.status = 'DISABLED'
                     or exists (select 1 from departure d where d.user_id = e.user_id and d.status = 'CONFIRMED'))

@@ -192,7 +192,7 @@ public class Departures {
             thirteenth = BigDecimal.ZERO.setScale(2);
             var t13 = thirteenthMonth.settings();
             if (t13.enabled() && on.getMonthValue() < t13.payMonth()) {
-                var row = thirteenthMonth.forEmployee(userId, u.getFirstName() + " " + u.getLastName(), on.getYear()).orElse(null);
+                var row = thirteenthMonth.forEmployee(userId, u.fullName(), on.getYear()).orElse(null);
                 if (row != null && row.currency().equals(salary.currency())) {
                     thirteenth = money(row.amount());
                     why.add(Texts.t("13th month for the months worked this year: %s.", thirteenth.toPlainString()));
@@ -217,7 +217,7 @@ public class Departures {
             why.add(Texts.t("Pay the settlement within 2 working days of the last day (art. 100), and give the certificate of employment within 2 working days (art. 79)."));
         }
         Departure saved = find(userId).orElse(null);
-        return new Departure(saved == null ? null : saved.id(), userId, u.getFirstName() + " " + u.getLastName(),
+        return new Departure(saved == null ? null : saved.id(), userId, u.fullName(),
                 u.getRegistrationNo(), hiredOn, on, in.reason(), in.noticeDate(), n.givenBy(), n.end(), notice,
                 salary.currency(), salary.grossMonthly(), daily, years, noticeDays, noticeAmount, noticeOwed, leaveDays,
                 leaveAmount, severance, endOfCareer, thirteenth, total, money(loanBalance),
@@ -407,7 +407,7 @@ public class Departures {
             BigDecimal total = ((BigDecimal) d[4]).add((BigDecimal) d[5]).add(r.severanceAmount()).add(r.endOfCareerAmount())
                     .add(r.thirteenthAmount())
                     .subtract((BigDecimal) d[6]);
-            return new Departure(r.id(), userId, u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(), hired(u),
+            return new Departure(r.id(), userId, u.fullName(), u.getRegistrationNo(), hired(u),
                     r.lastDay(), r.reason(), r.noticeDate(), r.noticeGivenBy(), r.noticeEnd(), r.notice(), (String) d[0],
                     (BigDecimal) d[1], (BigDecimal) d[2], (BigDecimal) d[3], r.noticeDays(), (BigDecimal) d[4],
                     (BigDecimal) d[6], r.leaveDays(), (BigDecimal) d[5],
@@ -418,7 +418,7 @@ public class Departures {
 
     public List<Summary> list() {
         return jdbc.sql("""
-                select d.id, d.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, d.last_day, d.reason,
+                select d.id, d.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, d.last_day, d.reason,
                        d.status, d.currency, d.notice_amount + d.leave_amount + d.severance_amount + d.end_of_career_amount + d.thirteenth_amount - d.notice_owed as total
                 from departure d join app_user u on u.id = d.user_id order by d.last_day desc limit 200""")
                 .query(Summary.class).list();
@@ -610,7 +610,7 @@ public class Departures {
         String occupation = lastContract == null || lastContract.occupationName() == null ? null : lastContract.occupationName();
         String grade = lastContract == null ? null : lastContract.gradeCode() + " · " + lastContract.gradeName();
         Paragraph body = new Paragraph(Texts.t("We, %s, certify that %s, registration number %s, worked for our company from %s to %s",
-                employer.name(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(),
+                employer.name(), u.fullName(), u.getRegistrationNo(),
                 from == null ? "?" : Texts.day(from), Texts.day(r.lastDay()))
                 + (occupation == null ? "" : Texts.t(", last as %s", occupation))
                 + (grade == null ? "" : Texts.t(" (grade %s)", grade)) + ".", NORMAL);

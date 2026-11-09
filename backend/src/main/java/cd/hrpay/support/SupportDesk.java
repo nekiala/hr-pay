@@ -37,7 +37,7 @@ public class SupportDesk {
 
     static final String SELECT = """
             select t.id, t.number, t.company_id, c.name as company_name, t.user_id,
-                   u.first_name || ' ' || u.last_name as user_name, u.email as user_email, t.subject, t.category,
+                   person_name(u.first_name, u.middle_name, u.last_name) as user_name, u.email as user_email, t.subject, t.category,
                    t.status, t.page, t.app_version, t.user_agent, t.created_at, t.updated_at,
                    (select count(*) from support_message m where m.ticket_id = t.id) as messages,
                    coalesce((select m.from_provider from support_message m where m.ticket_id = t.id order by m.id desc limit 1), false)
@@ -191,7 +191,7 @@ public class SupportDesk {
     }
 
     private static String name(AppUser u) {
-        return u.getFirstName() + " " + u.getLastName();
+        return u.fullName();
     }
 
     private static String cut(String s, int max) {

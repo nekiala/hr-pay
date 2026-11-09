@@ -82,7 +82,7 @@ public class Corrections {
     private Original original(long payslipId) {
         Original o = jdbc.sql("""
                 select p.id, p.run_id, p.user_id, p.number, trim(p.currency) as currency, r.month, r.status as run_status,
-                       p.kind, r.usd_cdf, u.first_name || ' ' || u.last_name as name, p.snapshot::text as snapshot
+                       p.kind, r.usd_cdf, person_name(u.first_name, u.middle_name, u.last_name) as name, p.snapshot::text as snapshot
                 from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id where p.id = ?""")
                 .param(payslipId).query(Original.class).optional()
                 .orElseThrow(() -> new NotFoundException("Payslip not found."));
@@ -384,7 +384,7 @@ public class Corrections {
     }
 
     private static final String SELECT = """
-            select c.id, c.payslip_id, p.number, r.month, c.user_id, u.first_name || ' ' || u.last_name as name, c.mode,
+            select c.id, c.payslip_id, p.number, r.month, c.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, c.mode,
                    c.gross_change, c.currency, c.target_month, c.complementary_id, k.number as complementary_number,
                    k.net, case when c.complementary_id is null then 'CARRIED' when k.number is null then 'WAITING'
                                else 'APPROVED' end as status, c.reason, c.created_by, c.created_at
@@ -471,7 +471,7 @@ public class Corrections {
     public List<BackPayDue> backPayDue() {
         LocalDate from = YearMonth.now(clock).minusMonths(12).atDay(1);
         List<Closed> slips = jdbc.sql("""
-                select p.id, p.number, r.month, p.user_id, u.first_name || ' ' || u.last_name as name,
+                select p.id, p.number, r.month, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name,
                        trim(p.currency) as currency, p.scheduled_minutes, p.paid_minutes, p.snapshot::text as snapshot
                 from payslip p join payroll_run r on r.id = p.run_id join app_user u on u.id = p.user_id
                 where r.status = 'CLOSED' and p.kind = 'REGULAR' and r.month >= ?

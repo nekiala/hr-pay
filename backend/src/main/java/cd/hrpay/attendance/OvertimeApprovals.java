@@ -71,7 +71,7 @@ public class OvertimeApprovals {
                     .map(OvertimeDecisions.Decision::workDate).collect(Collectors.toSet());
             for (DayResult d : attendance.days(u, from, to)) {
                 if (d.overtimeMinutes() > 0 && !done.contains(d.date()) && d.status() != DayCalculator.Status.IN_PROGRESS) {
-                    result.add(new PendingDay(u.getId(), u.getFirstName() + " " + u.getLastName(), u.getRegistrationNo(),
+                    result.add(new PendingDay(u.getId(), u.fullName(), u.getRegistrationNo(),
                             d.date(), d.overtimeMinutes(), d.overtimeKind().name(), d.firstIn(), d.lastOut()));
                 }
             }

@@ -131,7 +131,7 @@ public class AdminRecoveryController {
             }
             audit.recordAs(by, "user.recovered_by_provider", "user", user.getId(), Map.of("mode", body.mode(),
                     "secondStepReset", body.resetTwoStep(), "reason", reason));
-            String name = user.getFirstName() + " " + user.getLastName();
+            String name = user.fullName();
             notifications.sendToHolders("role.assign", "security", () -> Texts.t("Provider support reset an administrator's access"),
                     () -> Texts.t("%s: %s. Reason given: %s", name, "PASSWORD".equals(body.mode())
                             ? Texts.t("temporary password") : Texts.t("link to choose a new password"), reason),

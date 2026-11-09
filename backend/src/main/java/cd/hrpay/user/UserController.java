@@ -38,9 +38,10 @@ public class UserController {
             String phone,
             @NotBlank @Size(max = 100) String firstName,
             @NotBlank @Size(max = 100) String lastName,
-            Long siteId) {
+            Long siteId,
+            @Size(max = 100) String middleName) {
         UserService.UserData data() {
-            return new UserService.UserData(email, registrationNo, phone, firstName, lastName, siteId);
+            return new UserService.UserData(email, registrationNo, phone, firstName, lastName, siteId, middleName);
         }
     }
 
@@ -58,18 +59,20 @@ public class UserController {
     public record UserView(Long id, String email, String registrationNo, String phone, String firstName,
                            String lastName, Long siteId, String siteName, UserStatus status, Set<String> roles,
                            boolean hasPassword, OffsetDateTime lastLoginAt, OffsetDateTime createdAt,
-                           Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate, Long unitId, String unitName) {
+                           Long managerId, Long gradeCategoryId, java.time.LocalDate hireDate, Long unitId, String unitName,
+                           String middleName, String fullName) {
         static UserView of(AppUser u) {
             return new UserView(u.getId(), u.getEmail(), u.getRegistrationNo(), u.getPhone(), u.getFirstName(),
                     u.getLastName(), u.getSite() == null ? null : u.getSite().getId(),
                     u.getSite() == null ? null : u.getSite().getName(), u.getStatus(), u.roleCodes(),
                     u.getPasswordHash() != null, u.getLastLoginAt(), u.getCreatedAt(), u.getManagerId(),
-                    u.getGradeCategoryId(), u.getHireDate(), null, null);
+                    u.getGradeCategoryId(), u.getHireDate(), null, null, u.getMiddleName(), u.fullName());
         }
 
         UserView withUnit(Long unitId, String unitName) {
             return new UserView(id, email, registrationNo, phone, firstName, lastName, siteId, siteName, status, roles,
-                    hasPassword, lastLoginAt, createdAt, managerId, gradeCategoryId, hireDate, unitId, unitName);
+                    hasPassword, lastLoginAt, createdAt, managerId, gradeCategoryId, hireDate, unitId, unitName,
+                    middleName, fullName);
         }
     }
 

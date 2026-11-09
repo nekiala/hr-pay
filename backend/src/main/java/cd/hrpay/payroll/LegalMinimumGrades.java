@@ -139,7 +139,7 @@ public class LegalMinimumGrades {
                 PayslipCalculator.Result month = negotiated.normalMonth(userId, from);
                 BigDecimal complement = month.lines().stream().filter(l -> l.code().equals(NegotiatedPay.COMPLEMENT))
                         .map(PayslipCalculator.Line::amount).reduce(BigDecimal.ZERO, BigDecimal::add);
-                var who = jdbc.sql("select first_name || ' ' || last_name as name, registration_no from app_user where id = ?")
+                var who = jdbc.sql("select person_name(first_name, middle_name, last_name) as name, registration_no from app_user where id = ?")
                         .param(userId).query((rs, n) -> new String[] {rs.getString(1), rs.getString(2)}).single();
                 people.add(new Person(userId, who[0], who[1], contract, salary.get().grossMonthly(), complement,
                         month.net(), salary.get().currency(), salary.get().effectiveFrom().equals(from)));

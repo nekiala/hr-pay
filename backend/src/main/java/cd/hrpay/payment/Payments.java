@@ -161,7 +161,7 @@ public class Payments {
      */
     private List<Payee> unpaid(long runId, String kind) {
         String sql = ADVANCE.equals(kind) ? """
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
                        trim(p.currency) as currency, p.amount as net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
                        f.mobile_money_operator, f.mobile_money_number
@@ -169,7 +169,7 @@ public class Payments {
                 left join employee_profile f on f.user_id = p.user_id
                 where p.run_id = ? and p.status = 'APPROVED' and not exists (select 1 from payment_line l where l.advance_id = p.id)
                 order by u.last_name, u.first_name""" : QUINZAINE.equals(kind) ? """
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
                        trim(p.currency) as currency, p.amount as net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
                        f.mobile_money_operator, f.mobile_money_number
@@ -177,7 +177,7 @@ public class Payments {
                 left join employee_profile f on f.user_id = p.user_id
                 where p.run_id = ? and p.number is not null and not exists (select 1 from payment_line l where l.quinzaine_line_id = p.id)
                 order by u.last_name, u.first_name""" : """
-                select p.id, p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no,
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
                        trim(p.currency) as currency, p.net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
                        f.mobile_money_operator, f.mobile_money_number

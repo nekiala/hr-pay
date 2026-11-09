@@ -29,7 +29,7 @@ public class Loans {
     public record Pause(long id, long loanId, LocalDate month, String reason, String createdBy, OffsetDateTime createdAt) {}
 
     private static final String SELECT = """
-            select l.id, l.user_id, u.first_name || ' ' || u.last_name as user_name, l.kind, l.principal,
+            select l.id, l.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, l.kind, l.principal,
                    trim(l.currency) as currency, l.installment, l.start_month, l.granted_on, l.status,
                    coalesce(r.repaid, 0) as repaid, l.principal - coalesce(r.repaid, 0) as balance, l.note,
                    l.created_by, l.created_at

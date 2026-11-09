@@ -38,6 +38,8 @@ public class AppUser {
     private String phone;
     private String firstName;
     private String lastName;
+    /** The postnom (Congos): part of the name, between the nom and the prénom. Optional. */
+    private String middleName;
     private String passwordHash;
     @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.ACTIVE;
@@ -94,6 +96,19 @@ public class AppUser {
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
+    public String getMiddleName() { return middleName; }
+    public void setMiddleName(String middleName) { this.middleName = middleName; }
+
+    /** The name as documents print it: NOM POSTNOM Prénom (as the database's person_name). */
+    public String fullName() {
+        return fullName(firstName, middleName, lastName);
+    }
+
+    public static String fullName(String first, String middle, String last) {
+        String l = last == null ? "" : last.toUpperCase(java.util.Locale.ROOT);
+        String m = middle == null || middle.isBlank() ? "" : " " + middle.trim().toUpperCase(java.util.Locale.ROOT);
+        return (l + m + " " + (first == null ? "" : first)).trim();
+    }
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public UserStatus getStatus() { return status; }

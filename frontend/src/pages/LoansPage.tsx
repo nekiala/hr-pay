@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, money, type Loan, type Page, type User } from '../api'
+import { ApiError, api, money, type Loan, type Page, type User , personName } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -61,7 +61,7 @@ export default function LoansPage() {
     }, t('Saved. Payroll takes the installment from the first month.'))
   }
 
-  const label = (p: User) => `${p.firstName} ${p.lastName} (${p.registrationNo ?? p.email})`
+  const label = (p: User) => `${personName(p)} (${p.registrationNo ?? p.email})`
   const months = form.kind === 'LOAN' && Number(form.principal) > 0 && Number(form.installment) > 0 ? Math.ceil(Number(form.principal) / Number(form.installment)) : null
 
   return (

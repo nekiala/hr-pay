@@ -108,7 +108,7 @@ public class ThirteenthMonth {
     /** Everyone under contract in the year, for HR's preview. */
     public List<Row> preview(int year) {
         return jdbc.sql("""
-                select distinct u.id, u.first_name || ' ' || u.last_name as name, u.last_name
+                select distinct u.id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.last_name
                 from app_user u join employee_contract c on c.user_id = u.id
                 where u.status = 'ACTIVE' and c.start_date <= ? and (c.end_date is null or c.end_date >= ?)
                 order by u.last_name""").params(LocalDate.of(year, 12, 31), LocalDate.of(year, 1, 1))

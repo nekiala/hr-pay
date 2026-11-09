@@ -113,6 +113,7 @@ export type Me = {
   email: string
   firstName: string
   lastName: string
+  middleName?: string | null
   roles: string[]
   permissions: string[]
   mustChangePassword: boolean
@@ -286,6 +287,10 @@ export type User = {
   phone: string
   firstName: string
   lastName: string
+  /** The postnom (Congos), optional. */
+  middleName?: string | null
+  /** NOM POSTNOM Prénom, as documents print it. */
+  fullName?: string
   siteId: number | null
   siteName: string | null
   status: 'ACTIVE' | 'DISABLED'
@@ -710,7 +715,7 @@ export type Profile = {
   birthDate: string | null; gender: 'FEMALE' | 'MALE' | null; nationality: string | null
   maritalStatus: 'SINGLE' | 'MARRIED' | 'DIVORCED' | 'WIDOWED'; cnssNumber: string | null; taxNumber: string | null
   paymentMethod: 'BANK' | 'MOBILE_MONEY' | 'CASH'; bankName: string | null; bankAccount: string | null
-  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; postnom: string | null; commune: string | null
+  mobileMoneyOperator: string | null; mobileMoneyNumber: string | null; commune: string | null
   nursingBreakUntil?: string | null
 }
 export type Dependant = {
@@ -1037,3 +1042,7 @@ export type SalaryAdvance = {
 }
 export type MyAdvances = { settings: AdvanceSettings; availability: AdvanceAvailability; advances: SalaryAdvance[] }
 export type AdvanceCodeSent = { challengeId: string; channels: string[]; expiresAt: string; receipt: string }
+
+/** NOM POSTNOM Prénom, the way names are written in the Congos (the postnom only when there is one). */
+export const personName = (p: { firstName: string; lastName: string; middleName?: string | null }) =>
+  [p.lastName.toUpperCase(), p.middleName?.trim() ? p.middleName.trim().toUpperCase() : null, p.firstName].filter(Boolean).join(' ')

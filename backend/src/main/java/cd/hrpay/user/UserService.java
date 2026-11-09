@@ -29,7 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     public record UserData(String email, String registrationNo, String phone, String firstName, String lastName,
-                           Long siteId) {}
+                           Long siteId, String middleName) {
+        public UserData(String email, String registrationNo, String phone, String firstName, String lastName, Long siteId) {
+            this(email, registrationNo, phone, firstName, lastName, siteId, null);
+        }
+    }
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -58,6 +62,7 @@ public class UserService {
 
         AppUser user = new AppUser(clean.email(), clean.registrationNo(), clean.phone(), clean.firstName(),
                 clean.lastName());
+        user.setMiddleName(clean.middleName());
         user.setSite(resolveSite(clean.siteId()));
         user.setRoles(wanted);
         if (initialPassword != null && !initialPassword.isBlank()) {
@@ -82,12 +87,14 @@ public class UserService {
         track(changes, "phone", user.getPhone(), clean.phone());
         track(changes, "firstName", user.getFirstName(), clean.firstName());
         track(changes, "lastName", user.getLastName(), clean.lastName());
+        track(changes, "middleName", user.getMiddleName(), clean.middleName());
         track(changes, "siteId", user.getSite() == null ? null : user.getSite().getId(), clean.siteId());
         user.setEmail(clean.email());
         user.setRegistrationNo(clean.registrationNo());
         user.setPhone(clean.phone());
         user.setFirstName(clean.firstName());
         user.setLastName(clean.lastName());
+        user.setMiddleName(clean.middleName());
         user.setSite(resolveSite(clean.siteId()));
         if (!changes.isEmpty()) {
             audit.record("user.updated", "user", user.getId(), changes);
@@ -251,7 +258,8 @@ public class UserService {
             throw new BusinessRuleException("Enter the phone number in international format, for example +243812345678.");
         }
         return new UserData(d.email().trim().toLowerCase(), d.registrationNo().trim().toUpperCase(), phone,
-                d.firstName().trim(), d.lastName().trim(), d.siteId());
+                d.firstName().trim(), d.lastName().trim(), d.siteId(),
+                d.middleName() == null || d.middleName().isBlank() ? null : d.middleName().trim());
     }
 
     private static void track(Map<String, Object> changes, String field, Object before, Object after) {

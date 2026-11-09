@@ -44,7 +44,7 @@ public class AnniversaryRaises {
     public record Outcome(List<Raise> applied, List<String> skipped) {}
 
     private static final String SELECT = """
-            select a.id, a.user_id, u.first_name || ' ' || u.last_name as user_name, a.anniversary_date, a.years,
+            select a.id, a.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, a.anniversary_date, a.years,
                    a.effective_from, g.code as grade_code, a.percent, a.grade_base, a.raise_amount, a.old_basic,
                    a.new_basic, trim(a.currency) as currency, a.created_at, a.notified_at
             from anniversary_raise a join app_user u on u.id = a.user_id join grade g on g.id = a.grade_id
@@ -112,7 +112,7 @@ public class AnniversaryRaises {
                 LocalDate effective = timing.equals("ANNIVERSARY_MONTH") ? anniversary.withDayOfMonth(1)
                         : YearMonth.from(anniversary).plusMonths(1).atDay(1);
                 AppUser user = users.findById(userId).orElseThrow();
-                String name = user.getFirstName() + " " + user.getLastName();
+                String name = user.fullName();
                 var current = salaries.on(userId, effective.minusDays(1)).orElse(null);
                 if (current == null) {
                     skipped.add(name + ": no basic salary before " + effective + ".");

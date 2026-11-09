@@ -123,7 +123,7 @@ public class TimeClocks {
 
     public List<Punch> punches(Long deviceId, String outcome) {
         StringBuilder sql = new StringBuilder("""
-                select p.id, d.name as device, p.pin, p.punched_at, u.first_name || ' ' || u.last_name as person, p.outcome,
+                select p.id, d.name as device, p.pin, p.punched_at, person_name(u.first_name, u.middle_name, u.last_name) as person, p.outcome,
                        p.detail, p.received_at
                 from biometric_punch p join biometric_device d on d.id = p.device_id left join app_user u on u.id = p.user_id
                 where true""");

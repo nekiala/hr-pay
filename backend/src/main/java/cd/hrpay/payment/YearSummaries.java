@@ -28,7 +28,7 @@ public class YearSummaries {
                       BigDecimal cnss, BigDecimal ipr, BigDecimal otherDeductions, BigDecimal net, BigDecimal iprCdf) {}
 
     private static final String MONTHS = """
-            select p.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, to_char(r.month, 'YYYY-MM') as month,
+            select p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, to_char(r.month, 'YYYY-MM') as month,
                    p.id, p.number, trim(p.currency) as currency, p.gross, p.employee_deductions, p.net, p.taxable_base_cdf,
                    r.usd_cdf, p.snapshot ->> 'cnssNumber' as cnss_number, p.snapshot ->> 'taxNumber' as tax_number,
                    coalesce((select sum(amount) from payslip_line l where l.payslip_id = p.id and l.element_code = 'CNSS_EMPLOYEE'), 0) as cnss,
@@ -53,7 +53,7 @@ public class YearSummaries {
      */
     private List<Raw> openings(int year, Long userId) {
         String sql = """
-                select o.user_id, u.first_name || ' ' || u.last_name as name, u.registration_no, o.through_month,
+                select o.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, o.through_month,
                        o.currency, o.gross, o.cnss, o.tax, o.other_deductions, o.net, o.taxable_cdf, o.tax_cdf,
                        p.cnss_number, p.tax_number
                 from ytd_opening o join app_user u on u.id = o.user_id
@@ -133,7 +133,7 @@ public class YearSummaries {
             details.put("cnssNumber", last.cnssNumber());
             details.put("taxNumber", last.taxNumber());
         } else {
-            var u = jdbc.sql("select first_name || ' ' || last_name, registration_no from app_user where id = ?").param(userId)
+            var u = jdbc.sql("select person_name(first_name, middle_name, last_name), registration_no from app_user where id = ?").param(userId)
                     .query((rs, i) -> new String[] {rs.getString(1), rs.getString(2)}).optional();
             if (u.isPresent()) {
                 name = u.get()[0];

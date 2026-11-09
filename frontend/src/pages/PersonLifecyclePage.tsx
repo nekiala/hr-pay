@@ -4,6 +4,7 @@ import {
   api, CERTIFICATE_KINDS, CERTIFICATE_STATUS, CHECKLIST_KINDS, DOC_SOURCES, fileSize, fileToBase64, LETTER_KINDS, LETTER_STATUS, longDay, openFile,
   type CertificateKind, type Checklist, type ChecklistKind, type DocumentType, type Letter, type LetterDraft, type LetterKind, type LetterTemplate,
   type PersonLifecycle, type User,
+  personName,
 } from '../api'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
@@ -42,7 +43,7 @@ export default function PersonLifecyclePage() {
   const open = (path: string) => { openFile(path).catch((e: Error) => setError(e.message)) }
 
   if (!data) return <ErrorText error={error} />
-  const name = user ? `${user.firstName} ${user.lastName}` : ''
+  const name = user ? personName(user) : ''
   const openKinds = new Set(data.checklists.filter((c) => c.status === 'OPEN').map((c) => c.kind))
 
   return (
