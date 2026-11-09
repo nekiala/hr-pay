@@ -11,7 +11,7 @@ import { Public } from './PublicPages'
 
 type Rate = { code: string; effectiveFrom: string; value: number }
 export type LawChange = {
-  id: number; countryCode: 'CD' | 'CG'; effectiveFrom: string; category: string; titleEn: string; titleFr: string
+  id: number; countryCode: 'CD' | 'CG' | 'CM' | 'GA'; effectiveFrom: string; category: string; titleEn: string; titleFr: string
   summaryEn: string; summaryFr: string; reference: string; sourceUrl: string | null; inApp: 'APPLIED' | 'COMING' | 'INFO'
   inAppNoteEn: string | null; inAppNoteFr: string | null; verifiedBy: string | null; verifiedOn: string | null
   status: 'DRAFT' | 'PUBLISHED' | 'WITHDRAWN'; publishedAt: string | null; appliedTo: number; rates: Rate[]
@@ -19,7 +19,7 @@ export type LawChange = {
 }
 type PackName = { code: string; countryCode: string; nameEn: string; nameFr: string; status: string }
 
-const COUNTRY: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo') }
+const COUNTRY: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo'), CM: t('Cameroon'), GA: t('Gabon') }
 const CATEGORY: Record<string, string> = {
   TAX: t('Tax'), SOCIAL: t('Social contributions'), WAGE: t('Minimum wage'), LABOUR: t('Labour law'), DECLARATION: t('Declarations'),
 }
@@ -61,7 +61,7 @@ export function LawChangesPublicPage() {
       <p className="muted">{t('The payroll laws, rates and deadlines HR Pay follows in the DR Congo and the Republic of the Congo, with their official reference and what HR Pay does about each.')}</p>
       <div className="row">
         <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label={t('Country')}>
-          <option value="">{t('Both countries')}</option><option value="CD">{COUNTRY.CD}</option><option value="CG">{COUNTRY.CG}</option>
+          <option value="">{t('Every country')}</option>{Object.entries(COUNTRY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <a className="button secondary" href={`/api/public/changes.rss?lang=${language()}${country ? `&country=${country}` : ''}`}>{t('RSS feed')}</a>
       </div>
@@ -171,7 +171,7 @@ export function LawChangesAdminPage() {
           }}>
             <div className="grid2">
               <label>{t('Country')}<select disabled={ratesLocked} value={editing.d.countryCode} onChange={(e) => set({ countryCode: e.target.value as Draft['countryCode'] })}>
-                <option value="CD">{COUNTRY.CD}</option><option value="CG">{COUNTRY.CG}</option></select></label>
+                {Object.entries(COUNTRY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
               <label>{t('Sector')}<select disabled={ratesLocked} value={editing.d.sectorPackCode ?? ''} onChange={(e) => set({ sectorPackCode: e.target.value || null })}>
                 <option value="">{t('All companies of the country')}</option>
                 {packs.filter((p) => p.countryCode === editing.d.countryCode && p.status !== 'RETIRED').map((p) => <option key={p.code} value={p.code}>{fr() ? p.nameFr : p.nameEn}</option>)}

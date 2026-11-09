@@ -14,7 +14,7 @@ type Rule = {
   labelEn: string; labelFr: string; article: string | null; position?: number | null
 }
 type Pack = {
-  code: string; countryCode: 'CD' | 'CG'; nameEn: string; nameFr: string; scopeEn: string | null; scopeFr: string | null
+  code: string; countryCode: 'CD' | 'CG' | 'CM' | 'GA'; nameEn: string; nameFr: string; scopeEn: string | null; scopeFr: string | null
   reference: string | null; sourceUrl: string | null; status: 'FRAME' | 'READY' | 'RETIRED'; verifiedBy: string | null
   verifiedOn: string | null; displayOrder: number; updatedAt: string; companies: number; rules: Rule[]
 }
@@ -258,7 +258,8 @@ export function SectorPacksAdminPage() {
             <div className="grid2">
               <label>{t('Code')}<input required disabled={!editing.isNew} pattern="[A-Z0-9_]{2,40}" value={editing.p.code} onChange={(e) => set({ code: e.target.value.toUpperCase() })} /></label>
               <label>{t('Country')}<select value={editing.p.countryCode} onChange={(e) => set({ countryCode: e.target.value as Pack['countryCode'] })}>
-                <option value="CD">{t('DR Congo')}</option><option value="CG">{t('Republic of the Congo')}</option></select></label>
+                <option value="CD">{t('DR Congo')}</option><option value="CG">{t('Republic of the Congo')}</option>
+                <option value="CM">{t('Cameroon')}</option><option value="GA">{t('Gabon')}</option></select></label>
               <label>{t('Name (English)')}<input required maxLength={150} value={editing.p.nameEn} onChange={(e) => set({ nameEn: e.target.value })} /></label>
               <label>{t('Name (French)')}<input required maxLength={150} value={editing.p.nameFr} onChange={(e) => set({ nameFr: e.target.value })} /></label>
               <label>{t('Who it covers (English)')}<textarea maxLength={1000} rows={2} value={editing.p.scopeEn ?? ''} onChange={(e) => set({ scopeEn: e.target.value })} /></label>

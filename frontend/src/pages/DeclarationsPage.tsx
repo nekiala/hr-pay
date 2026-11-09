@@ -9,7 +9,7 @@ import { Button, Form } from '../components/Button'
 import { localCurrency, t } from '../i18n'
 import { PayDeclarationModal, STATUS_BADGE, statusLabel, type CalendarItem } from '../components/DeclarationStatus'
 
-type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE' | 'TUS'
+type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE' | 'TUS' | 'CNAMGS' | 'CAC' | 'CFC' | 'FNE' | 'RAV' | 'TDL' | 'TCS' | 'FNH' | 'CFP'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
 type Summary = { kind: Kind; employees: number; totalCdf: number; filed: Filed | null }
 type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string }
@@ -26,6 +26,15 @@ const KIND: Record<Kind, { name: string; to: string }> = {
   ONEM: { name: t('ONEM (employment office)'), to: 'ONEM' },
   IERE: { name: t('IERE (expatriates)'), to: 'DGI' },
   TUS: { name: t('TUS (single tax on salaries)'), to: t('Tax office') },
+  CNAMGS: { name: t('CNAMGS (health insurance)'), to: 'CNAMGS' },
+  CAC: { name: t('CAC (additional council tax)'), to: 'DGI' },
+  CFC: { name: t('Crédit foncier (CFC)'), to: 'DGI' },
+  FNE: { name: t('FNE (national employment fund)'), to: 'DGI' },
+  RAV: { name: t('RAV (audiovisual licence fee)'), to: 'DGI' },
+  TDL: { name: t('TDL (local development tax)'), to: 'DGI' },
+  TCS: { name: t('TCS (additional tax on salaries)'), to: 'DGI' },
+  FNH: { name: t('FNH (national housing fund)'), to: 'DGI' },
+  CFP: { name: t('Vocational training contribution'), to: 'DGI' },
 }
 const lastMonth = () => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7) }
 const cdf = (n: number) => money(n, localCurrency())

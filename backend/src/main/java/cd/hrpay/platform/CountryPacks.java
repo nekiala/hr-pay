@@ -24,10 +24,23 @@ import tools.jackson.databind.node.ObjectNode;
 public class CountryPacks {
 
     /** The countries with a pack, and how they are named on screen. */
-    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo", "CG", "Republic of the Congo");
+    public static final Map<String, String> COUNTRIES = Map.of("CD", "DR Congo", "CG", "Republic of the Congo",
+            "CM", "Cameroon", "GA", "Gabon");
 
     /** Each country's own currency, the one taxes are declared in. */
-    public static final Map<String, String> CURRENCIES = Map.of("CD", "CDF", "CG", "XAF");
+    public static final Map<String, String> CURRENCIES = Map.of("CD", "CDF", "CG", "XAF", "CM", "XAF", "GA", "XAF");
+
+    /** The countries whose payroll rules are data (contributions and scales), not code. */
+    public static final java.util.Set<String> RULES_AS_DATA = java.util.Set.of("CM", "GA");
+
+    /** The income tax on salaries as the country names it. */
+    public static String taxName(String country) {
+        return switch (country == null ? "CD" : country) {
+            case "CG" -> "ITS";
+            case "CM", "GA" -> "IRPP";
+            default -> "IPR";
+        };
+    }
 
     private final JdbcClient jdbc;
     private final JsonMapper json;

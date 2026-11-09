@@ -71,6 +71,48 @@ public class StatutoryRates {
                 .params(code, on).query(BigDecimal.class).optional().orElse(BigDecimal.ZERO);
     }
 
+    /** The rate in force, or null when none is set. */
+    public BigDecimal rateOrNull(String code, LocalDate on) {
+        return jdbc.sql("select value from statutory_rate where code = ? and effective_from <= ? order by effective_from desc limit 1")
+                .params(code, on).query(BigDecimal.class).optional().orElse(null);
+    }
+
+    // ---- countries whose rules are data -------------------------------------------------------------------------
+
+    /** The company's contributions and taxes, as listed (empty in the DRC and the Republic of the Congo). */
+    public List<CountryRules.Row> contributionRows() {
+        return jdbc.sql("""
+                select code, side, base, rate_code, ceiling_code, exempt_code, scale_code, before_tax, display_order
+                from payroll_contribution order by display_order, code""").query(CountryRules.Row.class).list();
+    }
+
+    /** A flat-amount scale's bands in force on the date. */
+    public List<CountryRules.Band> scale(String code, LocalDate on) {
+        return jdbc.sql("""
+                select lower_bound as lower, upper_bound as upper, amount from payroll_scale
+                where code = ? and effective_from = (select max(effective_from) from payroll_scale
+                                                     where code = ? and effective_from <= ?)
+                order by lower_bound""").params(code, code, on).query(CountryRules.Band.class).list();
+    }
+
+    /** Every start date of a scale's versions, latest first, with their bands. */
+    public Map<LocalDate, List<CountryRules.Band>> scaleHistory(String code) {
+        Map<LocalDate, List<CountryRules.Band>> all = new java.util.TreeMap<>(java.util.Comparator.reverseOrder());
+        jdbc.sql("select effective_from, lower_bound, upper_bound, amount from payroll_scale where code = ? order by lower_bound")
+                .param(code).query((rs, n) -> all.computeIfAbsent(rs.getObject(1, LocalDate.class), k -> new java.util.ArrayList<>())
+                        .add(new CountryRules.Band(rs.getBigDecimal(2), rs.getBigDecimal(3), rs.getBigDecimal(4)))).list();
+        return all;
+    }
+
+    /** The rules in force on the date, or null when the company's country keeps them in code. */
+    public CountryRules countryRules(LocalDate on) {
+        List<CountryRules.Row> rows = contributionRows();
+        if (rows.isEmpty()) {
+            return null;
+        }
+        return CountryRules.of(rows, code -> rateOrNull(code, on), code -> scale(code, on));
+    }
+
     @Transactional
     public RateEntry addRate(String code, LocalDate effectiveFrom, BigDecimal value, String note) {
         String unit = jdbc.sql("select unit from statutory_rate_type where code = ?").param(code).query(String.class)

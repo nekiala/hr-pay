@@ -13,6 +13,7 @@ export type LegalDoc = { kind: 'TERMS' | 'DPA' | 'PRIVACY' | 'SLA'; version: num
 
 export const LEGAL_PATHS: Record<LegalDoc['kind'], string> = { TERMS: 'terms', DPA: 'dpa', PRIVACY: 'privacy-policy', SLA: 'sla' }
 const KIND_OF: Record<string, LegalDoc['kind']> = { terms: 'TERMS', dpa: 'DPA', 'privacy-policy': 'PRIVACY', sla: 'SLA' }
+const PHONE: Record<string, string> = { CD: '+243', CG: '+242', CM: '+237', GA: '+241' }
 
 /** The frame of the pages anyone can open: brand, content, the public links. */
 export function Public({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
@@ -126,9 +127,10 @@ export function StatusPage() {
 export function TrialPage() {
   // The website's calculator opens the form with the visitor's country (?country=CG).
   const params = new URLSearchParams(window.location.search)
-  const startCountry = params.get('country') === 'CG' ? 'CG' : 'CD'
+  const asked = params.get('country') ?? 'CD'
+  const startCountry = ['CD', 'CG', 'CM', 'GA'].includes(asked) ? asked : 'CD'
   // ?firm=1: an accounting firm asking for the accountant portal.
-  const [form, setForm] = useState({ companyName: '', countryCode: startCountry, employees: '51-300', firstName: '', lastName: '', email: '', phone: startCountry === 'CG' ? '+242' : '+243', message: '', website: '', kind: params.get('firm') ? 'FIRM' : 'COMPANY', firmRegistration: '' })
+  const [form, setForm] = useState({ companyName: '', countryCode: startCountry, employees: '51-300', firstName: '', lastName: '', email: '', phone: PHONE[startCountry], message: '', website: '', kind: params.get('firm') ? 'FIRM' : 'COMPANY', firmRegistration: '' })
   const firm = form.kind === 'FIRM'
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -150,8 +152,9 @@ export function TrialPage() {
           <label>{firm ? t('Firm name') : t('Company name')}<input required maxLength={150} value={form.companyName} onChange={set('companyName')} /></label>
           {firm && <label>{t('ONEC or ONECCA number (optional)')}<input maxLength={60} value={form.firmRegistration} onChange={set('firmRegistration')} /></label>}
           <div className="grid2">
-            <label>{t('Country')}<select value={form.countryCode} onChange={(e) => setForm({ ...form, countryCode: e.target.value, phone: e.target.value === 'CG' ? '+242' : '+243' })}>
-              <option value="CD">{t('DR Congo')}</option><option value="CG">{t('Republic of the Congo')}</option></select></label>
+            <label>{t('Country')}<select value={form.countryCode} onChange={(e) => setForm({ ...form, countryCode: e.target.value, phone: PHONE[e.target.value] ?? '+243' })}>
+              <option value="CD">{t('DR Congo')}</option><option value="CG">{t('Republic of the Congo')}</option>
+              <option value="CM">{t('Cameroon')}</option><option value="GA">{t('Gabon')}</option></select></label>
             <label>{t('Employees')}<select value={form.employees} onChange={set('employees')}>
               <option value="1-50">1–50</option><option value="51-300">51–300</option><option value="301-1000">301–1 000</option><option value="1000+">{t('More than 1,000')}</option></select></label>
             <label>{t('First name')}<input required maxLength={100} value={form.firstName} onChange={set('firstName')} /></label>

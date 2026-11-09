@@ -55,7 +55,7 @@ public class PublicCalculatorController {
                          /** Left empty by people; filled by robots that fill every field. */ String website) {}
 
     /** The calculator's inputs, as the website sends them. */
-    public record Calculation(@NotBlank @Pattern(regexp = "CD|CG") String country,
+    public record Calculation(@NotBlank @Pattern(regexp = "CD|CG|CM|GA") String country,
                               @NotBlank @Pattern(regexp = "GROSS|NET") String mode, @NotNull BigDecimal amount,
                               @NotBlank @Pattern(regexp = "CDF|XAF|USD") String currency, BigDecimal housing,
                               BigDecimal transport, BigDecimal familyAllowances, BigDecimal bonus, Integer children,
@@ -246,7 +246,18 @@ public class PublicCalculatorController {
             case "FAMILY_ALLOWANCE" -> new String[] {"Allocations familiales", "Family allowances"};
             case "OTHER_BONUS" -> new String[] {"Primes", "Bonuses"};
             case "CNSS_EMPLOYEE" -> new String[] {"CNSS (part salariale)", "CNSS (employee share)"};
-            case "IPR" -> new String[] {"Impôt sur le salaire (IPR / ITS)", "Income tax (IPR / ITS)"};
+            case "IPR" -> new String[] {"Impôt sur le salaire (IPR / ITS / IRPP)", "Income tax (IPR / ITS / IRPP)"};
+            case "CAC" -> new String[] {"CAC (centimes additionnels communaux)", "CAC (additional council tax)"};
+            case "CFC_EMPLOYEE" -> new String[] {"Crédit foncier (part salariale)", "Crédit foncier (employee share)"};
+            case "CFC_EMPLOYER" -> new String[] {"Crédit foncier (part patronale)", "Crédit foncier (employer share)"};
+            case "FNE" -> new String[] {"FNE (fonds national de l'emploi)", "FNE (national employment fund)"};
+            case "RAV" -> new String[] {"RAV (redevance audiovisuelle)", "RAV (audiovisual licence fee)"};
+            case "TDL" -> new String[] {"TDL (taxe de développement local)", "TDL (local development tax)"};
+            case "CNAMGS_EMPLOYEE" -> new String[] {"CNAMGS (part salariale)", "CNAMGS (employee share)"};
+            case "CNAMGS_EMPLOYER" -> new String[] {"CNAMGS (part patronale)", "CNAMGS (employer share)"};
+            case "TCS" -> new String[] {"TCS (taxe complémentaire sur les salaires)", "TCS (additional tax on salaries)"};
+            case "FNH" -> new String[] {"FNH (fonds national de l'habitat)", "FNH (national housing fund)"};
+            case "CFP" -> new String[] {"Formation professionnelle", "Vocational training"};
             case "CNSS_EMPLOYER" -> new String[] {"CNSS (part patronale)", "CNSS (employer share)"};
             case "CNSS_EMPLOYER_FAMILY" -> new String[] {"CNSS prestations familiales", "CNSS family benefits"};
             case "CNSS_EMPLOYER_ACCIDENT" -> new String[] {"CNSS accidents du travail", "CNSS work accidents"};
@@ -260,7 +271,12 @@ public class PublicCalculatorController {
     }
 
     private static String country(String code, boolean fr) {
-        return "CG".equals(code) ? (fr ? "République du Congo" : "Republic of the Congo") : (fr ? "RDC" : "DR Congo");
+        return switch (code) {
+            case "CG" -> fr ? "République du Congo" : "Republic of the Congo";
+            case "CM" -> fr ? "Cameroun" : "Cameroon";
+            case "GA" -> "Gabon";
+            default -> fr ? "RDC" : "DR Congo";
+        };
     }
 
     private static String money(BigDecimal v) {

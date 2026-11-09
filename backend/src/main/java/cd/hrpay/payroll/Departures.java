@@ -248,7 +248,7 @@ public class Departures {
                 return r.get();
             }
         }
-        boolean cg = "CG".equals(company.country());
+        boolean cg = !"CD".equals(company.country());   // elsewhere a month, as in the packs
         return new NoticeRule(null, cg ? BigDecimal.ONE : BigDecimal.valueOf(14), cg ? "MONTHS" : "DAYS",
                 cg ? BigDecimal.ZERO : BigDecimal.valueOf(7), cg ? "CALENDAR" : "WORKING", cg ? BigDecimal.ONE : new BigDecimal("0.5"));
     }

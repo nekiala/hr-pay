@@ -201,7 +201,7 @@ public class PayslipPdf {
 
         /** The income tax's name: IPR in the DRC, ITS in the Republic of the Congo. */
         String tax() {
-            return "CG".equals(country) ? "ITS" : "IPR";
+            return cd.hrpay.platform.CountryPacks.taxName(country);
         }
     }
 

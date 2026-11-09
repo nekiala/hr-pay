@@ -10,7 +10,15 @@ import { locale, localCurrency, t } from '../i18n'
 type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null; lawChangeId: number | null; nextLawChangeId: number | null }
 type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string; lawChangeId: number | null }
 type Band = { lowerBound: number; upperBound: number | null; ratePercent: number }
-type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string> }
+type Contribution = { code: string; side: 'EMPLOYEE' | 'EMPLOYER'; base: string; rate: number | null; ceiling: number | null; exempt: number | null; scale: string | null; beforeTax: boolean }
+type ScaleBand = { lower: number; upper: number | null; amount: number }
+type Rules = { contributions: Contribution[]; scales: Record<string, ScaleBand[]>; professionalPercent: number; professionalCapYearly: number | null; yearlyAllowance: number; exemptBelowMonthly: number; maxParts: number | null }
+type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string>; rules: Rules | null }
+
+const BASE: Record<string, string> = {
+  CNSS: t('earnings subject to social security'), GROSS: t('gross pay'), TAXABLE: t('taxable earnings'),
+  NET_TAXABLE: t('taxable earnings less contributions before tax'), TAX: t('income tax'), BASIC: t('basic salary'),
+}
 type FxRate = { id: number; currency: string; rateDate: string; cdfPerUnit: number; source: string; sourceUrl: string | null; enteredBy: string | null; fetchedAt: string }
 type FxOverview = { today: string; latest: FxRate | null; stale: boolean; recent: FxRate[] }
 type IprResult = { beforeReduction: number; reduction: number; capped: number; tax: number }
@@ -22,7 +30,10 @@ const firstOfNextMonth = () => { const d = new Date(); return new Date(Date.UTC(
 
 export default function StatutoryRatesPage() {
   const { can, me } = useAuth()
-  const congo = me?.company?.country === 'CG'
+  const country = me?.company?.country ?? 'CD'
+  // The Republic of the Congo, Cameroon and Gabon: XAF, a monthly SMIG, no INPP or dependant reduction.
+  const congo = country !== 'CD'
+  const rulesCountry = country === 'CM' || country === 'GA'
   const editable = can('masterdata.manage')
   const fxEditable = editable || can('salary.write')
   const [on, setOn] = useState(today())
@@ -76,7 +87,9 @@ export default function StatutoryRatesPage() {
   return (
     <section>
       <h2>{t('Statutory rates')}</h2>
-      <SignOff notice={congo
+      <SignOff notice={rulesCountry
+        ? t('Sample values for {a}, from secondary sources that disagree on several rates. A local payroll accountant must confirm every rate, ceiling, scale and the IRPP bands before the first real payroll.', { a: country === 'CM' ? t('Cameroon') : t('Gabon') })
+        : congo
         ? t('Sample values from memory for the Republic of the Congo. A Congolese payroll accountant must confirm every rate, the ceilings and the ITS bands before the first real payroll.')
         : t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')} />
       <ErrorText error={error} />
@@ -163,7 +176,11 @@ export default function StatutoryRatesPage() {
 
       <div className="card">
         <h3>{t('IPR barème')}</h3>
-        {congo
+        {rulesCountry
+          ? <p className="hint">{data?.rules?.maxParts
+              ? t('Yearly bands for one part, in XAF, in force since {a}. Each month the taxable income less the contributions taken before tax is multiplied by 12, less the professional deduction, divided by the household\'s parts (1, plus 1 for a spouse and ½ per child in charge), taxed on these bands, multiplied back by the parts and divided by 12.', { a: data?.ipr.effectiveFrom ?? '' })
+              : t('Yearly bands in XAF, in force since {a}. Each month the taxable income less the contributions taken before tax is multiplied by 12, less the professional deduction and the yearly allowance, taxed on these bands and divided by 12. No tax below the monthly threshold.', { a: data?.ipr.effectiveFrom ?? '' })}</p>
+          : congo
           ? <p className="hint">{t('Yearly bands for one part, in XAF, in force since {a}. Each month the taxable income is multiplied by 12, less the professional deduction, divided by the household\'s parts (1, plus 1 for a spouse and ½ per child in charge), taxed on these bands, multiplied back by the parts and divided by 12.', { a: data?.ipr.effectiveFrom ?? '' })}</p>
           : <p className="hint">{t('Annual taxable income bands in CDF, in force since')}{' '}{data?.ipr.effectiveFrom}{t('. Each month the taxable income is multiplied by 12, taxed on these bands and divided by 12; then the reduction per dependant and the cap apply.')}</p>}
         {!scale && (
@@ -235,6 +252,35 @@ export default function StatutoryRatesPage() {
         )}
         </>}
       </div>
+
+      {data?.rules && <div className="card">
+        <h3>{t('Contributions and taxes')}</h3>
+        <p className="hint">{t('Worked out on each payslip from the rates above, in force on the payroll\'s last day. Ceilings and amounts are monthly.')}</p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>{t('Code')}</th><th>{t('Paid by')}</th><th>{t('Worked out on')}</th><th>{t('Rate')}</th><th>{t('Ceiling')}</th><th>{t('Not charged')}</th></tr></thead>
+            <tbody>
+              {data.rules.contributions.map((c) => (
+                <tr key={c.code}>
+                  <td>{c.code}</td><td>{c.side === 'EMPLOYEE' ? t('Employee') : t('Employer')}</td>
+                  <td>{BASE[c.base] ?? c.base}{c.beforeTax && <div className="small muted">{t('taken off the taxable pay')}</div>}</td>
+                  <td>{c.scale ? t('scale {a}', { a: c.scale }) : `${c.rate}%`}</td>
+                  <td>{c.ceiling ? cdf(c.ceiling) : '—'}</td><td>{c.exempt ? cdf(c.exempt) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {Object.entries(data.rules.scales).map(([code, bands]) => (
+          <div key={code} className="table-wrap">
+            <h4>{t('Scale {a}, a month', { a: code })}</h4>
+            <table>
+              <thead><tr><th>{t('Base above')}</th><th>{t('Up to')}</th><th>{t('Amount')}</th></tr></thead>
+              <tbody>{bands.map((b) => <tr key={b.lower}><td>{cdf(b.lower)}</td><td>{b.upper === null ? t('and above') : cdf(b.upper)}</td><td>{cdf(b.amount)}</td></tr>)}</tbody>
+            </table>
+          </div>
+        ))}
+      </div>}
 
       <div className="card">
         <h3>{t('Settings')}</h3>

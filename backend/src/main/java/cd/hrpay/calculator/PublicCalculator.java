@@ -110,9 +110,12 @@ public class PublicCalculator {
         // Without a stored rate, a placeholder: nothing is converted when every amount is in the local currency.
         BigDecimal usdLocal = usd.map(ExchangeRates.Rate::cdfPerUnit).orElse(BigDecimal.ONE);
 
-        boolean congo = "CG".equals(in.country());
+        // Cameroon, Gabon: like the Congo, a monthly SMIG.
+        boolean congo = !"CD".equals(in.country());
         List<String> used = new ArrayList<>();
-        PayslipCalculator.Rates r = congo ? congoRates(rates, brackets, usdLocal, local, used)
+        PayslipCalculator.Rates r = CountryPacks.RULES_AS_DATA.contains(in.country())
+                ? rulesRates(pack, rates, brackets, usdLocal, in.country(), local, today, used)
+                : "CG".equals(in.country()) ? congoRates(rates, brackets, usdLocal, local, used)
                 : drcRates(rates, brackets, usdLocal, in.employees(), used);
 
         BigDecimal basic;
@@ -245,6 +248,53 @@ public class PublicCalculator {
         return new PayslipCalculator.Rates(usdLocal, value(rates, "CNSS_EMPLOYEE"), value(rates, "CNSS_EMPLOYER"),
                 BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.valueOf(100), brackets, BigDecimal.ZERO, 0,
                 BigDecimal.valueOf(100), null, "CG", local, Map.copyOf(more));
+    }
+
+    /** A country whose rules are data: its contributions, scales and tax settings from the pack. */
+    private PayslipCalculator.Rates rulesRates(JsonNode pack, Map<String, Source> rates, List<IprCalculator.Bracket> brackets,
+                                               BigDecimal usdLocal, String country, String local, LocalDate on,
+                                               List<String> used) {
+        List<cd.hrpay.payroll.CountryRules.Row> rows = new ArrayList<>();
+        for (JsonNode c : table(pack, "payroll_contribution")) {
+            rows.add(new cd.hrpay.payroll.CountryRules.Row(c.get("code").asString(), c.get("side").asString(),
+                    c.get("base").asString(), text(c, "rate_code"), text(c, "ceiling_code"), text(c, "exempt_code"),
+                    text(c, "scale_code"), c.get("before_tax").asBoolean(), c.get("display_order").asInt()));
+        }
+        cd.hrpay.payroll.CountryRules rules = cd.hrpay.payroll.CountryRules.of(rows, code -> {
+            Source s = rates.get(code);
+            if (s == null) {
+                return null;
+            }
+            used.add(code);
+            return s.value();
+        }, code -> scale(pack, code, on));
+        return PayslipCalculator.Rates.of(usdLocal, country, local, BigDecimal.valueOf(100), brackets, rules);
+    }
+
+    /** A flat-amount scale's bands in force on the day. */
+    static List<cd.hrpay.payroll.CountryRules.Band> scale(JsonNode pack, String code, LocalDate on) {
+        LocalDate start = null;
+        for (JsonNode row : table(pack, "payroll_scale")) {
+            LocalDate from = LocalDate.parse(row.get("effective_from").asString());
+            if (code.equals(row.get("code").asString()) && !from.isAfter(on) && (start == null || from.isAfter(start))) {
+                start = from;
+            }
+        }
+        List<cd.hrpay.payroll.CountryRules.Band> out = new ArrayList<>();
+        for (JsonNode row : table(pack, "payroll_scale")) {
+            if (code.equals(row.get("code").asString()) && LocalDate.parse(row.get("effective_from").asString()).equals(start)) {
+                JsonNode upper = row.get("upper_bound");
+                out.add(new cd.hrpay.payroll.CountryRules.Band(row.get("lower_bound").decimalValue(),
+                        upper == null || upper.isNull() ? null : upper.decimalValue(), row.get("amount").decimalValue()));
+            }
+        }
+        out.sort(java.util.Comparator.comparing(cd.hrpay.payroll.CountryRules.Band::lower));
+        return out;
+    }
+
+    private static String text(JsonNode row, String field) {
+        JsonNode v = row.get(field);
+        return v == null || v.isNull() ? null : v.asString();
     }
 
     /** Each rate's value in force on the day: the row with the latest start on or before it. */

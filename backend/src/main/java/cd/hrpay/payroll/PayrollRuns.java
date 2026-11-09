@@ -226,6 +226,14 @@ public class PayrollRuns {
     /** The month's rates, at the given price of a dollar in the local currency. */
     PayslipCalculator.Rates rates(LocalDate last, BigDecimal usdLocal) {
         String country = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class).single();
+        if (!"CD".equals(country) && !"CG".equals(country)) {
+            CountryRules rules = statutory.countryRules(last);
+            if (rules == null) {
+                throw new cd.hrpay.common.BusinessRuleException("No contributions are set for this country.");
+            }
+            return PayslipCalculator.Rates.of(usdLocal, country, localCurrency(), statutory.rate("DEBT_MAX_SHARE", last),
+                    statutory.brackets(last).brackets(), rules);
+        }
         return "CG".equals(country)
                 ? congoRates(usdLocal, last, localCurrency())
                 : new PayslipCalculator.Rates(usdLocal,

@@ -37,14 +37,18 @@ public class Accounting {
             Map.entry("FAMILY_ALLOWANCE", "6616"), Map.entry("HOUSING", "6631"), Map.entry("TRANSPORT", "6634"),
             Map.entry("CNSS_EMPLOYER", "6641"), Map.entry("CNSS_EMPLOYER_FAMILY", "6641"),
             Map.entry("CNSS_EMPLOYER_ACCIDENT", "6641"), Map.entry("INPP", "6413"), Map.entry("ONEM", "6413"),
-            Map.entry("IERE", "6413"), Map.entry("TUS", "6413"));
+            Map.entry("IERE", "6413"), Map.entry("TUS", "6413"), Map.entry("CNAMGS_EMPLOYER", "6641"),
+            Map.entry("CFC_EMPLOYER", "6413"), Map.entry("FNE", "6413"), Map.entry("FNH", "6413"), Map.entry("CFP", "6413"));
 
     /** Default debt accounts by element. */
     static final Map<String, String> LIABILITY = Map.ofEntries(
             Map.entry("CNSS_EMPLOYEE", "4310"), Map.entry("IPR", "4472"), Map.entry("LOAN", "4211"),
             Map.entry("ADVANCE", "4212"), Map.entry("LEAVE_ADVANCE", "4212"), Map.entry("QUINZAINE", "4212"), Map.entry("EARNED_ADVANCE", "4212"), Map.entry("OTHER_DEDUCTION", "4230"), Map.entry("CNSS_EMPLOYER", "4310"),
             Map.entry("CNSS_EMPLOYER_FAMILY", "4310"), Map.entry("CNSS_EMPLOYER_ACCIDENT", "4310"),
-            Map.entry("INPP", "4478"), Map.entry("ONEM", "4478"), Map.entry("IERE", "4478"), Map.entry("TUS", "4478"));
+            Map.entry("INPP", "4478"), Map.entry("ONEM", "4478"), Map.entry("IERE", "4478"), Map.entry("TUS", "4478"),
+            Map.entry("CNAMGS_EMPLOYEE", "4310"), Map.entry("CNAMGS_EMPLOYER", "4310"), Map.entry("CAC", "4472"),
+            Map.entry("RAV", "4472"), Map.entry("TDL", "4472"), Map.entry("TCS", "4472"), Map.entry("CFC_EMPLOYEE", "4478"),
+            Map.entry("CFC_EMPLOYER", "4478"), Map.entry("FNE", "4478"), Map.entry("FNH", "4478"), Map.entry("CFP", "4478"));
 
     static final String OTHER_EARNING = "6618";
     static final String OTHER_DEDUCTION = "4230";

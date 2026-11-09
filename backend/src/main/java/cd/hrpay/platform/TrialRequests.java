@@ -40,7 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TrialRequests {
 
-    public record Ask(@NotBlank @Size(max = 150) String companyName, @NotBlank @Pattern(regexp = "CD|CG") String countryCode,
+    public record Ask(@NotBlank @Size(max = 150) String companyName, @NotBlank @Pattern(regexp = "CD|CG|CM|GA") String countryCode,
                       @NotBlank @Pattern(regexp = "1-50|51-300|301-1000|1000\\+") String employees,
                       @NotBlank @Size(max = 100) String firstName, @NotBlank @Size(max = 100) String lastName,
                       @NotBlank @Email @Size(max = 320) String email, @NotBlank @Size(max = 40) String phone,
