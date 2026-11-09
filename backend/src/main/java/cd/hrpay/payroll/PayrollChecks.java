@@ -341,6 +341,18 @@ public class PayrollChecks {
                     Texts.day(run.rateDate()), age));
         }
 
+        // A rate or the tax scale changed for this month after it was calculated (a published law change, or HR).
+        if (run.calculatedAt() != null) {
+            List<String> changed = jdbc.sql("""
+                    select code from statutory_rate where created_at > ? and effective_from <= ?
+                    union select 'IPR' from ipr_bracket where created_at > ? and effective_from <= ?
+                    order by 1""").params(run.calculatedAt(), last, run.calculatedAt(), last).query(String.class).list();
+            if (!changed.isEmpty()) {
+                add.add("RATE_CHANGED", null, Texts.t("Changed since this payroll was calculated: %s. Recalculate it.",
+                        String.join(", ", changed)));
+            }
+        }
+
         out.sort(Comparator.comparing((Check c) -> c.level()).thenComparing(Check::code)
                 .thenComparing(c -> c.name() == null ? "" : c.name()));
         return out;

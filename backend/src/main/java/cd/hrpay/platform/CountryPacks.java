@@ -32,6 +32,13 @@ public class CountryPacks {
     private final JdbcClient jdbc;
     private final JsonMapper json;
 
+    private cd.hrpay.law.LawChanges lawChanges;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setLawChanges(@org.springframework.context.annotation.Lazy cd.hrpay.law.LawChanges lawChanges) {
+        this.lawChanges = lawChanges;
+    }
+
     public CountryPacks(JdbcClient jdbc, JsonMapper json) {
         this.jdbc = jdbc;
         this.json = json;
@@ -94,6 +101,10 @@ public class CountryPacks {
         // Anniversary raises start from the company's first month on HR Pay, not from the pack's date.
         jdbc.sql("update payroll_setting set value = ? where key = 'RAISES_FROM'")
                 .param(LocalDate.now().withDayOfMonth(1).toString()).update();
+        // The rates published since the pack was written, and the link of each rate to its change.
+        if (lawChanges != null) {
+            lawChanges.applyAllHere(country);
+        }
     }
 
     /** The pack's names in French, by their English name. */

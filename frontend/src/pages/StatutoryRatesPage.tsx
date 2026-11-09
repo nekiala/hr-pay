@@ -7,8 +7,8 @@ import { Button, Form } from '../components/Button'
 import { SignOff } from '../components/SignOff'
 import { locale, localCurrency, t } from '../i18n'
 
-type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null }
-type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string }
+type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null; lawChangeId: number | null; nextLawChangeId: number | null }
+type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string; lawChangeId: number | null }
 type Band = { lowerBound: number; upperBound: number | null; ratePercent: number }
 type Overview = { on: string; rates: RateType[]; ipr: { effectiveFrom: string; brackets: Band[] }; iprDates: string[]; settings: Record<string, string> }
 type FxRate = { id: number; currency: string; rateDate: string; cdfPerUnit: number; source: string; sourceUrl: string | null; enteredBy: string | null; fetchedAt: string }
@@ -139,7 +139,7 @@ export default function StatutoryRatesPage() {
           <Modal title={data?.rates.find((r) => r.code === open)?.name ?? open} size="lg" onClose={() => setOpen(null)}>
             <h4>{t('History')}</h4>
             <ul>
-              {history.map((h) => <li key={h.id}>{show(data!.rates.find((r) => r.code === open)!, h.value)}{' '}{t('from')}{' '}{h.effectiveFrom}{h.note ? ` · ${h.note}` : ''} <span className="muted">· {h.createdBy}</span></li>)}
+              {history.map((h) => <li key={h.id}>{show(data!.rates.find((r) => r.code === open)!, h.value)}{' '}{t('from')}{' '}{h.effectiveFrom}{h.note ? ` · ${h.note}` : ''}{h.lawChangeId && <>{' · '}<a href={`/changes#${h.lawChangeId}`} target="_blank" rel="noreferrer">{t('the change')}</a></>} <span className="muted">· {h.createdBy}</span></li>)}
             </ul>
             {editable && (
               <Form className="grid3" onSubmit={(e) => {

@@ -31,6 +31,7 @@ export const CHECK_TITLES: Record<string, string> = {
   LEAVE_PENDING: t('Leave waiting for a decision'),
   CORRECTION_PENDING: t('Attendance corrections waiting'),
   RATE_OLD: t('Old exchange rate'),
+  RATE_CHANGED: t('Rates changed since the calculation'),
 }
 
 const fail = (e: unknown) => e instanceof ApiError ? [e.message, ...Object.values(e.fieldErrors)].join(' ') : t('Something went wrong.')
