@@ -11,6 +11,7 @@ import cd.hrpay.reference.References;
 import cd.hrpay.user.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.util.List;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -147,6 +148,52 @@ class ReferenceListsIT extends IntegrationTest {
                         {"countryCode":"CD","kind":"MOBILE_MONEY","name":"Opérateur Test","shared":true,"verified":true}"""))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.shared").value(true));
+    }
+
+    @Test
+    void theBranchOfActivityIsPickedFromHrPaysList() throws Exception {
+        jdbc.sql("delete from activity_branch where code = '59'").update();
+        MockHttpSession hr = login(HR);
+        String list = mvc.perform(get("/api/reference/branches").session(hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("A"))
+                .andExpect(jsonPath("$[?(@.code == 'J')].name").value(Matchers.contains("Information and communication")))
+                .andReturn().getResponse().getContentAsString();
+        long telecoms = JsonPath.<List<Number>>read(list, "$[?(@.code == '61')].id").getFirst().longValue();
+        // Each division follows its section.
+        List<String> codes = JsonPath.read(list, "$[*].code");
+        assertThat(codes.indexOf("61")).isEqualTo(codes.indexOf("J") + 3);
+
+        mvc.perform(json(put("/api/company/payslip-settings").session(hr),
+                        "{\"template\":\"CLASSIC\",\"activityBranchId\":999999}"))
+                .andExpect(status().isUnprocessableContent());
+        mvc.perform(json(put("/api/company/payslip-settings").session(hr),
+                        "{\"template\":\"CLASSIC\",\"activityBranchId\":%d}".formatted(telecoms)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.activityBranchId").value(telecoms));
+        String lang = jdbc.sql("select language from company where id = 1").query(String.class).single();
+        assertThat(jdbc.sql("select activity from company where id = 1").query(String.class).single())
+                .isEqualTo("en".equals(lang) ? "Telecommunications" : "Télécommunications");
+
+        // Only HR Pay writes the list.
+        mvc.perform(json(post("/api/reference/branches").session(hr), """
+                        {"code":"99","parentId":%d,"nameFr":"X","nameEn":"X"}""".formatted(telecoms)))
+                .andExpect(status().isForbidden());
+        MockHttpSession admin = login(ADMIN);
+        long section = JsonPath.<List<Number>>read(list, "$[?(@.code == 'J')].id").getFirst().longValue();
+        mvc.perform(json(post("/api/reference/branches").session(admin), """
+                        {"code":"59","parentId":%d,"nameFr":"Cinéma et musique","nameEn":"Film and music"}""".formatted(telecoms)))
+                .andExpect(status().isUnprocessableContent());
+        mvc.perform(json(post("/api/reference/branches").session(admin), """
+                        {"code":"59","parentId":%d,"nameFr":"Cinéma et musique","nameEn":"Film and music"}""".formatted(section)))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.verified").value(false));
+        // A rename reaches the companies that picked the branch.
+        mvc.perform(json(put("/api/reference/branches/" + telecoms).session(admin), """
+                        {"nameFr":"Télécoms","nameEn":"Telecoms","verified":true}"""))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.verified").value(true));
+        assertThat(jdbc.sql("select activity from company where id = 1").query(String.class).single())
+                .isEqualTo("en".equals(lang) ? "Telecoms" : "Télécoms");
+        mvc.perform(json(put("/api/reference/branches/" + telecoms).session(admin), """
+                        {"nameFr":"Télécommunications","nameEn":"Telecommunications"}""")).andExpect(status().isOk());
     }
 
     @Test

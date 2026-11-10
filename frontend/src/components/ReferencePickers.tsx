@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { api, countries, PLACE_KINDS, type Country, type Institution, type Place, type PlaceKind } from '../api'
+import { Link } from 'react-router-dom'
+import { api, countries, PLACE_KINDS, type ActivityBranch, type City, type Country, type Institution, type Place, type PlaceKind } from '../api'
 import { t } from '../i18n'
 
 /** The countries, for a select. */
@@ -115,6 +116,74 @@ export function InstitutionSelect({ country, kind, value, onChange, required }: 
     <select value={value ?? ''} required={required} onChange={(e) => onChange(list.find((i) => i.id === Number(e.target.value)) ?? null)}>
       <option value="">{t('Choose…')}</option>
       {list.map((i) => <option key={i.id} value={i.id}>{i.name}{i.shortName && i.shortName !== i.name ? ` (${i.shortName})` : ''}</option>)}
+    </select>
+  )
+}
+
+/**
+ * A town picked country first, then town: only the towns of the chosen country are offered, grouped by province or
+ * department, so a town of the wrong country cannot be picked.
+ */
+export function CityPicker({ country, cityId, onChange, cityLabel, emptyLabel, required }: {
+  country: string | null | undefined; cityId: number | null | undefined
+  onChange: (country: string | null, city: City | null) => void
+  cityLabel?: string; emptyLabel?: string; required?: boolean
+}) {
+  const [cities, setCities] = useState<City[] | null>(null)
+  useEffect(() => {
+    if (!country) { setCities([]); return }
+    let live = true
+    setCities(null)
+    api<City[]>(`/api/reference/cities?country=${country}`).then((c) => { if (live) setCities(c) }).catch(() => { if (live) setCities([]) })
+    return () => { live = false }
+  }, [country])
+  const regions = [...new Set((cities ?? []).map((c) => c.region ?? ''))].sort((a, b) => a.localeCompare(b))
+  return (
+    <>
+      <label>{t('Country')}<CountrySelect value={country} required={required} onChange={(c) => onChange(c, null)} /></label>
+      <label>{cityLabel ?? t('Town')}
+        <select value={cityId ?? ''} required={required} disabled={!country || cities === null}
+          onChange={(e) => onChange(country ?? null, cities?.find((c) => c.id === Number(e.target.value)) ?? null)}>
+          <option value="">{emptyLabel ?? t('Choose…')}</option>
+          {regions.map((r) => (
+            <optgroup key={r} label={r || t('Other')}>
+              {(cities ?? []).filter((c) => (c.region ?? '') === r).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        {country && cities?.length === 0 && (
+          <span className="hint">{t('No town of this country is in the lists yet.')} <Link to="/reference-lists">{t('Add it on Reference lists')}</Link></span>
+        )}
+      </label>
+    </>
+  )
+}
+
+/** HR Pay's branches of activity: each section, then its divisions. */
+export function useBranches(all = false) {
+  const [list, setList] = useState<ActivityBranch[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const reload = () => api<ActivityBranch[]>(`/api/reference/branches${all ? '?all=true' : ''}`)
+    .then((b) => { setList(b); setLoaded(true) }).catch(() => setLoaded(true))
+  useEffect(() => { reload() }, [all]) // eslint-disable-line react-hooks/exhaustive-deps
+  return { branches: list, loaded, reload }
+}
+
+/** A branch of activity picked from HR Pay's list: a whole section, or one of its divisions. */
+export function BranchSelect({ value, onChange, required }: {
+  value: number | null | undefined; onChange: (b: ActivityBranch | null) => void; required?: boolean
+}) {
+  const { branches } = useBranches()
+  const sections = branches.filter((b) => b.parentId === null)
+  return (
+    <select value={value ?? ''} required={required} onChange={(e) => onChange(branches.find((b) => b.id === Number(e.target.value)) ?? null)}>
+      <option value="">{t('Choose…')}</option>
+      {sections.map((s) => (
+        <optgroup key={s.id} label={`${s.code}. ${s.name}`}>
+          <option value={s.id}>{s.name} ({t('whole section')})</option>
+          {branches.filter((b) => b.parentId === s.id).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </optgroup>
+      ))}
     </select>
   )
 }

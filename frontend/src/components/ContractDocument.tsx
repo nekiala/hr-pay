@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ApiError, CONTRACT_TYPES, FIXED_TERM_REASONS, api, type ContractIssue, type ContractTermsView, type Contract as EmployeeContract,
-  type FixedTermReason, type Letter, type LetterDraft, type LetterTemplate,
+  type FixedTermReason, type Letter, type LetterDraft, type LetterTemplate, type Site,
 } from '../api'
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
+import { CityPicker, OldValue } from './ReferencePickers'
 import { t } from '../i18n'
 
 /** The Labour Code points of a contract: what blocks the document, and what to look at. */
@@ -25,7 +26,7 @@ export function ContractIssues({ issues }: { issues: ContractIssue[] }) {
 
 const empty = {
   trialMonths: '0', unskilledLabourer: false, fixedTermReason: '' as FixedTermReason | '', fixedTermDetail: '', permanentJob: false,
-  workPlace: '', supervisor: '', signedPlace: '', signedOn: '', draftGivenOn: '', medicalFitOn: '', medicalDoctor: '', onemVisaNo: '', onemVisaOn: '',
+  workSiteId: '', supervisor: '', signedPlaceId: '', signedCountry: '', signedOn: '', draftGivenOn: '', medicalFitOn: '', medicalDoctor: '', onemVisaNo: '', onemVisaOn: '',
 }
 
 /**
@@ -39,6 +40,8 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
   const [form, setForm] = useState(empty)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState('')
+  const [sites, setSites] = useState<Site[]>([])
+  useEffect(() => { api<Site[]>('/api/sites').then(setSites).catch(() => setSites([])) }, [])
   const base = `/api/lifecycle/people/${userId}/contracts/${contract.id}/terms`
   const fixed = contract.contractType === 'FIXED_TERM'
 
@@ -47,8 +50,8 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
     setView(v)
     setForm({
       trialMonths: String(x.trialMonths), unskilledLabourer: x.unskilledLabourer, fixedTermReason: x.fixedTermReason ?? '',
-      fixedTermDetail: x.fixedTermDetail ?? '', permanentJob: x.permanentJob, workPlace: x.workPlace ?? '', supervisor: x.supervisor ?? '',
-      signedPlace: x.signedPlace ?? '', signedOn: x.signedOn ?? '', draftGivenOn: x.draftGivenOn ?? '', medicalFitOn: x.medicalFitOn ?? '',
+      fixedTermDetail: x.fixedTermDetail ?? '', permanentJob: x.permanentJob, workSiteId: x.workSiteId ? String(x.workSiteId) : '',
+      supervisor: x.supervisor ?? '', signedPlaceId: x.signedPlaceId ? String(x.signedPlaceId) : '', signedCountry: v.signedCountry ?? '', signedOn: x.signedOn ?? '', draftGivenOn: x.draftGivenOn ?? '', medicalFitOn: x.medicalFitOn ?? '',
       medicalDoctor: x.medicalDoctor ?? '', onemVisaNo: x.onemVisaNo ?? '', onemVisaOn: x.onemVisaOn ?? '',
     })
   }
@@ -57,6 +60,9 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
   const save = async () => {
     const body: Record<string, unknown> = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v === '' ? null : v]))
     body.trialMonths = Number(form.trialMonths)
+    body.workSiteId = form.workSiteId ? Number(form.workSiteId) : null
+    body.signedPlaceId = form.signedPlaceId ? Number(form.signedPlaceId) : null
+    delete body.signedCountry
     const v = await api<ContractTermsView>(base, { method: 'PUT', body })
     fill(v)
     return v
@@ -117,17 +123,26 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
             </label>
           )}
           {fixed && <label className="check"><input type="checkbox" checked={form.permanentJob} onChange={(e) => set({ permanentJob: e.target.checked })} />{t('The job itself is permanent')}</label>}
-          <label>{t('Place of work')}<input value={form.workPlace} maxLength={200} placeholder={view?.defaultWorkPlace ?? ''} onChange={(e) => set({ workPlace: e.target.value })} /></label>
+          <label>{t('Place of work')}
+            <select value={form.workSiteId} onChange={(e) => set({ workSiteId: e.target.value })}>
+              <option value="">{view?.defaultWorkPlace ? t('The person\'s site ({a})', { a: view.defaultWorkPlace }) : t('Choose…')}</option>
+              {sites.filter((s) => s.active || String(s.id) === form.workSiteId).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            {!form.workSiteId && <OldValue value={view?.terms.workSiteId ? null : view?.terms.workPlace} />}
+          </label>
           <label>{t('Supervisor')}<input value={form.supervisor} maxLength={150} placeholder={view?.defaultSupervisor ?? ''} onChange={(e) => set({ supervisor: e.target.value })} /></label>
           <label>{t('Medical fitness: certificate of')}<input type="date" value={form.medicalFitOn} onChange={(e) => set({ medicalFitOn: e.target.value })} /></label>
           <label>{t('Doctor')}<input value={form.medicalDoctor} maxLength={150} onChange={(e) => set({ medicalDoctor: e.target.value })} /></label>
-          <label>{t('Signed at')}<input value={form.signedPlace} maxLength={100} placeholder={view?.defaultSignedPlace ?? ''} onChange={(e) => set({ signedPlace: e.target.value })} /></label>
+          <CityPicker country={form.signedCountry || null} cityId={form.signedPlaceId ? Number(form.signedPlaceId) : null} cityLabel={t('Signed at')}
+            emptyLabel={view?.defaultSignedPlace ? t('The company\'s town ({a})', { a: view.defaultSignedPlace }) : t('Choose…')}
+            onChange={(country, city) => set({ signedCountry: country ?? '', signedPlaceId: city ? String(city.id) : '' })} />
+          {!form.signedPlaceId && view?.terms.signedPlace && !view.terms.signedPlaceId && <OldValue value={view.terms.signedPlace} />}
           <label>{t('Signed on (paper)')}<input type="date" value={form.signedOn} onChange={(e) => set({ signedOn: e.target.value })} /></label>
           <label>{t('Paper draft handed over on')}<input type="date" value={form.draftGivenOn} onChange={(e) => set({ draftGivenOn: e.target.value })} /></label>
           <label>{t('ONEM visa no.')}<input value={form.onemVisaNo} maxLength={40} onChange={(e) => set({ onemVisaNo: e.target.value })} /></label>
           <label>{t('ONEM visa date')}<input type="date" value={form.onemVisaOn} onChange={(e) => set({ onemVisaOn: e.target.value })} /></label>
         </div>
-        <p className="hint">{t('Empty fields take the value shown in grey. The draft is given to the employee at least two working days before signing (Labour Code art. 46); the signed contract goes to the ONEM visa within 15 days (art. 47).')}</p>
+        <p className="hint">{t('Empty fields take the value shown in grey or in the list. The draft is given to the employee at least two working days before signing (Labour Code art. 46); the signed contract goes to the ONEM visa within 15 days (art. 47).')}</p>
         <div className="modal-foot">
           <Button className="secondary" onClick={onClose}>{t('Close')}</Button>
           <Button className="secondary" type="submit">{t('Save')}</Button>

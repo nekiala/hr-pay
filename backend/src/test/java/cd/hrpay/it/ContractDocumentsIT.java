@@ -60,9 +60,26 @@ class ContractDocumentsIT extends IntegrationTest {
     @Test
     void aFixedTermContractIsWrittenFromTheModelWithTheLegalChecks() throws Exception {
         MockHttpSession hr = login(HR);
+        // The town documents are signed in is picked from the lists: a typed one, or a place that is not a town, is refused.
+        long kinshasa = jdbc.sql("select id from place where country_code = 'CD' and kind = 'CITY' and name = 'Kinshasa' and company_id is null")
+                .query(Long.class).single();
+        long province = jdbc.sql("select parent_id from place where id = ?").param(kinshasa).query(Long.class).single();
+        mvc.perform(get("/api/reference/cities?country=CD").session(hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name == 'Kinshasa')].id").value(Matchers.contains((int) kinshasa)))
+                .andExpect(jsonPath("$[?(@.name == 'Masisi')]", Matchers.empty()));
         mvc.perform(json(put("/api/company/representative").session(hr),
-                        "{\"name\":\"KIALA NTONA\",\"title\":\"Gérant\",\"signingPlace\":\"Kinshasa\"}"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Gérant"));
+                        "{\"name\":\"KIALA NTONA\",\"title\":\"Gérant\",\"signingPlaceId\":%d}".formatted(province)))
+                .andExpect(status().isUnprocessableContent());
+        mvc.perform(json(put("/api/company/representative").session(hr),
+                        "{\"name\":\"KIALA NTONA\",\"title\":\"Gérant\",\"signingPlaceId\":%d}".formatted(kinshasa)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.title").value("Gérant"))
+                .andExpect(jsonPath("$.signingPlace").value("Kinshasa"))
+                .andExpect(jsonPath("$.signingCountry").value("CD"));
+        // The place of work is one of the company's sites.
+        long site = jdbc.sql("""
+                insert into site (code, name, time_zone, gps_required, company_id) values ('SILIKIN', 'Ngaliema (Silikin village)',
+                    'Africa/Kinshasa', false, 1) on conflict do nothing returning id""").query(Long.class).optional()
+                .orElseGet(() -> jdbc.sql("select id from site where code = 'SILIKIN' and company_id = 1").query(Long.class).single());
         jdbc.sql("update company set cnss_number = coalesce(cnss_number, '1001377700'), rccm = coalesce(rccm, 'CD/KNG/RCCM/17-B-00814'), "
                 + "national_id = coalesce(national_id, '01-83-N21745E') where id = 1")
                 .update();
@@ -92,9 +109,16 @@ class ContractDocumentsIT extends IntegrationTest {
         mvc.perform(json(put(terms).session(hr), "{\"trialMonths\":3,\"unskilledLabourer\":true}"))
                 .andExpect(status().isUnprocessableContent());
         mvc.perform(json(put(terms).session(hr), """
-                        {"trialMonths":6,"fixedTermReason":"TEMPORARY_NEED","workPlace":"Ngaliema (Silikin village)",
-                         "supervisor":"Responsable informatique","medicalFitOn":"2026-11-20","medicalDoctor":"Dr Lukusa"}"""))
+                        {"trialMonths":6,"fixedTermReason":"TEMPORARY_NEED","workSiteId":999999}"""))
+                .andExpect(status().isUnprocessableContent());
+        mvc.perform(json(put(terms).session(hr), """
+                        {"trialMonths":6,"fixedTermReason":"TEMPORARY_NEED","workSiteId":%d,"workPlace":"typed, ignored",
+                         "supervisor":"Responsable informatique","medicalFitOn":"2026-11-20","medicalDoctor":"Dr Lukusa",
+                         "signedPlaceId":%d}""".formatted(site, kinshasa)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.terms.workPlace").value("Ngaliema (Silikin village)"))
+                .andExpect(jsonPath("$.terms.signedPlace").value("Kinshasa"))
+                .andExpect(jsonPath("$.signedCountry").value("CD"))
                 .andExpect(jsonPath("$.issues[?(@.level == 'BLOCK')]", Matchers.empty()));
 
         long template = jdbc.sql("select id from letter_template where code = 'CONTRACT_CDD_FULL' and company_id = 1")

@@ -62,7 +62,7 @@ public class SectorPacks {
 
     /** The company's sector: its pack and the packs of its country. */
     public record CompanySector(String country, String current, OffsetDateTime appliedAt, String appliedBy,
-                                List<Pack> packs) {}
+                                List<Pack> packs, String activity, List<String> suggested) {}
 
     private record PackRow(String code, String countryCode, String nameEn, String nameFr, String scopeEn, String scopeFr,
                            String reference, String sourceUrl, String status, String verifiedBy, LocalDate verifiedOn,
@@ -258,7 +258,18 @@ public class SectorPacks {
                 .query((rs, i) -> new Object[] {rs.getString(1), rs.getString(2), rs.getObject(3, OffsetDateTime.class), rs.getString(4)})
                 .optional().orElse(new Object[] {"CD", null, null, null});
         String country = (String) row[0];
-        return new CompanySector(country, (String) row[1], (OffsetDateTime) row[2], (String) row[3], forCountry(country));
+        // The packs of the company's branch of activity (the branch picked, or its section).
+        List<String> suggested = jdbc.sql("""
+                select p.code from company c
+                join activity_branch b on b.id = c.activity_branch_id
+                left join activity_branch s on s.id = b.parent_id
+                join sector_pack p on p.country_code = c.country_code and p.status <> 'RETIRED'
+                                  and p.activity_code in (b.code, s.code)
+                where c.id = current_company_id() order by p.display_order, p.code""").query(String.class).list();
+        String activity = jdbc.sql("select activity from company where id = current_company_id()").query(String.class)
+                .optional().orElse(null);
+        return new CompanySector(country, (String) row[1], (OffsetDateTime) row[2], (String) row[3], forCountry(country),
+                activity, suggested);
     }
 
     /** The day new overtime and statutory rates start when none is given: the first day of next month. */

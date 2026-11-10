@@ -41,11 +41,12 @@ public class ContractTerms {
     public record Terms(long contractId, int trialMonths, boolean unskilledLabourer, String fixedTermReason,
                         String fixedTermDetail, boolean permanentJob, String workPlace, String supervisor, String signedPlace,
                         LocalDate signedOn, LocalDate draftGivenOn, LocalDate medicalFitOn, String medicalDoctor,
-                        String onemVisaNo, LocalDate onemVisaOn, String updatedBy, OffsetDateTime updatedAt) {}
+                        String onemVisaNo, LocalDate onemVisaOn, String updatedBy, OffsetDateTime updatedAt,
+                        Long workSiteId, Long signedPlaceId) {}
 
     /** What the form shows: the terms saved, and what HR Pay proposes where nothing was typed. */
     public record View(Terms terms, String defaultWorkPlace, String defaultSupervisor, String defaultSignedPlace,
-                       List<Issue> issues) {}
+                       List<Issue> issues, String signedCountry) {}
 
     /** A point to fix (BLOCK: the document cannot go out) or to look at (WARN), with the article it comes from. */
     public record Issue(String level, String code, String message) {}
@@ -56,9 +57,11 @@ public class ContractTerms {
     private final Company company;
     private final HolidayService holidays;
     private final AuditService audit;
+    private final cd.hrpay.reference.References refs;
 
     public ContractTerms(JdbcClient jdbc, EmployeeFile files, UserRepository users, Company company, HolidayService holidays,
-                         AuditService audit) {
+                         AuditService audit, cd.hrpay.reference.References refs) {
+        this.refs = refs;
         this.jdbc = jdbc;
         this.files = files;
         this.users = users;
@@ -75,13 +78,18 @@ public class ContractTerms {
     public Terms terms(long contractId) {
         return jdbc.sql("select * from contract_terms where contract_id = ?").param(contractId).query(Terms.class).optional()
                 .orElse(new Terms(contractId, 0, false, null, null, false, null, null, null, null, null, null, null, null, null,
-                        null, null));
+                        null, null, null, null));
     }
 
     public View view(long userId, long contractId) {
         EmployeeFile.Contract c = contract(userId, contractId);
-        return new View(terms(contractId), defaultWorkPlace(userId), defaultSupervisor(userId).orElse(null),
-                company.representative().signingPlace(), Texts.in(company.language(), () -> issues(userId, c, terms(c.id()))));
+        Terms t = terms(contractId);
+        Company.Representative r = company.representative();
+        String signedCountry = t.signedPlaceId() == null ? r.signingCountry()
+                : jdbc.sql("select country_code from place where id = ?").param(t.signedPlaceId()).query(String.class)
+                        .optional().orElse(r.signingCountry());
+        return new View(t, defaultWorkPlace(userId), defaultSupervisor(userId).orElse(null), r.signingPlace(),
+                Texts.in(company.language(), () -> issues(userId, c, t)), signedCountry);
     }
 
     @Transactional
@@ -99,11 +107,24 @@ public class ContractTerms {
         if (in.onemVisaOn() != null && in.onemVisaOn().isBefore(c.startDate().minusYears(1))) {
             throw new BusinessRuleException("Check the date of the ONEM visa.");
         }
+        // The site is one of the company's sites, the town one of the lists; their names are kept for printing. With
+        // none picked, what was typed before the lists stays until one is.
+        Terms before = terms(contractId);
+        String workPlace = before.workSiteId() == null ? before.workPlace() : null;
+        if (in.workSiteId() != null) {
+            workPlace = jdbc.sql("select name from site where id = ? and (active or id is not distinct from ?)")
+                    .params(in.workSiteId(), before.workSiteId()).query(String.class)
+                    .optional().orElseThrow(() -> new BusinessRuleException("Choose the site from the company's sites."));
+        }
+        String signedPlace = before.signedPlaceId() == null ? before.signedPlace() : null;
+        if (in.signedPlaceId() != null) {
+            signedPlace = refs.requireCity(in.signedPlaceId()).name();
+        }
         jdbc.sql("""
                 insert into contract_terms (contract_id, trial_months, unskilled_labourer, fixed_term_reason, fixed_term_detail,
                     permanent_job, work_place, supervisor, signed_place, signed_on, draft_given_on, medical_fit_on, medical_doctor,
-                    onem_visa_no, onem_visa_on, updated_by)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    onem_visa_no, onem_visa_on, updated_by, work_site_id, signed_place_id)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 on conflict (contract_id) do update set trial_months = excluded.trial_months,
                     unskilled_labourer = excluded.unskilled_labourer, fixed_term_reason = excluded.fixed_term_reason,
                     fixed_term_detail = excluded.fixed_term_detail, permanent_job = excluded.permanent_job,
@@ -111,12 +132,14 @@ public class ContractTerms {
                     signed_on = excluded.signed_on, draft_given_on = excluded.draft_given_on,
                     medical_fit_on = excluded.medical_fit_on, medical_doctor = excluded.medical_doctor,
                     onem_visa_no = excluded.onem_visa_no, onem_visa_on = excluded.onem_visa_on,
-                    updated_by = excluded.updated_by, updated_at = now()""")
+                    updated_by = excluded.updated_by, updated_at = now(), work_site_id = excluded.work_site_id,
+                    signed_place_id = excluded.signed_place_id""")
                 .params(contractId, in.trialMonths(), in.unskilledLabourer(),
                         "FIXED_TERM".equals(c.contractType()) ? in.fixedTermReason() : null,
                         "FIXED_TERM".equals(c.contractType()) ? blank(in.fixedTermDetail()) : null, in.permanentJob(),
-                        blank(in.workPlace()), blank(in.supervisor()), blank(in.signedPlace()), in.signedOn(), in.draftGivenOn(),
-                        in.medicalFitOn(), blank(in.medicalDoctor()), blank(in.onemVisaNo()), in.onemVisaOn(), CurrentUser.email())
+                        workPlace, blank(in.supervisor()), signedPlace, in.signedOn(), in.draftGivenOn(),
+                        in.medicalFitOn(), blank(in.medicalDoctor()), blank(in.onemVisaNo()), in.onemVisaOn(), CurrentUser.email(),
+                        in.workSiteId(), in.signedPlaceId())
                 .update();
         audit.record("contract.terms_saved", "user", userId, Map.of("contract", contractId, "trialMonths", in.trialMonths()));
         return view(userId, contractId);

@@ -107,6 +107,10 @@ public class AccountSecurityController {
             throw new BusinessRuleException("Choose French or English.");
         }
         jdbc.sql("update company set language = ? where id = current_company_id()").param(body.language()).update();
+        // The branch of activity picked from the list is printed in the company's language.
+        jdbc.sql("""
+                update company c set activity = case c.language when 'en' then b.name_en else b.name_fr end
+                from activity_branch b where b.id = c.activity_branch_id and c.id = current_company_id()""").update();
         audit.record("company.language_set", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("language", body.language()));
         return companyLanguage();
     }

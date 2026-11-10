@@ -42,6 +42,15 @@ public class References {
     public record InstitutionInput(String countryCode, String kind, String name, String shortName, String swiftCode,
                                    String aliases, Boolean active, Boolean verified, Boolean shared) {}
 
+    /** A branch of activity (ISIC Rev. 4 section or division), named in the language asked. */
+    public record ActivityBranch(long id, String code, Long parentId, String name, String nameFr, String nameEn,
+                                 boolean active, boolean verified) {}
+
+    public record BranchInput(String code, Long parentId, String nameFr, String nameEn, Boolean active, Boolean verified) {}
+
+    /** A town of a country, with the province or department it is in. */
+    public record City(long id, String countryCode, String name, String region, boolean shared) {}
+
     /** A value in an employee file typed before the lists, not yet picked from them. */
     public record ToPick(long userId, String name, String registrationNo, String field, String value) {}
 
@@ -191,6 +200,113 @@ public class References {
         }
         audit.record("reference.place_changed", "place", id, Map.of("name", name, "active", active));
         return place(id);
+    }
+
+    // ---- towns -----------------------------------------------------------------------------------------------------
+
+    /** The towns (villes) of a country, for picking where documents are signed. */
+    public List<City> cities(String country) {
+        return jdbc.sql("""
+                select p.id, p.country_code, p.name, up.name as region, p.company_id is null as shared
+                from place p left join place up on up.id = p.parent_id
+                where p.kind = 'CITY' and p.active and p.country_code = ? and """ + P_VISIBLE + """
+                order by ref_norm(p.name), ref_norm(up.name)""").param(country.toUpperCase()).query(City.class).list();
+    }
+
+    /** The town picked from the lists; anything else is refused. */
+    public City requireCity(long id) {
+        return jdbc.sql("""
+                select p.id, p.country_code, p.name, up.name as region, p.company_id is null as shared
+                from place p left join place up on up.id = p.parent_id
+                where p.id = ? and p.kind = 'CITY' and p.active and """ + P_VISIBLE).param(id).query(City.class).optional()
+                .orElseThrow(() -> new BusinessRuleException("Choose the town from the list."));
+    }
+
+    // ---- branches of activity -------------------------------------------------------------------------------------
+
+    private String branchSelect() {
+        return "select id, code, parent_id, " + (Texts.french() ? "name_fr" : "name_en")
+                + " as name, name_fr, name_en, active, verified from activity_branch";
+    }
+
+    /** HR Pay's branches of activity: the sections, each followed by its divisions. */
+    public List<ActivityBranch> branches(boolean all) {
+        return jdbc.sql(branchSelect() + (all ? "" : " where active")
+                        + " order by coalesce((select s.code from activity_branch s where s.id = activity_branch.parent_id), code),"
+                        + " parent_id nulls first, code").query(ActivityBranch.class).list();
+    }
+
+    public ActivityBranch branch(long id) {
+        return jdbc.sql(branchSelect() + " where id = ?").param(id).query(ActivityBranch.class).optional()
+                .orElseThrow(() -> new NotFoundException(Texts.t("This branch of activity is not in the list.")));
+    }
+
+    /** The branch picked by a company: an active one of the list. */
+    public ActivityBranch requireBranch(long id) {
+        ActivityBranch b = jdbc.sql(branchSelect() + " where id = ? and active").param(id).query(ActivityBranch.class)
+                .optional().orElseThrow(() -> new BusinessRuleException("Choose the branch of activity from the list."));
+        return b;
+    }
+
+    @Transactional
+    public ActivityBranch addBranch(BranchInput in) {
+        onlyPlatform();
+        String code = in.code() == null ? "" : in.code().trim().toUpperCase();
+        if (!code.matches("[A-U]|[0-9]{2}")) {
+            throw new BusinessRuleException("Give the ISIC code: a section letter (A to U) or a two-digit division.");
+        }
+        boolean section = code.matches("[A-U]");
+        if (section != (in.parentId() == null)) {
+            throw new BusinessRuleException(section ? "A section (letter) has no section above it."
+                    : "Choose the section a division belongs to.");
+        }
+        if (in.parentId() != null && branch(in.parentId()).parentId() != null) {
+            throw new BusinessRuleException("A division sits under a section, not under another division.");
+        }
+        try {
+            long id = jdbc.sql("""
+                    insert into activity_branch (code, parent_id, name_fr, name_en, verified, created_by)
+                    values (?, ?, ?, ?, ?, ?) returning id""")
+                    .params(code, in.parentId(), branchName(in.nameFr()), branchName(in.nameEn()),
+                            Boolean.TRUE.equals(in.verified()), CurrentUser.email())
+                    .query(Long.class).single();
+            audit.record("reference.branch_added", "activity_branch", id, Map.of("code", code));
+            return branch(id);
+        } catch (DuplicateKeyException e) {
+            throw new ConflictException(Texts.t("%s is already in the list.", code));
+        }
+    }
+
+    @Transactional
+    public ActivityBranch updateBranch(long id, BranchInput in) {
+        onlyPlatform();
+        ActivityBranch b = branch(id);
+        String fr = in.nameFr() == null ? b.nameFr() : branchName(in.nameFr());
+        String en = in.nameEn() == null ? b.nameEn() : branchName(in.nameEn());
+        boolean active = in.active() == null ? b.active() : in.active();
+        boolean verified = in.verified() == null ? b.verified() : in.verified();
+        jdbc.sql("update activity_branch set name_fr = ?, name_en = ?, active = ?, verified = ? where id = ?")
+                .params(fr, en, active, verified, id).update();
+        // The companies keep the name of what they picked, in their language: they follow a rename.
+        jdbc.sql("""
+                update company set activity = case language when 'en' then ? else ? end
+                where activity_branch_id = ?""").params(en, fr, id).update();
+        audit.record("reference.branch_changed", "activity_branch", id, Map.of("code", b.code(), "active", active));
+        return branch(id);
+    }
+
+    private void onlyPlatform() {
+        if (!platform()) {
+            throw new BusinessRuleException("Only HR Pay's administrators change the branches of activity.");
+        }
+    }
+
+    private static String branchName(String name) {
+        String n = name == null ? "" : name.trim().replaceAll("\\s+", " ");
+        if (n.isEmpty() || n.length() > 150) {
+            throw new BusinessRuleException("Give the name in 1 to 150 characters.");
+        }
+        return n;
     }
 
     // ---- banks and mobile money operators ---------------------------------------------------------------------------
