@@ -17,6 +17,8 @@ const PROVIDER_ERRORS: Record<string, string> = {
   not_registered: t('This account is not registered in HR Pay. Sign in with the email address HR registered, or contact HR.'),
   disabled: t('This account is disabled. Contact HR.'),
   email_not_verified: t('Your provider did not confirm this email address.'),
+  personal_account: t('Personal Google accounts cannot sign in. Use your company\'s professional Google account.'),
+  domain_not_allowed: t('Your company has not registered this Google domain. Ask your administrator to add it on the Roles page.'),
   wrong_tenant: t('Your company has not allowed this Microsoft directory. Ask your administrator to set it on the Company page.'),
   provider: t('The sign-in with your provider did not succeed. Try again.'),
 }

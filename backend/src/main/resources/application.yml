@@ -65,8 +65,8 @@ app:
   # (openssl rand -base64 32). Keep a copy outside the server: backups cannot be read without it.
   data-key: ${HRPAY_DATA_KEY:}
   data-key-file: ${HRPAY_DATA_KEY_FILE:}
-  # Sign in with Google / Microsoft 365: set a client id to turn each on. Microsoft also needs each company's
-  # tenant (directory) id on its Company page.
+  # Sign in with Google / Microsoft 365: set a client id to turn each on. Each company then sets, on its Roles page,
+  # its Microsoft tenant (directory) id and its Google Workspace domains.
   oidc:
     google:
       client-id: ${GOOGLE_CLIENT_ID:${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID:}}

@@ -1654,5 +1654,11 @@
  "none": "néant",
  "passport": "passeport",
  "divorced": "divorcé(e)",
- "widowed": "veuf ou veuve"
+ "widowed": "veuf ou veuve",
+ "\"%s\" is not a domain name, for example mycompany.com.": "« %s » n'est pas un nom de domaine, par exemple monentreprise.com.",
+ "The domain %s is already used by another company. Contact support.": "Le domaine %s est déjà utilisé par une autre entreprise. Contactez le support.",
+ "Personal Gmail addresses cannot be a company domain.": "Les adresses Gmail personnelles ne peuvent pas être un domaine d'entreprise.",
+ "Add at least one domain before requiring Google sign-in.": "Ajoutez au moins un domaine avant d'imposer la connexion Google.",
+ "Google sign-in is not turned on for this installation, so it cannot be required.": "La connexion Google n'est pas activée sur cette installation : elle ne peut pas être imposée.",
+ "Your company requires you to sign in with Google. Use the Sign in with Google button.": "Votre entreprise vous demande de vous connecter avec Google. Utilisez le bouton Se connecter avec Google."
 }

@@ -100,7 +100,7 @@ public class SecurityConfig {
                             SecurityContextRepository contextRepository, cd.hrpay.platform.SupportAccess support,
                             org.springframework.jdbc.core.simple.JdbcClient jdbc, SignInSteps steps,
                             org.springframework.transaction.support.TransactionTemplate tx, UserSessions sessions,
-                            cd.hrpay.firm.Firms firms) throws Exception {
+                            cd.hrpay.firm.Firms firms, GoogleDomains googleDomains) throws Exception {
         http
                 .securityContext(c -> c.securityContextRepository(contextRepository))
                 .csrf(csrf -> csrf
@@ -122,8 +122,19 @@ public class SecurityConfig {
                 .addFilterBefore(new UserRefreshFilter(users, tenants, support, jdbc, sessions, firms), AuthorizationFilter.class);
 
         if (googleClients.getIfAvailable() != null) {
-            OidcSignIn oidc = new OidcSignIn(users, audit, tenants, jdbc, steps, tx);
+            OidcSignIn oidc = new OidcSignIn(users, audit, tenants, jdbc, steps, tx, googleDomains);
+            ClientRegistrationRepository clients = googleClients.getIfAvailable();
+            var resolver = new org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver(
+                    clients, "/oauth2/authorization");
+            // Google: always let the person choose the account, so a personal account signed in on the browser is
+            // not used without asking.
+            resolver.setAuthorizationRequestCustomizer(r -> r.attributes(a -> {
+                if ("google".equals(a.get(org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames.REGISTRATION_ID))) {
+                    r.additionalParameters(p -> p.put("prompt", "select_account"));
+                }
+            }));
             http.oauth2Login(o -> o
+                    .authorizationEndpoint(a -> a.authorizationRequestResolver(resolver))
                     .userInfoEndpoint(u -> u.oidcUserService(oidc))
                     .successHandler(oidc)
                     .failureHandler((req, res, ex) -> res.sendRedirect("/login?error=" + (

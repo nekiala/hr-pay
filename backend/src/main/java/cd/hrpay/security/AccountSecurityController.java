@@ -32,7 +32,15 @@ public class AccountSecurityController {
     public record LanguageInput(@jakarta.validation.constraints.Pattern(regexp = "fr|en") String language) {}
 
     /** How people of the company may sign in besides a password. */
-    public record SignInSettings(String microsoftTenant, boolean microsoftAvailable, boolean googleAvailable) {}
+    public record SignInSettings(String microsoftTenant, boolean microsoftAvailable, boolean googleAvailable,
+                                 java.util.List<String> googleDomains, boolean googleOnly) {}
+
+    /** The company's Google Workspace domains, and whether people on them must use Google. */
+    public record GoogleInput(java.util.List<String> domains, Boolean googleOnly) {
+        boolean only() {
+            return Boolean.TRUE.equals(googleOnly);
+        }
+    }
 
     public record SignInInput(@jakarta.validation.constraints.Pattern(
             regexp = "^$|^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
@@ -46,10 +54,12 @@ public class AccountSecurityController {
     private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
     private final AuthController auth;
     private final cd.hrpay.audit.AuditService audit;
+    private final GoogleDomains googleDomains;
 
     public AccountSecurityController(TwoStep twoStep, UserSessions sessions, UserService users, PasswordEncoder encoder,
                                      org.springframework.jdbc.core.simple.JdbcClient jdbc, AuthController auth,
-                                     cd.hrpay.audit.AuditService audit) {
+                                     cd.hrpay.audit.AuditService audit, GoogleDomains googleDomains) {
+        this.googleDomains = googleDomains;
         this.jdbc = jdbc;
         this.auth = auth;
         this.audit = audit;
@@ -180,7 +190,27 @@ public class AccountSecurityController {
         AuthController.Providers p = auth.providers();
         String tenant = jdbc.sql("select microsoft_tenant from company where id = current_company_id()").query(String.class)
                 .optional().orElse(null);
-        return new SignInSettings(tenant, p.microsoft(), p.google());
+        return new SignInSettings(tenant, p.microsoft(), p.google(), googleDomains.list(), googleDomains.googleOnly());
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/api/company/sign-in/google")
+    @PreAuthorize("hasAuthority('role.manage')")
+    @Transactional
+    public SignInSettings saveGoogle(@RequestBody GoogleInput body) {
+        if (body.only() && !auth.providers().google()) {
+            throw new BusinessRuleException("Google sign-in is not turned on for this installation, so it cannot be required.");
+        }
+        googleDomains.replace(body.domains(), body.only(), CurrentUser.email());
+        audit.record("company.google_domains_set", "company", cd.hrpay.tenancy.TenantContext.companyId(),
+                Map.of("domains", String.join(",", googleDomains.list()), "googleOnly", body.only()));
+        return signIn();
+    }
+
+    /** The company's Google domains, for HR creating accounts (who can sign in with Google). */
+    @GetMapping("/api/company/google-domains")
+    @PreAuthorize("hasAnyAuthority('user.create', 'user.update', 'role.manage')")
+    public Map<String, Object> googleDomains() {
+        return Map.of("domains", googleDomains.list(), "available", auth.providers().google(), "googleOnly", googleDomains.googleOnly());
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/api/company/sign-in")

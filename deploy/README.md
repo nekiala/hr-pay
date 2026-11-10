@@ -93,6 +93,20 @@ Google Workspace > Gmail > Routing > SMTP relay service, allow the server's IP a
 domains", and require TLS. Then in `.env`: `SMTP_HOST=smtp-relay.gmail.com`, `SMTP_PORT=587`, `SMTP_AUTH=false`,
 `SMTP_EHLO=<DOMAIN>`, `MAIL_FROM` an address of your Google domain, and leave `SMTP_USERNAME` and `SMTP_PASSWORD` empty.
 
+## Sign in with Google
+
+People can sign in with their company's professional Google account (Google Workspace). Personal Gmail accounts are
+always refused, and each company lists its own domains on its Roles page (a domain belongs to one company only).
+
+1. In the Google Cloud console (console.cloud.google.com), open or create a project for HR Pay.
+2. Google Auth Platform > Branding: app name, support email, authorised domain (`<DOMAIN>`). Audience: **External**,
+   then publish the app ("In production"). The app asks only `openid`, `email` and `profile`, which need no review.
+3. Clients > Create client > Web application, with these authorised redirect URIs:
+   - `https://<DOMAIN>/login/oauth2/code/google`
+   - for development: `http://localhost:5173/login/oauth2/code/google` and `http://localhost:8082/login/oauth2/code/google`
+4. Put the client id and secret in `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, then run `./upgrade.sh`
+   (or restart the app).
+
 ## Upgrading
 
 ```bash
