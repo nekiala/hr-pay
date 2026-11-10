@@ -54,7 +54,7 @@ public class LifecycleController {
                              @Size(max = 200) String fixedTermDetail, Boolean permanentJob, @Size(max = 200) String workPlace,
                              @Size(max = 150) String supervisor, @Size(max = 100) String signedPlace, LocalDate signedOn,
                              LocalDate draftGivenOn, LocalDate medicalFitOn, @Size(max = 150) String medicalDoctor,
-                             @Size(max = 40) String onemVisaNo, LocalDate onemVisaOn) {}
+                             @Size(max = 40) String onemVisaNo, LocalDate onemVisaOn, Long workSiteId, Long signedPlaceId) {}
 
     public record StartInput(@NotBlank String kind, LocalDate dueOn) {}
 
@@ -280,7 +280,8 @@ public class LifecycleController {
         return contractTerms.save(userId, contractId, new ContractTerms.Terms(contractId,
                 in.trialMonths() == null ? 0 : in.trialMonths(), Boolean.TRUE.equals(in.unskilledLabourer()),
                 in.fixedTermReason(), in.fixedTermDetail(), Boolean.TRUE.equals(in.permanentJob()), in.workPlace(), in.supervisor(), in.signedPlace(),
-                in.signedOn(), in.draftGivenOn(), in.medicalFitOn(), in.medicalDoctor(), in.onemVisaNo(), in.onemVisaOn(), null, null));
+                in.signedOn(), in.draftGivenOn(), in.medicalFitOn(), in.medicalDoctor(), in.onemVisaNo(), in.onemVisaOn(), null, null,
+                in.workSiteId(), in.signedPlaceId()));
     }
 
     @GetMapping("/letters/{id}/file")

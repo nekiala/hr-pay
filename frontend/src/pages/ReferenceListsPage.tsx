@@ -5,10 +5,10 @@ import { useAuth } from '../auth'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
-import { useCountries } from '../components/ReferencePickers'
+import { useBranches, useCountries } from '../components/ReferencePickers'
 import { t } from '../i18n'
 
-type Tab = 'places' | 'BANK' | 'MOBILE_MONEY' | 'pick'
+type Tab = 'places' | 'BANK' | 'MOBILE_MONEY' | 'branches' | 'pick'
 
 const FIELDS: Record<ToPick['field'], string> = {
   NATIONALITY: t('Nationality'), COMMUNE: t('Commune or territory'), BANK: t('Bank'), MOBILE_MONEY: t('Mobile money operator'),
@@ -43,7 +43,7 @@ export default function ReferenceListsPage() {
   const { countries, withPlaces, canShare } = useCountries()
   const [country, setCountry] = useState(me?.company?.country ?? 'CD')
   const [tab, setTab] = useState<Tab>('places')
-  const tabs: Record<Tab, string> = { places: t('Places'), BANK: t('Banks'), MOBILE_MONEY: t('Mobile money'), pick: t('To pick in employee files') }
+  const tabs: Record<Tab, string> = { places: t('Places'), BANK: t('Banks'), MOBILE_MONEY: t('Mobile money'), branches: t('Branches of activity'), pick: t('To pick in employee files') }
   const shown = [...new Set([...(me?.company?.country ? [me.company.country] : []), ...withPlaces, 'CD', 'CG'])]
 
   return (
@@ -56,7 +56,7 @@ export default function ReferenceListsPage() {
             <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{tabs[k]}</button>
           ))}
         </div>
-        {tab !== 'pick' && (
+        {tab !== 'pick' && tab !== 'branches' && (
           <label className="inline-filter" style={{ maxWidth: 320 }}>{t('Country')}
             <select value={country} onChange={(e) => setCountry(e.target.value)}>
               {shown.map((c) => <option key={c} value={c}>{countries.find((x) => x.code === c)?.name ?? c}</option>)}
@@ -66,6 +66,7 @@ export default function ReferenceListsPage() {
       </div>
       {tab === 'places' && <Places key={country} country={country} canShare={canShare} />}
       {(tab === 'BANK' || tab === 'MOBILE_MONEY') && <Institutions key={country + tab} country={country} kind={tab} canShare={canShare} />}
+      {tab === 'branches' && <Branches canShare={canShare} />}
       {tab === 'pick' && <ToPickList />}
     </section>
   )
@@ -244,6 +245,76 @@ function Institutions({ country, kind, canShare }: { country: string; kind: 'BAN
             {kind === 'BANK' && <label>{t('SWIFT (BIC)')}<input value={form.swiftCode} maxLength={11} onChange={(e) => setForm({ ...form, swiftCode: e.target.value })} /></label>}
           </div>
           {canShare && <label className="check"><input type="checkbox" checked={form.shared} onChange={(e) => setForm({ ...form, shared: e.target.checked })} />{t('In HR Pay\'s shared list (every company)')}</label>}
+          <Button type="submit">{t('Add')}</Button>
+        </Form>
+      )}
+    </div>
+  )
+}
+
+/** HR Pay's branches of activity (ISIC Rev. 4): companies pick their branch on the Company page; only HR Pay writes. */
+function Branches({ canShare }: { canShare: boolean }) {
+  const ask = useAsk()
+  const { error, message, run } = useRun()
+  const { branches, reload } = useBranches(true)
+  const sections = branches.filter((b) => b.parentId === null)
+  const [form, setForm] = useState({ code: '', parentId: '', nameFr: '', nameEn: '' })
+  const change = (b: { id: number }, body: Record<string, unknown>) => run(async () => {
+    await api(`/api/reference/branches/${b.id}`, { method: 'PUT', body })
+    await reload()
+  }, t('Saved.'))
+  const add = (e: FormEvent) => {
+    e.preventDefault()
+    return run(async () => {
+      await api('/api/reference/branches', { method: 'POST', body: { ...form, parentId: form.parentId ? Number(form.parentId) : null } })
+      setForm({ code: '', parentId: '', nameFr: '', nameEn: '' })
+      await reload()
+    }, t('Added.'))
+  }
+  return (
+    <div className="card">
+      <p className="hint">{t('The branches follow the United Nations classification ISIC Rev. 4 (CITI rév. 4): its sections and the divisions most employers belong to. Each company picks its branch on the Company page; only HR Pay changes this list.')}</p>
+      <ErrorText error={error} />
+      {message && <p className="success">{message}</p>}
+      <table>
+        <thead><tr><th>{t('Code')}</th><th>{t('Name in French')}</th><th>{t('Name in English')}</th><th>{t('List')}</th><th /></tr></thead>
+        <tbody>
+          {branches.map((b) => (
+            <tr key={b.id}>
+              <td>{b.parentId === null ? <strong>{b.code}</strong> : <span className="muted">{'  '}{b.code}</span>}</td>
+              <td>{b.parentId === null ? <strong>{b.nameFr}</strong> : b.nameFr}</td>
+              <td>{b.parentId === null ? <strong>{b.nameEn}</strong> : b.nameEn}</td>
+              <td><Status shared verified={b.verified} active={b.active} /></td>
+              <td className="row">
+                {canShare && (
+                  <>
+                    <Button className="secondary" onClick={() => ask({
+                      title: t('Change {a}', { a: b.name }), confirmLabel: t('Save'),
+                      fields: [{ label: t('Name in French'), defaultValue: b.nameFr, required: true }, { label: t('Name in English'), defaultValue: b.nameEn, required: true }],
+                      onConfirm: ([nameFr, nameEn]) => change(b, { nameFr, nameEn }),
+                    })}>{t('Change')}</Button>
+                    {!b.verified && <Button className="secondary" onClick={() => change(b, { verified: true })}>{t('Mark verified')}</Button>}
+                    <Button className="secondary" onClick={() => change(b, { active: !b.active })}>{b.active ? t('Stop using') : t('Use again')}</Button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {canShare && (
+        <Form onSubmit={add}>
+          <h4>{t('Add a branch')}</h4>
+          <div className="grid3">
+            <label>{t('Section')}<select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })}>
+                <option value="">{t('None: this is a section (letter)')}</option>
+                {sections.map((x) => <option key={x.id} value={x.id}>{x.code}. {x.name}</option>)}
+              </select>
+            </label>
+            <label>{t('ISIC code')}<input value={form.code} maxLength={2} required placeholder={form.parentId ? '59' : 'A'} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
+            <label>{t('Name in French')}<input value={form.nameFr} maxLength={150} required onChange={(e) => setForm({ ...form, nameFr: e.target.value })} /></label>
+            <label>{t('Name in English')}<input value={form.nameEn} maxLength={150} required onChange={(e) => setForm({ ...form, nameEn: e.target.value })} /></label>
+          </div>
           <Button type="submit">{t('Add')}</Button>
         </Form>
       )}

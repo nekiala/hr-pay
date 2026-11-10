@@ -78,6 +78,31 @@ public class ReferenceController {
         return refs.updateInstitution(id, in);
     }
 
+    @GetMapping("/cities")
+    @PreAuthorize("isAuthenticated()")
+    public List<References.City> cities(@RequestParam String country) {
+        return refs.cities(country);
+    }
+
+    @GetMapping("/branches")
+    @PreAuthorize("isAuthenticated()")
+    public List<References.ActivityBranch> branches(@RequestParam(defaultValue = "false") boolean all) {
+        return refs.branches(all);
+    }
+
+    @PostMapping("/branches")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('platform.manage')")
+    public References.ActivityBranch addBranch(@RequestBody References.BranchInput in) {
+        return refs.addBranch(in);
+    }
+
+    @PutMapping("/branches/{id}")
+    @PreAuthorize("hasAuthority('platform.manage')")
+    public References.ActivityBranch updateBranch(@PathVariable long id, @RequestBody References.BranchInput in) {
+        return refs.updateBranch(id, in);
+    }
+
     @GetMapping("/to-pick")
     @PreAuthorize("hasAuthority('salary.read')")
     public List<References.ToPick> toPick() {

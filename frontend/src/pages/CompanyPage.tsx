@@ -5,7 +5,7 @@ import { Button, Form } from '../components/Button'
 import { useAuth } from '../auth'
 import { t } from '../i18n'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
-import { InstitutionSelect, OldValue } from '../components/ReferencePickers'
+import { BranchSelect, CityPicker, InstitutionSelect, OldValue } from '../components/ReferencePickers'
 
 const EMPLOYER_FIELDS: [keyof Employer, string][] = [
   ['name', t('Name')], ['address', t('Address')], ['rccm', 'RCCM'], ['nationalId', t('Id. Nat.')], ['taxNumber', 'NIF'],
@@ -50,8 +50,12 @@ function RepresentativeCard() {
         <div className="grid">
           <label>{t('Signs for the employer')}<input value={value.name ?? ''} maxLength={150} placeholder="KIALA NTONA" onChange={(e) => setValue({ ...value, name: e.target.value })} /></label>
           <label>{t('Capacity')}<input value={value.title ?? ''} maxLength={100} placeholder={t('Manager')} onChange={(e) => setValue({ ...value, title: e.target.value })} /></label>
-          <label>{t('Town where documents are signed')}<input value={value.signingPlace ?? ''} maxLength={100} placeholder="Kinshasa" onChange={(e) => setValue({ ...value, signingPlace: e.target.value })} /></label>
         </div>
+        <div className="grid">
+          <CityPicker country={value.signingCountry} cityId={value.signingPlaceId} cityLabel={t('Town where documents are signed')}
+            onChange={(country, city) => setValue({ ...value, signingCountry: country, signingPlaceId: city?.id ?? null })} />
+        </div>
+        {value.signingPlaceId === null && <OldValue value={value.signingPlace} />}
         <p className="hint">{t('Printed on employment contracts: "represented by", the employer\'s signature block and "Done at … on …".')}</p>
         {saved && <p className="success">{t('Saved.')}</p>}
         <ErrorText error={error} />
@@ -191,8 +195,10 @@ export default function CompanyPage() {
         <div className="grid3">
           <label>{t('Legal form and capital')}<input value={settings.legalForm ?? ''} maxLength={200} placeholder={t('SARL au capital de 10 000 USD')}
             onChange={(e) => set('legalForm', e.target.value)} /></label>
-          <label>{t('Branch of activity')}<input value={settings.activity ?? ''} maxLength={150} placeholder={t('Telecommunications')}
-            onChange={(e) => set('activity', e.target.value)} /></label>
+          <label>{t('Branch of activity')}
+            <BranchSelect value={settings.activityBranchId} onChange={(b) => setSettings({ ...settings, activityBranchId: b?.id ?? null })} />
+            {settings.activityBranchId === null && <OldValue value={settings.activity} />}
+          </label>
           <label>{t('Phone')}<input value={settings.phone ?? ''} maxLength={40} onChange={(e) => set('phone', e.target.value)} /></label>
           <label>{t('Email')}<input type="email" value={settings.email ?? ''} maxLength={150} onChange={(e) => set('email', e.target.value)} /></label>
           <label>{t('Website')}<input value={settings.website ?? ''} maxLength={150} onChange={(e) => set('website', e.target.value)} /></label>

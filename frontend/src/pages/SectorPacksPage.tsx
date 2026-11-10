@@ -20,7 +20,7 @@ type Pack = {
 }
 type Line = { kind: Kind; key: string | null; labelEn: string; labelFr: string; article: string | null; current: string | null; next: string | null; changes: boolean; applies: boolean }
 type Preview = { pack: Pack; from: string; lines: Line[]; changes: number }
-type CompanySector = { country: string; current: string | null; appliedAt: string | null; appliedBy: string | null; packs: Pack[] }
+type CompanySector = { country: string; current: string | null; appliedAt: string | null; appliedBy: string | null; packs: Pack[]; activity: string | null; suggested: string[] }
 
 const fr = () => language() === 'fr'
 const name = (p: Pack) => (fr() ? p.nameFr : p.nameEn)
@@ -121,6 +121,11 @@ export function SectorPage() {
         {current
           ? <p>{t('Your company follows: {a}', { a: name(current) })}{data.appliedAt && <span className="muted"> · {t('applied on {a} by {b}', { a: longDay(data.appliedAt.slice(0, 10)), b: data.appliedBy ?? '' })}</span>}</p>
           : <p className="muted">{t('No sector pack applied yet: the country rules and your own settings apply.')}</p>}
+        {data.suggested.filter((c) => c !== data.current).map((c) => {
+          const p = data.packs.find((x) => x.code === c)
+          return p && <p key={c} className="hint">{t('For your branch of activity ({a}), the pack is: {b}.', { a: data.activity ?? '', b: name(p) })}{' '}
+            {chosen !== c && <button type="button" className="link" onClick={() => setChosen(c)}>{t('See it')}</button>}</p>
+        })}
         <div className="grid2">
           <label>{t('Sector pack')}
             <select value={chosen} onChange={(e) => setChosen(e.target.value)}>

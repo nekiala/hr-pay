@@ -1660,5 +1660,15 @@
  "Personal Gmail addresses cannot be a company domain.": "Les adresses Gmail personnelles ne peuvent pas être un domaine d'entreprise.",
  "Add at least one domain before requiring Google sign-in.": "Ajoutez au moins un domaine avant d'imposer la connexion Google.",
  "Google sign-in is not turned on for this installation, so it cannot be required.": "La connexion Google n'est pas activée sur cette installation : elle ne peut pas être imposée.",
- "Your company requires you to sign in with Google. Use the Sign in with Google button.": "Votre entreprise vous demande de vous connecter avec Google. Utilisez le bouton Se connecter avec Google."
+ "Your company requires you to sign in with Google. Use the Sign in with Google button.": "Votre entreprise vous demande de vous connecter avec Google. Utilisez le bouton Se connecter avec Google.",
+ "Choose the town from the list.": "Choisissez la ville dans la liste.",
+ "Choose the branch of activity from the list.": "Choisissez la branche d'activité dans la liste.",
+ "This branch of activity is not in the list.": "Cette branche d'activité n'est pas dans la liste.",
+ "Choose the site from the company's sites.": "Choisissez le site parmi les sites de l'entreprise.",
+ "Give the ISIC code: a section letter (A to U) or a two-digit division.": "Donnez le code CITI : une lettre de section (A à U) ou une division à deux chiffres.",
+ "A section (letter) has no section above it.": "Une section (lettre) n'a pas de section au-dessus d'elle.",
+ "Choose the section a division belongs to.": "Choisissez la section à laquelle appartient la division.",
+ "A division sits under a section, not under another division.": "Une division se place sous une section, pas sous une autre division.",
+ "Only HR Pay's administrators change the branches of activity.": "Seuls les administrateurs de HR Pay modifient les branches d'activité.",
+ "Give the name in 1 to 150 characters.": "Donnez le nom en 1 à 150 caractères."
 }

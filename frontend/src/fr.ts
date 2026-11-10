@@ -3243,6 +3243,23 @@ const fr: Record<string, string> = {
   'Their access then stops as soon as your IT closes their Google account. Others keep their password.': 'Leur accès s\'arrête alors dès que votre service informatique ferme leur compte Google. Les autres gardent leur mot de passe.',
   'Can sign in with Google ({d}).': 'Peut se connecter avec Google ({d}).',
   'Must sign in with Google ({d}): no password needed.': 'Doit se connecter avec Google ({d}) : aucun mot de passe nécessaire.',
+  'Town': 'Ville',
+  'No town of this country is in the lists yet.': 'Aucune ville de ce pays n\'est encore dans les listes.',
+  'Add it on Reference lists': 'L\'ajouter dans Listes de référence',
+  'whole section': 'toute la section',
+  'Branches of activity': 'Branches d\'activité',
+  'The branches follow the United Nations classification ISIC Rev. 4 (CITI rév. 4): its sections and the divisions most employers belong to. Each company picks its branch on the Company page; only HR Pay changes this list.': 'Les branches suivent la classification des Nations unies CITI rév. 4 : ses sections et les divisions où se trouvent la plupart des employeurs. Chaque entreprise choisit sa branche sur la page Entreprise ; seul HR Pay modifie cette liste.',
+  'Name in French': 'Nom en français',
+  'Name in English': 'Nom en anglais',
+  'Add a branch': 'Ajouter une branche',
+  'Section': 'Section',
+  'None: this is a section (letter)': 'Aucune : c\'est une section (lettre)',
+  'ISIC code': 'Code CITI',
+  'The person\'s site ({a})': 'Le site de la personne ({a})',
+  'The company\'s town ({a})': 'La ville de l\'entreprise ({a})',
+  'Empty fields take the value shown in grey or in the list. The draft is given to the employee at least two working days before signing (Labour Code art. 46); the signed contract goes to the ONEM visa within 15 days (art. 47).': 'Un champ vide prend la valeur affichée en gris ou dans la liste. Le projet est remis au travailleur au moins deux jours ouvrables avant la signature (Code du travail art. 46) ; le contrat signé est soumis au visa de l\'ONEM dans les 15 jours (art. 47).',
+  'For your branch of activity ({a}), the pack is: {b}.': 'Pour votre branche d\'activité ({a}), le pack est : {b}.',
+  'See it': 'Le voir',
 }
 
 export default fr

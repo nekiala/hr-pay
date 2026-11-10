@@ -43,7 +43,7 @@ public class PaymentController {
                                        @Size(max = 150) String website, @Size(max = 200) String legalForm,
                                        @Size(max = 300) String footer,
                                        @NotNull @Pattern(regexp = "CLASSIC|COMPACT|LEDGER") String template,
-                                       @Size(max = 150) String activity) {}
+                                       Long activityBranchId) {}
 
     public record LogoInput(@NotBlank String contentType, @NotBlank @Size(max = 800_000) String base64) {}
 
@@ -111,7 +111,7 @@ public class PaymentController {
 
     public record RepresentativeInput(@jakarta.validation.constraints.Size(max = 150) String name,
                                       @jakarta.validation.constraints.Size(max = 100) String title,
-                                      @jakarta.validation.constraints.Size(max = 100) String signingPlace) {}
+                                      Long signingPlaceId) {}
 
     @GetMapping("/company/representative")
     @PreAuthorize("hasAuthority('company.manage') or hasAuthority('lifecycle.manage')")
@@ -122,7 +122,7 @@ public class PaymentController {
     @PutMapping("/company/representative")
     @PreAuthorize("hasAuthority('company.manage')")
     public Company.Representative saveRepresentative(@Valid @RequestBody RepresentativeInput b) {
-        return company.saveRepresentative(new Company.Representative(b.name(), b.title(), b.signingPlace()));
+        return company.saveRepresentative(new Company.Representative(b.name(), b.title(), null, b.signingPlaceId(), null));
     }
 
     @GetMapping("/company/payslip-settings")
@@ -135,7 +135,7 @@ public class PaymentController {
     @PreAuthorize("hasAuthority('company.manage')")
     public Company.PayslipSettings savePayslipSettings(@Valid @RequestBody PayslipSettingsInput b) {
         return company.savePayslipSettings(new Company.PayslipSettings(b.phone(), b.email(), b.website(), b.legalForm(),
-                b.footer(), b.template(), false, b.activity()));
+                b.footer(), b.template(), false, null, b.activityBranchId()));
     }
 
     /** A made-up payslip in one of the layouts, with the company's real header, to compare the layouts. */

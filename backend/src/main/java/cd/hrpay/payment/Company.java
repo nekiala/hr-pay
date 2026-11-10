@@ -17,22 +17,25 @@ public class Company {
 
     /** How payslips look: contact details and legal mentions next to the logo, the footer, and the layout. */
     public record PayslipSettings(String phone, String email, String website, String legalForm, String footer,
-                                  String template, boolean hasLogo, String activity) {}
+                                  String template, boolean hasLogo, String activity, Long activityBranchId) {}
 
     public record Logo(String contentType, byte[] data) {}
 
     /** Who signs contracts for the employer (its legal representative), and the town documents are signed in. */
-    public record Representative(String name, String title, String signingPlace) {}
+    public record Representative(String name, String title, String signingPlace, Long signingPlaceId,
+                                 String signingCountry) {}
 
     private static final java.util.Set<String> LOGO_TYPES = java.util.Set.of("image/png", "image/jpeg");
     private static final int LOGO_MAX_BYTES = 512 * 1024;
 
     private final JdbcClient jdbc;
     private final AuditService audit;
+    private final cd.hrpay.reference.References refs;
 
-    public Company(JdbcClient jdbc, AuditService audit) {
+    public Company(JdbcClient jdbc, AuditService audit, cd.hrpay.reference.References refs) {
         this.jdbc = jdbc;
         this.audit = audit;
+        this.refs = refs;
     }
 
     /** The language the company's documents are written in (fr or en). */
@@ -80,16 +83,30 @@ public class Company {
     }
 
     public Representative representative() {
-        return jdbc.sql("select representative_name as name, representative_title as title, signing_place "
-                        + "from company where id = current_company_id()").query(Representative.class).optional()
-                .orElse(new Representative(null, null, null));
+        return jdbc.sql("""
+                        select c.representative_name as name, c.representative_title as title, c.signing_place,
+                               c.signing_place_id, coalesce(p.country_code, c.country_code) as signing_country
+                        from company c left join place p on p.id = c.signing_place_id
+                        where c.id = current_company_id()""").query(Representative.class).optional()
+                .orElse(new Representative(null, null, null, null, null));
     }
 
+    /**
+     * Saves who signs and the town documents are signed in. The town is picked from the lists (its name is kept for
+     * printing); with none picked, a town typed before the lists stays until one is.
+     */
     @Transactional
     public Representative saveRepresentative(Representative r) {
-        jdbc.sql("update company set representative_name = ?, representative_title = ?, signing_place = ?, updated_by = ?, "
-                        + "updated_at = now() where id = current_company_id()")
-                .params(blank(r.name()), blank(r.title()), blank(r.signingPlace()), CurrentUser.email()).update();
+        String place = blank(r.signingPlace());
+        if (r.signingPlaceId() != null) {
+            place = refs.requireCity(r.signingPlaceId()).name();
+        } else {
+            place = jdbc.sql("select case when signing_place_id is null then signing_place end from company where id = current_company_id()")
+                    .query(String.class).optional().orElse(null);
+        }
+        jdbc.sql("update company set representative_name = ?, representative_title = ?, signing_place = ?, signing_place_id = ?, "
+                        + "updated_by = ?, updated_at = now() where id = current_company_id()")
+                .params(blank(r.name()), blank(r.title()), place, r.signingPlaceId(), CurrentUser.email()).update();
         audit.record("company.representative_updated", "company", cd.hrpay.tenancy.TenantContext.companyId(),
                 Map.of("name", r.name() == null ? "" : r.name()));
         return representative();
@@ -98,16 +115,29 @@ public class Company {
     public PayslipSettings payslipSettings() {
         return jdbc.sql("""
                 select phone, email, website, legal_form, payslip_footer as footer, payslip_template as template,
-                       logo is not null as has_logo, activity from company where id = current_company_id()""").query(PayslipSettings.class).single();
+                       logo is not null as has_logo, activity, activity_branch_id
+                from company where id = current_company_id()""").query(PayslipSettings.class).single();
     }
 
+    /**
+     * Saves how payslips look. The branch of activity is picked from HR Pay's list and printed in the company's
+     * language; with none picked, a branch typed before the list stays until one is.
+     */
     @Transactional
     public PayslipSettings savePayslipSettings(PayslipSettings s) {
+        String activity;
+        if (s.activityBranchId() != null) {
+            var b = refs.requireBranch(s.activityBranchId());
+            activity = "en".equals(language()) ? b.nameEn() : b.nameFr();
+        } else {
+            activity = jdbc.sql("select case when activity_branch_id is null then activity end from company where id = current_company_id()")
+                    .query(String.class).optional().orElse(null);
+        }
         jdbc.sql("""
                 update company set phone = ?, email = ?, website = ?, legal_form = ?, payslip_footer = ?, payslip_template = ?,
-                       activity = ?, updated_by = ?, updated_at = now() where id = current_company_id()""")
+                       activity = ?, activity_branch_id = ?, updated_by = ?, updated_at = now() where id = current_company_id()""")
                 .params(blank(s.phone()), blank(s.email()), blank(s.website()), blank(s.legalForm()), blank(s.footer()),
-                        s.template(), blank(s.activity()), CurrentUser.email()).update();
+                        s.template(), activity, s.activityBranchId(), CurrentUser.email()).update();
         audit.record("company.payslip_settings_updated", "company", cd.hrpay.tenancy.TenantContext.companyId(), Map.of("template", s.template()));
         return payslipSettings();
     }

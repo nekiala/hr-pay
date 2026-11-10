@@ -745,6 +745,10 @@ export type Place = {
   id: number; countryCode: string; parentId: number | null; kind: PlaceKind; name: string; active: boolean
   verified: boolean; shared: boolean; children: number
 }
+/** A branch of activity of HR Pay's list (ISIC Rev. 4 section, or a division under it). */
+export type ActivityBranch = { id: number; code: string; parentId: number | null; name: string; nameFr: string; nameEn: string; active: boolean; verified: boolean }
+/** A town of a country, with its province or department. */
+export type City = { id: number; countryCode: string; name: string; region: string | null; shared: boolean }
 export type Institution = {
   id: number; countryCode: string; kind: 'BANK' | 'MOBILE_MONEY'; name: string; shortName: string | null
   swiftCode: string | null; aliases: string | null; active: boolean; verified: boolean; shared: boolean
@@ -902,7 +906,7 @@ export type EvalTemplate = {
 export const FREQUENCY = { MONTHLY: t('Monthly'), QUARTERLY: t('Quarterly'), SEMI_ANNUAL: t('Every six months') }
 
 export type Employer = { name: string; address: string; cnssNumber: string; taxNumber: string; nationalId: string; rccm: string; inppNumber: string; onemNumber: string; bankName: string; bankAccount: string; bankId?: number | null }
-export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean; activity: string | null }
+export type PayslipSettings = { phone: string | null; email: string | null; website: string | null; legalForm: string | null; footer: string | null; template: 'CLASSIC' | 'COMPACT' | 'LEDGER'; hasLogo: boolean; activity: string | null; activityBranchId: number | null }
 
 /** The countries a company may be in, by their code. */
 export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t('Republic of the Congo'), CM: t('Cameroon'), GA: t('Gabon') }
@@ -1017,9 +1021,10 @@ export type ContractTermsData = {
   contractId: number; trialMonths: number; unskilledLabourer: boolean; fixedTermReason: FixedTermReason | null; fixedTermDetail: string | null; permanentJob: boolean
   workPlace: string | null; supervisor: string | null; signedPlace: string | null; signedOn: string | null; draftGivenOn: string | null
   medicalFitOn: string | null; medicalDoctor: string | null; onemVisaNo: string | null; onemVisaOn: string | null; updatedBy: string | null; updatedAt: string | null
+  workSiteId: number | null; signedPlaceId: number | null
 }
-export type ContractTermsView = { terms: ContractTermsData; defaultWorkPlace: string | null; defaultSupervisor: string | null; defaultSignedPlace: string | null; issues: ContractIssue[] }
-export type CompanyRepresentative = { name: string | null; title: string | null; signingPlace: string | null }
+export type ContractTermsView = { terms: ContractTermsData; defaultWorkPlace: string | null; defaultSupervisor: string | null; defaultSignedPlace: string | null; issues: ContractIssue[]; signedCountry: string | null }
+export type CompanyRepresentative = { name: string | null; title: string | null; signingPlace: string | null; signingPlaceId: number | null; signingCountry: string | null }
 export type CodeSent = { challengeId: string; channels: string[]; expiresAt: string }
 
 export type CertificateKind = 'WORK' | 'SALARY'
