@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { t } from '../i18n'
+import { GoogleLogo, MicrosoftLogo } from './ProviderLogos'
 
 type SignIn = { microsoftTenant: string | null; microsoftAvailable: boolean; googleAvailable: boolean; googleDomains: string[]; googleOnly: boolean }
 
@@ -21,8 +22,8 @@ export function SignInCard() {
   if (!allowed || !s) return null
   return (
     <>
-      <MicrosoftCard s={s} setS={setS} tenant={tenant} setTenant={setTenant} error={error} setError={setError} saved={saved} setSaved={setSaved} />
       <GoogleCard s={s} setS={setS} />
+      <MicrosoftCard s={s} setS={setS} tenant={tenant} setTenant={setTenant} error={error} setError={setError} saved={saved} setSaved={setSaved} />
     </>
   )
 }
@@ -47,7 +48,7 @@ function MicrosoftCard({ s, setS, tenant, setTenant, error, setError, saved, set
   }
   return (
     <Form className="card" onSubmit={save}>
-      <h3>{t('Sign in with Microsoft 365')}</h3>
+      <h3 className="row"><MicrosoftLogo />{t('Sign in with Microsoft 365')}</h3>
       {!s.microsoftAvailable && <p className="notice">{t('Microsoft sign-in is not turned on for this installation (MICROSOFT_CLIENT_ID). You can still set the tenant now.')}</p>}
       <p className="muted">{t('Your people can sign in with their work account, but only from your organization\'s own Microsoft directory. Find its tenant ID in the Microsoft Entra admin centre, under Overview. Their email in HR Pay must be their Microsoft sign-in name.')}</p>
       <label>{t('Tenant ID')}<input value={tenant} onChange={(e) => setTenant(e.target.value)} placeholder="00000000-0000-0000-0000-000000000000"
@@ -83,7 +84,7 @@ function GoogleCard({ s, setS }: { s: SignIn; setS: (s: SignIn) => void }) {
   }
   return (
     <Form className="card" onSubmit={save}>
-      <h3>{t('Sign in with Google')}</h3>
+      <h3 className="row"><GoogleLogo />{t('Sign in with Google')}</h3>
       {!s.googleAvailable && <p className="notice">{t('Google sign-in is not turned on for this installation (GOOGLE_CLIENT_ID). You can still list your domains now.')}</p>}
       <p className="muted">{t('Your people can sign in with their professional Google account (Google Workspace), only on the domains listed here. Personal Gmail accounts are always refused. Their email in HR Pay must be their Google account. The second step is still asked.')}</p>
       <label>{t('Company domains')}<textarea rows={3} value={domains} onChange={(e) => setDomains(e.target.value)} placeholder="mycompany.com" />

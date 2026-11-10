@@ -10,6 +10,7 @@ import { RecoveryCodes, TwoStepCode, TwoStepSetupFlow } from '../components/TwoS
 import { serverVersion } from './HelpPage'
 import { PublicLinks } from './PublicPages'
 import { t } from '../i18n'
+import { GoogleLogo, MicrosoftLogo } from '../components/ProviderLogos'
 
 /** What a refused Google or Microsoft sign-in means, by the reason the server gave. */
 const PROVIDER_ERRORS: Record<string, string> = {
@@ -106,10 +107,10 @@ export default function LoginPage() {
         <ErrorText error={error} />
         <Button type="submit" pending={busy} pendingText={t('Signing in…')}>{t('Sign in')}</Button>
         {providers.microsoft && (
-          <a className="button secondary" href="/oauth2/authorization/microsoft">{t('Sign in with Microsoft')}</a>
+          <a className="button secondary" href="/oauth2/authorization/microsoft"><MicrosoftLogo />{t('Sign in with Microsoft')}</a>
         )}
         {providers.google && (
-          <a className="button secondary" href="/oauth2/authorization/google">{t('Sign in with Google')}</a>
+          <a className="button secondary" href="/oauth2/authorization/google"><GoogleLogo />{t('Sign in with Google')}</a>
         )}
         {demo && (
           <div className="notice small">
