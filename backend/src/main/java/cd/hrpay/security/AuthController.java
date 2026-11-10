@@ -108,12 +108,15 @@ public class AuthController {
     private final UserSessions sessions;
     private final SignInSteps steps;
     private final cd.hrpay.firm.Firms firms;
+    private final GoogleDomains googleDomains;
 
     public AuthController(AuthenticationManager authenticationManager, SecurityContextRepository contextRepository,
                           UserRepository users, UserService userService, LoginAttempts attempts,
                           AuditService audit, ObjectProvider<ClientRegistrationRepository> googleClients,
                           Tenants tenants, TransactionTemplate tx, cd.hrpay.platform.Entitlements entitlements,
-                          TwoStep twoStep, UserSessions sessions, SignInSteps steps, cd.hrpay.firm.Firms firms) {
+                          TwoStep twoStep, UserSessions sessions, SignInSteps steps, cd.hrpay.firm.Firms firms,
+                          GoogleDomains googleDomains) {
+        this.googleDomains = googleDomains;
         this.firms = firms;
         this.steps = steps;
         this.twoStep = twoStep;
@@ -162,6 +165,11 @@ public class AuthController {
         if (attempts.isBlocked(email)) {
             audit.recordAs(email, "auth.login_blocked", "user", null, Map.of("method", "password"));
             return problem(HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+        }
+        // The company makes people on its Google domains sign in with Google (only while Google sign-in is on).
+        if (providers().google() && googleDomains.passwordRefused(email)) {
+            audit.recordAs(email, "auth.login_failed", "user", null, Map.of("method", "password", "reason", "google_only"));
+            return problem(HttpStatus.UNAUTHORIZED, "Your company requires you to sign in with Google. Use the Sign in with Google button.");
         }
         try {
             authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(email,

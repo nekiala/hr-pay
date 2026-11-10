@@ -36,6 +36,7 @@ export default function UserFormPage() {
   const [units, setUnits] = useState<OrgUnit[]>([])
   const [orgUnitId, setOrgUnitId] = useState('')
   const [autoId, setAutoId] = useState<MatriculeFormat | null>(null)
+  const [google, setGoogle] = useState<{ domains: string[]; available: boolean; googleOnly: boolean } | null>(null)
 
   const canAssign = can('role.assign')
   const canEdit = isNew ? can('user.create') : can('user.update')
@@ -44,6 +45,7 @@ export default function UserFormPage() {
     api<Role[]>('/api/roles').then(setRoles).catch(() => undefined)
     if (can('site.read') || can('site.manage')) api<Site[]>('/api/sites').then(setSites).catch(() => undefined)
     if (!id) api<OrgUnit[]>('/api/org/units').then(setUnits).catch(() => undefined)
+    api<{ domains: string[]; available: boolean; googleOnly: boolean }>('/api/company/google-domains').then(setGoogle).catch(() => undefined)
     if (!id) api<MatriculeFormat>('/api/matricule-format').then((f) => setAutoId(f.enabled ? f : null)).catch(() => undefined)
     if (id) {
       api<Schedule[]>('/api/schedules').then(setSchedules).catch(() => undefined)
@@ -56,6 +58,10 @@ export default function UserFormPage() {
       }).catch((e: Error) => setError(e.message))
     }
   }, [id, can])
+
+  // The email is on one of the company's Google Workspace domains, and Google sign-in is on.
+  const emailDomain = form.email.trim().toLowerCase().split('@')[1] ?? ''
+  const googleDomain = google?.available && google.domains.includes(emailDomain) ? emailDomain : null
 
   const set = (key: keyof Form) => (e: { target: { value: string } }) => setForm({ ...form, [key]: e.target.value })
 
@@ -156,6 +162,11 @@ export default function UserFormPage() {
           {field('firstName', t('First name'))}
         </div>
         {field('email', t('Email'), 'email')}
+        {googleDomain && (
+          <p className="hint">{google?.googleOnly
+            ? t('Must sign in with Google ({d}): no password needed.', { d: googleDomain })
+            : t('Can sign in with Google ({d}).', { d: googleDomain })}</p>
+        )}
         <div className="grid2">
           {isNew && autoId
             ? <label>{t('Registration number')}<input value="" placeholder={t('Given by HR Pay: {n}', { n: autoId.next })} disabled />

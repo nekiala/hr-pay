@@ -222,11 +222,15 @@ After closing, a correction is made with a complementary payslip or back pay, ne
     fr: { title: 'Connexion, deuxième étape et mot de passe oublié', body: `
 - **Mot de passe oublié** : sur la page de connexion, « Mot de passe oublié ? » envoie un lien valable 30 minutes.
 - **Deuxième étape** : un code d'une application d'authentification, ou envoyé par e-mail. Gardez vos codes de secours. Téléphone perdu : un administrateur la réinitialise (Utilisateurs, puis la personne).
-- **Navigateurs connectés** : Mon compte les liste ; déconnectez ceux que vous ne reconnaissez pas.` },
+- **Navigateurs connectés** : Mon compte les liste ; déconnectez ceux que vous ne reconnaissez pas.
+- **Connexion avec Google** : possible avec le compte Google professionnel de votre entreprise (Google Workspace), si l'administrateur a enregistré son domaine sur la page Rôles. Les comptes Gmail personnels sont refusés. Votre e-mail dans HR Pay doit être celui de ce compte Google. La deuxième étape est toujours demandée.
+- **Pour l'administrateur** : page Rôles, carte « Se connecter avec Google », listez les domaines de l'entreprise (par exemple monentreprise.com). « Google uniquement » refuse le mot de passe des personnes sur ces domaines : leur accès s'arrête dès que leur compte Google est fermé.` },
     en: { title: 'Signing in, second step and forgotten password', body: `
 - **Forgotten password**: on the sign-in page, "Forgot your password?" sends a link valid for 30 minutes.
 - **Second step**: a code from an authenticator app, or sent by email. Keep your recovery codes. Lost phone: an administrator resets it (Users, then the person).
-- **Signed-in browsers**: My account lists them; sign out the ones you don't recognise.` },
+- **Signed-in browsers**: My account lists them; sign out the ones you don't recognise.
+- **Sign in with Google**: possible with your company's professional Google account (Google Workspace), once the administrator has registered its domain on the Roles page. Personal Gmail accounts are refused. Your email in HR Pay must be that Google account. The second step is still asked.
+- **For the administrator**: Roles page, "Sign in with Google" card, list the company's domains (for example mycompany.com). "Google only" refuses the password of people on those domains: their access stops as soon as their Google account is closed.` },
   },
   {
     id: 'dashboards', audience: 'managers', routes: ['/dashboards', '/reports'],

@@ -3233,6 +3233,16 @@ const fr: Record<string, string> = {
   'Word': 'Word',
   'Write the contract': 'Rédiger le contrat',
   'You can sign from {a}: the law gives you two working days to read the draft of your contract (Labour Code art. 46).': 'Vous pourrez signer à partir du {a} : la loi vous donne deux jours ouvrables pour lire le projet de votre contrat (Code du travail art. 46).',
+  'Personal Google accounts cannot sign in. Use your company\'s professional Google account.': 'Les comptes Google personnels ne peuvent pas se connecter. Utilisez le compte Google professionnel de votre entreprise.',
+  'Your company has not registered this Google domain. Ask your administrator to add it on the Roles page.': 'Votre entreprise n\'a pas enregistré ce domaine Google. Demandez à votre administrateur de l\'ajouter sur la page Rôles.',
+  'Google sign-in is not turned on for this installation (GOOGLE_CLIENT_ID). You can still list your domains now.': 'La connexion Google n\'est pas activée sur cette installation (GOOGLE_CLIENT_ID). Vous pouvez déjà lister vos domaines.',
+  'Your people can sign in with their professional Google account (Google Workspace), only on the domains listed here. Personal Gmail accounts are always refused. Their email in HR Pay must be their Google account. The second step is still asked.': 'Votre personnel peut se connecter avec son compte Google professionnel (Google Workspace), uniquement sur les domaines listés ici. Les comptes Gmail personnels sont toujours refusés. Leur e-mail dans HR Pay doit être leur compte Google. La deuxième étape est toujours demandée.',
+  'Company domains': 'Domaines de l\'entreprise',
+  'One per line. Leave empty to refuse Google sign-in for your company.': 'Un par ligne. Laissez vide pour refuser la connexion Google à votre entreprise.',
+  'Google only: people on these domains cannot sign in with a password': 'Google uniquement : les personnes sur ces domaines ne peuvent pas se connecter avec un mot de passe',
+  'Their access then stops as soon as your IT closes their Google account. Others keep their password.': 'Leur accès s\'arrête alors dès que votre service informatique ferme leur compte Google. Les autres gardent leur mot de passe.',
+  'Can sign in with Google ({d}).': 'Peut se connecter avec Google ({d}).',
+  'Must sign in with Google ({d}): no password needed.': 'Doit se connecter avec Google ({d}) : aucun mot de passe nécessaire.',
 }
 
 export default fr

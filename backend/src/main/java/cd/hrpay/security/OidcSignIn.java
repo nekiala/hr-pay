@@ -23,7 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Sign-in with Google or Microsoft 365. Neither creates accounts: the email must belong to an active account an
- * administrator registered. Google must say the email is verified; Microsoft must sign the person in from the
+ * administrator registered. Google must say the email is verified and that the account belongs to a Google Workspace
+ * on one of the company's domains (see {@link GoogleDomains}); Microsoft must sign the person in from the
  * company's own Microsoft tenant, set on the Company page, because a Microsoft email claim alone proves nothing.
  * After the provider, the person goes through the same second step as with a password.
  */
@@ -35,9 +36,11 @@ class OidcSignIn extends OidcUserService implements AuthenticationSuccessHandler
     private final JdbcClient jdbc;
     private final SignInSteps steps;
     private final TransactionTemplate tx;
+    private final GoogleDomains googleDomains;
 
     OidcSignIn(UserRepository users, AuditService audit, Tenants tenants, JdbcClient jdbc, SignInSteps steps,
-               TransactionTemplate tx) {
+               TransactionTemplate tx, GoogleDomains googleDomains) {
+        this.googleDomains = googleDomains;
         this.users = users;
         this.audit = audit;
         this.tenants = tenants;
@@ -67,6 +70,13 @@ class OidcSignIn extends OidcUserService implements AuthenticationSuccessHandler
                 if (expected == null || tid == null || !expected.equalsIgnoreCase(tid)
                         || !("https://login.microsoftonline.com/" + tid + "/v2.0").equals(issuer)) {
                     throw reject(provider, "wrong_tenant", email);
+                }
+            }
+            if ("google".equals(provider)) {
+                // Only a Workspace account of the company's own domains: never a personal Gmail account.
+                String refused = googleDomains.refusal(email, oidc.getClaimAsString("hd"));
+                if (refused != null) {
+                    throw reject(provider, refused, email);
                 }
             }
             AppUser user = users.findByEmailIgnoreCase(email).orElseThrow(() -> reject(provider, "not_registered", email));
