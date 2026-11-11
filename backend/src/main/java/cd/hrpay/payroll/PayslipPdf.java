@@ -176,7 +176,10 @@ public class PayslipPdf {
                 company.localCurrency(), company.country());
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         Document doc = new Document(PageSize.A4, 36, 36, 30, 30);
-        PdfWriter.getInstance(doc, bytes);
+        PdfWriter writer = PdfWriter.getInstance(doc, bytes);
+        if ("SIMULATION".equals(p.runStatus())) {
+            writer.setPageEvent(new SimulationMark());
+        }
         doc.addTitle(Texts.t("Payslip %s %s", p.month().toString().substring(0, 7), text(p.snapshot().get("name"))));
         doc.addCreator("HR Pay");
         doc.open();
@@ -398,7 +401,29 @@ public class PayslipPdf {
         return title;
     }
 
+    /** Writes SIMULATION across each page of a simulated payslip. */
+    private static final class SimulationMark extends org.openpdf.text.pdf.PdfPageEventHelper {
+        @Override
+        public void onEndPage(PdfWriter writer, Document document) {
+            org.openpdf.text.pdf.PdfContentByte over = writer.getDirectContentUnder();
+            over.saveState();
+            org.openpdf.text.pdf.PdfGState state = new org.openpdf.text.pdf.PdfGState();
+            state.setFillOpacity(0.12f);
+            over.setGState(state);
+            org.openpdf.text.Font big = new org.openpdf.text.Font(org.openpdf.text.Font.HELVETICA, 72, org.openpdf.text.Font.BOLD,
+                    new java.awt.Color(180, 30, 30));
+            org.openpdf.text.pdf.ColumnText.showTextAligned(over, org.openpdf.text.Element.ALIGN_CENTER,
+                    new org.openpdf.text.Phrase(Texts.t("SIMULATION"), big),
+                    document.getPageSize().getWidth() / 2, document.getPageSize().getHeight() / 2, 45);
+            over.restoreState();
+        }
+    }
+
     private static void draftNotice(Document doc, Context c) {
+        if ("SIMULATION".equals(c.p().runStatus())) {
+            doc.add(new Paragraph(Texts.t("SIMULATION: not a payslip. Worked out with today's data, nothing was saved and nothing was paid."), NOTICE));
+            return;
+        }
         if (c.p().leave()) {
             doc.add(new Paragraph(c.p().number() == null
                     ? Texts.t("DRAFT: this leave allowance waits for Finance's approval.")

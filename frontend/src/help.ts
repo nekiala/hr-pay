@@ -306,6 +306,37 @@ Click a row to see the employees behind it (needs the right to read all payslips
 **The law.** DRC: the Labour Code (art. 213) requires a livre de paie; ministerial order 12/CAB.MIN/ETPS/042 of 8 August 2008 sets its model (33 mentions) for 10 workers or more, on paper or as a computer file, never changed once written. No retention period was found: HR Pay never deletes a closed payroll. Republic of the Congo: to confirm with your payroll expert. The branch of activity printed at the top comes from the Company page.` },
   },
   {
+    id: 'pay-simulation', audience: 'payroll', routes: ['/payroll/simulate'],
+    fr: { title: 'Simuler la paie et projeter l\'année', body: `
+**Simuler la paie** calcule la paie d'une personne avec le vrai moteur de paie, sans rien enregistrer : ce n'est pas un bulletin (Code du travail art. 103), il n'a pas de numéro, n'entre pas dans le livre de paie et l'employé ne le voit pas. Seul le journal d'audit garde qui a regardé la paie de qui.
+
+- **Type de paie** : bulletin de fin de mois (n'importe quel mois), quinzaine, allocation de congé (dates du congé), 13e mois (année) ou décompte final (dernier jour et motif).
+- **Et si** : changez le salaire de base, le complément, une prime ponctuelle, des heures supplémentaires, des jours non payés, les enfants ou le taux du dollar pour voir l'effet. Un champ vide garde ce qui est enregistré.
+- Pour un mois déjà payé, le bulletin payé est affiché à côté pour comparer. Le PDF porte la mention SIMULATION.
+
+**Projection annuelle** : mois par mois jusqu'en décembre. Les mois clôturés sont repris tels que payés ; les autres sont calculés avec ce qui est connu aujourd'hui : changements de salaire enregistrés, augmentations d'ancienneté à venir, congés annuels approuvés ou demandés avec leur allocation (payée avant le départ, art. 145), 13e mois, prêts, fin de CDD, enfants qui atteignent la limite d'âge, taux saisis pour des dates futures. Les primes et heures supplémentaires à venir sont la moyenne des 12 derniers mois, ou rien.
+
+Le congé non pris au 31 décembre n'est pas payé (art. 144) : la projection montre combien de jours resteront et ce qu'ils valent, payés seulement à la fin du contrat.
+
+**Projection de l'entreprise** : la même chose pour tout le monde, ou pour une unité et tout ce qui est en dessous, additionnée par mois. Une grande entreprise la calcule en arrière-plan (Mes tâches). Export Excel.
+
+La permission « Simuler et projeter la paie » est donnée aux RH ; la page Rôles peut la donner à d'autres. Personne ne peut simuler sa propre paie.` },
+    en: { title: 'Simulating pay and projecting the year', body: `
+**Simulate pay** works out one person's pay with the real payroll engine and saves nothing: it is not a payslip (Labour Code art. 103), has no number, is not in the livre de paie and the employee never sees it. Only the audit log keeps who looked at whose pay.
+
+- **Pay type**: month-end payslip (any month), quinzaine, allocation de congé (the leave's dates), 13th month (a year) or final settlement (last day and reason).
+- **What if**: change the basic salary, the complement, a one-off bonus, overtime hours, days not paid, children or the dollar rate to see the effect. An empty field keeps what is recorded.
+- For a month already paid, the payslip paid is shown beside it. The PDF is marked SIMULATION.
+
+**Year projection**: month by month to December. Closed months are shown as paid; the others are worked out with what is known today: salary changes recorded, anniversary raises to come, approved or requested annual leave with its allocation (paid before the leave, art. 145), the 13th month, loans, the end of a fixed-term contract, children reaching the age limit, rates entered for later dates. Bonuses and overtime to come are the last 12 months' average, or none.
+
+Leave not taken by 31 December is not paid (art. 144): the projection shows how many days will be left and what they are worth, paid only when the contract ends.
+
+**Company projection**: the same for everyone, or for a unit and everything below it, added up by month. A large company runs it in the background (My jobs). Excel export.
+
+HR has the "Simulate and project pay" permission; the Roles page can give it to others. Nobody can simulate their own pay.` },
+  },
+  {
     id: 'annual-leave', audience: 'hr', routes: ['/payroll/runs/leave-pay', '/leave/settings'],
     fr: { title: 'Congé annuel : acquisition, report et allocation', body: `
 - **Acquisition** : chaque paie mensuelle clôturée crédite les jours de la catégorie de la personne ÷ 12, jamais sous le minimum légal (RDC art. 141 : 1 jour ouvrable par mois complet, 1,5 avant 18 ans), plus les jours d'ancienneté, au prorata du mois en service. Le congé sans solde et l'absence injustifiée ne comptent pas. Le bulletin montre les jours acquis et le solde.

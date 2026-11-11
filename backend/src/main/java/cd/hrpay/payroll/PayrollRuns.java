@@ -271,6 +271,10 @@ public class PayrollRuns {
                 .params(userId, month.atDay(1), month.atEndOfMonth()).query(LocalDate.class).optional();
     }
 
+    SalaryService salaries() {
+        return salaries;
+    }
+
     SeniorityBonus seniority() {
         return seniority;
     }
@@ -285,6 +289,25 @@ public class PayrollRuns {
 
     /** The same, with one-off lines that are not stored as pay entries (a correction's additions). */
     Computed compute(MonthContext ctx, long userId, boolean withLoans, List<PayElements.Entry> extra) {
+        return compute(ctx, userId, withLoans, extra, Scenario.NONE);
+    }
+
+    /**
+     * Changes to the recorded data for a simulation or a projection, never stored: each null or zero field keeps what
+     * is recorded. {@code basic} replaces the basic salary, {@code complement} the negotiated salary complement;
+     * {@code lastDay} makes the month the person's last; {@code extraOvertimeMinutes} adds weekday overtime priced with
+     * the overtime policy; {@code unpaidDays} takes days off the paid time; {@code thirteenth} replaces the approved 13th
+     * month when {@code thirteenthSet}; {@code loans} replaces the loan installments due; {@code leaveRanges} are annual
+     * leave periods paid by an allocation de congé (the days leave the monthly payslip, as when the allocation is approved).
+     */
+    public record Scenario(BigDecimal basic, BigDecimal complement, LocalDate lastDay, int extraOvertimeMinutes,
+                           BigDecimal unpaidDays, Integer children, Integer dependants, boolean thirteenthSet,
+                           Thirteenths.Due thirteenth, List<PayslipCalculator.LoanDue> loans, List<LocalDate[]> leaveRanges) {
+        public static final Scenario NONE = new Scenario(null, null, null, 0, null, null, null, false, null, null, List.of());
+    }
+
+    /** One person's payslip worked out with a scenario's changes (see {@link Scenario}). */
+    Computed compute(MonthContext ctx, long userId, boolean withLoans, List<PayElements.Entry> extra, Scenario sc) {
         YearMonth month = ctx.month();
         LocalDate first = ctx.first();
         LocalDate last = ctx.last();
@@ -304,8 +327,10 @@ public class PayrollRuns {
         if (contract == null) {
             return new Computed(userId, name, null, null, null, 0, 0, 0, null, name + ": no contract in this month.");
         }
-        LocalDate leaves = lastDayIn(userId, month).orElse(null);
+        LocalDate leaves = sc.lastDay() != null && !sc.lastDay().isBefore(first) && !sc.lastDay().isAfter(last)
+                ? sc.lastDay() : lastDayIn(userId, month).orElse(null);
         var summary = attendance.month(user, month, true);
+        BigDecimal basicMonthly = sc.basic() != null ? sc.basic() : salary.grossMonthly();
         int paid;
         int daysWorked;
         if (leaves == null) {
@@ -326,15 +351,34 @@ public class PayrollRuns {
         int scheduledDays = (int) summary.days().stream().filter(d -> d.scheduledMinutes() > 0).count();
         BigDecimal overtime = summary.earnings() == null ? BigDecimal.ZERO
                 : ExchangeRates.convert(summary.earnings().overtimeEarned(), summary.earnings().currency(), salary.currency(), usdLocal);
+        int overtimeMinutes = summary.overtimeApprovedMinutes();
+        // A simulation's changes: days not paid, and more overtime priced like the recorded overtime.
+        if (sc.unpaidDays() != null && sc.unpaidDays().signum() > 0 && scheduledDays > 0) {
+            int perDay = summary.scheduledMinutesMonth() / scheduledDays;
+            int off = sc.unpaidDays().multiply(BigDecimal.valueOf(perDay)).intValue();
+            paid = Math.max(0, paid - off);
+            daysWorked = Math.max(0, daysWorked - sc.unpaidDays().setScale(0, java.math.RoundingMode.CEILING).intValue());
+        }
+        if (sc.extraOvertimeMinutes() > 0 && summary.scheduledMinutesMonth() > 0) {
+            BigDecimal agreed = basicMonthly.add(sc.complement() != null ? sc.complement()
+                    : pay.standingFor(userId, month).stream().filter(a -> a.elementCode().equals(NegotiatedPay.COMPLEMENT)
+                            && a.amount() != null && salary.currency().equals(a.currency()))
+                    .map(PayElements.Assignment::amount).reduce(BigDecimal.ZERO, BigDecimal::add));
+            BigDecimal perMinute = agreed.divide(BigDecimal.valueOf(summary.scheduledMinutesMonth()), 10, java.math.RoundingMode.HALF_UP);
+            overtime = overtime.add(perMinute.multiply(attendance.weightedWeekdayOvertime(user, last, sc.extraOvertimeMinutes()))
+                    .setScale(2, java.math.RoundingMode.HALF_UP));
+            overtimeMinutes += sc.extraOvertimeMinutes();
+        }
         // Only the dependants who count this month: in charge, and children within the age limits (art. 7).
         EmployeeFile.Counted counted = files.counted(userId, month);
-        int children = counted.children();
-        int inCharge = counted.dependants();
+        int children = sc.children() != null ? sc.children() : counted.children();
+        int inCharge = sc.dependants() != null ? sc.dependants() : counted.dependants();
         // The 13th month comes from its own approved run for this payroll month.
-        Thirteenths.Due thirteenth = ctx.thirteenth().get(userId);
-        List<PayslipCalculator.LoanDue> loansDue = !withLoans ? List.of() : leaves == null ? loans.dueFor(userId, month)
+        Thirteenths.Due thirteenth = sc.thirteenthSet() ? sc.thirteenth() : ctx.thirteenth().get(userId);
+        List<PayslipCalculator.LoanDue> due = sc.loans() != null ? sc.loans() : withLoans ? loans.dueFor(userId, month) : List.of();
+        List<PayslipCalculator.LoanDue> loansDue = !withLoans ? List.of() : leaves == null ? due
                 // On the last payslip, what is left of each loan is due.
-                : loans.dueFor(userId, month).stream().map(l -> new PayslipCalculator.LoanDue(l.loanId(), l.kind(),
+                : due.stream().map(l -> new PayslipCalculator.LoanDue(l.loanId(), l.kind(),
                         l.balance(), l.balance(), l.currency())).toList();
 
         // Annual leave paid by its own allocation payslip: the allocation pays the remuneration of those days, the
@@ -348,12 +392,36 @@ public class PayrollRuns {
         int allocatedMinutes = summary.days().stream().filter(d -> d.status() == DayCalculator.Status.LEAVE
                         && allocated.stream().anyMatch(x -> !d.date().isBefore(x[0]) && !d.date().isAfter(x[1])))
                 .mapToInt(d -> Math.max(0, d.scheduledMinutes() - d.payableMinutes())).sum();
+        // A projection's leave paid by an allocation not worked out yet: its days leave the monthly payslip the same way.
+        if (sc.leaveRanges() != null && !sc.leaveRanges().isEmpty()) {
+            final LocalDate cut = leaves;
+            int moved = summary.days().stream()
+                    .filter(d -> d.scheduledMinutes() > 0 && d.status() != DayCalculator.Status.HOLIDAY)
+                    .filter(d -> cut == null || !d.date().isAfter(cut))
+                    .filter(d -> allocated.stream().noneMatch(x -> !d.date().isBefore(x[0]) && !d.date().isAfter(x[1])))
+                    .filter(d -> sc.leaveRanges().stream().anyMatch(x -> !d.date().isBefore(x[0]) && !d.date().isAfter(x[1])))
+                    .mapToInt(d -> d.date().isAfter(summary.asOf()) ? d.scheduledMinutes() : d.payableMinutes()).sum();
+            paid = Math.max(0, paid - moved);
+            allocatedMinutes += moved;
+        }
+        List<PayElements.Assignment> standing = pay.standingFor(userId, month);
+        if (sc.complement() != null) {
+            standing = new ArrayList<>(standing.stream().filter(a -> !a.elementCode().equals(NegotiatedPay.COMPLEMENT)).toList());
+            if (sc.complement().signum() > 0) {
+                PayElements.Element ce = ctx.elements().stream().filter(e -> e.code().equals(NegotiatedPay.COMPLEMENT))
+                        .findFirst().orElse(null);
+                if (ce != null) {
+                    standing.add(new PayElements.Assignment(0, userId, ce.id(), ce.code(), ce.name(), sc.complement(),
+                            salary.currency(), null, false, null, null, null, null, null));
+                }
+            }
+        }
         PayslipCalculator.Result r = PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(),
-                salary.grossMonthly(), summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
-                summary.overtimeApprovedMinutes(), thirteenth == null ? null
+                basicMonthly, summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
+                overtimeMinutes, thirteenth == null ? null
                         : ExchangeRates.convert(thirteenth.amount(), thirteenth.currency(), salary.currency(), usdLocal),
                 thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(), ctx.elements(),
-                pay.standingFor(userId, month),
+                standing,
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
                 allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus(),
                 seniority.percent(user.getHireDate() != null ? user.getHireDate() : contract.startDate(),
@@ -404,7 +472,7 @@ public class PayrollRuns {
                 .values().stream().mapToInt(Integer::intValue).max().orElse(0));
         snapshot.put("occupation", contract.occupationName());
         snapshot.put("expatriate", contract.expatriate());
-        snapshot.put("basicMonthly", salary.grossMonthly());
+        snapshot.put("basicMonthly", basicMonthly);
         snapshot.put("childrenInCharge", children);
         snapshot.put("maritalStatus", profile.maritalStatus());
         LocalDate hired = user.getHireDate() != null ? user.getHireDate() : contract.startDate();

@@ -6,6 +6,7 @@ import {
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
+  FlaskConical,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -76,6 +77,7 @@ function useNav(): { title: string; items: Item[] }[] {
       items: [
         { to: '/payroll', label: t('Pay runs'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
         { to: '/payroll/reports', label: t('Payroll reports'), icon: FileSpreadsheet, show: pay && can('payroll.report') },
+        { to: '/payroll/simulate', label: t('Simulate pay'), icon: FlaskConical, show: pay && can('payroll.simulate') },
         { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
