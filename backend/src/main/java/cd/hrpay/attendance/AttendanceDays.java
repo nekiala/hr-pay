@@ -63,8 +63,17 @@ public class AttendanceDays {
         this.clock = clock;
     }
 
+    /** A day's result with the grace period of its schedule (lateness or early departure within it is tolerated). */
+    public record Graced(DayResult day, int graceMinutes) {}
+
     @Transactional // not read-only: the calendar creates a year's holiday dates on first use
     public List<DayResult> days(AppUser user, LocalDate from, LocalDate to) {
+        return withGrace(user, from, to).stream().map(Graced::day).toList();
+    }
+
+    /** As {@link #days}, with each day's grace period. */
+    @Transactional // not read-only: the calendar creates a year's holiday dates on first use
+    public List<Graced> withGrace(AppUser user, LocalDate from, LocalDate to) {
         ZoneId zone = CheckInService.zone(user.getSite());
         String country = user.getSite() == null ? "CD" : user.getSite().getCountryCode();
         int rounding = policies.findFirstByCountryCodeAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(country, to)
@@ -82,14 +91,14 @@ public class AttendanceDays {
                     // A travel mission: worked and paid without a check-in (leave and missions never overlap).
                     String away = travel.get(p.date());
                     if (away != null && l == null) {
-                        return r.onTravel(away);
+                        return new Graced(r.onTravel(away), p.graceMinutes());
                     }
                     if (l != null && l.halfDay() != null && p.expectedAtWork()) {
-                        return r.onHalfLeave(l.type(), l.payPercent());
+                        return new Graced(r.onHalfLeave(l.type(), l.payPercent()), p.graceMinutes());
                     }
                     boolean replace = l != null && p.expectedAtWork() && (r.status() == DayCalculator.Status.ABSENT
                             || r.status() == DayCalculator.Status.FUTURE || r.status() == DayCalculator.Status.NOT_STARTED);
-                    return replace ? r.onLeave(l.type(), l.payPercent()) : r;
+                    return new Graced(replace ? r.onLeave(l.type(), l.payPercent()) : r, p.graceMinutes());
                 })
                 .toList();
     }

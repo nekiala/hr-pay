@@ -30,6 +30,9 @@ import MissionSettingsPage from './pages/MissionSettingsPage'
 import MissionCheckPage from './pages/MissionCheckPage'
 import LeavePage from './pages/LeavePage'
 import ReportsPage from './pages/ReportsPage'
+import RankingsPage from './pages/RankingsPage'
+import DisciplinePage from './pages/DisciplinePage'
+import DisciplineSettingsPage from './pages/DisciplineSettingsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
 import PayElementsPage from './pages/PayElementsPage'
@@ -104,9 +107,9 @@ import { Shell } from './components/Shell'
 import type { ReactNode } from 'react'
 import { t } from './i18n'
 
-function Guard({ permission, children }: { permission?: string; children: ReactNode }) {
+function Guard({ permission, children }: { permission?: string | string[]; children: ReactNode }) {
   const { can } = useAuth()
-  if (permission && !can(permission)) {
+  if (permission && !(Array.isArray(permission) ? permission.some(can) : can(permission))) {
     return <p className="notice">{t('You do not have permission to open this page.')}</p>
   }
   return <>{children}</>
@@ -262,6 +265,9 @@ export default function App() {
           <Route path="/missions/settings" element={<Guard permission="mission.manage"><MissionSettingsPage /></Guard>} />
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/rankings" element={<Guard permission={['report.hr', 'attendance.read.all', 'attendance.read.team', 'mission.manage', 'discipline.manage', 'discipline.propose']}><RankingsPage /></Guard>} />
+          <Route path="/discipline" element={<Guard permission={['discipline.manage', 'discipline.propose']}><DisciplinePage /></Guard>} />
+          <Route path="/discipline/settings" element={<Guard permission="discipline.manage"><DisciplineSettingsPage /></Guard>} />
           <Route path="/payroll" element={<PayrollRoute />} />
           <Route path="/payroll/reports" element={<Guard permission="payroll.report"><PayrollReportsPage /></Guard>} />
           <Route path="/payroll/simulate" element={<SimulationRoute />} />

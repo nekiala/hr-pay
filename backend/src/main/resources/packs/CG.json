@@ -226,6 +226,19 @@
      "active": true,
      "pay_percent": 66.67,
      "circumstance": false
+    },
+    {
+     "id": 6,
+     "code": "SUSPENSION",
+     "name": "Disciplinary suspension",
+     "paid": false,
+     "uses_balance": false,
+     "requires_document": false,
+     "max_days": 15,
+     "active": true,
+     "pay_percent": 0.0,
+     "circumstance": false,
+     "hr_only": true
     }
    ]
   },
@@ -1740,6 +1753,26 @@
     {
      "key": "MISSION_REPORT_DAYS",
      "value": "10"
+    },
+    {
+     "key": "DISCIPLINE_RANKING_MONTHS",
+     "value": "24"
+    },
+    {
+     "key": "LATENESS_FOLLOWUP_DAYS",
+     "value": "4"
+    },
+    {
+     "key": "DISCIPLINE_SUSPENSION_ALLOWED",
+     "value": "false"
+    },
+    {
+     "key": "DISCIPLINE_SUSPENSION_MAX_DAYS",
+     "value": "15"
+    },
+    {
+     "key": "DISCIPLINE_SUSPENSION_YEAR_DAYS",
+     "value": "30"
     }
    ]
   },
@@ -2302,6 +2335,26 @@
     {
      "role_id": 2,
      "permission_code": "mission.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "report.hr"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "report.hr"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "discipline.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "discipline.decide"
+    },
+    {
+     "role_id": 4,
+     "permission_code": "discipline.propose"
     }
    ]
   },
@@ -2359,6 +2412,67 @@
      "daily_from_day": null,
      "legal_basis": "Comme la taxe forfaitaire sur les salaires qu'elle remplace: CGI art. 173 et 512 (à confirmer pour la TUS)",
      "verified": false
+    }
+   ]
+  },
+  {
+   "table": "sanction_type",
+   "refs": {},
+   "rows": [
+    {
+     "id": 1,
+     "code": "WARNING",
+     "name": "Written warning",
+     "weight": 1,
+     "suspends": false,
+     "dismissal": false,
+     "letter_code": "DISCIPLINE_WARNING",
+     "position": 10,
+     "active": true
+    },
+    {
+     "id": 2,
+     "code": "REPRIMAND",
+     "name": "Reprimand",
+     "weight": 1,
+     "suspends": false,
+     "dismissal": false,
+     "letter_code": "DISCIPLINE_REPRIMAND",
+     "position": 20,
+     "active": true
+    },
+    {
+     "id": 3,
+     "code": "BLAME",
+     "name": "Blame",
+     "weight": 2,
+     "suspends": false,
+     "dismissal": false,
+     "letter_code": "DISCIPLINE_BLAME",
+     "position": 30,
+     "active": true
+    },
+    {
+     "id": 4,
+     "code": "SUSPENSION",
+     "name": "Disciplinary suspension",
+     "weight": 3,
+     "suspends": true,
+     "dismissal": false,
+     "letter_code": "DISCIPLINE_SUSPENSION",
+     "position": 40,
+     "active": true
+    },
+    {
+     "id": 5,
+     "code": "DISMISSAL",
+     "name": "Dismissal for serious misconduct",
+     "weight": 5,
+     "suspends": false,
+     "dismissal": true,
+     "letter_code": "DISCIPLINE_DISMISSAL",
+     "position": 50,
+     "active": true
     }
    ]
   }

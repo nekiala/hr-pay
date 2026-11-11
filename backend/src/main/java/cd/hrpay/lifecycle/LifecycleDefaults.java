@@ -175,7 +175,125 @@ public class LifecycleDefaults {
 
                     Ces faits sont contraires à vos obligations. La présente constitue un avertissement écrit versé à votre dossier. En cas de récidive, une sanction plus lourde pourra être prise.
 
-                    Vous pouvez y répondre par écrit dans le délai prévu par le règlement intérieur. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"));
+                    Vous pouvez y répondre par écrit dans le délai prévu par le règlement intérieur. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("DISCIPLINE_HEARING", "LETTER", "Invitation to a disciplinary hearing", "Convocation à un entretien disciplinaire", """
+                    Dear {{employee.name}},
+
+                    The following facts have been reported to us (case {{discipline.number}}), which may lead to a disciplinary sanction:
+
+                    {{discipline.facts}}
+
+                    Before any decision, so that you can explain yourself and present your defence (Labour Code art. 62), we invite you to a hearing on {{discipline.hearing_date}}, at {{discipline.hearing_place}}.
+
+                    You may come with a member of the staff of your choice. If you cannot attend, tell us beforehand; you may also answer in writing before the hearing.
+
+                    Your signature confirms that you received this letter.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Les faits suivants nous ont été signalés (dossier {{discipline.number}}) et sont susceptibles d'entraîner une sanction disciplinaire :
+
+                    {{discipline.facts}}
+
+                    Avant toute décision, et afin de vous permettre de vous expliquer et de présenter votre défense (Code du travail, art. 62), nous vous convoquons à un entretien le {{discipline.hearing_date}}, à {{discipline.hearing_place}}.
+
+                    Vous pouvez vous faire accompagner d'un membre du personnel de votre choix. En cas d'empêchement, prévenez-nous à l'avance ; vous pouvez aussi répondre par écrit avant l'entretien.
+
+                    Votre signature atteste la réception de la présente.""", "LETTER"),
+            new Letter("DISCIPLINE_WARNING", "LETTER", "Disciplinary warning", "Avertissement disciplinaire", """
+                    Dear {{employee.name}},
+
+                    On {{discipline.facts_date}}, the following facts were noted (case {{discipline.number}}):
+
+                    {{discipline.facts}}
+
+                    You were heard on {{discipline.heard_on}}. Having considered your explanations, and in accordance with our company rules, we impose on you the following sanction: a written warning. This letter is kept in your file. Should such facts happen again, a heavier sanction may follow.
+
+                    You may contest this sanction in writing. Your signature confirms that you received this letter, not that you agree with it.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Le {{discipline.facts_date}}, les faits suivants ont été constatés (dossier {{discipline.number}}) :
+
+                    {{discipline.facts}}
+
+                    Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, et conformément au règlement d'entreprise, nous vous infligeons la sanction suivante : un avertissement écrit. La présente est versée à votre dossier. En cas de récidive, une sanction plus lourde pourra être prise.
+
+                    Vous pouvez contester cette sanction par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("DISCIPLINE_REPRIMAND", "LETTER", "Reprimand", "Réprimande", """
+                    Dear {{employee.name}},
+
+                    On {{discipline.facts_date}}, the following facts were noted (case {{discipline.number}}):
+
+                    {{discipline.facts}}
+
+                    You were heard on {{discipline.heard_on}}. Having considered your explanations, and in accordance with our company rules, we impose on you the following sanction: a reprimand. This letter is kept in your file. Should such facts happen again, a heavier sanction may follow.
+
+                    You may contest this sanction in writing. Your signature confirms that you received this letter, not that you agree with it.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Le {{discipline.facts_date}}, les faits suivants ont été constatés (dossier {{discipline.number}}) :
+
+                    {{discipline.facts}}
+
+                    Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, et conformément au règlement d'entreprise, nous vous infligeons la sanction suivante : une réprimande. La présente est versée à votre dossier. En cas de récidive, une sanction plus lourde pourra être prise.
+
+                    Vous pouvez contester cette sanction par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("DISCIPLINE_BLAME", "LETTER", "Blame", "Blâme", """
+                    Dear {{employee.name}},
+
+                    On {{discipline.facts_date}}, the following facts were noted (case {{discipline.number}}):
+
+                    {{discipline.facts}}
+
+                    You were heard on {{discipline.heard_on}}. Having considered your explanations, and in accordance with our company rules, we impose on you the following sanction: a blame. This letter is kept in your file. Should such facts happen again, a heavier sanction may follow.
+
+                    You may contest this sanction in writing. Your signature confirms that you received this letter, not that you agree with it.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Le {{discipline.facts_date}}, les faits suivants ont été constatés (dossier {{discipline.number}}) :
+
+                    {{discipline.facts}}
+
+                    Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, et conformément au règlement d'entreprise, nous vous infligeons la sanction suivante : un blâme. La présente est versée à votre dossier. En cas de récidive, une sanction plus lourde pourra être prise.
+
+                    Vous pouvez contester cette sanction par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("DISCIPLINE_SUSPENSION", "LETTER", "Disciplinary suspension (mise à pied)", "Mise à pied disciplinaire", """
+                    Dear {{employee.name}},
+
+                    On {{discipline.facts_date}}, the following facts were noted (case {{discipline.number}}):
+
+                    {{discipline.facts}}
+
+                    You were heard on {{discipline.heard_on}}. Having considered your explanations, and as our company rules provide (Labour Code art. 57), we impose on you a disciplinary suspension (mise à pied) of {{discipline.suspension_days}} days, from {{discipline.suspension_from}} to {{discipline.suspension_to}} inclusive. During these days your contract is suspended: you do not come to work and these days are not paid. You resume work on {{discipline.return_date}}.
+
+                    You may contest this sanction in writing. Your signature confirms that you received this letter, not that you agree with it.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Le {{discipline.facts_date}}, les faits suivants ont été constatés (dossier {{discipline.number}}) :
+
+                    {{discipline.facts}}
+
+                    Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, et comme le prévoit le règlement d'entreprise (Code du travail, art. 57), nous vous infligeons une mise à pied disciplinaire de {{discipline.suspension_days}} jours, du {{discipline.suspension_from}} au {{discipline.suspension_to}} inclus. Pendant ces jours, votre contrat est suspendu : vous ne vous présentez pas au travail et ces jours ne sont pas rémunérés. Vous reprendrez le travail le {{discipline.return_date}}.
+
+                    Vous pouvez contester cette sanction par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("DISCIPLINE_DISMISSAL", "LETTER", "Dismissal for serious misconduct", "Licenciement pour faute lourde", """
+                    Dear {{employee.name}},
+
+                    On {{discipline.facts_date}}, the following facts were noted (case {{discipline.number}}):
+
+                    {{discipline.facts}}
+
+                    You were heard on {{discipline.heard_on}}. Having considered your explanations, we hold that these facts are serious misconduct (faute lourde, Labour Code art. 72). We therefore end your contract without notice, from {{discipline.decided_on}}.
+
+                    Your final pay, your work certificate and your final documents will be given to you. You may contest this decision in writing. Your signature confirms that you received this letter, not that you agree with it.""", """
+                    Madame, Monsieur {{employee.name}},
+
+                    Le {{discipline.facts_date}}, les faits suivants ont été constatés (dossier {{discipline.number}}) :
+
+                    {{discipline.facts}}
+
+                    Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, nous considérons que ces faits constituent une faute lourde (Code du travail, art. 72). Nous mettons donc fin à votre contrat sans préavis, à compter du {{discipline.decided_on}}.
+
+                    Votre décompte final, votre certificat de travail et vos documents de fin de contrat vous seront remis. Vous pouvez contester cette décision par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"));
 
     private final JdbcClient jdbc;
     private final Tenants tenants;
@@ -200,6 +318,7 @@ public class LifecycleDefaults {
         for (Long id : all) {
             try {
                 tenants.runAs(id, this::addContractModels);
+                tenants.runAs(id, this::addDisciplineLetters);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -233,6 +352,30 @@ public class LifecycleDefaults {
             jdbc.sql("update letter_template set active = false where code in ('CONTRACT_CDI', 'CONTRACT_CDD') and updated_by = 'system'")
                     .update();
         }
+    }
+
+    private static final String DISCIPLINE_LETTERS_ADDED = "DISCIPLINE_LETTERS_ADDED";
+
+    /** The discipline register's letters, once per company that was set up before the register existed. */
+    @Transactional
+    public void addDisciplineLetters() {
+        if (jdbc.sql("select count(*) from payroll_setting where key = ?").param(DISCIPLINE_LETTERS_ADDED)
+                .query(Integer.class).single() > 0) {
+            return;
+        }
+        boolean fr = "fr".equals(jdbc.sql("select language from company where id = current_company_id()").query(String.class)
+                .optional().orElse("fr"));
+        Long type = jdbc.sql("select id from document_type where code = 'LETTER'").query(Long.class).optional().orElse(null);
+        for (Letter l : LETTERS) {
+            if (l.code().startsWith("DISCIPLINE_")) {
+                jdbc.sql("""
+                        insert into letter_template (code, name, kind, body, requires_signature, document_type_id, updated_by)
+                        values (?, ?, ?, ?, true, ?, 'system') on conflict do nothing""")
+                        .params(l.code(), fr ? l.fr() : l.en(), l.kind(), (fr ? l.bodyFr() : l.bodyEn()).strip(), type).update();
+            }
+        }
+        jdbc.sql("insert into payroll_setting (key, value) values (?, 'true') on conflict do nothing")
+                .param(DISCIPLINE_LETTERS_ADDED).update();
     }
 
     static String model(String file) {
@@ -278,6 +421,7 @@ public class LifecycleDefaults {
                     .params(l.code(), fr ? l.fr() : l.en(), l.kind(), (fr ? l.bodyFr() : l.bodyEn()).strip(), type).update();
         }
         addContractModels();
+        addDisciplineLetters();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

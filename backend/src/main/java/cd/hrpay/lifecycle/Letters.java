@@ -105,6 +105,19 @@ public class Letters {
         m.put("company.representative_title", "Title of who signs for the company");
         m.put("signatory.name", "Name of the person who sends the document");
         m.put("today", "Today's date");
+        // A discipline case's own fields, filled in by the discipline register when it writes the letter.
+        m.put("discipline.number", "Discipline: case number");
+        m.put("discipline.facts", "Discipline: the facts");
+        m.put("discipline.facts_date", "Discipline: date of the facts");
+        m.put("discipline.hearing_date", "Discipline: date and time of the hearing");
+        m.put("discipline.hearing_place", "Discipline: place of the hearing");
+        m.put("discipline.heard_on", "Discipline: day of the hearing");
+        m.put("discipline.sanction", "Discipline: the sanction");
+        m.put("discipline.decided_on", "Discipline: day of the decision");
+        m.put("discipline.suspension_days", "Discipline: days of mise à pied");
+        m.put("discipline.suspension_from", "Discipline: first day of mise à pied");
+        m.put("discipline.suspension_to", "Discipline: last day of mise à pied");
+        m.put("discipline.return_date", "Discipline: day work resumes");
         return m;
     }
 

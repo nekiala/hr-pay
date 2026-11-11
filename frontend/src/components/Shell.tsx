@@ -6,7 +6,7 @@ import {
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
-  FlaskConical,
+  FlaskConical, Trophy, Gavel,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -59,6 +59,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/evaluations', label: t('Evaluations'), icon: Star, end: true, show: has('EVALUATIONS') },
         { to: '/org', label: t('Org chart'), icon: Network, show: true },
         { to: '/dashboards', label: t('Dashboards'), icon: ChartNoAxesCombined, show: can('dashboard.read') },
+        { to: '/reports/rankings', label: t('HR rankings'), icon: Trophy, show: any('report.hr', 'attendance.read.all', 'attendance.read.team', 'mission.manage', 'discipline.manage', 'discipline.propose') },
       ],
     },
     {
@@ -68,6 +69,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/lifecycle', label: t('Hiring and departures'), icon: ClipboardList, end: true, show: can('lifecycle.manage') },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
+        { to: '/discipline', label: t('Discipline'), icon: Gavel, show: any('discipline.manage', 'discipline.propose') },
         { to: '/departures', label: t('Departures'), icon: DoorOpen, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/sites', label: t('Sites'), icon: MapPin, show: att && any('site.read', 'site.manage') },
       ],
@@ -86,7 +88,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/advances', label: t('Salary advances'), icon: PiggyBank, show: pay && any('advance.manage', 'payroll.pay') },
         { to: '/payroll/loans', label: t('Loans'), icon: HandCoins, show: pay && any('loan.manage', 'payslip.read.all') },
         { to: '/payroll/accounting', label: t('Accounting'), icon: BookOpenCheck, show: pay && can('accounting.export') },
-        { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, show: any('report.attendance.export', 'report.finance.export') },
+        { to: '/reports', label: t('Reports'), icon: FileSpreadsheet, end: true, show: any('report.attendance.export', 'report.finance.export') },
       ],
     },
     {
