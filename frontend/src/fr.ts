@@ -3365,6 +3365,9 @@ const fr: Record<string, string> = {
   "Cost now": "Coût actuel",
   "New cost": "Nouveau coût",
   "A simulation: nothing was saved.": "Une simulation : rien n'a été enregistré.",
+  "Search by name, employee ID or email": "Rechercher par nom, matricule ou e-mail",
+  "Type at least 2 characters.": "Tapez au moins 2 caractères.",
+  "No employee matches \"{a}\".": "Aucun employé ne correspond à « {a} ».",
 }
 
 export default fr
