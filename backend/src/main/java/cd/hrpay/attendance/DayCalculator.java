@@ -27,7 +27,7 @@ import java.util.List;
  */
 public final class DayCalculator {
 
-    public enum Status { FUTURE, NOT_STARTED, IN_PROGRESS, PRESENT, ABSENT, HOLIDAY, REST_DAY, NO_SCHEDULE, LEAVE }
+    public enum Status { FUTURE, NOT_STARTED, IN_PROGRESS, PRESENT, ABSENT, HOLIDAY, REST_DAY, NO_SCHEDULE, LEAVE, MISSION }
 
     public record Session(OffsetDateTime in, OffsetDateTime out, boolean open) {}
 
@@ -47,6 +47,24 @@ public final class DayCalculator {
             return new DayResult(date, Status.LEAVE, scheduledMinutes, workedMinutes, share(scheduledMinutes, payPercent), 0, 0,
                     0, 0, overtimeMinutes, overtimeKind, false, firstIn, lastOut, sessions, autoClosed, corrected,
                     mission, entries, type);
+        }
+
+        /**
+         * A day of an approved travel mission: the employee works away, without checking in. A scheduled day is worked
+         * and paid in full (never absent, nothing deducted); a rest day or holiday stays what it is, marked as on mission.
+         * {@code where} is shown in place of the leave type.
+         */
+        public DayResult onTravel(String where) {
+            boolean working = scheduledMinutes > 0 && (status == Status.ABSENT || status == Status.FUTURE
+                    || status == Status.NOT_STARTED || status == Status.PRESENT || status == Status.IN_PROGRESS);
+            if (!working) {
+                return new DayResult(date, status, scheduledMinutes, workedMinutes, payableMinutes, lateMinutes,
+                        lateDeductedMinutes, earlyMinutes, earlyDeductedMinutes, overtimeMinutes, overtimeKind,
+                        missingCheckOut, firstIn, lastOut, sessions, autoClosed, corrected, true, entries, where);
+            }
+            return new DayResult(date, Status.MISSION, scheduledMinutes, workedMinutes, scheduledMinutes, 0, 0, 0, 0,
+                    overtimeMinutes, overtimeKind, false, firstIn, lastOut, sessions, autoClosed, corrected, true, entries,
+                    where);
         }
 
         /**

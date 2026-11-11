@@ -349,6 +349,14 @@ public class PayrollRuns {
                     : d.workedMinutes() > 0 || d.mission()).count();
         }
         int scheduledDays = (int) summary.days().stream().filter(d -> d.scheduledMinutes() > 0).count();
+        // Travel mission days are worked days; the transport allowance (paid per day worked) stops on them when the
+        // company says so: the employee does not commute.
+        final LocalDate lastPaid = leaves;
+        int travelDays = (int) summary.days().stream()
+                .filter(d -> d.status() == DayCalculator.Status.MISSION && (lastPaid == null || !d.date().isAfter(lastPaid)))
+                .count();
+        boolean transportStops = travelDays > 0 && "STOP".equals(jdbc.sql(
+                "select value from payroll_setting where key = 'MISSION_TRANSPORT_ON_TRAVEL'").query(String.class).optional().orElse("STOP"));
         BigDecimal overtime = summary.earnings() == null ? BigDecimal.ZERO
                 : ExchangeRates.convert(summary.earnings().overtimeEarned(), summary.earnings().currency(), salary.currency(), usdLocal);
         int overtimeMinutes = summary.overtimeApprovedMinutes();
@@ -425,7 +433,8 @@ public class PayrollRuns {
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
                 allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus(),
                 seniority.percent(user.getHireDate() != null ? user.getHireDate() : contract.startDate(),
-                        leaves != null && leaves.isBefore(last) ? leaves : last)));
+                        leaves != null && leaves.isBefore(last) ? leaves : last),
+                transportStops ? Math.max(0, daysWorked - travelDays) : null));
         List<String> warnings = new ArrayList<>(r.warnings());
         if (summary.overtimePendingMinutes() > 0) {
             warnings.add(summary.overtimePendingMinutes() / 60 + " h " + summary.overtimePendingMinutes() % 60
@@ -462,6 +471,9 @@ public class PayrollRuns {
         summary.days().stream().filter(d -> d.status() == DayCalculator.Status.LEAVE && d.leaveType() != null)
                 .forEach(d -> leaveDays.merge(d.leaveType(), 1, Integer::sum));
         snapshot.put("leaveDays", leaveDays);
+        if (travelDays > 0) {
+            snapshot.put("missionDays", travelDays);
+        }
         // For the checks before approval (PayrollChecks).
         snapshot.put("absentDays", summary.absentDays());
         snapshot.put("overtimePendingMinutes", summary.overtimePendingMinutes());

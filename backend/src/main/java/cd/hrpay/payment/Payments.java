@@ -80,6 +80,8 @@ public class Payments {
     public static final String PAYROLL = "PAYROLL";
     public static final String QUINZAINE = "QUINZAINE";
     public static final String ADVANCE = "ADVANCE";
+    /** Mission money: advances before departure and balances after the return (TravelMissions). */
+    public static final String MISSION = "MISSION";
 
     private static final String BATCH_SELECT = """
             select id, method, provider, trim(currency) as currency, line_count, total, status, created_by, created_at,
@@ -133,6 +135,11 @@ public class Payments {
     }
 
     private RunRow run(YearMonth month, String kind) {
+        if (MISSION.equals(kind)) {
+            return jdbc.sql("select id, 'CLOSED' as status from mission_pay_run where month = ?").param(month.atDay(1))
+                    .query(RunRow.class).optional()
+                    .orElseThrow(() -> new NotFoundException("No mission payment for " + month + " yet."));
+        }
         if (ADVANCE.equals(kind)) {
             // Approved advances are paid as they come: the month's advances are always ready to pay.
             return jdbc.sql("select id, 'CLOSED' as status from advance_run where month = ?").param(month.atDay(1))
@@ -148,11 +155,13 @@ public class Payments {
     }
 
     private static String runColumn(String kind) {
-        return QUINZAINE.equals(kind) ? "quinzaine_run_id" : ADVANCE.equals(kind) ? "advance_run_id" : "run_id";
+        return QUINZAINE.equals(kind) ? "quinzaine_run_id" : ADVANCE.equals(kind) ? "advance_run_id"
+                : MISSION.equals(kind) ? "mission_run_id" : "run_id";
     }
 
     private static String lineColumn(String kind) {
-        return QUINZAINE.equals(kind) ? "quinzaine_line_id" : ADVANCE.equals(kind) ? "advance_id" : "payslip_id";
+        return QUINZAINE.equals(kind) ? "quinzaine_line_id" : ADVANCE.equals(kind) ? "advance_id"
+                : MISSION.equals(kind) ? "mission_payment_id" : "payslip_id";
     }
 
     /**
@@ -160,7 +169,16 @@ public class Payments {
      * today.
      */
     private List<Payee> unpaid(long runId, String kind) {
-        String sql = ADVANCE.equals(kind) ? """
+        String sql = MISSION.equals(kind) ? """
+                select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
+                       trim(p.currency) as currency, p.amount as net,
+                       coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
+                       f.mobile_money_operator, f.mobile_money_number
+                from mission_payment p join app_user u on u.id = p.user_id
+                left join employee_profile f on f.user_id = p.user_id
+                where p.run_id = ? and p.status = 'APPROVED' and p.kind in ('ADVANCE', 'BALANCE')
+                  and not exists (select 1 from payment_line l where l.mission_payment_id = p.id)
+                order by u.last_name, u.first_name""" : ADVANCE.equals(kind) ? """
                 select p.id, p.user_id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no,
                        trim(p.currency) as currency, p.amount as net,
                        coalesce(f.payment_method, 'BANK') as method, f.bank_name, f.bank_account,
@@ -241,7 +259,10 @@ public class Payments {
         List<Group> toPay = groups.values().stream()
                 .sorted(java.util.Comparator.comparing(Group::method).thenComparing(Group::provider).thenComparing(Group::currency))
                 .toList();
-        int payslips = ADVANCE.equals(kind)
+        int payslips = MISSION.equals(kind)
+                ? jdbc.sql("select count(*) from mission_payment where run_id = ? and status in ('APPROVED', 'PAID')").param(run.id())
+                        .query(Integer.class).single()
+                : ADVANCE.equals(kind)
                 ? jdbc.sql("select count(*) from salary_advance where run_id = ? and status in ('APPROVED', 'PAID')").param(run.id())
                         .query(Integer.class).single()
                 : QUINZAINE.equals(kind)
@@ -265,12 +286,13 @@ public class Payments {
     public BatchView prepare(YearMonth month, String kind, String method, String provider, String currency) {
         boolean quinzaine = QUINZAINE.equals(kind);
         boolean advance = ADVANCE.equals(kind);
+        boolean mission = MISSION.equals(kind);
         RunRow run = run(month, kind);
         if (!run.status().equals("CLOSED")) {
             throw new BusinessRuleException(quinzaine ? "Close the quinzaine of " + month + " before making payment files."
                     : "Close the " + month + " payroll before making payment files.");
         }
-        jdbc.sql("select id from " + (quinzaine ? "quinzaine_run" : advance ? "advance_run" : "payroll_run") + " where id = ? for update")
+        jdbc.sql("select id from " + (quinzaine ? "quinzaine_run" : advance ? "advance_run" : mission ? "mission_pay_run" : "payroll_run") + " where id = ? for update")
                 .param(run.id()).query(Long.class).single();
         List<Payee> payees = unpaid(run.id(), kind).stream()
                 .filter(p -> p.problem() == null && p.method().equals(method) && p.provider().equals(provider)
@@ -293,7 +315,7 @@ public class Payments {
                     .update();
         }
         audit.record("payment.prepared", "payment_batch", id, Map.of("month", month.toString(), "method", method,
-                "provider", provider, "currency", currency, "count", payees.size(), "total", total, "kind", quinzaine ? QUINZAINE : advance ? ADVANCE : PAYROLL));
+                "provider", provider, "currency", currency, "count", payees.size(), "total", total, "kind", quinzaine ? QUINZAINE : advance ? ADVANCE : mission ? MISSION : PAYROLL));
         return batch(id);
     }
 
@@ -302,19 +324,19 @@ public class Payments {
                 .orElseThrow(() -> new NotFoundException("Payment file not found."));
         record Source(String month, String kind) {}
         Source src = jdbc.sql("""
-                select to_char(coalesce(r.month, q.month, a.month), 'YYYY-MM') as month,
+                select to_char(coalesce(r.month, q.month, a.month, m.month), 'YYYY-MM') as month,
                        case when b.quinzaine_run_id is not null then 'QUINZAINE' when b.advance_run_id is not null then 'ADVANCE'
-                            else 'PAYROLL' end as kind
+                            when b.mission_run_id is not null then 'MISSION' else 'PAYROLL' end as kind
                 from payment_batch b left join payroll_run r on r.id = b.run_id left join quinzaine_run q on q.id = b.quinzaine_run_id
-                left join advance_run a on a.id = b.advance_run_id
+                left join advance_run a on a.id = b.advance_run_id left join mission_pay_run m on m.id = b.mission_run_id
                 where b.id = ?""").param(id).query(Source.class).single();
         List<Line> lines = jdbc.sql("""
-                select coalesce(l.payslip_id, l.quinzaine_line_id, l.advance_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
+                select coalesce(l.payslip_id, l.quinzaine_line_id, l.advance_id, l.mission_payment_id) as payslip_id, l.user_id, l.beneficiary, l.registration_no,
                        l.account, l.amount, trim(l.currency) as currency,
-                       coalesce(p.unit_id, q.unit_id, a.unit_id) as unit_id, null as direction_name, null as unit_name,
+                       coalesce(p.unit_id, q.unit_id, a.unit_id, mp.unit_id) as unit_id, null as direction_name, null as unit_name,
                        l.ntpay_status, l.ntpay_payout_reference, l.ntpay_error
                 from payment_line l left join payslip p on p.id = l.payslip_id left join quinzaine_line q on q.id = l.quinzaine_line_id
-                left join salary_advance a on a.id = l.advance_id
+                left join salary_advance a on a.id = l.advance_id left join mission_payment mp on mp.id = l.mission_payment_id
                 where l.batch_id = ? order by l.beneficiary""")
                 .param(id).query(Line.class).list();
         var units = org.placementsOfUnits();
@@ -362,6 +384,10 @@ public class Payments {
         jdbc.sql("""
                 update salary_advance a set status = 'PAID'
                 from payment_line l where l.batch_id = ? and l.advance_id = a.id and a.status = 'APPROVED'""").param(id).update();
+        // Mission advances and balances in the file are paid.
+        jdbc.sql("""
+                update mission_payment m set status = 'PAID'
+                from payment_line l where l.batch_id = ? and l.mission_payment_id = m.id and m.status = 'APPROVED'""").param(id).update();
     }
 
     /** Withdraws a file that was not paid, for instance after correcting an account number. Its payslips can be paid again. */

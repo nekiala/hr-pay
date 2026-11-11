@@ -44,6 +44,12 @@ public class AttendanceDays {
     private final Clock clock;
     private final cd.hrpay.overtime.OvertimeDecisions decisions;
     private final cd.hrpay.leave.LeaveService leave;
+    private cd.hrpay.mission.MissionDays missions;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setMissions(cd.hrpay.mission.MissionDays missions) {
+        this.missions = missions;
+    }
 
     public AttendanceDays(WorkCalendar calendar, ClockEventRepository events, OvertimePolicyRepository policies,
                           SalaryService salaries, Clock clock, cd.hrpay.overtime.OvertimeDecisions decisions,
@@ -67,11 +73,17 @@ public class AttendanceDays {
                 .collect(Collectors.groupingBy(ClockEvent::getWorkDate));
         List<DayPlan> plans = calendar.plan(user, from, to);
         Map<LocalDate, cd.hrpay.leave.LeaveService.LeaveDay> onLeave = leave.approvedDays(user.getId(), from, to);
+        Map<LocalDate, String> travel = missions == null ? Map.of() : missions.of(user.getId(), from, to);
         return plans.stream()
                 .map(p -> {
                     DayResult r = DayCalculator.compute(p, byDay.getOrDefault(p.date(), List.of()), zone,
                             clock.instant(), rounding);
                     var l = onLeave.get(p.date());
+                    // A travel mission: worked and paid without a check-in (leave and missions never overlap).
+                    String away = travel.get(p.date());
+                    if (away != null && l == null) {
+                        return r.onTravel(away);
+                    }
                     if (l != null && l.halfDay() != null && p.expectedAtWork()) {
                         return r.onHalfLeave(l.type(), l.payPercent());
                     }
