@@ -396,6 +396,13 @@ public class LifecycleDefaults {
         this.tenants = tenants;
     }
 
+    private cd.hrpay.position.JobDefaults jobDefaults;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setJobDefaults(cd.hrpay.position.JobDefaults jobDefaults) {
+        this.jobDefaults = jobDefaults;
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void atStart() {
         List<Long> companies = tenants.callAsPlatform(() -> jdbc.sql("select id from company where not lifecycle_seeded")
@@ -414,6 +421,7 @@ public class LifecycleDefaults {
                 tenants.runAs(id, this::addDisciplineLetters);
                 tenants.runAs(id, this::addCareerLetters);
                 tenants.runAs(id, this::addHealthLetters);
+                tenants.runAs(id, jobDefaults::addSampleJobs);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -555,6 +563,7 @@ public class LifecycleDefaults {
         addDisciplineLetters();
         addCareerLetters();
         addHealthLetters();
+        jobDefaults.addSampleJobs();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

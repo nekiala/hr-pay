@@ -162,9 +162,9 @@ public class EmployeeFile {
                 .params(start.minusDays(1), userId, start, start).update();
         long id = jdbc.sql("""
                 insert into employee_contract (user_id, contract_type, start_date, end_date, grade_id, occupation_id,
-                                               expatriate, note, created_by)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
-                .params(userId, type, start, end, gradeId, occupationId, expatriate, note, CurrentUser.email())
+                                               expatriate, note, created_by, occupation_version)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, (select nullif(version, 0) from occupation where id = ?)) returning id""")
+                .params(userId, type, start, end, gradeId, occupationId, expatriate, note, CurrentUser.email(), occupationId)
                 .query(Long.class).single();
         user.setGradeCategoryId(grade.categoryId());
         if (first) {

@@ -34,6 +34,7 @@ import RankingsPage from './pages/RankingsPage'
 import DisciplinePage from './pages/DisciplinePage'
 import StaffRepresentationPage from './pages/StaffRepresentationPage'
 import HealthSafetyPage from './pages/HealthSafetyPage'
+import PositionsPage from './pages/PositionsPage'
 import DisciplineSettingsPage from './pages/DisciplineSettingsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
@@ -271,6 +272,7 @@ export default function App() {
           <Route path="/discipline" element={<Guard permission={['discipline.manage', 'discipline.propose']}><DisciplinePage /></Guard>} />
           <Route path="/representation" element={<Guard permission="staff.representation"><StaffRepresentationPage /></Guard>} />
           <Route path="/health" element={<Guard permission="health.safety"><HealthSafetyPage /></Guard>} />
+          <Route path="/positions" element={<Guard permission="jobs.manage"><PositionsPage /></Guard>} />
           <Route path="/discipline/settings" element={<Guard permission="discipline.manage"><DisciplineSettingsPage /></Guard>} />
           <Route path="/payroll" element={<PayrollRoute />} />
           <Route path="/payroll/reports" element={<Guard permission="payroll.report"><PayrollReportsPage /></Guard>} />

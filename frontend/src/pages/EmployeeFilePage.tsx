@@ -10,6 +10,7 @@ import { Modal } from '../components/Modal'
 import { GradeChangeModal } from '../components/GradeChange'
 import { ContractDocumentModal } from '../components/ContractDocument'
 import { CareerHistory, CareerMoveModal } from '../components/CareerMove'
+import { NextStepsCard, PostWarning } from '../components/JobCards'
 import { t } from '../i18n'
 import { DateInput } from '../components/DateFields'
 
@@ -212,6 +213,7 @@ export default function EmployeeFilePage() {
                   </select>
                 </label>
               </div>
+              <PostWarning userId={id!} occupationId={contract.occupationId} on={contract.startDate} />
               <div className="grid2">
                 <label>{t('Agreed net salary (optional)')}<input type="number" min="0.01" step="0.01" value={contract.agreedNet} placeholder={grade ? t('Grade basic: {a}', { a: money(grade.baseSalary, grade.currency) }) : ''}
                     onChange={(e) => setContract({ ...contract, agreedNet: e.target.value })} />
@@ -238,6 +240,8 @@ export default function EmployeeFilePage() {
         <h3>{t('Career: promotions and transfers')}</h3>
         <CareerHistory userId={id!} moves={moves} />
       </div>
+
+      <NextStepsCard userId={id!} />
 
       {p && (
         <Form className="card" onSubmit={saveProfile}>
