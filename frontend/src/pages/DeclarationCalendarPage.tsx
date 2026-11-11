@@ -46,7 +46,7 @@ export default function DeclarationCalendarPage() {
 
   return (
     <section>
-      <p className="small muted"><Link to="/payroll/declarations">{t('Declarations')}</Link></p>
+      <p className="small muted"><Link to="/payroll/declarations">{t('Declarations')}</Link> · <Link to="/payroll/legal-filings">{t('Legal registers and annual filings')}</Link></p>
       <h2>{t('Declarations calendar')}</h2>
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
