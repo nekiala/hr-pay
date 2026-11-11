@@ -41,6 +41,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       PUBLIC_URL: ${PUBLIC_URL:-https://${DOMAIN:?Set DOMAIN in .env}}
       CORS_ORIGINS: ${PUBLIC_URL:-https://${DOMAIN}}
+      # The product website's address, when Caddy serves it (SITE_DOMAIN): the sign-in page links to its calculators.
+      SITE_DOMAIN: ${SITE_DOMAIN:-}
       # Caddy is the only way in: take the client's address from its X-Forwarded-For (site and clock IP rules).
       FORWARD_HEADERS: native
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
@@ -98,11 +100,13 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN}
+      SITE_DOMAIN: ${SITE_DOMAIN:-}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
       CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-X-Forwarded-For}
       TLS_MODE: "${TLS_MODE:?Set TLS_MODE in .env to an email address for Let's Encrypt, or to internal}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../website:/srv/website:ro
       - caddy-data:/data
       - caddy-config:/config
     logging: *logging

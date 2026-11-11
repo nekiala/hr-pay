@@ -238,7 +238,8 @@ public class PublicCalculator {
             more.put(code, value(rates, code));
             used.add(code);
         }
-        for (String code : List.of("ITS_FIRST_BAND_FLAT", "ITS_MINIMUM_YEARLY")) {
+        for (String code : List.of("ITS_FIRST_BAND_FLAT", "ITS_MINIMUM_YEARLY", "CAMU_SOLIDARITY",
+                "CAMU_SOLIDARITY_THRESHOLD", "TOL_MONTHLY")) {
             if (rates.containsKey(code)) {
                 more.put(code, value(rates, code));
                 used.add(code);

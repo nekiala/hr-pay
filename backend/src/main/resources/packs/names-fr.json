@@ -234,5 +234,12 @@
  "Child in charge, age limit": "Enfant à charge, âge limite",
  "Child studying full time, age limit": "Enfant aux études à plein temps, âge limite",
  "A child stops counting for family allowances and the tax reduction at this age, unless studying full time or disabled. Empty: no age check.": "Un enfant cesse de compter pour les allocations familiales et la réduction d'impôt à cet âge, sauf études à plein temps ou handicap. Vide : pas de contrôle d'âge.",
- "A child who studies full time counts until this age. A disabled child counts without age limit.": "Un enfant aux études à plein temps compte jusqu'à cet âge. Un enfant handicapé compte sans limite d'âge."
+ "A child who studies full time counts until this age. A disabled child counts without age limit.": "Un enfant aux études à plein temps compte jusqu'à cet âge. Un enfant handicapé compte sans limite d'âge.",
+ "CAMU solidarity contribution": "CAMU, contribution de solidarité",
+ "TOL (premises occupation tax)": "TOL (taxe d'occupation des locaux)",
+ "Withheld on the taxable pay (after the CNSS) above the monthly threshold.": "Retenue sur le salaire imposable (après CNSS) au-delà du seuil mensuel.",
+ "CAMU solidarity contribution, monthly threshold": "CAMU, contribution de solidarité : seuil mensuel",
+ "Only the taxable pay above this monthly amount pays the contribution.": "Seule la part du salaire imposable au-delà de ce montant mensuel paie la contribution.",
+ "TOL (premises occupation tax), per month": "TOL (taxe d'occupation des locaux), par mois",
+ "Flat amount withheld once a month on the month-end payslip.": "Montant fixe retenu une fois par mois sur le bulletin de fin de mois."
 }

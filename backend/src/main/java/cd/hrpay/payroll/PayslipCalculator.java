@@ -345,6 +345,9 @@ public final class PayslipCalculator {
             iprAmount = convert(taxLocal, local, cur, r.usdCdf());
             lines.add(new Line("IPR", byCode.get("IPR").name(), "DEDUCTION", taxableBase, null, iprAmount,
                     byCode.get("IPR").displayOrder(), null));
+            if (r.congo()) {
+                congoLevies(lines, byCode, r, in, cur, taxableBase);
+            }
         }
 
         // 6. Net before loans, then loans within the allowed share.
@@ -532,6 +535,31 @@ public final class PayslipCalculator {
         lines.add(new Line(c.code(), name(byCode, c.code()), kind, shownBase, rate, amount,
                 byCode.containsKey(c.code()) ? order(byCode, c.code()) : c.displayOrder(), null));
         return amount;
+    }
+
+    /**
+     * The Republic of the Congo's other employee levies, each only when its rate is set: the CAMU solidarity
+     * contribution on the taxable pay (after the CNSS) above a monthly threshold, and the TOL (taxe d'occupation des
+     * locaux), a flat amount once a month on the month-end payslip.
+     */
+    private static void congoLevies(List<Line> lines, Map<String, PayElements.Element> byCode, Rates r, Input in,
+                                    String cur, BigDecimal taxableBase) {
+        String local = r.local();
+        BigDecimal camu = r.more().getOrDefault("CAMU_SOLIDARITY", BigDecimal.ZERO);
+        if (camu.signum() > 0) {
+            BigDecimal threshold = convert(r.more().getOrDefault("CAMU_SOLIDARITY_THRESHOLD", BigDecimal.ZERO), local, cur, r.usdCdf());
+            BigDecimal base = taxableBase.subtract(threshold).max(BigDecimal.ZERO);
+            BigDecimal amount = money(base.multiply(camu).divide(HUNDRED, 10, RoundingMode.HALF_UP));
+            if (amount.signum() > 0) {
+                lines.add(new Line("CAMU_SOLIDARITY", name(byCode, "CAMU_SOLIDARITY"), "DEDUCTION", money(base), camu, amount,
+                        order(byCode, "CAMU_SOLIDARITY"), null));
+            }
+        }
+        BigDecimal tol = r.more().getOrDefault("TOL_MONTHLY", BigDecimal.ZERO);
+        if (tol.signum() > 0 && in.basicMonthly() != null && in.basicMonthly().signum() > 0) {
+            lines.add(new Line("TOL", name(byCode, "TOL"), "DEDUCTION", null, null, money(convert(tol, local, cur, r.usdCdf())),
+                    order(byCode, "TOL"), null));
+        }
     }
 
     private static String name(Map<String, PayElements.Element> byCode, String code) {

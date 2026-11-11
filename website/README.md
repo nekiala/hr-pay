@@ -2,12 +2,14 @@
 
 Static pages, French and English (`?lang=en`, or the visitor's browser language), no build step.
 
-Before publishing, set the two addresses on `<body>` in `index.html`:
+Published at https://hrpay.cloud, with the app at https://platform.hrpay.cloud. Each page sets two addresses on `<body>`:
 
-- `data-app`: the HR Pay server customers sign in to. The page links to its `/trial` form, `/status` page and `/legal/...` documents.
-- `data-demo`: the demo server (see "Demo server" in `deploy/README.md`).
+- `data-app`: the HR Pay server customers sign in to (https://platform.hrpay.cloud). The pages link to its `/trial` form,
+  `/status` page and `/legal/...` documents.
+- `data-demo`: the demo server (see "Demo server" in `deploy/README.md`). Empty: the demo buttons are hidden.
 
-Put the folder on any static host (the Caddy in `deploy/` can serve it with `file_server`). Prices are not on the page: trial requests come to the provider console (*Trial requests*), and the offer is sent from there.
+The Caddy in `deploy/` serves this folder on `SITE_DOMAIN` (see `deploy/README.md`), so `upgrade.sh` publishes it with
+the app. Any other static host works too. Prices are not on the page: trial requests come to the provider console (*Trial requests*), and the offer is sent from there.
 
 ## Salary calculators and articles
 
@@ -20,6 +22,6 @@ Put the folder on any static host (the Caddy in `deploy/` can serve it with `fil
   under *Trial requests > Salary calculator leads*.
 - `articles/` holds short French articles on the rules (SMIG, IPR, CNSS, ITS). Update their date and text when a law
   changes.
-- Before publishing, replace `https://www.example.com` in `sitemap.xml`, `robots.txt` and each page's canonical link.
+- The website's address (https://hrpay.cloud) is in `sitemap.xml`, `robots.txt` and each page's canonical link.
 - Opened from `localhost` (for instance `python3 -m http.server 8090` in this folder), the pages use the local app
   (API on 8082, app on 5173).

@@ -33,9 +33,9 @@ const AUDIENCES: [Article['audience'], string][] = [
 ]
 
 /** The version the server runs, shared by the menu and the report form. */
-let versionCache: Promise<{ version: string; builtAt: string | null; demo: boolean }> | null = null
-export const serverVersion = () => (versionCache ??= api<{ version: string; builtAt: string | null; demo: boolean }>('/api/version')
-  .catch(() => ({ version: 'unknown', builtAt: null, demo: false })))
+let versionCache: Promise<{ version: string; builtAt: string | null; demo: boolean; websiteUrl: string | null }> | null = null
+export const serverVersion = () => (versionCache ??= api<{ version: string; builtAt: string | null; demo: boolean; websiteUrl: string | null }>('/api/version')
+  .catch(() => ({ version: 'unknown', builtAt: null, demo: false, websiteUrl: null })))
 
 /** The help centre: articles, the person's requests to support, and what's new. */
 export default function HelpPage() {

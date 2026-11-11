@@ -271,6 +271,7 @@ const fr: Record<string, string> = {
   "MOD. DCC form": "Formulaire MOD. DCC",
   "Next declaration": "Prochaine déclaration",
   "Salary calculator leads": "Contacts du calculateur de salaire",
+  "Free salary calculators: gross to net, employer cost": "Calculateurs de salaire gratuits : du brut au net, coût employeur",
   "Visitors of the website’s salary calculator who asked for their result by email. They received it; contact them to offer a trial.": "Visiteurs du calculateur de salaire du site qui ont demandé leur résultat par email. Ils l'ont reçu ; contactez-les pour proposer un essai.",
   "No lead yet.": "Aucun contact pour l'instant.",
   "Contacted": "Contacté",

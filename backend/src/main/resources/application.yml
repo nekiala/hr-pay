@@ -121,6 +121,9 @@ app:
   cors-origins: ${CORS_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
   # Address employees reach the app at; used in the kiosk QR code.
   public-url: ${PUBLIC_URL:http://localhost:5173}
+  # The product website (salary calculators); the sign-in page links to it. WEBSITE_URL, or https://SITE_DOMAIN.
+  website-url: ${WEBSITE_URL:}
+  site-domain: ${SITE_DOMAIN:}
   notifications:
     mail-from: ${MAIL_FROM:HR Pay <no-reply@hrpay.local>}
     # WhatsApp Cloud API (Meta). Leave empty to send codes by email only.

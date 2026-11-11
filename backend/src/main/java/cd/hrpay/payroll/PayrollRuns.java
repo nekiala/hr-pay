@@ -205,7 +205,9 @@ public class PayrollRuns {
             more.put(code, statutory.rate(code, on));
         }
         // Loi n° 42-2025 (finance law 2026): the ITS first band as a flat amount, and the minimum below the SMIG.
-        for (String code : List.of("ITS_FIRST_BAND_FLAT", "ITS_MINIMUM_YEARLY")) {
+        // The CAMU solidarity contribution and the TOL: only when the company has their rates.
+        for (String code : List.of("ITS_FIRST_BAND_FLAT", "ITS_MINIMUM_YEARLY", "CAMU_SOLIDARITY",
+                "CAMU_SOLIDARITY_THRESHOLD", "TOL_MONTHLY")) {
             more.put(code, statutory.rateOrZero(code, on));
         }
         return new PayslipCalculator.Rates(usdLocal, statutory.rate("CNSS_EMPLOYEE", on), statutory.rate("CNSS_EMPLOYER", on),

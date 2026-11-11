@@ -2,6 +2,11 @@
 # certificate for DOMAIN by itself (ports 80 and 443 must reach this server from the internet). On a server the
 # internet cannot reach, set TLS_MODE=internal: Caddy then makes its own certificate, which browsers must trust.
 #
+# SITE_DOMAIN (optional) serves the product website (the website/ folder: home page, salary calculators, articles) on
+# a second address, for instance hrpay.cloud with the app on platform.hrpay.cloud. On that address, /api and /iclock
+# still reach the app (time clocks, webhooks and API clients set up with the old address keep working), and any other
+# path that is not a page of the website is sent to the app's address, so old links and bookmarks keep working.
+#
 # Behind a CDN or another proxy (Cloudflare...), set TRUSTED_PROXIES to its address ranges and CLIENT_IP_HEADER to the
 # header that carries the visitor's address (CF-Connecting-IP for Cloudflare): the app then sees the visitor's real
 # address for the site and time clock IP rules, not the proxy's. Only those ranges may set that header.
@@ -36,9 +41,45 @@
 	}
 }
 
+# The product website. Without SITE_DOMAIN, this block only answers on site.localhost, which nobody uses.
+{$SITE_DOMAIN:site.localhost} {
+	tls {$TLS_MODE}
+	encode zstd gzip
+
+	handle /actuator/* {
+		respond 404
+	}
+
+	@app path /api/* /iclock/*
+	handle @app {
+		reverse_proxy app:8082 {
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+
+	handle {
+		root * /srv/website
+		@page file {path} {path}/index.html
+		handle @page {
+			file_server
+		}
+		handle {
+			redir https://{$DOMAIN}{uri} 302
+		}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
+
 # Time clocks that cannot use HTTPS send their punches over plain HTTP to /iclock (see README, phase 15): only
 # that path is served on port 80, everything else goes to HTTPS. Limit such clocks to the office's addresses.
-http://{$DOMAIN} {
+http://{$DOMAIN}, http://{$SITE_DOMAIN:site.localhost} {
 	@clock path /iclock/*
 	handle @clock {
 		reverse_proxy app:8082 {

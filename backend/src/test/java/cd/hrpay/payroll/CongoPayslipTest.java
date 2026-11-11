@@ -129,4 +129,36 @@ class CongoPayslipTest {
         assertThat(ItsCalculator.parts(null, true, 0, max)).isEqualByComparingTo("2");
         assertThat(ItsCalculator.parts("MARRIED", true, 12, max)).isEqualByComparingTo("6.5");
     }
+
+    // ---- CAMU solidarity contribution and TOL (CongoPaie, CNSS et CAMU 2026; to verify in the Journal officiel) --
+
+    static PayslipCalculator.Input withLevies(String basic) {
+        Map<String, BigDecimal> more = new java.util.HashMap<>(RATES_2026.more());
+        more.put("CAMU_SOLIDARITY", d("0.5"));
+        more.put("CAMU_SOLIDARITY_THRESHOLD", d("500000"));
+        more.put("TOL_MONTHLY", d("1000"));
+        PayslipCalculator.Rates r = RATES_2026;
+        PayslipCalculator.Rates rates = new PayslipCalculator.Rates(r.usdCdf(), r.cnssEmployee(), r.cnssEmployer(), r.inpp(),
+                r.onem(), r.iere(), r.debtMaxShare(), r.iprBrackets(), r.iprDependantReduction(), r.iprMaxDependants(),
+                r.iprCap(), r.smigDailyCdf(), "CG", "XAF", Map.copyOf(more));
+        return new PayslipCalculator.Input("XAF", d(basic), 10560, 10560, 22, 22, BigDecimal.ZERO, 0, null, null,
+                0, 0, false, ELEMENTS, List.of(), List.of(), List.of(), rates, 0, null, "SINGLE");
+    }
+
+    @Test
+    void camuSolidarityAboveTheThresholdAndTheTol() {
+        var r = PayslipCalculator.calculate(withLevies("900000"));
+        // Taxable after the CNSS: 900,000 - 36,000 = 864,000; 0.5% of the 364,000 above 500,000 = 1,820.
+        assertThat(line(r, "CAMU_SOLIDARITY")).isEqualByComparingTo("1820");
+        assertThat(line(r, "TOL")).isEqualByComparingTo("1000");
+        var without = PayslipCalculator.calculate(input2026("900000", 10560, 0, 0, "SINGLE"));
+        assertThat(without.net().subtract(r.net())).isEqualByComparingTo("2820");
+    }
+
+    @Test
+    void noCamuSolidarityUnderTheThreshold() {
+        var r = PayslipCalculator.calculate(withLevies("400000"));
+        assertThat(r.lines()).noneMatch(l -> l.code().equals("CAMU_SOLIDARITY"));
+        assertThat(line(r, "TOL")).isEqualByComparingTo("1000");
+    }
 }

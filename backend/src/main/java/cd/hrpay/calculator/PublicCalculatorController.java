@@ -265,6 +265,8 @@ public class PublicCalculatorController {
             case "ONEM" -> new String[] {"ONEM", "ONEM"};
             case "IERE" -> new String[] {"IERE (expatriés)", "IERE (expatriates)"};
             case "TUS" -> new String[] {"TUS (taxe unique sur les salaires)", "TUS (single tax on salaries)"};
+            case "CAMU_SOLIDARITY" -> new String[] {"CAMU, contribution de solidarité", "CAMU solidarity contribution"};
+            case "TOL" -> new String[] {"TOL (taxe d'occupation des locaux)", "TOL (premises occupation tax)"};
             default -> new String[] {code, code};
         };
         return fr ? l[0] : l[1];

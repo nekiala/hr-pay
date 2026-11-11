@@ -84,6 +84,11 @@ class PublicCalculatorIT extends IntegrationTest {
                 .andExpect(jsonPath("$.lines[?(@.code == 'TUS')].amount").value(37500.0))
                 .andExpect(jsonPath("$.lines[?(@.code == 'CNSS_EMPLOYEE')].amount").value(20000.0))
                 .andExpect(jsonPath("$.localCurrency").value("XAF"));
+        // Above 500,000 taxable, the CAMU solidarity contribution; the TOL each month.
+        mvc.perform(get("/api/public/calculator").param("country", "CG").param("amount", "900000").param("currency", "XAF"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lines[?(@.code == 'CAMU_SOLIDARITY')].amount").value(1820.0))
+                .andExpect(jsonPath("$.lines[?(@.code == 'TOL')].amount").value(1000.0));
         mvc.perform(get("/api/public/calculator/countries")).andExpect(jsonPath("$.countries.length()").value(2));
     }
 
