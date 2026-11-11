@@ -11,6 +11,7 @@ export default function EvaluationPage() {
   const { me, can } = useAuth()
   const [ev, setEv] = useState<Evaluation | null>(null)
   const [scores, setScores] = useState<Record<number, { score: string; comment: string }>>({})
+  const [objScores, setObjScores] = useState<Record<number, { score: string; comment: string }>>({})
   const [managerComment, setManagerComment] = useState('')
   const [answer, setAnswer] = useState('')
   const [hrComment, setHrComment] = useState('')
@@ -20,6 +21,7 @@ export default function EvaluationPage() {
   const show = (e: Evaluation) => {
     setEv(e)
     setScores(Object.fromEntries((e.scores ?? []).map((s) => [s.criterionId, { score: s.score === null ? '' : String(s.score), comment: s.comment ?? '' }])))
+    setObjScores(Object.fromEntries((e.objectives ?? []).map((o) => [o.objectiveId, { score: o.score === null ? '' : String(o.score), comment: o.comment ?? '' }])))
     setManagerComment(e.managerComment ?? '')
   }
   useEffect(() => { api<Evaluation>(`/api/evaluations/${id}`).then(show).catch((e: Error) => setError(e.message)) }, [id])
@@ -39,6 +41,15 @@ export default function EvaluationPage() {
 
   if (!ev) return <section><ErrorText error={error} />{!error && <p className="muted">{t('Loading…')}</p>}</section>
 
+  const objectives = ev.objectives ?? []
+  const byObjectives = objectives.length > 0
+  const manual = (source: string) => source === 'MANAGER' || (source === 'OBJECTIVES' && !byObjectives)
+  const objectivesScore = () => {
+    const rows = objectives.map((o) => ({ score: objScores[o.objectiveId]?.score, weight: Number(o.weight) }))
+    if (rows.some((r) => r.score === '' || r.score == null)) return null
+    const weights = rows.reduce((a, r) => a + r.weight, 0)
+    return weights === 0 ? rows.reduce((a, r) => a + Number(r.score), 0) / rows.length : rows.reduce((a, r) => a + Number(r.score) * r.weight, 0) / weights
+  }
   const isEmployee = me?.id === ev.userId
   const canScore = !isEmployee && (me?.id === ev.evaluatorId || can('evaluation.manage') || can('evaluation.approve')) && ['DRAFT', 'SUBMITTED', 'CONTESTED'].includes(ev.status)
   const canApprove = !isEmployee && can('evaluation.approve') && ['SUBMITTED', 'ACKNOWLEDGED', 'CONTESTED'].includes(ev.status)
@@ -46,14 +57,18 @@ export default function EvaluationPage() {
     method: 'PUT',
     body: {
       submit, managerComment: managerComment || null,
-      scores: (ev.scores ?? []).filter((s) => s.source === 'MANAGER').map((s) => ({
+      objectiveScores: objectives.map((o) => ({
+        objectiveId: o.objectiveId, score: objScores[o.objectiveId]?.score === '' ? null : Number(objScores[o.objectiveId]?.score), comment: objScores[o.objectiveId]?.comment || null,
+      })),
+      scores: (ev.scores ?? []).filter((s) => manual(s.source)).map((s) => ({
         criterionId: s.criterionId, score: scores[s.criterionId]?.score === '' ? null : Number(scores[s.criterionId]?.score), comment: scores[s.criterionId]?.comment || null,
       })),
     },
   }), submit ? t('Submitted. The employee is asked to read it.') : t('Saved as draft.'))
 
   const preview = (ev.scores ?? []).reduce((sum, s) => {
-    const v = s.source === 'MANAGER' ? Number(scores[s.criterionId]?.score || 0) : Number(s.score ?? 0)
+    const v = manual(s.source) ? Number(scores[s.criterionId]?.score || 0)
+      : s.source === 'OBJECTIVES' && canScore ? Number(objectivesScore() ?? 0) : Number(s.score ?? 0)
     return sum + (v * s.weight) / 100
   }, 0)
 
@@ -72,16 +87,18 @@ export default function EvaluationPage() {
             <tbody>
               {(ev.scores ?? []).map((s) => (
                 <tr key={s.criterionId}>
-                  <td>{s.name}{s.source === 'ATTENDANCE' && <div className="hint">{t('From attendance')}</div>}</td>
+                  <td>{s.name}{s.source === 'ATTENDANCE' && <div className="hint">{t('From attendance')}</div>}
+                    {s.source === 'OBJECTIVES' && <div className="hint">{byObjectives ? t('Weighted average of the objectives below') : t('No objective was shared for the year: score it by hand.')}</div>}</td>
                   <td>{s.weight}%</td>
                   <td>
-                    {canScore && s.source === 'MANAGER'
+                    {s.source === 'OBJECTIVES' && byObjectives && canScore ? (objectivesScore() == null ? '—' : objectivesScore()!.toFixed(2))
+                    : canScore && manual(s.source)
                       ? <input type="number" min={0} max={100} step={1} className="narrow-input" value={scores[s.criterionId]?.score ?? ''}
                           onChange={(e) => setScores({ ...scores, [s.criterionId]: { ...scores[s.criterionId], score: e.target.value } })} />
                       : (s.score ?? '—')}
                   </td>
                   <td>
-                    {canScore && s.source === 'MANAGER'
+                    {canScore && manual(s.source)
                       ? <input value={scores[s.criterionId]?.comment ?? ''} maxLength={500}
                           onChange={(e) => setScores({ ...scores, [s.criterionId]: { ...scores[s.criterionId], comment: e.target.value } })} />
                       : <span className="small">{s.comment}</span>}
@@ -91,6 +108,37 @@ export default function EvaluationPage() {
             </tbody>
           </table>
         </div>
+        {byObjectives && (
+          <>
+            <h3>{t('Objectives')}</h3>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>{t('Objective')}</th><th>{t('Weight')}</th><th>{t('Progress check')}</th><th>{t('Score (0–100)')}</th><th>{t('Comment')}</th></tr></thead>
+                <tbody>
+                  {objectives.map((o) => (
+                    <tr key={o.objectiveId}>
+                      <td><strong>{o.title}</strong>{o.target && <div className="hint">{t('Target: {a}', { a: o.target })}</div>}</td>
+                      <td>{o.weight}%</td>
+                      <td className="small">{o.progress == null ? '—' : `${o.progress} %`}{o.checkinComment && <div className="muted">{o.checkinComment}</div>}</td>
+                      <td>
+                        {canScore
+                          ? <input type="number" min={0} max={100} step={1} className="narrow-input" value={objScores[o.objectiveId]?.score ?? ''}
+                              onChange={(e) => setObjScores({ ...objScores, [o.objectiveId]: { ...objScores[o.objectiveId], score: e.target.value } })} />
+                          : (o.score ?? '—')}
+                      </td>
+                      <td>
+                        {canScore
+                          ? <input value={objScores[o.objectiveId]?.comment ?? ''} maxLength={500}
+                              onChange={(e) => setObjScores({ ...objScores, [o.objectiveId]: { ...objScores[o.objectiveId], comment: e.target.value } })} />
+                          : <span className="small">{o.comment}</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
         <p><strong>{t('Total:')}{' '}{ev.totalPercent !== null && !canScore ? `${ev.totalPercent}%` : `${preview.toFixed(2)}%`}</strong>{canScore && <span className="hint">{' '}{t('(updates as you type)')}</span>}</p>
 
         {canScore ? (

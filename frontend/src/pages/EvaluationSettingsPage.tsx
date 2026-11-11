@@ -8,7 +8,7 @@ import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
 
-type CriterionForm = { id?: number; code: string; name: string; description: string; source: 'MANAGER' | 'ATTENDANCE'; active: boolean }
+type CriterionForm = { id?: number; code: string; name: string; description: string; source: 'MANAGER' | 'ATTENDANCE' | 'OBJECTIVES'; active: boolean }
 type TemplateForm = { id?: number; name: string; frequency: EvalTemplate['frequency']; gradeCategoryId: string; orgUnitId: string; active: boolean; weights: Record<number, string> }
 
 const blankCriterion: CriterionForm = { code: '', name: '', description: '', source: 'MANAGER', active: true }
@@ -132,7 +132,7 @@ export default function EvaluationSettingsPage() {
                 <tbody>
                   {criteria.filter((c) => c.active || template.weights[c.id]).map((c) => (
                     <tr key={c.id}>
-                      <td>{c.name}{c.source === 'ATTENDANCE' && <span className="hint">{' '}{t('(from attendance)')}</span>}</td>
+                      <td>{c.name}{c.source === 'ATTENDANCE' && <span className="hint">{' '}{t('(from attendance)')}</span>}{c.source === 'OBJECTIVES' && <span className="hint">{' '}{t('(from the objectives)')}</span>}</td>
                       <td><input type="number" className="narrow-input" min={0} max={100} step={0.01} value={template.weights[c.id] ?? ''}
                         onChange={(e) => setTemplate({ ...template, weights: { ...template.weights, [c.id]: e.target.value } })} /></td>
                     </tr>
@@ -159,7 +159,7 @@ export default function EvaluationSettingsPage() {
                 <tr key={c.id}>
                   <td>{c.code}</td>
                   <td>{c.name}{c.description && <div className="hint">{c.description}</div>}</td>
-                  <td>{c.source === 'ATTENDANCE' ? t('Attendance') : t('Manager')}</td>
+                  <td>{c.source === 'ATTENDANCE' ? t('Attendance') : c.source === 'OBJECTIVES' ? t('Individual objectives') : t('Manager')}</td>
                   <td>{c.active ? t('Yes') : t('No')}</td>
                   <td><Button className="secondary" onClick={() => setCriterion({ id: c.id, code: c.code, name: c.name, description: c.description ?? '', source: c.source, active: c.active })}>{t('Edit')}</Button></td>
                 </tr>
@@ -175,7 +175,7 @@ export default function EvaluationSettingsPage() {
                 <label>{t('Code')}<input value={criterion.code} disabled={!!criterion.id} required pattern="[A-Za-z0-9_-]{1,32}" onChange={(e) => setCriterion({ ...criterion, code: e.target.value.toUpperCase() })} /></label>
                 <label>{t('Name')}<input value={criterion.name} required maxLength={150} onChange={(e) => setCriterion({ ...criterion, name: e.target.value })} /></label>
                 <label>{t('Scored by')}<select value={criterion.source} onChange={(e) => setCriterion({ ...criterion, source: e.target.value as CriterionForm['source'] })}>
-                    <option value="MANAGER">{t('Manager')}</option><option value="ATTENDANCE">{t('Attendance')}</option>
+                    <option value="MANAGER">{t('Manager')}</option><option value="ATTENDANCE">{t('Attendance')}</option><option value="OBJECTIVES">{t('Individual objectives')}</option>
                   </select>
                 </label>
               </div>

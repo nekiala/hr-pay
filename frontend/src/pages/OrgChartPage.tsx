@@ -15,6 +15,7 @@ export default function OrgChartPage() {
   const [levels, setLevels] = useState<OrgLevel[]>([])
   const [members, setMembers] = useState<OrgMember[]>([])
   const [view, setView] = useState<'units' | 'people'>('units')
+  const [posts, setPosts] = useState<Map<number, { budgeted: number; filled: number }>>(new Map())
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
   const [root, setRoot] = useState<string>('')
   const [site, setSite] = useState<string>('')
@@ -24,6 +25,8 @@ export default function OrgChartPage() {
     api<OrgUnit[]>('/api/org/units').then(setUnits).catch((e: Error) => setError(e.message))
     api<OrgLevel[]>('/api/org/levels').then(setLevels).catch(() => undefined)
     if (people) api<OrgMember[]>('/api/org/people').then(setMembers).catch(() => undefined)
+    api<{ unitId: number; budgeted: number; filled: number }[]>(`/api/positions/units?year=${new Date().getFullYear()}`)
+      .then((r) => setPosts(new Map(r.map((x) => [x.unitId, x])))).catch(() => undefined)
   }, [people])
 
   const sites = useMemo(() => {
@@ -80,6 +83,8 @@ export default function OrgChartPage() {
       {u.head ? <span>{u.head.userName}<br /><small>{headTitle(u, u.head, levels)}</small></span> : <span className="muted">{t('Vacant')}</span>}
       {u.deputy && <small>{headTitle(u, u.deputy, levels)}: {u.deputy.userName}</small>}
       {u.totalMembers !== null && <small>{u.members}{' '}{t('here ·')}{' '}{u.totalMembers}{' '}{t('in total')}</small>}
+      {(posts.get(u.id)?.budgeted ?? 0) > 0 && <small className={posts.get(u.id)!.filled < posts.get(u.id)!.budgeted ? 'warn-text' : undefined}>
+        {t('Posts filled: {a} of {b}', { a: posts.get(u.id)!.filled, b: posts.get(u.id)!.budgeted })}</small>}
     </div>
   )
 

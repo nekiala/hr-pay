@@ -6,7 +6,7 @@ import {
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
-  FlaskConical, Trophy, Gavel, Vote, HeartPulse,
+  FlaskConical, Trophy, Gavel, Vote, HeartPulse, Goal,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -57,6 +57,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/presence', label: t('Presence'), icon: UserCheck, show: att && any('attendance.read.all', 'attendance.read.team') },
         { to: '/overtime/approvals', label: t('Approve overtime'), icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
         { to: '/evaluations', label: t('Evaluations'), icon: Star, end: true, show: has('EVALUATIONS') },
+        { to: '/objectives', label: t('Objectives'), icon: Goal, show: has('EVALUATIONS') },
         { to: '/org', label: t('Org chart'), icon: Network, show: true },
         { to: '/dashboards', label: t('Dashboards'), icon: ChartNoAxesCombined, show: can('dashboard.read') },
         { to: '/reports/rankings', label: t('HR rankings'), icon: Trophy, show: any('report.hr', 'attendance.read.all', 'attendance.read.team', 'mission.manage', 'discipline.manage', 'discipline.propose') },

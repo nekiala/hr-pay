@@ -509,6 +509,45 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - Hiring or moving someone into a unit with no free post gives a warning; HR can go on. With no posts entered for the year, nothing is checked.` },
   },
   {
+    id: 'objectives', audience: 'everyone', routes: ['/objectives'],
+    fr: { title: 'Objectifs', body: `
+**Pour l'employé**
+- Votre responsable fixe vos objectifs de l'année : ce qui est attendu, comment c'est mesuré, la cible, l'échéance et le poids de chaque objectif.
+- Lisez-les sous « Mes objectifs » et confirmez-en la prise de connaissance, avec un commentaire si vous le souhaitez. Si un objectif change, il vous est demandé de le confirmer à nouveau.
+
+**Pour le responsable**
+- Sous « Mon équipe », ouvrez une personne et ajoutez ses objectifs. Ils restent en brouillon jusqu'au partage, qui exige des poids totalisant 100 %.
+- Vers la mi-année, faites un point d'étape pour chaque objectif : avancement, commentaire et, si besoin, un besoin de développement (une formation par exemple). Un rappel vous est envoyé en juillet s'il en manque.
+- Un objectif partagé n'est pas supprimé mais annulé : il reste dans l'historique.
+- Les objectifs d'unité, fixés par les RH ou le chef de l'unité, servent de point de départ : l'objectif d'une personne peut en découler.
+
+**Dans l'évaluation**
+- Quand le modèle d'évaluation comprend le critère « Objectifs individuels », chaque objectif partagé y est noté de 0 à 100. La moyenne pondérée devient la note de ce critère, avec le poids fixé dans le modèle (par exemple 40 % pour les cadres).
+- Sans objectif partagé pour l'année, le responsable note le critère à la main.
+- Des objectifs écrits et leurs points d'étape sont aussi la preuve attendue en cas de licenciement pour insuffisance professionnelle (Code du travail RDC art. 62 et 72).
+
+**Pour les RH**
+- La « Vue d'ensemble » montre, par unité, qui a des objectifs, qui les a confirmés, les points d'étape faits et les objectifs atteints (avancement de 100 % ou note d'au moins 75), puis les personnes sans objectifs, les points d'étape en retard et les besoins de développement.` },
+    en: { title: 'Objectives', body: `
+**For employees**
+- Your manager sets your objectives for the year: what is expected, how it is measured, the target, the due date and the weight of each objective.
+- Read them under "My objectives" and acknowledge them, with a comment if you wish. If an objective changes, you are asked to acknowledge it again.
+
+**For managers**
+- Under "My team", open a person and add their objectives. They stay as drafts until you share them, which needs weights that add up to 100%.
+- Around mid-year, record a check-in for each objective: progress, a comment and, if needed, a development need (a training, for example). A reminder comes in July if some are missing.
+- A shared objective is not deleted but cancelled, so it stays in the history.
+- Unit objectives, set by HR or the unit's head, are the starting point: a person's objective can follow one.
+
+**In the evaluation**
+- When the evaluation template has the "Individual objectives" criterion, each shared objective is scored from 0 to 100. The weighted average becomes that criterion's score, with the weight set in the template (for example 40% for managers).
+- With no objective shared for the year, the manager scores the criterion by hand.
+- Written objectives and their check-ins are also the evidence expected if a dismissal for poor work is ever contested (DRC Labour Code art. 62 and 72).
+
+**For HR**
+- The "Overview" shows, by unit, who has objectives, who acknowledged them, the check-ins done and the objectives reached (100% progress or a score of 75 or more), then the people with no objectives, late check-ins and development needs.` },
+  },
+  {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],
     fr: { title: 'Obtenir de l’aide', body: `
 - **Signaler un problème** (menu de votre nom, ou cette page) : décrivez ce qui se passe ; la page ouverte et la version sont jointes automatiquement.

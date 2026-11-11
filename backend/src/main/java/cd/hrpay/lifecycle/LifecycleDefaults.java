@@ -397,6 +397,12 @@ public class LifecycleDefaults {
     }
 
     private cd.hrpay.position.JobDefaults jobDefaults;
+    private cd.hrpay.evaluation.ObjectiveDefaults objectiveDefaults;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setObjectiveDefaults(cd.hrpay.evaluation.ObjectiveDefaults objectiveDefaults) {
+        this.objectiveDefaults = objectiveDefaults;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setJobDefaults(cd.hrpay.position.JobDefaults jobDefaults) {
@@ -422,6 +428,7 @@ public class LifecycleDefaults {
                 tenants.runAs(id, this::addCareerLetters);
                 tenants.runAs(id, this::addHealthLetters);
                 tenants.runAs(id, jobDefaults::addSampleJobs);
+                tenants.runAs(id, objectiveDefaults::addSamples);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -564,6 +571,7 @@ public class LifecycleDefaults {
         addCareerLetters();
         addHealthLetters();
         jobDefaults.addSampleJobs();
+        objectiveDefaults.addSamples();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

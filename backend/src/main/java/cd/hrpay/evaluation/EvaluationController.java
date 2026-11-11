@@ -35,7 +35,7 @@ public class EvaluationController {
 
     public record CriterionInput(@NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{1,32}") String code,
                                  @NotBlank @Size(max = 150) String name, @Size(max = 400) String description,
-                                 @NotNull @Pattern(regexp = "MANAGER|ATTENDANCE") String source, boolean active) {}
+                                 @NotNull @Pattern(regexp = "MANAGER|ATTENDANCE|OBJECTIVES") String source, boolean active) {}
 
     public record WeightInput(@NotNull Long criterionId,
                               @NotNull @DecimalMin("0.01") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal weight) {}
@@ -57,8 +57,12 @@ public class EvaluationController {
                              @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal score,
                              @Size(max = 500) String comment) {}
 
-    public record ScoresInput(@NotNull List<@Valid ScoreInput> scores, @Size(max = 1000) String managerComment,
-                              boolean submit) {}
+    public record ObjectiveScoreInput(@NotNull Long objectiveId,
+                                      @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal score,
+                                      @Size(max = 500) String comment) {}
+
+    public record ScoresInput(@NotNull List<@Valid ScoreInput> scores, List<@Valid ObjectiveScoreInput> objectiveScores,
+                              @Size(max = 1000) String managerComment, boolean submit) {}
 
     public record AnswerInput(boolean acknowledge, @Size(max = 1000) String comment) {}
 
@@ -151,6 +155,8 @@ public class EvaluationController {
     public Evaluations.Evaluation scores(@PathVariable long id, @Valid @RequestBody ScoresInput b) {
         return evaluations.saveScores(id, b.scores().stream()
                 .map(s -> new Evaluations.ScoreInput(s.criterionId(), s.score(), s.comment())).toList(),
+                b.objectiveScores() == null ? List.of() : b.objectiveScores().stream()
+                        .map(o -> new Evaluations.ObjectiveScoreInput(o.objectiveId(), o.score(), o.comment())).toList(),
                 b.managerComment(), b.submit());
     }
 
