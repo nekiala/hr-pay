@@ -434,6 +434,19 @@
      "pay_percent": 0.0,
      "circumstance": false,
      "hr_only": true
+    },
+    {
+     "id": 12,
+     "code": "WORK_ACCIDENT",
+     "name": "Work accident",
+     "paid": true,
+     "uses_balance": false,
+     "requires_document": false,
+     "max_days": null,
+     "active": true,
+     "pay_percent": 66.67,
+     "circumstance": false,
+     "hr_only": true
     }
    ]
   },
@@ -2043,6 +2056,54 @@
     {
      "key": "DELEGATE_MEETING_MONTHS",
      "value": "3"
+    },
+    {
+     "key": "MEDICAL_VALID_MONTHS",
+     "value": "12"
+    },
+    {
+     "key": "MEDICAL_VALID_MONTHS_MINOR",
+     "value": "6"
+    },
+    {
+     "key": "MEDICAL_PROVISIONAL_MONTHS",
+     "value": "3"
+    },
+    {
+     "key": "MEDICAL_RETURN_AFTER_DAYS",
+     "value": "30"
+    },
+    {
+     "key": "MEDICAL_REMIND_DAYS",
+     "value": "30"
+    },
+    {
+     "key": "MEDICAL_SERVICE",
+     "value": "OUTSIDE"
+    },
+    {
+     "key": "ACCIDENT_DECLARE_DAYS",
+     "value": "60"
+    },
+    {
+     "key": "DISEASE_DECLARE_DAYS",
+     "value": "120"
+    },
+    {
+     "key": "ACCIDENT_PAY_MONTHS",
+     "value": "6"
+    },
+    {
+     "key": "SAFETY_COMMITTEE_FROM",
+     "value": "20"
+    },
+    {
+     "key": "SAFETY_MEETING_MONTHS",
+     "value": "2"
+    },
+    {
+     "key": "SAFETY_TERM_YEARS",
+     "value": "2"
     }
    ]
   },
@@ -2633,6 +2694,14 @@
     {
      "role_id": 2,
      "permission_code": "staff.representation"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "health.safety"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "health.safety"
     }
    ]
   },
