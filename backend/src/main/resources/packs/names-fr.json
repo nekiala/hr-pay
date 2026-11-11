@@ -242,5 +242,6 @@
  "Only the taxable pay above this monthly amount pays the contribution.": "Seule la part du salaire imposable au-delà de ce montant mensuel paie la contribution.",
  "TOL (premises occupation tax), per month": "TOL (taxe d'occupation des locaux), par mois",
  "Flat amount withheld once a month on the month-end payslip.": "Montant fixe retenu une fois par mois sur le bulletin de fin de mois.",
- "Salary arrears (back pay)": "Rappel de salaire"
+ "Salary arrears (back pay)": "Rappel de salaire",
+ "Mission allowance (taxable excess)": "Indemnité de mission (excédent imposable)"
 }

@@ -30,6 +30,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-session-jdbc")
     // PDF payslips.
     implementation("com.github.librepdf:openpdf:3.0.5")
+    implementation("com.google.zxing:core:3.5.3")
     runtimeOnly("org.flywaydb:flyway-database-postgresql")
     runtimeOnly("org.postgresql:postgresql")
 

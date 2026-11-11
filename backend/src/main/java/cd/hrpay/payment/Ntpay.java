@@ -284,7 +284,8 @@ public class Ntpay {
         String key = UUID.nameUUIDFromBytes(("ntpay|" + c.companyId() + "|" + fileId + "|" + attempt).getBytes(StandardCharsets.UTF_8)).toString();
 
         Map<String, Object> body = new LinkedHashMap<>();
-        String kind = Payments.QUINZAINE.equals(view.kind()) ? "Quinzaine" : Payments.ADVANCE.equals(view.kind()) ? "Avances" : "Paie";
+        String kind = Payments.QUINZAINE.equals(view.kind()) ? "Quinzaine" : Payments.ADVANCE.equals(view.kind()) ? "Avances"
+                : Payments.MISSION.equals(view.kind()) ? "Missions" : "Paie";
         body.put("name", cut(kind + " " + view.month() + " · " + b.provider() + " · HR Pay", 120));
         body.put("currency", b.currency());
         body.put("reference", reference);

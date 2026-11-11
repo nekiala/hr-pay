@@ -82,7 +82,25 @@ public final class PayslipCalculator {
                         int childrenInCharge, int dependantsInCharge, boolean expatriate,
                         List<PayElements.Element> elements, List<PayElements.Assignment> standing,
                         List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes,
-                        BigDecimal smigCoefficient, String maritalStatus, BigDecimal seniorityPercent) {
+                        BigDecimal smigCoefficient, String maritalStatus, BigDecimal seniorityPercent,
+                        Integer perDayWorkedDays) {
+
+        /**
+         * Allowances paid per day worked use {@code daysWorked}, unless {@code perDayWorkedDays} is given: the days the
+         * employee comes to work, less travel mission days when the company stops the transport allowance on them.
+         */
+        public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
+                     int scheduledDays, int daysWorked, BigDecimal overtimeAmount, int overtimeMinutes,
+                     BigDecimal thirteenthMonth, String thirteenthMonthNote,
+                     int childrenInCharge, int dependantsInCharge, boolean expatriate,
+                     List<PayElements.Element> elements, List<PayElements.Assignment> standing,
+                     List<PayElements.Entry> entries, List<LoanDue> loans, Rates rates, int allocatedLeaveMinutes,
+                     BigDecimal smigCoefficient, String maritalStatus, BigDecimal seniorityPercent) {
+            this(currency, basicMonthly, scheduledMinutes, paidMinutes, scheduledDays, daysWorked, overtimeAmount,
+                    overtimeMinutes, thirteenthMonth, thirteenthMonthNote, childrenInCharge, dependantsInCharge, expatriate,
+                    elements, standing, entries, loans, rates, allocatedLeaveMinutes, smigCoefficient, maritalStatus,
+                    seniorityPercent, null);
+        }
 
         /** Without a seniority bonus. */
         public Input(String currency, BigDecimal basicMonthly, int scheduledMinutes, int paidMinutes,
@@ -213,7 +231,7 @@ public final class PayslipCalculator {
                     }
                 }
                 case "PER_DAY_WORKED" -> {
-                    base = BigDecimal.valueOf(in.daysWorked());
+                    base = BigDecimal.valueOf(in.perDayWorkedDays() != null ? in.perDayWorkedDays() : in.daysWorked());
                     rate = convert(amount, amountCur, cur, r.usdCdf());
                     value = base.multiply(rate);
                 }

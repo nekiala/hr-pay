@@ -26,6 +26,8 @@ import KioskPage from './pages/KioskPage'
 import OutboxPage from './pages/OutboxPage'
 import UserAttendancePage from './pages/UserAttendancePage'
 import MissionsPage from './pages/MissionsPage'
+import MissionSettingsPage from './pages/MissionSettingsPage'
+import MissionCheckPage from './pages/MissionCheckPage'
 import LeavePage from './pages/LeavePage'
 import ReportsPage from './pages/ReportsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
@@ -184,9 +186,11 @@ export default function App() {
   // The page an emailed link opens: it works signed out, and setting the password signs every browser out.
   if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
   // Pages anyone can open, signed in or not: the status page, the terms and the trial request.
-  if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname === '/changes' || location.pathname.startsWith('/legal/')) {
+  if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname === '/changes' || location.pathname.startsWith('/legal/')
+    || location.pathname.startsWith('/mission-check/')) {
     return (
       <Routes>
+        <Route path="/mission-check/:token" element={<MissionCheckPage />} />
         <Route path="/status" element={<StatusPage />} />
         <Route path="/changes" element={<LawChangesPublicPage />} />
         <Route path="/trial" element={<TrialPage />} />
@@ -255,6 +259,7 @@ export default function App() {
           <Route path="/overtime" element={<Guard permission="overtime_policy.manage"><OvertimePage /></Guard>} />
           <Route path="/check-in" element={<CheckInPage />} />
           <Route path="/missions" element={<MissionsPage />} />
+          <Route path="/missions/settings" element={<Guard permission="mission.manage"><MissionSettingsPage /></Guard>} />
           <Route path="/leave" element={<LeavePage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payroll" element={<PayrollRoute />} />

@@ -14,6 +14,7 @@ const STATUS: Record<DayStatus, string> = {
   REST_DAY: t('Rest day'),
   NO_SCHEDULE: t('No schedule'),
   LEAVE: t('On leave'),
+  MISSION: t('On mission'),
 }
 
 function currentMonth() {
@@ -121,7 +122,7 @@ export default function MonthView({ source, onVoid, version = 0 }: {
                 {days.map((d) => (
                   <tr key={d.date} className={d.status === 'ABSENT' ? 'absent' : undefined}>
                     <td>{new Date(`${d.date}T12:00:00`).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric' })}</td>
-                    <td>{d.status === 'LEAVE' && d.leaveType ? d.leaveType : STATUS[d.status]}</td>
+                    <td>{(d.status === 'LEAVE' || d.status === 'MISSION') && d.leaveType ? d.leaveType : STATUS[d.status]}</td>
                     <td>{d.firstIn ? time(d.firstIn, data.timeZone) : ''}</td>
                     <td>{d.lastOut ? time(d.lastOut, data.timeZone) : ''}</td>
                     <td>{d.workedMinutes ? hours(d.workedMinutes) : ''}</td>

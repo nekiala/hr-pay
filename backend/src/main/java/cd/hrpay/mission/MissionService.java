@@ -87,6 +87,9 @@ public class MissionService {
     @Transactional
     public Mission cancel(Long id) {
         Mission m = find(id);
+        if (!m.isShort()) {
+            throw new BusinessRuleException("A travel mission is cancelled on the Missions page.");
+        }
         if (!m.getUserId().equals(CurrentUser.id())) {
             throw new AccessDeniedException("Only the employee can cancel their mission.");
         }
@@ -112,6 +115,9 @@ public class MissionService {
     @Transactional
     public Mission decide(Long id, boolean approve, String note) {
         Mission m = find(id);
+        if (!m.isShort()) {
+            throw new BusinessRuleException("A travel mission is decided on the Missions page.");
+        }
         if (!canDecide(m)) {
             throw new AccessDeniedException("You cannot decide on this mission.");
         }
@@ -159,24 +165,24 @@ public class MissionService {
         LocalDate date = at.atZoneSameInstant(zone(user)).toLocalDate();
         LocalTime time = at.atZoneSameInstant(zone(user)).toLocalTime();
         return missions.findByUserIdAndWorkDate(user.getId(), date).stream()
-                .filter(m -> m.getStatus() == Mission.Status.APPROVED)
+                .filter(m -> m.getStatus() == Mission.Status.APPROVED && m.isShort())
                 .filter(m -> !time.isBefore(m.getStartTime().minusMinutes(30)) && !time.isAfter(m.getEndTime().plusHours(2)))
                 .findFirst();
     }
 
     public List<Mission> mine() {
-        return missions.findByUserIdOrderByWorkDateDescStartTimeDesc(CurrentUser.id());
+        return missions.findByUserIdOrderByWorkDateDescStartTimeDesc(CurrentUser.id()).stream().filter(Mission::isShort).toList();
     }
 
     public List<Mission> toDecide() {
         List<Mission> list = CurrentUser.has("mission.approve.all") ? missions.findPending()
                 : CurrentUser.has("mission.approve.team") ? missions.findPendingForUsers(org.teamOf(CurrentUser.id())) : List.of();
-        return list.stream().filter(m -> !m.getUserId().equals(CurrentUser.id())).toList();
+        return list.stream().filter(m -> m.isShort() && !m.getUserId().equals(CurrentUser.id())).toList();
     }
 
     public Optional<Mission> approvedOn(Long userId, LocalDate date) {
         return missions.findByUserIdAndWorkDate(userId, date).stream()
-                .filter(m -> m.getStatus() == Mission.Status.APPROVED)
+                .filter(m -> m.getStatus() == Mission.Status.APPROVED && m.isShort())
                 .max(java.util.Comparator.comparing(Mission::getEndTime));
     }
 

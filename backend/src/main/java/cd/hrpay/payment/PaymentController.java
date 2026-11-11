@@ -213,10 +213,11 @@ public class PaymentController {
         Payments.Batch b = v.batch();
         boolean quinzaine = Payments.QUINZAINE.equals(v.kind());
         boolean advance = Payments.ADVANCE.equals(v.kind());
-        String name = (quinzaine ? "quinzaine-" : advance ? "advances-" : "salaries-") + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase()
+        boolean mission = Payments.MISSION.equals(v.kind());
+        String name = (quinzaine ? "quinzaine-" : advance ? "advances-" : mission ? "missions-" : "salaries-") + v.month() + "-" + b.provider().replaceAll("[^A-Za-z0-9]+", "-").toLowerCase()
                 + "-" + b.currency().toLowerCase() + "-" + b.id() + ".csv";
         PrintWriter out = Csv.start(response, name);
-        String narration = (quinzaine ? "Quinzaine " : advance ? "Salary advance " : "Salary ") + v.month();
+        String narration = (quinzaine ? "Quinzaine " : advance ? "Salary advance " : mission ? "Mission costs " : "Salary ") + v.month();
         int n = 0;
         switch (b.method()) {
             case "BANK" -> {

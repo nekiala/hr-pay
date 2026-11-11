@@ -14,7 +14,7 @@ import java.time.OffsetDateTime;
 @Entity
 public class Mission {
 
-    public enum Status { PENDING, APPROVED, REJECTED, CANCELLED }
+    public enum Status { PENDING, APPROVED, REJECTED, CANCELLED, CLOSED }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,6 +32,9 @@ public class Mission {
     private String decidedBy;
     private OffsetDateTime decidedAt;
     private String decisionNote;
+    /** SHORT (this entity's own missions) or TRAVEL (whole days, handled by {@link TravelMissions}). */
+    @jakarta.persistence.Column(insertable = false, updatable = false)
+    private String kind;
 
     protected Mission() {}
 
@@ -52,6 +55,8 @@ public class Mission {
         this.decidedAt = OffsetDateTime.now();
         this.decisionNote = note;
     }
+
+    public boolean isShort() { return kind == null || "SHORT".equals(kind); }
 
     public boolean isActive() { return status == Status.PENDING || status == Status.APPROVED; }
 

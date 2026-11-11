@@ -27,9 +27,11 @@ export default function PaymentsPage() {
   const { can } = useAuth()
   const canPay = can('payroll.pay')
   const [params, setParams] = useSearchParams()
-  const kind = params.get('kind') === 'QUINZAINE' ? 'QUINZAINE' : params.get('kind') === 'ADVANCE' ? 'ADVANCE' : 'PAYROLL'
+  const kind = params.get('kind') === 'QUINZAINE' ? 'QUINZAINE' : params.get('kind') === 'ADVANCE' ? 'ADVANCE'
+    : params.get('kind') === 'MISSION' ? 'MISSION' : 'PAYROLL'
   const quinzaine = kind === 'QUINZAINE'
-  const advance = kind === 'ADVANCE'
+  const mission = kind === 'MISSION'
+  const advance = kind === 'ADVANCE' || mission
   const month = params.get('month') ?? (advance ? new Date().toISOString().slice(0, 7) : lastMonth())
   const [data, setData] = useState<Overview | null>(null)
   const [paying, setPaying] = useState<{ id: number; paidOn: string; reference: string } | null>(null)
@@ -38,7 +40,7 @@ export default function PaymentsPage() {
 
   const load = () => api<Overview>(`/api/payments/${month}?kind=${kind}`).then(setData).catch((e) => {
     setData(null)
-    setError(e instanceof ApiError && e.status === 404 ? (quinzaine ? t('No quinzaine for {a} yet.', { a: month }) : advance ? t('No salary advance for {a} yet.', { a: month }) : t('No payroll for {a} yet.', { a: month })) : (e as Error).message)
+    setError(e instanceof ApiError && e.status === 404 ? (quinzaine ? t('No quinzaine for {a} yet.', { a: month }) : mission ? t('No mission payment for {a} yet.', { a: month }) : advance ? t('No salary advance for {a} yet.', { a: month }) : t('No payroll for {a} yet.', { a: month })) : (e as Error).message)
   })
   useEffect(() => { setError(null); void load() }, [month, kind]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -67,6 +69,7 @@ export default function PaymentsPage() {
           <option value="PAYROLL">{t('Month-end pay')}</option>
           <option value="QUINZAINE">{t('Quinzaine')}</option>
           <option value="ADVANCE">{t('Salary advances')}</option>
+          <option value="MISSION">{t('Mission costs')}</option>
         </select></label>
       </div>
       <ErrorText error={error} />

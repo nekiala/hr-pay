@@ -114,6 +114,7 @@ public class PresenceReport {
                 case NOT_STARTED -> counts.merge(d.mission() ? "mission" : "notYetIn", 1, Integer::sum);
                 case ABSENT -> counts.merge(d.mission() ? "mission" : "absent", 1, Integer::sum);
                 case LEAVE -> counts.merge("leave", 1, Integer::sum);
+                case MISSION -> counts.merge("mission", 1, Integer::sum);
                 default -> counts.merge("off", 1, Integer::sum);
             }
             if (d.scheduledMinutes() > 0) {
