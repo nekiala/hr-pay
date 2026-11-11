@@ -7,7 +7,9 @@ import { Button } from '../components/Button'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
 import type { OrgUnit } from '../org'
+import { useAuth } from '../auth'
 import { locale, t } from '../i18n'
+import { SalaryIncreaseTab } from './SalaryIncreaseTab'
 
 type SimType = 'MONTH' | 'QUINZAINE' | 'LEAVE_PAY' | 'THIRTEENTH' | 'SETTLEMENT'
 type Line = { elementCode: string; label: string; kind: 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'; base: number | null; rate: number | null; amount: number }
@@ -56,13 +58,18 @@ const decimal = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '
 const whole = (s: string) => (s.trim() === '' ? null : Math.round(Number(s)))
 const EMPTY: WhatIf = { basic: '', complement: '', overtimeHours: '', unpaidDays: '', bonus: '', children: '', dependants: '', usdRate: '' }
 
-type Tab = 'simulate' | 'projection' | 'company'
+type Tab = 'simulate' | 'projection' | 'company' | 'increase'
 
 /** Simulate pay and year-end projection: the real payroll engine, nothing saved. */
 export default function PaySimulationPage() {
   const [params, setParams] = useSearchParams()
-  const tab = (params.get('tab') as Tab | null) ?? 'simulate'
-  const tabs: Record<Tab, string> = { simulate: t('Simulate pay'), projection: t('Year projection'), company: t('Company projection') }
+  const { can } = useAuth()
+  const simulate = can('payroll.simulate')
+  const increase = can('payroll.increase') || can('payroll.increase.approve')
+  const all: Record<Tab, string> = { simulate: t('Simulate pay'), projection: t('Year projection'), company: t('Company projection'), increase: t('General increase') }
+  const tabs = Object.fromEntries(Object.entries(all).filter(([k]) => (k === 'increase' ? increase : simulate))) as Partial<Record<Tab, string>>
+  const asked = params.get('tab') as Tab | null
+  const tab: Tab = asked && tabs[asked] ? asked : simulate ? 'simulate' : 'increase'
   const setTab = (k: Tab) => { const p = new URLSearchParams(params); p.set('tab', k); setParams(p) }
   const [person, setPerson] = useState<User | null>(null)
   const userId = params.get('userId')
@@ -84,10 +91,11 @@ export default function PaySimulationPage() {
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{tabs[k]}</button>
         ))}
       </div>
-      {tab !== 'company' && <PersonPicker person={person} onChange={choose} />}
+      {(tab === 'simulate' || tab === 'projection') && <PersonPicker person={person} onChange={choose} />}
       {tab === 'simulate' && person && <Simulate key={person.id} person={person} />}
       {tab === 'projection' && person && <PersonProjection key={person.id} person={person} />}
       {tab === 'company' && <CompanyProjection />}
+      {tab === 'increase' && <SalaryIncreaseTab />}
     </section>
   )
 }
