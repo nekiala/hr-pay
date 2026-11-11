@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ApiError, DEPARTURE_REASONS, api, download, downloadJob, longDay, money, openFile, personName, type Page, type User,
@@ -102,16 +102,17 @@ export default function PaySimulationPage() {
 
 function PersonPicker({ person, onChange }: { person: User | null; onChange: (u: User | null) => void }) {
   const [query, setQuery] = useState('')
-  const [people, setPeople] = useState<User[]>([])
+  const [people, setPeople] = useState<User[] | null>(null)
+  const [active, setActive] = useState(0)
+  const q = query.trim()
   useEffect(() => {
-    if (person) return
+    if (person || q.length < 2) { setPeople(null); return }
     const handle = setTimeout(() => {
-      const p = new URLSearchParams({ page: '0', size: '8' })
-      if (query.trim()) p.set('q', query.trim())
-      api<Page<User>>(`/api/users?${p}`).then((d) => setPeople(d.items)).catch(() => setPeople([]))
+      api<Page<User>>(`/api/users?${new URLSearchParams({ page: '0', size: '8', q })}`)
+        .then((d) => { setPeople(d.items); setActive(0) }).catch(() => setPeople([]))
     }, 250)
     return () => clearTimeout(handle)
-  }, [query, person])
+  }, [q, person])
   if (person) {
     return (
       <div className="card">
@@ -121,13 +122,35 @@ function PersonPicker({ person, onChange }: { person: User | null; onChange: (u:
       </div>
     )
   }
+  const keys = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (!people?.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, people.length - 1)) }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)) }
+    if (e.key === 'Enter') { e.preventDefault(); onChange(people[active]) }
+  }
   return (
     <div className="card">
       <h3>{t('Employee')}</h3>
-      <input type="search" placeholder={t('Search an employee')} value={query} onChange={(e) => setQuery(e.target.value)} />
-      <ul>{people.map((u) => (
-        <li key={u.id}><Button className="link" onClick={() => onChange(u)}>{personName(u)}</Button>{' '}<span className="muted">{u.registrationNo ?? ''}</span></li>
-      ))}</ul>
+      <input type="search" autoFocus placeholder={t('Search by name, employee ID or email')} value={query}
+        onChange={(e) => setQuery(e.target.value)} onKeyDown={keys} aria-controls="person-results" />
+      {q.length > 0 && q.length < 2 && <p className="hint">{t('Type at least 2 characters.')}</p>}
+      {people && people.length === 0 && <p className="muted">{t('No employee matches "{a}".', { a: q })}</p>}
+      {people && people.length > 0 && (
+        <ul id="person-results" className="person-results" role="listbox">
+          {people.map((u, i) => (
+            <li key={u.id} role="option" aria-selected={i === active}>
+              <button type="button" className={i === active ? 'on' : undefined} onMouseEnter={() => setActive(i)} onClick={() => onChange(u)}>
+                <span className="avatar">{`${u.firstName[0] ?? ''}${u.lastName[0] ?? ''}`.toUpperCase()}</span>
+                <span className="who">
+                  <strong>{personName(u)}</strong>
+                  <span className="muted small">{[u.registrationNo, u.unitName, u.siteName].filter(Boolean).join(' · ')}</span>
+                </span>
+                {u.status === 'DISABLED' && <span className="badge">{t('Disabled')}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
