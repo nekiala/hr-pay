@@ -1121,6 +1121,42 @@
      "system": true,
      "display_order": 85,
      "active": true
+    },
+    {
+     "id": 36,
+     "code": "CAMU_SOLIDARITY",
+     "name": "CAMU solidarity contribution",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 125,
+     "active": true
+    },
+    {
+     "id": 37,
+     "code": "TOL",
+     "name": "TOL (premises occupation tax)",
+     "kind": "DEDUCTION",
+     "method": "COMPUTED",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": false,
+     "taxable_ipr": false,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 126,
+     "active": true
     }
    ]
   },
@@ -1253,6 +1289,27 @@
      "unit": "COUNT",
      "description": "A child who studies full time counts until this age. A disabled child counts without age limit.",
      "display_order": 321
+    },
+    {
+     "code": "CAMU_SOLIDARITY",
+     "name": "CAMU solidarity contribution",
+     "unit": "PERCENT",
+     "description": "Withheld on the taxable pay (after the CNSS) above the monthly threshold.",
+     "display_order": 87
+    },
+    {
+     "code": "CAMU_SOLIDARITY_THRESHOLD",
+     "name": "CAMU solidarity contribution, monthly threshold",
+     "unit": "XAF",
+     "description": "Only the taxable pay above this monthly amount pays the contribution.",
+     "display_order": 88
+    },
+    {
+     "code": "TOL_MONTHLY",
+     "name": "TOL (premises occupation tax), per month",
+     "unit": "XAF",
+     "description": "Flat amount withheld once a month on the month-end payslip.",
+     "display_order": 89
     }
    ]
   },
@@ -1386,6 +1443,38 @@
      "effective_from": "2026-01-01",
      "value": 1200.0,
      "note": "Loi 42-2025 (loi de finances 2026), CGI art. 116 G",
+     "created_by": "system"
+    },
+    {
+     "id": 19,
+     "code": "SMIG_MONTHLY",
+     "effective_from": "2025-01-01",
+     "value": 70400.0,
+     "note": "Décret n° 2024-2762 du 20 novembre 2024",
+     "created_by": "system"
+    },
+    {
+     "id": 20,
+     "code": "CAMU_SOLIDARITY",
+     "effective_from": "2026-01-01",
+     "value": 0.5,
+     "note": "CongoPaie, CNSS et CAMU 2026 (to verify in the Journal officiel)",
+     "created_by": "system"
+    },
+    {
+     "id": 21,
+     "code": "CAMU_SOLIDARITY_THRESHOLD",
+     "effective_from": "2026-01-01",
+     "value": 500000.0,
+     "note": "CongoPaie, CNSS et CAMU 2026 (to verify in the Journal officiel)",
+     "created_by": "system"
+    },
+    {
+     "id": 22,
+     "code": "TOL_MONTHLY",
+     "effective_from": "2026-01-01",
+     "value": 1000.0,
+     "note": "CongoPaie, CNSS et CAMU 2026 (to verify in the Journal officiel)",
      "created_by": "system"
     }
    ]

@@ -93,6 +93,18 @@ Google Workspace > Gmail > Routing > SMTP relay service, allow the server's IP a
 domains", and require TLS. Then in `.env`: `SMTP_HOST=smtp-relay.gmail.com`, `SMTP_PORT=587`, `SMTP_AUTH=false`,
 `SMTP_EHLO=<DOMAIN>`, `MAIL_FROM` an address of your Google domain, and leave `SMTP_USERNAME` and `SMTP_PASSWORD` empty.
 
+## Product website on a second address
+
+Caddy can also serve the product website (the `website/` folder: home page, salary calculators, articles). Set
+`SITE_DOMAIN` in `.env` (for example `hrpay.cloud`, with `DOMAIN=platform.hrpay.cloud`), point its DNS record to this
+server, and run `./upgrade.sh`. On that address `/api` and `/iclock` still reach the app, and any path that is not a
+page of the website is sent to `DOMAIN`, so links and QR codes made with the old address keep working. The sign-in
+page then links to the calculators.
+
+Moving the app to a new `DOMAIN`: people sign in again once (sessions belong to an address), employees who installed
+the app on their phone install it again from the new address, and the Google and Microsoft sign-in redirect addresses
+must be added for the new `DOMAIN`.
+
 ## Sign in with Google
 
 People can sign in with their company's professional Google account (Google Workspace). Personal Gmail accounts are

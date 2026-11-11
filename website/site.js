@@ -15,7 +15,10 @@
     document.documentElement.lang = lang;
     document.querySelectorAll('[lang]:not(html)').forEach(function (el) { el.hidden = el.getAttribute('lang') !== lang; });
     document.querySelectorAll('[data-app-path]').forEach(function (a) { a.href = app + a.dataset.appPath; });
-    document.querySelectorAll('[data-demo-path]').forEach(function (a) { a.href = demo + a.dataset.demoPath; });
+    // Without a demo server, its buttons are hidden.
+    document.querySelectorAll('[data-demo-path]').forEach(function (a) {
+      if (demo) { a.href = demo + a.dataset.demoPath; } else { a.hidden = true; }
+    });
     var sw = document.querySelector('[data-switch]');
     if (sw) { sw.textContent = lang === 'fr' ? 'English' : 'Français'; }
     listeners.forEach(function (f) { f(lang); });

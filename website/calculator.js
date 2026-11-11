@@ -83,7 +83,9 @@
     CFP: ['Formation professionnelle', 'Vocational training'] };
   var CONGO_LINES = { IPR: ['ITS (impôt sur les traitements et salaires)', 'ITS (tax on salaries)'],
     CNSS_EMPLOYEE: ['CNSS pensions, part salariale', 'CNSS pensions, employee share'],
-    CNSS_EMPLOYER: ['CNSS pensions, part patronale', 'CNSS pensions, employer share'] };
+    CNSS_EMPLOYER: ['CNSS pensions, part patronale', 'CNSS pensions, employer share'],
+    CAMU_SOLIDARITY: ['CAMU, contribution de solidarité', 'CAMU solidarity contribution'],
+    TOL: ['TOL (taxe d\'occupation des locaux)', 'TOL (premises occupation tax)'] };
   var SOURCES = {
     CNSS_EMPLOYEE: ['CNSS salarié', 'CNSS employee'], CNSS_EMPLOYER: ['CNSS employeur', 'CNSS employer'],
     INPP_SMALL: ['INPP, jusqu\'à 50 salariés', 'INPP, up to 50 staff'], INPP_MEDIUM: ['INPP, 51 à 300 salariés', 'INPP, 51 to 300 staff'],
@@ -97,6 +99,9 @@
     TUS: ['TUS', 'TUS'], ITS_PROFESSIONAL_DEDUCTION: ['Abattement professionnel ITS', 'ITS professional deduction'],
     ITS_MAX_PARTS: ['Parts ITS, au plus', 'ITS parts, at most'], ITS_FIRST_BAND_FLAT: ['ITS, première tranche par part et par an', 'ITS, first band per part and year'],
     ITS_MINIMUM_YEARLY: ['ITS minimum par an', 'ITS minimum per year'],
+    CAMU_SOLIDARITY: ['CAMU, contribution de solidarité', 'CAMU solidarity contribution'],
+    CAMU_SOLIDARITY_THRESHOLD: ['CAMU solidarité : seuil mensuel', 'CAMU solidarity: monthly threshold'],
+    TOL_MONTHLY: ['TOL par mois', 'TOL per month'],
     CNAMGS_EMPLOYEE: ['CNAMGS salarié', 'CNAMGS employee'], CNAMGS_EMPLOYER: ['CNAMGS employeur', 'CNAMGS employer'],
     CNAMGS_CEILING: ['Plafond CNAMGS', 'CNAMGS ceiling'], CFC_EMPLOYEE: ['Crédit foncier salarié', 'Crédit foncier employee'],
     CFC_EMPLOYER: ['Crédit foncier employeur', 'Crédit foncier employer'], FNE: ['FNE', 'FNE'], CAC: ['CAC', 'CAC'],
@@ -105,7 +110,7 @@
     TAX_YEARLY_ALLOWANCE: ['Abattement annuel IRPP', 'IRPP yearly allowance'], TAX_EXEMPT_BELOW: ['IRPP : pas d\'impôt sous', 'IRPP: no tax below'],
     TAX_MAX_PARTS: ['Parts IRPP, au plus', 'IRPP parts, at most']
   };
-  var PERCENT = /^(CNSS_EMPLOYEE|CNSS_EMPLOYER|INPP_|ONEM|IERE|IPR_DEPENDANT_REDUCTION|IPR_CAP|CNSS_FAMILY$|CNSS_ACCIDENT|TUS|ITS_PROFESSIONAL|CNAMGS_EMPLOY|CFC_|FNE$|CAC$|TCS$|FNH$|CFP$|TAX_PROFESSIONAL)/;
+  var PERCENT = /^(CNSS_EMPLOYEE|CNSS_EMPLOYER|INPP_|ONEM|IERE|IPR_DEPENDANT_REDUCTION|IPR_CAP|CNSS_FAMILY$|CNSS_ACCIDENT|TUS|ITS_PROFESSIONAL|CNAMGS_EMPLOY|CFC_|FNE$|CAC$|TCS$|FNH$|CFP$|TAX_PROFESSIONAL|CAMU_SOLIDARITY$)/;
   var LOCAL = { CD: 'CDF', CG: 'XAF', CM: 'XAF', GA: 'XAF' };
   var SAMPLE = { CD: '1500000', CG: '400000', CM: '300000', GA: '600000' };
 

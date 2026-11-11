@@ -34,12 +34,13 @@ export default function LoginPage() {
   const [step, setStep] = useState<TwoStepNeeded | null>(null)
   const [codes, setCodes] = useState<{ codes: string[]; me: Me } | null>(null)
   const [demo, setDemo] = useState(false)
+  const [website, setWebsite] = useState<string | null>(null)
   const errorCode = params.get('error')
   const [error, setError] = useState<string | null>(errorCode ? PROVIDER_ERRORS[errorCode] ?? PROVIDER_ERRORS.provider : null)
 
   useEffect(() => {
     api<{ google: boolean; microsoft: boolean }>('/api/auth/providers').then(setProviders).catch(() => undefined)
-    void serverVersion().then((v) => setDemo(v.demo))
+    void serverVersion().then((v) => { setDemo(v.demo); setWebsite(v.websiteUrl) })
     // Back from Google or Microsoft with a second step to do.
     if (params.get('step') === 'two') {
       api<TwoStepNeeded>('/api/auth/two-step').then(setStep).catch((e: Error) => setError(e.message))
@@ -124,6 +125,11 @@ export default function LoginPage() {
         )}
         <LanguageToggle />
         <p className="small" style={{ textAlign: "center", margin: 0 }}><Link to="/trial">{t('Try HR Pay free for 30 days')}</Link></p>
+        {website && (
+          <p className="small" style={{ textAlign: "center", margin: 0 }}>
+            <a href={`${website}/calculateur-salaire-rdc.html`}>{t('Free salary calculators: gross to net, employer cost')}</a>
+          </p>
+        )}
       </Form>
       <PublicLinks />
     </div>

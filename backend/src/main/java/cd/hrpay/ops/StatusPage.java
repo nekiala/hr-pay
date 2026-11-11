@@ -36,8 +36,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class StatusPage {
 
-    /** demo: this server is the public demo, wiped every night. */
-    public record Version(String version, Instant builtAt, boolean demo) {}
+    /**
+     * demo: this server is the public demo, wiped every night. websiteUrl: the product website with the salary
+     * calculators, when there is one (null otherwise).
+     */
+    public record Version(String version, Instant builtAt, boolean demo, String websiteUrl) {}
 
     public record Update(long id, String body, OffsetDateTime createdAt) {}
 
@@ -61,11 +64,16 @@ public class StatusPage {
     private final AuditService audit;
     private final ObjectProvider<BuildProperties> build;
     private final boolean demo;
+    private final String websiteUrl;
 
     public StatusPage(JdbcClient jdbc, Tenants tenants, TransactionTemplate tx, AuditService audit,
                       ObjectProvider<BuildProperties> build,
-                      @org.springframework.beans.factory.annotation.Value("${app.demo.enabled:false}") boolean demo) {
+                      @org.springframework.beans.factory.annotation.Value("${app.demo.enabled:false}") boolean demo,
+                      @org.springframework.beans.factory.annotation.Value("${app.website-url:}") String websiteUrl,
+                      @org.springframework.beans.factory.annotation.Value("${app.site-domain:}") String siteDomain) {
         this.demo = demo;
+        this.websiteUrl = websiteUrl != null && !websiteUrl.isBlank() ? websiteUrl.trim().replaceAll("/+$", "")
+                : siteDomain != null && !siteDomain.isBlank() ? "https://" + siteDomain.trim() : null;
         this.jdbc = jdbc;
         this.tenants = tenants;
         this.tx = tx;
@@ -76,7 +84,7 @@ public class StatusPage {
     @GetMapping("/api/version")
     public Version version() {
         BuildProperties b = build.getIfAvailable();
-        return new Version(b == null ? "dev" : b.getVersion(), b == null ? null : b.getTime(), demo);
+        return new Version(b == null ? "dev" : b.getVersion(), b == null ? null : b.getTime(), demo, websiteUrl);
     }
 
     @GetMapping("/api/status")

@@ -20,6 +20,8 @@ echo "   $before -> $after"
 
 echo "== Building and restarting"
 docker compose up -d --build --remove-orphans
+# Caddy reads its Caddyfile at start only: reload it in case it changed (the website's files are read live).
+docker compose exec -T proxy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || echo "   (Caddy not reloaded)"
 
 echo "== Waiting for the app"
 for _ in $(seq 1 60); do
