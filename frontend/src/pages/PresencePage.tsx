@@ -7,6 +7,7 @@ import { useUnitFilter } from '../components/UnitFilter'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
 import { DateInput } from '../components/DateFields'
+import { TeamFitnessCard } from '../components/HealthCards'
 
 type Person = {
   userId: number; name: string; registrationNo: string; directionName: string | null; unitName: string | null; siteName: string | null
@@ -148,6 +149,7 @@ export default function PresencePage() {
           )}
         </>
       )}
+      <TeamFitnessCard />
     </section>
   )
 }

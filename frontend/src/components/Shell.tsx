@@ -6,7 +6,7 @@ import {
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
-  FlaskConical, Trophy, Gavel, Vote,
+  FlaskConical, Trophy, Gavel, Vote, HeartPulse,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -71,6 +71,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
         { to: '/discipline', label: t('Discipline'), icon: Gavel, show: any('discipline.manage', 'discipline.propose') },
         { to: '/representation', label: t('Staff representation'), icon: Vote, show: can('staff.representation') },
+        { to: '/health', label: t('Health and safety'), icon: HeartPulse, show: can('health.safety') },
         { to: '/departures', label: t('Departures'), icon: DoorOpen, show: pay && any('payroll.run', 'payroll.approve') },
         { to: '/sites', label: t('Sites'), icon: MapPin, show: att && any('site.read', 'site.manage') },
       ],

@@ -6,6 +6,7 @@ import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { PayDeclarationModal, STATUS_BADGE, statusLabel, type CalendarItem } from '../components/DeclarationStatus'
 import { localCurrency, t } from '../i18n'
+import { HealthDeadlinesCard } from '../components/HealthCards'
 
 type Rule = {
   kind: string; authority: string; declareDay: number; payDay: number; quarterlyUpToStaff: number | null
@@ -132,6 +133,8 @@ export default function DeclarationCalendarPage() {
           <p className="hint">{t('Penalties are estimates at these rates, to check with your tax adviser. A reminder goes out 5 days and 1 day before each due date, then weekly while late, to those who manage the declarations and to your accounting firm.')}</p>
         </div>
       )}
+
+      <HealthDeadlinesCard />
 
       {paying && <PayDeclarationModal item={paying} currency={cur} onClose={() => setPaying(null)}
         onSave={(body) => run(async () => { await api(`/api/declarations/${paying.month}/${paying.kind}/paid`, { method: 'POST', body }); setPaying(null) }, t('Payment recorded.'))} />}

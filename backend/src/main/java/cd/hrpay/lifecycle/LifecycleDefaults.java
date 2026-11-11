@@ -341,6 +341,53 @@ public class LifecycleDefaults {
 
                     Votre signature atteste votre accord avec cette mutation.""", "CONTRACT"));
 
+
+    /** The declaration of a work accident to the CNSS (DRC Loi 16/009 art. 65), a draft for the company to check. */
+    private static final List<Letter> HEALTH_LETTERS = List.of(
+            new Letter("HEALTH_ACCIDENT_DECLARATION", "LETTER", "Declaration of a work accident", "Déclaration d'accident du travail", """
+                    To the Director of the Caisse Nationale de Sécurité Sociale (CNSS)
+
+                    Subject: declaration of a work accident
+
+                    {{company.name}}, CNSS employer number {{company.cnss_no}}, {{company.address}}, declares the following accident.
+
+                    Victim: {{employee.name}}, born on {{employee.birth_date}}, CNSS number {{employee.cnss_no}}, {{job.title}}, hired on {{employee.hire_date}}.
+
+                    Kind: {{accident.kind}}
+                    Date and time: {{accident.date}} at {{accident.time}}
+                    Place: {{accident.place}}
+                    What happened: {{accident.description}}
+                    Injury: {{accident.injury}}
+                    First aid: {{accident.first_aid}}
+                    Witnesses: {{accident.witnesses}}
+                    Time off work: {{accident.days_off}}
+
+                    Copies: the labour inspection; the victim.
+
+                    Done at {{contract.signed_place}}, on {{today}}.
+                    {{company.representative}}, {{company.representative_title}}""", """
+                    À Monsieur le Directeur de la Caisse Nationale de Sécurité Sociale (CNSS)
+
+                    Objet : déclaration d'accident du travail
+
+                    {{company.name}}, numéro d'affiliation CNSS {{company.cnss_no}}, {{company.address}}, déclare l'accident suivant.
+
+                    Victime : {{employee.name}}, né(e) le {{employee.birth_date}}, numéro CNSS {{employee.cnss_no}}, {{job.title}}, engagé(e) le {{employee.hire_date}}.
+
+                    Nature : {{accident.kind}}
+                    Date et heure : {{accident.date}} à {{accident.time}}
+                    Lieu : {{accident.place}}
+                    Circonstances : {{accident.description}}
+                    Lésions : {{accident.injury}}
+                    Premiers soins : {{accident.first_aid}}
+                    Témoins : {{accident.witnesses}}
+                    Arrêt de travail : {{accident.days_off}}
+
+                    Copies : l'Inspection du travail ; la victime.
+
+                    Fait à {{contract.signed_place}}, le {{today}}.
+                    {{company.representative}}, {{company.representative_title}}""", "LETTER"));
+
     private final JdbcClient jdbc;
     private final Tenants tenants;
 
@@ -366,6 +413,7 @@ public class LifecycleDefaults {
                 tenants.runAs(id, this::addContractModels);
                 tenants.runAs(id, this::addDisciplineLetters);
                 tenants.runAs(id, this::addCareerLetters);
+                tenants.runAs(id, this::addHealthLetters);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -415,6 +463,29 @@ public class LifecycleDefaults {
     @Transactional
     public void addCareerLetters() {
         addLetters("CAREER_", CAREER_LETTERS_ADDED);
+    }
+
+    private static final String HEALTH_LETTERS_ADDED = "HEALTH_LETTERS_ADDED";
+
+    /** The work accident declaration, once per company. */
+    @Transactional
+    public void addHealthLetters() {
+        if (jdbc.sql("select count(*) from payroll_setting where key = ?").param(HEALTH_LETTERS_ADDED)
+                .query(Integer.class).single() > 0) {
+            return;
+        }
+        boolean fr = "fr".equals(jdbc.sql("select language from company where id = current_company_id()").query(String.class)
+                .optional().orElse("fr"));
+        for (Letter l : HEALTH_LETTERS) {
+            Long type = jdbc.sql("select id from document_type where code = ?").param(l.documentType()).query(Long.class)
+                    .optional().orElse(null);
+            jdbc.sql("""
+                    insert into letter_template (code, name, kind, body, requires_signature, document_type_id, updated_by)
+                    values (?, ?, ?, ?, false, ?, 'system') on conflict do nothing""")
+                    .params(l.code(), fr ? l.fr() : l.en(), l.kind(), (fr ? l.bodyFr() : l.bodyEn()).strip(), type).update();
+        }
+        jdbc.sql("insert into payroll_setting (key, value) values (?, 'true') on conflict do nothing")
+                .param(HEALTH_LETTERS_ADDED).update();
     }
 
     private void addLetters(String prefix, String flag) {
@@ -483,6 +554,7 @@ public class LifecycleDefaults {
         addContractModels();
         addDisciplineLetters();
         addCareerLetters();
+        addHealthLetters();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

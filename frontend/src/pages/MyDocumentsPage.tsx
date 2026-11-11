@@ -12,6 +12,7 @@ import { Modal } from '../components/Modal'
 import { t } from '../i18n'
 import { CertificatesTable, UploadModal } from './PersonLifecyclePage'
 import { MyDisciplineCard } from './DisciplinePage'
+import { MyHealthCard } from '../components/HealthCards'
 
 /** The person's own documents: what HR keeps for them, what waits for their signature, and certificates on request. */
 export default function MyDocumentsPage() {
@@ -105,6 +106,7 @@ export default function MyDocumentsPage() {
       {signing && <SignModal letter={signing} onOpen={() => open(`/api/my/letters/${signing.id}/file`)} onClose={() => setSigning(null)}
         onDone={async (message) => { setSigning(null); setInfo(message); await load() }} />}
       <MyDisciplineCard />
+      <MyHealthCard />
     </section>
   )
 }

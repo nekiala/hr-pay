@@ -125,6 +125,16 @@ public class Letters {
         m.put("career.pay_note", "Move: what happens to the pay");
         m.put("career.trial", "Move: trial period of the promotion");
         m.put("career.housing", "Move: housing when the place of work changes (art. 138)");
+        // A work accident's own fields, filled in by the accident register when it drafts the declaration.
+        m.put("accident.kind", "Accident: kind (at work, on the way, disease)");
+        m.put("accident.date", "Accident: date");
+        m.put("accident.time", "Accident: time");
+        m.put("accident.place", "Accident: place");
+        m.put("accident.description", "Accident: what happened");
+        m.put("accident.witnesses", "Accident: witnesses");
+        m.put("accident.injury", "Accident: injury");
+        m.put("accident.first_aid", "Accident: first aid given");
+        m.put("accident.days_off", "Accident: days off work");
         return m;
     }
 
