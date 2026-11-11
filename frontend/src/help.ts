@@ -320,7 +320,13 @@ Le congé non pris au 31 décembre n'est pas payé (art. 144) : la projection mo
 
 **Projection de l'entreprise** : la même chose pour tout le monde, ou pour une unité et tout ce qui est en dessous, additionnée par mois. Une grande entreprise la calcule en arrière-plan (Mes tâches). Export Excel.
 
-La permission « Simuler et projeter la paie » est donnée aux RH ; la page Rôles peut la donner à d'autres. Personne ne peut simuler sa propre paie.` },
+**Augmentation générale** : une révision du barème. Choisissez un pourcentage (avec un montant minimum et un arrondi si besoin), le mois de départ et les catégories ou grades (aucun coché : tout le barème). Les bases des grades augmentent, et chaque personne de ces grades reçoit le même montant sur son salaire de base (art. 86 : à travail égal, salaire égal) ; le complément de salaire ne change pas. Le résultat montre, par devise, le coût mensuel en plus (brut, net, charges patronales), le coût jusqu'au 31 décembre et sur 12 mois, les nouvelles bases face au minimum légal (art. 87 et 88) et chaque personne avant et après. Rien n'est enregistré.
+- Enregistrez plusieurs versions (par exemple 3 % et 5 %) et cochez-les pour les comparer côte à côte.
+- **Envoyer pour approbation** : la Finance ou un administrateur approuve, jamais la personne qui l'a préparée. L'approbation enregistre les salaires à partir du mois choisi ; les bases des grades changent ce mois-là.
+- **Mois déjà approuvés** : un départ dans le passé (12 mois au plus) donne un **rappel de salaire** sur la prochaine paie, soumis à la CNSS et à l'impôt.
+- **Annuler** : possible tant qu'aucune paie à partir de ce mois (ou du mois du rappel) n'est approuvée.
+
+La permission « Simuler et projeter la paie » est donnée aux RH ; la page Rôles peut la donner à d'autres. Personne ne peut simuler sa propre paie. « Préparer une augmentation générale » est donnée aux RH, « Approuver une augmentation générale » à la Finance et aux administrateurs.` },
     en: { title: 'Simulating pay and projecting the year', body: `
 **Simulate pay** works out one person's pay with the real payroll engine and saves nothing: it is not a payslip (Labour Code art. 103), has no number, is not in the livre de paie and the employee never sees it. Only the audit log keeps who looked at whose pay.
 
@@ -334,7 +340,13 @@ Leave not taken by 31 December is not paid (art. 144): the projection shows how 
 
 **Company projection**: the same for everyone, or for a unit and everything below it, added up by month. A large company runs it in the background (My jobs). Excel export.
 
-HR has the "Simulate and project pay" permission; the Roles page can give it to others. Nobody can simulate their own pay.` },
+**General increase**: a revision of the grade scale. Choose a percentage (with a minimum amount and rounding if needed), the start month and the categories or grades (none ticked: the whole scale). The grade bases go up, and everyone on those grades gets the same amount on their basic salary (art. 86: equal pay for equal work); the salary complement does not change. The result shows, by currency, the extra monthly cost (gross, net, employer charges), the cost to 31 December and over 12 months, the new bases against the legal minimum (art. 87 and 88) and each person before and after. Nothing is saved.
+- Save several versions (say 3% and 5%) and tick them to compare side by side.
+- **Send for approval**: Finance or an administrator approves, never the person who prepared it. Approval records the salaries from the chosen month; the grade bases change on that month.
+- **Months already approved**: a start in the past (12 months at most) gives **back pay** (Rappel de salaire) on the next payroll, subject to CNSS and income tax.
+- **Undo**: possible while no payroll from that month (or the back pay month) is approved.
+
+HR has the "Simulate and project pay" permission; the Roles page can give it to others. Nobody can simulate their own pay. HR prepares general increases; Finance and administrators approve them.` },
   },
   {
     id: 'annual-leave', audience: 'hr', routes: ['/payroll/runs/leave-pay', '/leave/settings'],

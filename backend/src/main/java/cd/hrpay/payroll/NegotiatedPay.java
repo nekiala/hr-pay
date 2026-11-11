@@ -297,6 +297,11 @@ public class NegotiatedPay {
      * complement included): every scheduled day worked, no overtime or one-off entries.
      */
     public PayslipCalculator.Result normalMonth(long userId, LocalDate on) {
+        return normalMonth(userId, on, null);
+    }
+
+    /** The same with another basic salary (a general increase being simulated); null keeps the recorded one. */
+    public PayslipCalculator.Result normalMonth(long userId, LocalDate on, BigDecimal basic) {
         var salary = salaries.on(userId, on).orElseThrow(() -> new BusinessRuleException("No basic salary recorded."));
         YearMonth ym = YearMonth.from(on);
         LocalDate today = LocalDate.now(clock);
@@ -317,7 +322,7 @@ public class NegotiatedPay {
         int children = counted.children();
         int inCharge = counted.dependants();
         boolean expatriate = files.contractOn(userId, on).map(EmployeeFile.Contract::expatriate).orElse(false);
-        return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), salary.grossMonthly(), minutes,
+        return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), basic != null ? basic : salary.grossMonthly(), minutes,
                 minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, pay.elements(),
                 pay.standingFor(userId, ym), List.of(), List.of(), rates, 0, null, null, seniorityPercent(userId, last)));
     }

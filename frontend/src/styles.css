@@ -664,3 +664,11 @@ select.auto-width { width: auto; min-width: 0; }
 .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px 24px; margin: 0; }
 .facts dt { font-size: 12px; line-height: 16px; color: var(--muted); font-weight: 500; }
 .facts dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+
+/* General salary increase: grade choices by category */
+.choice-group { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.choice-group:last-child { border-bottom: 0; }
+.grade-checks { display: flex; flex-wrap: wrap; gap: 4px 20px; padding-left: 26px; }
+.choice-group label.check { align-items: center; margin: 0; }
+.choice-group input[type=checkbox] { width: auto; margin: 0; }
+.danger-text { color: var(--danger); }

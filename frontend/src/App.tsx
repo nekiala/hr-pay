@@ -108,6 +108,13 @@ function Guard({ permission, children }: { permission?: string; children: ReactN
   return <>{children}</>
 }
 
+function SimulationRoute() {
+  const { can } = useAuth()
+  return can('payroll.simulate') || can('payroll.increase') || can('payroll.increase.approve')
+    ? <PaySimulationPage />
+    : <p className="notice">{t('You do not have permission to open this page.')}</p>
+}
+
 function AdvancesRoute() {
   const { can } = useAuth()
   return can('advance.manage') || can('payroll.pay')
@@ -250,7 +257,7 @@ export default function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/payroll" element={<PayrollRoute />} />
           <Route path="/payroll/reports" element={<Guard permission="payroll.report"><PayrollReportsPage /></Guard>} />
-          <Route path="/payroll/simulate" element={<Guard permission="payroll.simulate"><PaySimulationPage /></Guard>} />
+          <Route path="/payroll/simulate" element={<SimulationRoute />} />
           <Route path="/payroll/payments" element={<PaymentsRoute />} />
           <Route path="/payroll/payments/files/:id" element={<PaymentsRoute file />} />
           <Route path="/payroll/payments/ntpay" element={<NtpaySettingsPage />} />

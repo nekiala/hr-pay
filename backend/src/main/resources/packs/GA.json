@@ -1202,6 +1202,24 @@
      "system": true,
      "display_order": 235,
      "active": true
+    },
+    {
+     "id": 51,
+     "code": "SALARY_ARREARS",
+     "name": "Salary arrears (back pay)",
+     "kind": "EARNING",
+     "method": "MANUAL",
+     "default_amount": null,
+     "default_currency": null,
+     "percent": null,
+     "subject_to_cnss": true,
+     "taxable_ipr": true,
+     "ipr_exempt_cap_percent": null,
+     "prorated": false,
+     "default_for_all": false,
+     "system": true,
+     "display_order": 15,
+     "active": true
     }
    ]
   },
@@ -2373,6 +2391,18 @@
     {
      "role_id": 2,
      "permission_code": "payroll.simulate"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payroll.increase"
+    },
+    {
+     "role_id": 3,
+     "permission_code": "payroll.increase.approve"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "payroll.increase.approve"
     }
    ]
   },

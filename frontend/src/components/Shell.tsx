@@ -77,7 +77,7 @@ function useNav(): { title: string; items: Item[] }[] {
       items: [
         { to: '/payroll', label: t('Pay runs'), icon: Calculator, end: true, show: pay && any('payroll.run', 'payroll.approve', 'payslip.read.all') },
         { to: '/payroll/reports', label: t('Payroll reports'), icon: FileSpreadsheet, show: pay && can('payroll.report') },
-        { to: '/payroll/simulate', label: t('Simulate pay'), icon: FlaskConical, show: pay && can('payroll.simulate') },
+        { to: '/payroll/simulate', label: t('Simulate pay'), icon: FlaskConical, show: pay && any('payroll.simulate', 'payroll.increase', 'payroll.increase.approve') },
         { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
