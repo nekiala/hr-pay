@@ -546,7 +546,7 @@ export function currentPosition(): Promise<Position> {
 export const time = (iso: string, timeZone = 'Africa/Kinshasa') =>
   new Date(iso).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', timeZone })
 
-export type DayStatus = 'LEAVE' | 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
+export type DayStatus = 'LEAVE' | 'MISSION' | 'FUTURE' | 'NOT_STARTED' | 'IN_PROGRESS' | 'PRESENT' | 'ABSENT' | 'HOLIDAY' | 'REST_DAY' | 'NO_SCHEDULE'
 
 export type DayResult = {
   date: string
@@ -589,11 +589,89 @@ export type Mission = {
   endTime: string
   location: string
   purpose: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'CLOSED'
   requestedAt: string
   decidedBy: string | null
   decidedAt: string | null
   decisionNote: string | null
+}
+
+export type TravelMission = {
+  id: number
+  userId: number
+  employeeName: string
+  registrationNo: string | null
+  unitId: number | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'CLOSED'
+  step: 'MANAGER' | 'HR' | null
+  scope: 'DOMESTIC' | 'INTERNATIONAL'
+  countryCode: string
+  countryName: string
+  city: string
+  startDate: string
+  endDate: string
+  days: number
+  purpose: string
+  transport: 'PLANE' | 'ROAD' | 'BOAT' | 'TRAIN' | 'COMPANY_CAR' | 'OTHER'
+  costsBy: 'COMPANY' | 'HOST' | 'SPONSOR' | 'SHARED'
+  costsNote: string | null
+  lodgingByCompany: boolean
+  number: string | null
+  amendment: number
+  amendmentReason: string | null
+  requestedBy: string
+  requestedAt: string
+  firstApprovedBy: string | null
+  firstApprovedAt: string | null
+  decidedBy: string | null
+  decidedAt: string | null
+  decisionNote: string | null
+  zone: 'DOMESTIC' | 'AFRICA' | 'WORLD'
+  perDiemScale: number | null
+  perDiemRate: number | null
+  lodgingRate: number | null
+  currency: string
+  reportFiled: boolean
+  reportAt: string | null
+  reportDue: string
+  reportOverdue: boolean
+  closedBy: string | null
+  closedAt: string | null
+  canDecide: boolean
+  canManage: boolean
+  mine: boolean
+}
+
+export type MissionMoney = {
+  currency: string; perDiemDays: number; perDiem: number; nights: number; lodging: number; expensesAccepted: number
+  expensesWaiting: number; due: number; paid: number; returned: number; balance: number; excess: number
+}
+
+export type MissionExpense = {
+  id: number; spentOn: string; category: 'TRANSPORT' | 'LODGING' | 'MEALS' | 'VISA' | 'OTHER'; description: string
+  amount: number; currency: string; hasReceipt: boolean; receiptName: string | null; status: 'SUBMITTED' | 'ACCEPTED' | 'REFUSED'
+  decidedBy: string | null; decisionNote: string | null; createdBy: string
+}
+
+export type MissionPayment = {
+  id: number; kind: 'ADVANCE' | 'BALANCE' | 'REFUND'; number: string; amount: number; currency: string
+  status: 'APPROVED' | 'PAID' | 'RECEIVED' | 'CANCELLED'; note: string | null; createdAt: string; createdBy: string
+}
+
+export type TravelMissionDetail = {
+  mission: TravelMission; money: MissionMoney; expenses: MissionExpense[]; payments: MissionPayment[]; report: string | null
+}
+
+export type PerDiemRate = {
+  id: number; categoryId: number | null; categoryName: string | null; zone: 'DOMESTIC' | 'AFRICA' | 'WORLD'
+  amount: number; lodgingAmount: number; currency: string
+}
+
+export type MissionSettings = { transportOnTravel: 'STOP' | 'PAY'; secondApproval: 'INTERNATIONAL' | 'ALL' | 'NONE'; reportDays: number }
+
+export type MissionCheck = {
+  status: 'VALID' | 'ENDED' | 'CANCELLED'; number: string; amendment: number; company: string; employeeName: string
+  destination: string; startDate: string; endDate: string
 }
 
 export type MonthSummary = {

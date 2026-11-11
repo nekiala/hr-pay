@@ -15,6 +15,31 @@ export type Article = {
 
 export const ARTICLES: Article[] = [
   {
+    id: 'missions', audience: 'everyone', routes: ['/missions', '/mission-check'],
+    fr: { title: 'Missions et ordre de mission', body: `
+Une **mission** envoie un employé travailler ailleurs pour des jours entiers : à Lubumbashi pour un déploiement, au Japon pour une formation.
+
+1. **Demande** : l'employé la demande dans **Missions** (pays, ville, dates, objet), ou les RH la créent pour une ou plusieurs personnes.
+2. **Approbation** : le chef d'unité approuve. Pour une mission à l'étranger, les RH approuvent ensuite (réglable dans les paramètres).
+3. **Ordre de mission** : une fois approuvée, la mission reçoit un numéro (OM-2026-0001) et un PDF sur le papier à en-tête de l'entreprise, en français, avec une page en anglais pour l'étranger. Son **code QR** ouvre une page qui confirme, à un agent de l'aéroport ou à l'hôte, que l'ordre est authentique et valide.
+4. **Présence et paie** : chaque jour de travail de la mission compte comme travaillé et payé en entier, sans pointage. Le salaire ne change pas. L'indemnité de transport s'arrête ces jours-là si l'entreprise l'a choisi (l'employé ne fait pas le trajet domicile-travail).
+5. **Frais** : les RH versent une avance (per diem du barème, et l'hôtel si l'entreprise ne le réserve pas) par un fichier de paiement, hors bulletin. Pendant ou après la mission, l'employé ajoute ses dépenses avec la photo du reçu.
+6. **Retour** : l'employé dépose son rapport. Les RH acceptent ou refusent chaque dépense, puis **soldent** la mission : le reste dû est payé, ou l'employé rend le trop-perçu.
+
+Les frais de voyage ne sont pas de la rémunération pour la CNSS (RDC, arrêté 146/2018 art. 17). Un per diem au-dessus du barème de l'entreprise passe sur le bulletin comme salaire imposable, avec CNSS et impôt. Faites confirmer les montants du barème par votre conseiller paie.` },
+    en: { title: 'Missions and the mission order', body: `
+A **mission** sends an employee to work elsewhere for whole days: to Lubumbashi for a deployment, to Japan for a training session.
+
+1. **Request**: the employee asks in **Missions** (country, city, dates, purpose), or HR creates it for one or more people.
+2. **Approval**: the unit head approves. For a mission abroad, HR approves next (a setting).
+3. **Ordre de mission**: once approved, the mission gets a number (OM-2026-0001) and a PDF on the company letterhead, in French, with a page in English for missions abroad. Its **QR code** opens a page that tells an airport officer or the host that the order is genuine and valid.
+4. **Attendance and pay**: every working day of the mission counts as worked and fully paid, without checking in. The salary does not change. The transport allowance stops on those days if the company chose so (the employee does not commute).
+5. **Costs**: HR pays an advance (the per diem from the scale, and the hotel when the company does not book it) through a payment file, off the payslip. During or after the mission, the employee adds each cost with a photo of the receipt.
+6. **Return**: the employee files the report. HR accepts or refuses each cost, then **settles** the mission: what is still due is paid, or the employee gives back the difference.
+
+Travel costs are not pay for CNSS (DRC, Arrêté 146/2018 art. 17). A per diem above the company scale goes on the payslip as taxable pay, with CNSS and income tax. Have your payroll adviser confirm the scale amounts.` },
+  },
+  {
     id: 'first-steps', audience: 'admin', routes: ['/setup', '/company'],
     fr: { title: 'Mettre en place une nouvelle entreprise', body: `
 Le **guide de mise en place** (page d'accueil, ou Aide puis Mise en place) liste les étapes, dans l'ordre :
@@ -57,19 +82,19 @@ Open **Check in** and tap **In** when you arrive, **Out** when you leave. The ph
 - **On a phone**: add HR Pay to the home screen (My account, Phone) to open it like an app and get reminders.` },
   },
   {
-    id: 'leave', audience: 'everyone', routes: ['/leave', '/missions'],
+    id: 'leave', audience: 'everyone', routes: ['/leave'],
     fr: { title: 'Demander un congé ou une mission', body: `
 Dans **Congés**, choisissez le type, les dates (une demi-journée est possible sur un jour) et joignez un document si on vous le demande. Votre solde est affiché avant l'envoi.
 
 - La demande va au responsable de votre unité, ou à son adjoint s'il est absent.
 - Vous êtes prévenu de la décision par une notification et par e-mail.
-- Une **mission** se demande de la même façon dans **Missions** ; les jours de mission comptent comme travaillés.` },
+- Une **mission** se demande dans **Missions** ; les jours de mission comptent comme travaillés (voir l'article sur les missions).` },
     en: { title: 'Asking for leave or a mission', body: `
 In **Leave**, choose the type and the dates (half a day is possible on a single day) and attach a document when asked. Your balance shows before you send.
 
 - The request goes to your unit's head, or their deputy when they are away.
 - You are told of the decision by a notification and by email.
-- A **mission** is asked the same way in **Missions**; mission days count as worked.` },
+- A **mission** is asked in **Missions**; mission days count as worked (see the article on missions).` },
   },
   {
     id: 'payslips', audience: 'everyone', routes: ['/my/payslips', '/my/year'],
