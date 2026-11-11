@@ -72,6 +72,16 @@ public class CareerMoves {
         this.representation = representation;
     }
 
+    private cd.hrpay.position.JobCatalogue jobs;
+    private cd.hrpay.position.Positions positions;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setJobs(@org.springframework.context.annotation.Lazy cd.hrpay.position.JobCatalogue jobs,
+                 @org.springframework.context.annotation.Lazy cd.hrpay.position.Positions positions) {
+        this.jobs = jobs;
+        this.positions = positions;
+    }
+
     public CareerMoves(JdbcClient jdbc, EmployeeFile files, NegotiatedPay negotiated, MasterData masterData,
                        OrgStructure org, Letters letters, Company company, AuditService audit) {
         this.jdbc = jdbc;
@@ -165,6 +175,17 @@ public class CareerMoves {
             representation.requireAuthorisation(userId, "TRANSFER", in.effectiveOn());
         }
 
+        List<String> warnings = new ArrayList<>();
+        if (jobs != null && (toUnit != null || toOccupation != null)) {
+            Long job = toOccupation != null ? toOccupation : current == null ? null : current.occupationId();
+            jobs.requireTrialAllowed(job, trial == null ? 0 : trial);
+            positions.check(userId, toUnit != null ? toUnit : fromUnit, job, in.effectiveOn()).ifPresent(warnings::add);
+        }
+        if (jobs != null && (toGrade != null || toOccupation != null)) {
+            jobs.gradeOutside(toOccupation != null ? toOccupation : current.occupationId(),
+                    toGrade != null ? toGrade : current.gradeId()).ifPresent(warnings::add);
+        }
+
         Long contractId = null;
         if (toGrade != null || toOccupation != null) {
             long grade = toGrade != null ? toGrade : current.gradeId();
@@ -200,7 +221,6 @@ public class CareerMoves {
                 saved = find(id);
             }
         }
-        List<String> warnings = new ArrayList<>();
         if (toSite != null) {
             warnings.add(Texts.t("If the new site is outside the place of employment, the company owes decent housing for the worker and the family, or an allowance (Labour Code art. 138)."));
         }

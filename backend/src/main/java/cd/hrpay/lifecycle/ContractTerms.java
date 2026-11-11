@@ -92,6 +92,13 @@ public class ContractTerms {
                 Texts.in(company.language(), () -> issues(userId, c, t)), signedCountry);
     }
 
+    private cd.hrpay.position.JobCatalogue jobs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setJobs(@org.springframework.context.annotation.Lazy cd.hrpay.position.JobCatalogue jobs) {
+        this.jobs = jobs;
+    }
+
     @Transactional
     public View save(long userId, long contractId, Terms in) {
         EmployeeFile.Contract c = contract(userId, contractId);
@@ -101,6 +108,7 @@ public class ContractTerms {
         if (in.trialMonths() < 0 || in.trialMonths() > 6) {
             throw new BusinessRuleException("The trial is six months at most (Labour Code art. 43).");
         }
+        jobs.requireTrialAllowed(c.occupationId(), in.trialMonths());
         if (in.fixedTermReason() != null && !REASONS.contains(in.fixedTermReason())) {
             throw new BusinessRuleException("Choose the reason from the list.");
         }
@@ -217,6 +225,9 @@ public class ContractTerms {
                 out.add(new Issue("WARN", "CDD_PERMANENT_JOB", Texts.t("The job is permanent: the contract must be a permanent "
                         + "contract, or it will be held to be one (Labour Code art. 42).")));
             }
+        }
+        for (cd.hrpay.position.JobCatalogue.Issue i : jobs.contractIssues(c.occupationId(), c.gradeId(), t.trialMonths())) {
+            out.add(new Issue(i.level(), i.code(), i.message()));
         }
         if (t.medicalFitOn() == null) {
             out.add(new Issue("WARN", "MEDICAL", Texts.t("Record the medical fitness for work: the contract must state it "

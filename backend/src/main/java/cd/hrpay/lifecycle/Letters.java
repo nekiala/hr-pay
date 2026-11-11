@@ -85,6 +85,9 @@ public class Letters {
         m.put("contract.medical", "Medical fitness for work");
         m.put("contract.signed_place", "Place where the contract is signed");
         m.put("job.title", "Occupation");
+        m.put("job.purpose", "Purpose of the job (job description)");
+        m.put("job.duties", "Main duties (job description)");
+        m.put("job.requirements", "Education and experience required (job description)");
         m.put("job.grade", "Grade");
         m.put("job.category", "Grade category");
         m.put("job.grade_code", "Grade code");
@@ -371,6 +374,25 @@ public class Letters {
             }
             v.put("contract.signed_place", t.signedPlace() != null ? t.signedPlace() : company.representative().signingPlace());
             v.put("job.title", c.occupationName());
+            if (c.occupationId() != null) {
+                Integer signed = jdbc.sql("select occupation_version from employee_contract where id = ?").param(c.id())
+                        .query(Integer.class).optional().orElse(null);
+                jdbc.sql("""
+                        select purpose, duties, concat_ws('. ', education, experience) from occupation_version
+                        where occupation_id = ? and version = coalesce(?, (select version from occupation where id = ?))""")
+                        .params(c.occupationId(), signed, c.occupationId())
+                        .query(rs -> {
+                            if (rs.getString(1) != null) {
+                                v.put("job.purpose", rs.getString(1));
+                            }
+                            if (rs.getString(2) != null) {
+                                v.put("job.duties", rs.getString(2));
+                            }
+                            if (rs.getString(3) != null && !rs.getString(3).isBlank()) {
+                                v.put("job.requirements", rs.getString(3));
+                            }
+                        });
+            }
             v.put("job.grade", c.gradeCode() + " · " + c.gradeName());
             v.put("job.grade_code", c.gradeCode());
             v.put("job.echelon", c.gradeName());

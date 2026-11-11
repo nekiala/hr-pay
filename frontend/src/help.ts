@@ -472,6 +472,43 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - The Congo values are to be checked with your accountant.` },
   },
   {
+    id: 'jobs-positions', audience: 'hr', routes: ['/positions'],
+    fr: { title: 'Emplois et postes', body: `
+**Fiches de poste**
+- Chaque emploi a sa fiche : mission, principales tâches (une par ligne), formation, expérience, compétences et conditions de travail, avec sa famille, son rattachement et les grades dans lesquels il est payé.
+- Les grades donnent la catégorie légale (exécution, maîtrise, cadre). Un contrat dont le grade sort de la plage reçoit un avertissement.
+- Un emploi de manœuvre ne peut avoir qu'un essai d'un mois au plus (Code du travail RDC art. 43) : un essai plus long est refusé.
+- Chaque enregistrement garde une version. Un contrat garde la version en vigueur à sa signature ; la fiche PDF de la personne et les champs « fiche de poste » des modèles de contrat utilisent cette version.
+- L'employé retrouve sa fiche dans Mes documents.
+
+**Échelles de carrière**
+- Pour un emploi, les emplois suivants possibles, avec les années minimum dans l'emploi et la moyenne minimum des évaluations approuvées des deux dernières années. Une formation ou un diplôme requis se vérifie à la main.
+- La fiche de la personne montre les étapes suivantes et les conditions remplies ; l'onglet « Promouvables » liste qui les remplit toutes.
+- L'échelle ne promeut personne : la promotion passe par Carrière sur la fiche de la personne, avec son avenant.
+
+**Postes approuvés**
+- Par année, le nombre de postes de chaque emploi dans chaque unité, avec un budget facultatif, face aux personnes en place et à ce qui a été payé.
+- Partez de l'année précédente ou des personnes en place, puis ajustez.
+- Engager ou muter quelqu'un dans une unité sans poste libre donne un avertissement ; les RH peuvent continuer. Sans postes saisis pour l'année, rien n'est vérifié.` },
+    en: { title: 'Jobs and positions', body: `
+**Job descriptions**
+- Each job has its description: purpose, main duties (one per line), education, experience, skills and working conditions, with its family, who it reports to and the grades it is paid in.
+- The grades give the legal category (worker, supervisor, manager). A contract whose grade is outside the range gets a warning.
+- An unskilled job can only have a trial of one month at most (DRC Labour Code art. 43): a longer trial is refused.
+- Each save keeps a version. A contract keeps the version in force when it was signed; the person's PDF job description and the job description fields of contract templates use that version.
+- Employees find their job description under My documents.
+
+**Career ladders**
+- For a job, the possible next jobs, with the minimum years in the job and the minimum average of the approved evaluations of the last two years. A training or diploma required is checked by hand.
+- The person's page shows the next steps and which conditions are met; the Ready for promotion tab lists who meets them all.
+- A ladder promotes nobody: the promotion goes through Career moves on the person's page, with its amendment.
+
+**Approved positions**
+- For each year, the number of posts of each job in each unit, with an optional budget, against the people in place and what was paid.
+- Start from the year before or from the people in place, then adjust.
+- Hiring or moving someone into a unit with no free post gives a warning; HR can go on. With no posts entered for the year, nothing is checked.` },
+  },
+  {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],
     fr: { title: 'Obtenir de l’aide', body: `
 - **Signaler un problème** (menu de votre nom, ou cette page) : décrivez ce qui se passe ; la page ouverte et la version sont jointes automatiquement.

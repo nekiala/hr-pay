@@ -319,6 +319,7 @@ tr.selected td { background: var(--primary-soft); }
 .badge, .status-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border-strong);
   font-size: 12px; line-height: 18px; font-weight: 500; white-space: nowrap; background: var(--surface-3); color: var(--muted); }
 .badge.ok, .status-pill.in { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.ok-text { color: var(--ok); font-weight: 600; }
 .badge.off, .status-pill.absent { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
 .badge.warn, .status-pill.late { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
 .status-pill.away { background: var(--primary-soft); border-color: var(--accent); color: var(--accent); }
