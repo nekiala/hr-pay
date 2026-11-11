@@ -35,7 +35,7 @@ public class LeaveService {
 
     public record LeaveType(long id, String code, String name, boolean paid, boolean usesBalance,
                             boolean requiresDocument, Integer maxDays, boolean active, BigDecimal payPercent,
-                            boolean circumstance) {}
+                            boolean circumstance, boolean hrOnly) {}
 
     public record GradeCategory(long id, String code, String name, BigDecimal annualLeaveDays, boolean active,
                                 BigDecimal anniversaryRaisePercent, String raiseTiming, BigDecimal noticeBase,
@@ -106,8 +106,8 @@ public class LeaveService {
     // ---- Settings -------------------------------------------------------------------------------------------
 
     public List<LeaveType> types() {
-        return jdbc.sql("select id, code, name, paid, uses_balance, requires_document, max_days, active, pay_percent, circumstance"
-                + " from leave_type order by id")
+        return jdbc.sql("select id, code, name, paid, uses_balance, requires_document, max_days, active, pay_percent, circumstance,"
+                + " hr_only from leave_type order by id")
                 .query(LeaveType.class).list();
     }
 
@@ -591,6 +591,9 @@ public class LeaveService {
         LeaveType type = type(typeId);
         if (!type.active()) {
             throw new BusinessRuleException("This kind of leave is not available.");
+        }
+        if (type.hrOnly()) {
+            throw new BusinessRuleException("HR records this kind of leave itself.");
         }
         if (end.isBefore(start)) {
             throw new BusinessRuleException("The leave must end on or after its first day.");

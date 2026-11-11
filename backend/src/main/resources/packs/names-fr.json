@@ -243,5 +243,10 @@
  "TOL (premises occupation tax), per month": "TOL (taxe d'occupation des locaux), par mois",
  "Flat amount withheld once a month on the month-end payslip.": "Montant fixe retenu une fois par mois sur le bulletin de fin de mois.",
  "Salary arrears (back pay)": "Rappel de salaire",
- "Mission allowance (taxable excess)": "Indemnité de mission (excédent imposable)"
+ "Mission allowance (taxable excess)": "Indemnité de mission (excédent imposable)",
+ "Disciplinary suspension": "Mise à pied disciplinaire",
+ "Written warning": "Avertissement écrit",
+ "Reprimand": "Réprimande",
+ "Blame": "Blâme",
+ "Dismissal for serious misconduct": "Licenciement pour faute lourde"
 }

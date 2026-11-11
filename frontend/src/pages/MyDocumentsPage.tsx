@@ -11,6 +11,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
 import { CertificatesTable, UploadModal } from './PersonLifecyclePage'
+import { MyDisciplineCard } from './DisciplinePage'
 
 /** The person's own documents: what HR keeps for them, what waits for their signature, and certificates on request. */
 export default function MyDocumentsPage() {
@@ -103,6 +104,7 @@ export default function MyDocumentsPage() {
       {upload && <UploadModal mine types={data.uploadTypes} onClose={() => setUpload(false)} onDone={async () => { setUpload(false); setInfo(t('Sent to HR.')); await load() }} />}
       {signing && <SignModal letter={signing} onOpen={() => open(`/api/my/letters/${signing.id}/file`)} onClose={() => setSigning(null)}
         onDone={async (message) => { setSigning(null); setInfo(message); await load() }} />}
+      <MyDisciplineCard />
     </section>
   )
 }
