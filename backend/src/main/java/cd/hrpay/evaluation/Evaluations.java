@@ -49,15 +49,22 @@ public class Evaluations {
                              LocalDate periodStart, LocalDate periodEnd, long evaluatorId, String evaluatorName,
                              String status, BigDecimal totalPercent, String managerComment, String employeeComment,
                              String hrComment, OffsetDateTime submittedAt, OffsetDateTime answeredAt,
-                             String approvedBy, OffsetDateTime approvedAt, List<Score> scores) {}
+                             String approvedBy, OffsetDateTime approvedAt, List<Score> scores,
+                             List<ObjectiveScore> objectives) {}
 
     public record ScoreInput(long criterionId, BigDecimal score, String comment) {}
+
+    /** One objective scored in an evaluation, with its weight when the evaluation started. */
+    public record ObjectiveScore(long objectiveId, String title, String measure, String target, BigDecimal weight,
+                                 Integer progress, String checkinComment, BigDecimal score, String comment) {}
+
+    public record ObjectiveScoreInput(long objectiveId, BigDecimal score, String comment) {}
 
     private static final String EVAL_SELECT = """
             select e.id, e.user_id, person_name(u.first_name, u.middle_name, u.last_name) as user_name, e.template_id, t.name as template_name,
                    e.period_start, e.period_end, e.evaluator_id, person_name(v.first_name, v.middle_name, v.last_name) as evaluator_name,
                    e.status, e.total_percent, e.manager_comment, e.employee_comment, e.hr_comment, e.submitted_at,
-                   e.answered_at, e.approved_by, e.approved_at, null as scores
+                   e.answered_at, e.approved_by, e.approved_at, null as scores, null as objectives
             from evaluation e join app_user u on u.id = e.user_id join app_user v on v.id = e.evaluator_id
             join evaluation_template t on t.id = e.template_id
             """;
@@ -74,6 +81,13 @@ public class Evaluations {
     @org.springframework.beans.factory.annotation.Autowired
     void setOrg(cd.hrpay.org.OrgStructure org) {
         this.org = org;
+    }
+
+    private Objectives objectiveList;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setObjectives(@org.springframework.context.annotation.Lazy Objectives objectives) {
+        this.objectiveList = objectives;
     }
 
     public Evaluations(JdbcClient jdbc, UserRepository users, AttendanceDays attendance, AuditService audit, Clock clock) {
@@ -216,9 +230,15 @@ public class Evaluations {
                 select s.criterion_id, c.code, c.name, c.source, s.weight, s.score, s.comment
                 from evaluation_score s join evaluation_criterion c on c.id = s.criterion_id
                 where s.evaluation_id = ? order by s.weight desc, c.name""").param(e.id()).query(Score.class).list();
+        List<ObjectiveScore> objectives = jdbc.sql("""
+                select o.id as objective_id, o.title, o.measure, o.target, eo.weight, o.progress, o.checkin_comment,
+                       eo.score, eo.comment
+                from evaluation_objective eo join objective o on o.id = eo.objective_id
+                where eo.evaluation_id = ? order by eo.weight desc, o.id""").param(e.id()).query(ObjectiveScore.class).list();
         return new Evaluation(e.id(), e.userId(), e.userName(), e.templateId(), e.templateName(), e.periodStart(),
                 e.periodEnd(), e.evaluatorId(), e.evaluatorName(), e.status(), e.totalPercent(), e.managerComment(),
-                e.employeeComment(), e.hrComment(), e.submittedAt(), e.answeredAt(), e.approvedBy(), e.approvedAt(), scores);
+                e.employeeComment(), e.hrComment(), e.submittedAt(), e.answeredAt(), e.approvedBy(), e.approvedAt(), scores,
+                objectives);
     }
 
     /** Evaluations the current user may see, newest first: their own (once submitted), their team's, or all for HR. */
@@ -272,6 +292,7 @@ public class Evaluations {
                     .params(id, c.criterionId(), c.weight()).update();
         }
         fillAttendanceScores(id, user, p[0], p[1]);
+        syncObjectives(id, userId, p[1].getYear());
         audit.record("evaluation.started", "user", userId, Map.of("evaluation", id, "period", p[0] + ".." + p[1]));
         return withScores(head(id));
     }
@@ -294,6 +315,13 @@ public class Evaluations {
     /** The evaluator (or HR) saves scores; with submit, every manager score is required and the employee is asked. */
     @Transactional
     public Evaluation saveScores(long id, List<ScoreInput> scores, String managerComment, boolean submit) {
+        return saveScores(id, scores, List.of(), managerComment, submit);
+    }
+
+    /** The same, with the score of each objective; their weighted average is the objectives criterion's score. */
+    @Transactional
+    public Evaluation saveScores(long id, List<ScoreInput> scores, List<ObjectiveScoreInput> objectiveScores,
+                                 String managerComment, boolean submit) {
         Evaluation e = head(id);
         if (!Objects.equals(e.evaluatorId(), CurrentUser.id()) && !isHr()) {
             throw new AccessDeniedException("Only the evaluator or HR can change the scores.");
@@ -304,6 +332,17 @@ public class Evaluations {
         if (!List.of("DRAFT", "SUBMITTED", "CONTESTED").contains(e.status())) {
             throw new BusinessRuleException("This evaluation is " + e.status().toLowerCase() + " and can no longer be changed.");
         }
+        boolean byObjectives = syncObjectives(id, e.userId(), e.periodEnd().getYear());
+        java.util.Set<Long> mine = new java.util.HashSet<>(jdbc.sql("select objective_id from evaluation_objective where evaluation_id = ?")
+                .param(id).query(Long.class).list());
+        for (ObjectiveScoreInput o : objectiveScores) {
+            if (!mine.contains(o.objectiveId())) {
+                throw new BusinessRuleException("This objective is not part of the evaluation.");
+            }
+            jdbc.sql("update evaluation_objective set score = ?, comment = ? where evaluation_id = ? and objective_id = ?")
+                    .params(o.score(), o.comment() == null || o.comment().isBlank() ? null : o.comment().strip(), id,
+                            o.objectiveId()).update();
+        }
         Map<Long, Score> current = new LinkedHashMap<>();
         withScores(e).scores().forEach(s -> current.put(s.criterionId(), s));
         for (ScoreInput s : scores) {
@@ -311,11 +350,14 @@ public class Evaluations {
             if (c == null) {
                 throw new BusinessRuleException("This criterion is not part of the evaluation.");
             }
-            if (c.source().equals("ATTENDANCE")) {
-                continue;   // computed from attendance
+            if (c.source().equals("ATTENDANCE") || (c.source().equals("OBJECTIVES") && byObjectives)) {
+                continue;   // computed from attendance, or from the objectives' scores
             }
             jdbc.sql("update evaluation_score set score = ?, comment = ? where evaluation_id = ? and criterion_id = ?")
                     .params(s.score(), s.comment(), id, s.criterionId()).update();
+        }
+        if (byObjectives) {
+            fillObjectivesScore(id);
         }
         jdbc.sql("update evaluation set manager_comment = ? where id = ?").params(managerComment, id).update();
         if (submit) {
@@ -354,6 +396,48 @@ public class Evaluations {
         audit.record(acknowledge ? "evaluation.acknowledged" : "evaluation.contested", "user", e.userId(),
                 Map.of("evaluation", id));
         return withScores(head(id));
+    }
+
+    /**
+     * Brings the person's shared objectives of the year into an evaluation whose template scores objectives: new
+     * ones are added, cancelled ones removed, weights follow the objectives until the evaluation is submitted.
+     * Whether the evaluation is scored by objectives (false: none shared, the manager scores the criterion by hand).
+     */
+    private boolean syncObjectives(long evaluationId, long userId, int year) {
+        boolean scored = jdbc.sql("""
+                select count(*) from evaluation_score s join evaluation_criterion c on c.id = s.criterion_id
+                where s.evaluation_id = ? and c.source = 'OBJECTIVES'""").param(evaluationId).query(Integer.class).single() > 0;
+        if (!scored || objectiveList == null) {
+            return false;
+        }
+        String status = jdbc.sql("select status from evaluation where id = ?").param(evaluationId).query(String.class).single();
+        if (status.equals("DRAFT") || status.equals("CONTESTED")) {
+            List<Objectives.Objective> live = objectiveList.forEvaluation(userId, year);
+            List<Long> ids = live.stream().map(Objectives.Objective::id).toList();
+            jdbc.sql("delete from evaluation_objective where evaluation_id = ? and not (objective_id = any (?))")
+                    .params(evaluationId, ids.toArray(new Long[0])).update();
+            for (Objectives.Objective o : live) {
+                jdbc.sql("""
+                        insert into evaluation_objective (evaluation_id, objective_id, weight) values (?, ?, ?)
+                        on conflict (evaluation_id, objective_id) do update set weight = excluded.weight""")
+                        .params(evaluationId, o.id(), o.weight()).update();
+            }
+        }
+        return jdbc.sql("select count(*) from evaluation_objective where evaluation_id = ?").param(evaluationId)
+                .query(Integer.class).single() > 0;
+    }
+
+    /** The objectives criterion's score: the weighted average once every objective is scored. */
+    private void fillObjectivesScore(long evaluationId) {
+        List<BigDecimal[]> rows = jdbc.sql("select score, weight from evaluation_objective where evaluation_id = ?")
+                .param(evaluationId).query((rs, i) -> new BigDecimal[] {rs.getBigDecimal(1), rs.getBigDecimal(2)}).list();
+        boolean complete = rows.stream().allMatch(r -> r[0] != null);
+        BigDecimal score = complete && !rows.isEmpty() ? Objectives.weighted(rows) : null;
+        String comment = cd.hrpay.i18n.Texts.t("%d objectives, %d scored", rows.size(), rows.stream().filter(r -> r[0] != null).count());
+        jdbc.sql("""
+                update evaluation_score s set score = ?, comment = ? from evaluation_criterion c
+                where s.criterion_id = c.id and c.source = 'OBJECTIVES' and s.evaluation_id = ?""")
+                .params(score, comment, evaluationId).update();
     }
 
     /** HR's final decision. A contested evaluation needs HR's comment. */

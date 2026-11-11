@@ -35,6 +35,7 @@ import DisciplinePage from './pages/DisciplinePage'
 import StaffRepresentationPage from './pages/StaffRepresentationPage'
 import HealthSafetyPage from './pages/HealthSafetyPage'
 import PositionsPage from './pages/PositionsPage'
+import ObjectivesPage from './pages/ObjectivesPage'
 import DisciplineSettingsPage from './pages/DisciplineSettingsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
@@ -309,6 +310,7 @@ export default function App() {
           <Route path="/payroll/sector" element={<Guard permission="masterdata.manage"><SectorPage /></Guard>} />
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
           <Route path="/evaluations" element={<EvaluationsPage />} />
+          <Route path="/objectives" element={<ObjectivesPage />} />
           <Route path="/evaluations/settings" element={<Guard permission="evaluation.manage"><EvaluationSettingsPage /></Guard>} />
           <Route path="/evaluations/:id" element={<EvaluationPage />} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
