@@ -82,6 +82,23 @@ public class AttendanceDays {
                 .toList();
     }
 
+    /**
+     * Weekday overtime not recorded (a simulation's "what if"), priced with the person's overtime policy in force on a
+     * date: the minutes weighted by the policy's tiers, as if worked in one week.
+     */
+    public BigDecimal weightedWeekdayOvertime(AppUser user, LocalDate on, int minutes) {
+        if (minutes <= 0) {
+            return BigDecimal.ZERO;
+        }
+        String country = user.getSite() == null ? "CD" : user.getSite().getCountryCode();
+        OvertimePolicy policy = policies.findFirstByCountryCodeAndEffectiveFromLessThanEqualOrderByEffectiveFromDesc(
+                country, on).orElse(null);
+        LocalDate monday = on.with(java.time.DayOfWeek.MONDAY);
+        return cd.hrpay.overtime.OvertimeValuation.price(List.of(new cd.hrpay.overtime.OvertimeValuation.Approved(monday,
+                        cd.hrpay.overtime.OvertimeRateTier.Kind.WEEKDAY, minutes)), policy == null ? List.of() : policy.getTiers())
+                .stream().map(cd.hrpay.overtime.OvertimeValuation.Priced::weightedMinutes).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
     /** Month to date. Earnings are only filled in when {@code withEarnings} is true (the caller may see salaries). */
     @Transactional // not read-only: the calendar creates a year's holiday dates on first use
     public MonthSummary month(AppUser user, YearMonth month, boolean withEarnings) {

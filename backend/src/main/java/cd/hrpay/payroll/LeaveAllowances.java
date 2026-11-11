@@ -186,7 +186,83 @@ public class LeaveAllowances {
         return new RunResult(done, skipped);
     }
 
+    /** One month's share of an allowance: its working days, gross and the advance (net) paid before the leave. */
+    public record Part(LocalDate month, BigDecimal days, BigDecimal grossAmount, BigDecimal advanceAmount) {}
+
+    /** An allowance worked out, before it is stored (a simulation stops here). */
+    public record Worked(Due due, String currency, BigDecimal days, BigDecimal monthly, BigDecimal perMonth, BigDecimal daily,
+                         BigDecimal salaryPart, BigDecimal variable, int monthsCounted, BigDecimal variablePart,
+                         PayslipCalculator.Result result, List<PayslipCalculator.Line> lines, BigDecimal gross,
+                         BigDecimal net, BigDecimal netShare, LocalDate payBy, List<String> explanation,
+                         ExchangeRates.Rate usd, PayslipCalculator.Rates rates, List<Part> parts) {}
+
+    /**
+     * The allowance of annual leave from {@code start} to {@code end} as it would be worked out today, for a simulation
+     * or a projection: nothing is stored. The working days are counted on the person's schedule.
+     */
+    public Worked simulate(long userId, LocalDate start, LocalDate end) {
+        if (end.isBefore(start)) {
+            throw new BusinessRuleException("The leave ends before it starts.");
+        }
+        AppUser user = users.find(userId);
+        BigDecimal days = leave.workingDays(user, start, end);
+        if (days.signum() <= 0) {
+            throw new BusinessRuleException("No working day in this leave.");
+        }
+        return work(new Due(0, userId, user.fullName(), user.getRegistrationNo(), start, end, days, payBy(user, start)));
+    }
+
+    /** The allowance of a recorded annual leave (whatever its status), worked out today and not stored. */
+    public Worked simulate(long leaveRequestId) {
+        record R(long userId, LocalDate startDate, LocalDate endDate, BigDecimal workingDays, String code) {}
+        R r = jdbc.sql("""
+                select r.user_id, r.start_date, r.end_date, r.working_days, t.code from leave_request r
+                join leave_type t on t.id = r.leave_type_id where r.id = ?""").param(leaveRequestId).query(R.class).optional()
+                .orElseThrow(() -> new NotFoundException("Leave request not found."));
+        if (!"ANNUAL".equals(r.code())) {
+            throw new BusinessRuleException("Only annual leave gets a leave allowance.");
+        }
+        AppUser user = users.find(r.userId());
+        return work(new Due(leaveRequestId, r.userId(), user.fullName(), user.getRegistrationNo(), r.startDate(), r.endDate(),
+                r.workingDays(), payBy(user, r.startDate())));
+    }
+
     private Allowance calculateOne(Due d) {
+        Worked w = work(d);
+        Map<String, Object> snapshot;
+        try {
+            snapshot = runs.compute(runs.context(YearMonth.from(d.startDate()), w.rates(), w.usd().cdfPerUnit()), d.userId(), false).snapshot();
+        } catch (RuntimeException e) {
+            snapshot = null;
+        }
+        if (snapshot == null) {
+            AppUser user = users.find(d.userId());
+            snapshot = new java.util.LinkedHashMap<>();
+            snapshot.put("name", user.fullName());
+            snapshot.put("registrationNo", user.getRegistrationNo());
+        }
+        PayslipCalculator.Result r = w.result();
+        BigDecimal net = w.net();
+        long id = jdbc.sql("""
+                insert into leave_allowance (leave_request_id, user_id, currency, days, monthly_salary, days_per_month, daily_rate,
+                    salary_part, variable_12m, months_counted, variable_part, gross, net_share, advance, pay_by, explanation, calculated_by,
+                    lines, cnss_base, taxable_base, taxable_base_cdf, employee_deductions, net, employer_charges, usd_cdf, rate_date, snapshot)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))
+                returning id""")
+                .params(d.leaveRequestId(), d.userId(), w.currency(), w.days(), money(w.monthly()), w.perMonth(), w.daily(),
+                        w.salaryPart(), w.variable(), w.monthsCounted(), w.variablePart(), w.gross(), w.netShare(), money(net),
+                        w.payBy(), json.writeValueAsString(w.explanation()), CurrentUser.email(),
+                        json.writeValueAsString(w.lines()), r.cnssBase(), r.taxableBase(), r.taxableBaseCdf(), r.employeeDeductions(),
+                        net, r.employerCharges(), w.usd().cdfPerUnit(), w.usd().rateDate(), json.writeValueAsString(snapshot))
+                .query(Long.class).single();
+        for (Part part : w.parts()) {
+            jdbc.sql("insert into leave_allowance_month (allowance_id, month, days, gross_amount, advance_amount) values (?, ?, ?, ?, ?)")
+                    .params(id, part.month(), part.days(), part.grossAmount(), part.advanceAmount()).update();
+        }
+        return find(id);
+    }
+
+    private Worked work(Due d) {
         AppUser user = users.find(d.userId());
         LocalDate start = d.startDate();
         YearMonth ym = YearMonth.from(start);
@@ -290,52 +366,30 @@ public class LeaveAllowances {
         BigDecimal netShare = gross.signum() == 0 ? BigDecimal.ONE
                 : net.divide(gross, 4, RoundingMode.HALF_UP).max(BigDecimal.ZERO).min(BigDecimal.ONE);
 
-        Map<String, Object> snapshot;
-        try {
-            snapshot = runs.compute(runs.context(ym, rates, usd.cdfPerUnit()), d.userId(), false).snapshot();
-        } catch (RuntimeException e) {
-            snapshot = null;
-        }
-        if (snapshot == null) {
-            snapshot = new java.util.LinkedHashMap<>();
-            snapshot.put("name", user.fullName());
-            snapshot.put("registrationNo", user.getRegistrationNo());
-        }
-        long id = jdbc.sql("""
-                insert into leave_allowance (leave_request_id, user_id, currency, days, monthly_salary, days_per_month, daily_rate,
-                    salary_part, variable_12m, months_counted, variable_part, gross, net_share, advance, pay_by, explanation, calculated_by,
-                    lines, cnss_base, taxable_base, taxable_base_cdf, employee_deductions, net, employer_charges, usd_cdf, rate_date, snapshot)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), ?, cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb))
-                returning id""")
-                .params(d.leaveRequestId(), d.userId(), cur, days, money(monthly), perMonth, daily, salaryPart, variable,
-                        months, variablePart, gross, netShare, money(net), payBy, json.writeValueAsString(why), CurrentUser.email(),
-                        json.writeValueAsString(lines), r.cnssBase(), r.taxableBase(), r.taxableBaseCdf(), r.employeeDeductions(),
-                        net, r.employerCharges(), usd.cdfPerUnit(), usd.rateDate(), json.writeValueAsString(snapshot))
-                .query(Long.class).single();
-
         // Split by the months the leave covers, in proportion to its working days in each.
-        List<LocalDate[]> parts = new ArrayList<>();
+        List<LocalDate[]> spans = new ArrayList<>();
         for (YearMonth m = ym; !m.isAfter(YearMonth.from(d.endDate())); m = m.plusMonths(1)) {
             LocalDate from = start.isAfter(m.atDay(1)) ? start : m.atDay(1);
             LocalDate to = d.endDate().isBefore(m.atEndOfMonth()) ? d.endDate() : m.atEndOfMonth();
-            parts.add(new LocalDate[] {from, to});
+            spans.add(new LocalDate[] {from, to});
         }
-        List<BigDecimal> inMonth = parts.stream().map(x -> parts.size() == 1 ? days : leave.workingDays(user, x[0], x[1])).toList();
+        List<BigDecimal> inMonth = spans.stream().map(x -> spans.size() == 1 ? days : leave.workingDays(user, x[0], x[1])).toList();
         BigDecimal total = inMonth.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal grossLeft = gross;
         BigDecimal netLeft = money(net);
-        for (int i = 0; i < parts.size(); i++) {
-            BigDecimal share = total.signum() == 0 ? BigDecimal.ONE.divide(BigDecimal.valueOf(parts.size()), 6, RoundingMode.HALF_UP)
+        List<Part> parts = new ArrayList<>();
+        for (int i = 0; i < spans.size(); i++) {
+            BigDecimal share = total.signum() == 0 ? BigDecimal.ONE.divide(BigDecimal.valueOf(spans.size()), 6, RoundingMode.HALF_UP)
                     : inMonth.get(i).divide(total, 6, RoundingMode.HALF_UP);
-            boolean lastPart = i == parts.size() - 1;
+            boolean lastPart = i == spans.size() - 1;
             BigDecimal g = lastPart ? grossLeft : money(gross.multiply(share));
             BigDecimal a = lastPart ? netLeft : money(net.multiply(share));
             grossLeft = grossLeft.subtract(g);
             netLeft = netLeft.subtract(a);
-            jdbc.sql("insert into leave_allowance_month (allowance_id, month, days, gross_amount, advance_amount) values (?, ?, ?, ?, ?)")
-                    .params(id, parts.get(i)[0].withDayOfMonth(1), inMonth.get(i), g, a).update();
+            parts.add(new Part(spans.get(i)[0].withDayOfMonth(1), inMonth.get(i), g, a));
         }
-        return find(id);
+        return new Worked(d, cur, days, monthly, perMonth, daily, salaryPart, variable, months, variablePart, r, lines,
+                gross, net, netShare, payBy, why, usd, rates, parts);
     }
 
     // ---- list, approve, pay, cancel ---------------------------------------------------------------------------

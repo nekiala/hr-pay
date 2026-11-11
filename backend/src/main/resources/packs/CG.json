@@ -2230,6 +2230,10 @@
     {
      "role_id": 1,
      "permission_code": "matricule.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "payroll.simulate"
     }
    ]
   },

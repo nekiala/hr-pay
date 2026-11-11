@@ -101,16 +101,13 @@ public class AnniversaryRaises {
                 if (anniversary.isBefore(from) || alreadyApplied(userId, anniversary)) {
                     continue;
                 }
-                var contract = files.contractOn(userId, anniversary).orElse(null);
-                if (contract == null || !contract.contractType().equals("PERMANENT")) {
+                Rule rule = rule(userId, anniversary);
+                if (rule == null) {
                     continue;   // not permanent on that day
                 }
-                MasterData.Grade grade = masterData.grade(contract.gradeId());
-                String timing = jdbc.sql("select raise_timing from grade_category where id = ?").param(grade.categoryId())
-                        .query(String.class).single();
-                BigDecimal percent = masterData.raisePercent(grade.categoryId());
-                LocalDate effective = timing.equals("ANNIVERSARY_MONTH") ? anniversary.withDayOfMonth(1)
-                        : YearMonth.from(anniversary).plusMonths(1).atDay(1);
+                MasterData.Grade grade = rule.grade();
+                BigDecimal percent = rule.percent();
+                LocalDate effective = rule.effective();
                 AppUser user = users.findById(userId).orElseThrow();
                 String name = user.fullName();
                 var current = salaries.on(userId, effective.minusDays(1)).orElse(null);
@@ -153,6 +150,61 @@ public class AnniversaryRaises {
             }
         }
         return new Outcome(applied, skipped);
+    }
+
+    /** The grade, its category's raise percentage and the date the raise of an anniversary takes effect. */
+    private record Rule(MasterData.Grade grade, BigDecimal percent, LocalDate effective) {}
+
+    /** The raise rule on an anniversary, or null when the person is not permanent that day. */
+    private Rule rule(long userId, LocalDate anniversary) {
+        var contract = files.contractOn(userId, anniversary).orElse(null);
+        if (contract == null || !contract.contractType().equals("PERMANENT")) {
+            return null;
+        }
+        MasterData.Grade grade = masterData.grade(contract.gradeId());
+        String timing = jdbc.sql("select raise_timing from grade_category where id = ?").param(grade.categoryId())
+                .query(String.class).single();
+        BigDecimal percent = masterData.raisePercent(grade.categoryId());
+        LocalDate effective = timing.equals("ANNIVERSARY_MONTH") ? anniversary.withDayOfMonth(1)
+                : YearMonth.from(anniversary).plusMonths(1).atDay(1);
+        return new Rule(grade, percent, effective);
+    }
+
+    /** A raise the daily job has not applied yet, as it will work it out (for a projection; nothing is saved). */
+    public record Planned(LocalDate anniversaryDate, int years, LocalDate effectiveFrom, String gradeCode,
+                          BigDecimal percent, BigDecimal gradeBase, BigDecimal raiseAmount, String currency) {}
+
+    /**
+     * The anniversary raises of one person not applied yet, up to an anniversary date, with the rules recorded today
+     * (contract, grade, category percentage and timing). The amount is the grade's base times the percentage, as the
+     * daily job adds it to the basic then in force.
+     */
+    public List<Planned> upcoming(long userId, LocalDate until) {
+        LocalDate from = LocalDate.parse(settings.setting("RAISES_FROM"));
+        LocalDate start = jdbc.sql("""
+                select min(start_date) from employee_contract where user_id = ? and contract_type = 'PERMANENT'""")
+                .param(userId).query(LocalDate.class).optional().orElse(null);
+        List<Planned> out = new ArrayList<>();
+        if (start == null) {
+            return out;
+        }
+        for (int years = 1; ; years++) {
+            LocalDate anniversary = start.plusYears(years);
+            if (anniversary.isAfter(until)) {
+                break;
+            }
+            if (anniversary.isBefore(from) || alreadyApplied(userId, anniversary)) {
+                continue;
+            }
+            Rule rule = rule(userId, anniversary);
+            if (rule == null || rule.percent().signum() == 0) {
+                continue;
+            }
+            BigDecimal raise = rule.grade().baseSalary().multiply(rule.percent()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            out.add(new Planned(anniversary, years, rule.effective(), rule.grade().code(), rule.percent(),
+                    rule.grade().baseSalary(), raise, rule.grade().currency()));
+        }
+        return out;
     }
 
     private boolean alreadyApplied(long userId, LocalDate anniversary) {

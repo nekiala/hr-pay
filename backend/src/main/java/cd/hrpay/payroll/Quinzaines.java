@@ -158,6 +158,146 @@ public class Quinzaines {
         return categories();
     }
 
+    /** One person's quinzaine line worked out, or why they get none. */
+    public record Assessed(String skipped, String currency, String category, BigDecimal percent, BigDecimal base,
+                           BigDecimal normalNet, BigDecimal workedShare, BigDecimal earnedNet, BigDecimal amount,
+                           LocalDate payDate, List<String> explanation) {
+        static Assessed skip(String why) {
+            return new Assessed(why, null, null, null, null, null, null, null, null, null, List.of());
+        }
+    }
+
+    private Assessed assess(Candidate c, Settings s, YearMonth month, LocalDate payDate, BigDecimal[] usd) {
+        LocalDate first = month.atDay(1);
+        LocalDate last = month.atEndOfMonth();
+        String who = c.employeeName();
+        if (refused(c.userId())) {
+            return Assessed.skip(Texts.t("%s: asked not to receive the quinzaine.", who));
+        }
+        String excluded = jdbc.sql("select reason from quinzaine_exclusion where month = ? and user_id = ?")
+                .params(first, c.userId()).query(String.class).optional().orElse(null);
+        if (excluded != null) {
+            return Assessed.skip(Texts.t("%s: left out by HR for this month (%s).", who, excluded));
+        }
+        if (c.percent() == null) {
+            return Assessed.skip(Texts.t("%s: the category %s has no quinzaine rate.", who, c.category()));
+        }
+        if (jdbc.sql("select count(*) from departure where user_id = ? and status = 'CONFIRMED' and last_day <= ?")
+                .params(c.userId(), last).query(Integer.class).single() > 0) {
+            return Assessed.skip(Texts.t("%s: leaves this month; the final settlement pays the month.", who));
+        }
+        if (jdbc.sql("""
+                select count(*) from leave_request r join leave_type t on t.id = r.leave_type_id
+                where r.user_id = ? and r.status = 'APPROVED' and not t.paid and r.start_date <= ? and r.end_date >= ?""")
+                .params(c.userId(), payDate, payDate).query(Integer.class).single() > 0) {
+            return Assessed.skip(Texts.t("%s: on unpaid leave on the pay day.", who));
+        }
+        PayslipCalculator.Result normal;
+        try {
+            normal = negotiated.normalMonth(c.userId(), payDate);
+        } catch (BusinessRuleException e) {
+            return Assessed.skip(who + ": " + Texts.translate(e.getMessage()));
+        }
+        String cur = normal.currency();
+        BigDecimal net = money(normal.net());
+        if (net.signum() <= 0) {
+            return Assessed.skip(Texts.t("%s: no net pay in a normal month.", who));
+        }
+        List<String> why = new ArrayList<>();
+
+        // Loans and advances owed.
+        List<Owed> owed = jdbc.sql("""
+                select trim(l.currency) as currency, sum(l.principal - coalesce((select sum(r.amount) from loan_repayment r
+                       where r.loan_id = l.id), 0)) as balance
+                from loan l where l.user_id = ? and l.status = 'ACTIVE' group by l.currency""")
+                .param(c.userId()).query(Owed.class).list();
+        BigDecimal debt = BigDecimal.ZERO;
+        for (Owed o : owed) {
+            if (!o.currency().equals(cur) && usd[0] == null) {
+                usd[0] = exchange.local(runs.localCurrency(), payDate.isAfter(LocalDate.now()) ? LocalDate.now() : payDate).cdfPerUnit();
+            }
+            debt = debt.add(ExchangeRates.convert(o.balance(), o.currency(), cur, usd[0]));
+        }
+        debt = money(debt.max(BigDecimal.ZERO));
+        BigDecimal debtCap = money(net.multiply(s.maxDebtMonths()));
+        if (debt.compareTo(debtCap) > 0) {
+            return Assessed.skip(Texts.t("%s: owes %s %s in loans and advances, more than %s months of net pay.", who,
+                    debt.toPlainString(), cur, s.maxDebtMonths().stripTrailingZeros().toPlainString()));
+        }
+
+        // Time paid from the 1st to the pay day (days still to come count as worked).
+        AppUser user = users.find(c.userId());
+        AttendanceDays.MonthSummary summary = attendance.month(user, month, false);
+        int scheduledHalf = 0;
+        int paidHalf = 0;
+        for (var d : summary.days()) {
+            if (d.date().isAfter(payDate)) {
+                continue;
+            }
+            scheduledHalf += d.scheduledMinutes();
+            if (!d.date().isBefore(c.firstDay())) {
+                paidHalf += d.date().isAfter(summary.asOf()) ? d.scheduledMinutes() : d.payableMinutes();
+            }
+        }
+        int scheduledMonth = summary.scheduledMinutesMonth();
+        if (scheduledHalf <= 0 || scheduledMonth <= 0) {
+            return Assessed.skip(Texts.t("%s: no scheduled time before the pay day.", who));
+        }
+        BigDecimal share = BigDecimal.valueOf(paidHalf).divide(BigDecimal.valueOf(scheduledHalf), 4, RoundingMode.HALF_UP)
+                .min(BigDecimal.ONE);
+        BigDecimal earned = money(net.multiply(BigDecimal.valueOf(paidHalf))
+                .divide(BigDecimal.valueOf(scheduledMonth), 6, RoundingMode.HALF_UP));
+
+        BigDecimal base = s.base().equals("BASIC")
+                ? money(normal.lines().stream().filter(l -> l.code().equals("BASIC")).map(PayslipCalculator.Line::amount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                : net;
+        BigDecimal byRate = base.multiply(c.percent()).divide(HUNDRED, 6, RoundingMode.HALF_UP).multiply(share);
+        BigDecimal amount = byRate.min(earned).setScale(0, RoundingMode.DOWN);
+        why.add(Texts.t(s.base().equals("BASIC") ? "Basic salary of a normal month: %s %s." : "Net pay of a normal month: %s %s.",
+                base.toPlainString(), cur));
+        why.add(Texts.t("Rate of the category %s: %s%%.", c.category(), c.percent().stripTrailingZeros().toPlainString()));
+        if (share.compareTo(BigDecimal.ONE) < 0) {
+            why.add(Texts.t("Paid time from the 1st to the pay day: %s%% (unpaid absence, unpaid leave or hire after the 1st).",
+                    share.multiply(HUNDRED).setScale(0, RoundingMode.HALF_UP).toPlainString()));
+        }
+        if (byRate.compareTo(earned) > 0) {
+            why.add(Texts.t("Limited to the net already earned on the pay day: %s %s.", earned.toPlainString(), cur));
+        }
+        if (debt.signum() > 0) {
+            why.add(Texts.t("Loans and advances owed: %s %s (limit %s).", debt.toPlainString(), cur, debtCap.toPlainString()));
+        }
+        why.add(Texts.t("Rounded down to a whole unit: %s %s, taken back on the payslip of the month.", plain(amount), cur));
+        if (amount.signum() <= 0) {
+            return Assessed.skip(Texts.t("%s: nothing to pay this mid-month.", who));
+        }
+        return new Assessed(null, cur, c.category(), c.percent(), base, net, share, earned, money(amount), payDate, why);
+    }
+
+    /**
+     * One person's quinzaine of a month as it would be worked out today (a simulation): nothing is stored. The company's
+     * switch is not checked, so HR can see what it would pay before turning it on.
+     */
+    public Assessed simulate(long userId, YearMonth month) {
+        Settings s = settings();
+        LocalDate first = month.atDay(1);
+        LocalDate payDate = payDate(month);
+        Candidate c = jdbc.sql("""
+                select u.id as user_id, person_name(u.first_name, u.middle_name, u.last_name) as employee_name,
+                       greatest((select min(c2.start_date) from employee_contract c2 where c2.user_id = u.id
+                                 and (c2.end_date is null or c2.end_date >= ?)), ?) as first_day,
+                       k.code as category, k.quinzaine_percent as percent
+                from app_user u
+                join lateral (select c.grade_id from employee_contract c where c.user_id = u.id and c.start_date <= ?
+                              and (c.end_date is null or c.end_date >= ?) order by c.start_date desc limit 1) c on true
+                join grade g on g.id = c.grade_id join grade_category k on k.id = g.category_id
+                where u.id = ?""").params(first, first, payDate, payDate, userId).query(Candidate.class).optional().orElse(null);
+        if (c == null) {
+            return Assessed.skip(Texts.t("No contract on the pay day (%s).", Texts.day(payDate)));
+        }
+        return assess(c, s, month, payDate, new BigDecimal[1]);
+    }
+
     /** The day the quinzaine of a month is paid: the setting's day, or the working day before (not a weekend or holiday). */
     public LocalDate payDate(YearMonth month) {
         LocalDate day = month.atDay(Math.min(settings().day(), month.lengthOfMonth()));
@@ -349,118 +489,12 @@ public class Quinzaines {
                 order by u.last_name, u.first_name, u.id""")
                 .params(first, first, payDate, payDate).query(Candidate.class).list();
         Map<Long, OrgStructure.Placement> places = org.placementsOn(payDate);
-        BigDecimal usdLocal = null;
+        BigDecimal[] usd = new BigDecimal[1];
         int done = 0;
         for (Candidate c : people) {
-            String who = c.employeeName();
-            if (refused(c.userId())) {
-                skipped.add(Texts.t("%s: asked not to receive the quinzaine.", who));
-                continue;
-            }
-            String excluded = jdbc.sql("select reason from quinzaine_exclusion where month = ? and user_id = ?")
-                    .params(first, c.userId()).query(String.class).optional().orElse(null);
-            if (excluded != null) {
-                skipped.add(Texts.t("%s: left out by HR for this month (%s).", who, excluded));
-                continue;
-            }
-            if (c.percent() == null) {
-                skipped.add(Texts.t("%s: the category %s has no quinzaine rate.", who, c.category()));
-                continue;
-            }
-            if (jdbc.sql("select count(*) from departure where user_id = ? and status = 'CONFIRMED' and last_day <= ?")
-                    .params(c.userId(), last).query(Integer.class).single() > 0) {
-                skipped.add(Texts.t("%s: leaves this month; the final settlement pays the month.", who));
-                continue;
-            }
-            if (jdbc.sql("""
-                    select count(*) from leave_request r join leave_type t on t.id = r.leave_type_id
-                    where r.user_id = ? and r.status = 'APPROVED' and not t.paid and r.start_date <= ? and r.end_date >= ?""")
-                    .params(c.userId(), payDate, payDate).query(Integer.class).single() > 0) {
-                skipped.add(Texts.t("%s: on unpaid leave on the pay day.", who));
-                continue;
-            }
-            PayslipCalculator.Result normal;
-            try {
-                normal = negotiated.normalMonth(c.userId(), payDate);
-            } catch (BusinessRuleException e) {
-                skipped.add(who + ": " + Texts.translate(e.getMessage()));
-                continue;
-            }
-            String cur = normal.currency();
-            BigDecimal net = money(normal.net());
-            if (net.signum() <= 0) {
-                skipped.add(Texts.t("%s: no net pay in a normal month.", who));
-                continue;
-            }
-            List<String> why = new ArrayList<>();
-
-            // Loans and advances owed.
-            List<Owed> owed = jdbc.sql("""
-                    select trim(l.currency) as currency, sum(l.principal - coalesce((select sum(r.amount) from loan_repayment r
-                           where r.loan_id = l.id), 0)) as balance
-                    from loan l where l.user_id = ? and l.status = 'ACTIVE' group by l.currency""")
-                    .param(c.userId()).query(Owed.class).list();
-            BigDecimal debt = BigDecimal.ZERO;
-            for (Owed o : owed) {
-                if (!o.currency().equals(cur) && usdLocal == null) {
-                    usdLocal = exchange.local(runs.localCurrency(), payDate.isAfter(LocalDate.now()) ? LocalDate.now() : payDate).cdfPerUnit();
-                }
-                debt = debt.add(ExchangeRates.convert(o.balance(), o.currency(), cur, usdLocal));
-            }
-            debt = money(debt.max(BigDecimal.ZERO));
-            BigDecimal debtCap = money(net.multiply(s.maxDebtMonths()));
-            if (debt.compareTo(debtCap) > 0) {
-                skipped.add(Texts.t("%s: owes %s %s in loans and advances, more than %s months of net pay.", who,
-                        debt.toPlainString(), cur, s.maxDebtMonths().stripTrailingZeros().toPlainString()));
-                continue;
-            }
-
-            // Time paid from the 1st to the pay day (days still to come count as worked).
-            AppUser user = users.find(c.userId());
-            AttendanceDays.MonthSummary summary = attendance.month(user, month, false);
-            int scheduledHalf = 0;
-            int paidHalf = 0;
-            for (var d : summary.days()) {
-                if (d.date().isAfter(payDate)) {
-                    continue;
-                }
-                scheduledHalf += d.scheduledMinutes();
-                if (!d.date().isBefore(c.firstDay())) {
-                    paidHalf += d.date().isAfter(summary.asOf()) ? d.scheduledMinutes() : d.payableMinutes();
-                }
-            }
-            int scheduledMonth = summary.scheduledMinutesMonth();
-            if (scheduledHalf <= 0 || scheduledMonth <= 0) {
-                skipped.add(Texts.t("%s: no scheduled time before the pay day.", who));
-                continue;
-            }
-            BigDecimal share = BigDecimal.valueOf(paidHalf).divide(BigDecimal.valueOf(scheduledHalf), 4, RoundingMode.HALF_UP)
-                    .min(BigDecimal.ONE);
-            BigDecimal earned = money(net.multiply(BigDecimal.valueOf(paidHalf))
-                    .divide(BigDecimal.valueOf(scheduledMonth), 6, RoundingMode.HALF_UP));
-
-            BigDecimal base = s.base().equals("BASIC")
-                    ? money(normal.lines().stream().filter(l -> l.code().equals("BASIC")).map(PayslipCalculator.Line::amount)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add))
-                    : net;
-            BigDecimal byRate = base.multiply(c.percent()).divide(HUNDRED, 6, RoundingMode.HALF_UP).multiply(share);
-            BigDecimal amount = byRate.min(earned).setScale(0, RoundingMode.DOWN);
-            why.add(Texts.t(s.base().equals("BASIC") ? "Basic salary of a normal month: %s %s." : "Net pay of a normal month: %s %s.",
-                    base.toPlainString(), cur));
-            why.add(Texts.t("Rate of the category %s: %s%%.", c.category(), c.percent().stripTrailingZeros().toPlainString()));
-            if (share.compareTo(BigDecimal.ONE) < 0) {
-                why.add(Texts.t("Paid time from the 1st to the pay day: %s%% (unpaid absence, unpaid leave or hire after the 1st).",
-                        share.multiply(HUNDRED).setScale(0, RoundingMode.HALF_UP).toPlainString()));
-            }
-            if (byRate.compareTo(earned) > 0) {
-                why.add(Texts.t("Limited to the net already earned on the pay day: %s %s.", earned.toPlainString(), cur));
-            }
-            if (debt.signum() > 0) {
-                why.add(Texts.t("Loans and advances owed: %s %s (limit %s).", debt.toPlainString(), cur, debtCap.toPlainString()));
-            }
-            why.add(Texts.t("Rounded down to a whole unit: %s %s, taken back on the payslip of the month.", plain(amount), cur));
-            if (amount.signum() <= 0) {
-                skipped.add(Texts.t("%s: nothing to pay this mid-month.", who));
+            Assessed a = assess(c, s, month, payDate, usd);
+            if (a.skipped() != null) {
+                skipped.add(a.skipped());
                 continue;
             }
             OrgStructure.Placement place = places.get(c.userId());
@@ -468,8 +502,8 @@ public class Quinzaines {
                     insert into quinzaine_line (run_id, user_id, currency, category, percent, base_amount, normal_net, worked_share,
                                                 earned_net, amount, unit_id, explanation)
                     values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb)""")
-                    .params(runId, c.userId(), cur, c.category(), c.percent(), base, net, share, earned, money(amount),
-                            place == null ? null : place.unitId(), json.writeValueAsString(why)).update();
+                    .params(runId, c.userId(), a.currency(), c.category(), c.percent(), a.base(), a.normalNet(), a.workedShare(),
+                            a.earnedNet(), a.amount(), place == null ? null : place.unitId(), json.writeValueAsString(a.explanation())).update();
             done++;
         }
         jdbc.sql("update quinzaine_run set skipped = ?::jsonb where id = ?").params(json.writeValueAsString(skipped), runId).update();
