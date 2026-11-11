@@ -80,6 +80,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/payroll/simulate', label: t('Simulate pay'), icon: FlaskConical, show: pay && any('payroll.simulate', 'payroll.increase', 'payroll.increase.approve') },
         { to: '/payroll/payments', label: t('Payments'), icon: Banknote, show: pay && any('payroll.pay', 'payslip.read.all') },
         { to: '/payroll/declarations', label: t('Declarations'), icon: Landmark, show: pay && can('declaration.manage') },
+        { to: '/payroll/legal-filings', label: t('Legal filings'), icon: ClipboardList, show: pay && can('declaration.manage') },
         { to: '/payroll/year', label: t('Year summary'), icon: ChartColumn, end: true, show: pay && can('payslip.read.all') },
         { to: '/payroll/entries', label: t('Bonuses and deductions'), icon: Coins, show: pay && can('salary.read') },
         { to: '/payroll/advances', label: t('Salary advances'), icon: PiggyBank, show: pay && any('advance.manage', 'payroll.pay') },
