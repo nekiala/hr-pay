@@ -145,6 +145,9 @@ public class EmployeeFile {
         if (!grade.active()) {
             throw new BusinessRuleException("This grade is no longer in use.");
         }
+        if (type.equals("DAILY")) {
+            requireDayWorkerAllowed(userId, start);
+        }
         if (type.equals("FIXED_TERM") && end == null) {
             throw new BusinessRuleException("A fixed-term contract needs an end date.");
         }
@@ -184,6 +187,30 @@ public class EmployeeFile {
         details.put("expatriate", expatriate);
         audit.record("contract.started", "user", userId, details);
         return contracts(userId).stream().filter(c -> c.id() == id).findFirst().orElseThrow();
+    }
+
+    /**
+     * A day worker who worked the maximum days in the window (22 days in two months in DRC) and is hired again is under
+     * a permanent contract (Labour Code art. 40).
+     */
+    void requireDayWorkerAllowed(long userId, LocalDate start) {
+        int max = intSetting("DAILY_WORKER_MAX_DAYS", 22);
+        int months = intSetting("DAILY_WORKER_WINDOW_MONTHS", 2);
+        int worked = jdbc.sql("select count(distinct work_date) from clock_event where user_id = ? and work_date >= ? and work_date < ?")
+                .params(userId, start.minusMonths(months), start).query(Integer.class).single();
+        if (worked >= max) {
+            throw new BusinessRuleException(Texts.t("This person worked %d days in the last %d months: hired again, they are under a permanent contract (Labour Code art. 40). Choose a permanent contract.",
+                    worked, months));
+        }
+    }
+
+    private int intSetting(String key, int fallback) {
+        try {
+            return jdbc.sql("select value from payroll_setting where key = ?").param(key).query(String.class).optional()
+                    .map(String::trim).map(Integer::parseInt).orElse(fallback);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 
     /** Refuses a change from a day whose payroll month is approved or closed. */

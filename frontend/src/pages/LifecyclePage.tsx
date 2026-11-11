@@ -11,6 +11,7 @@ import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
 import { DateInput } from '../components/DateFields'
+import { ContractEnds } from '../components/ContractEnds'
 
 type Tab = 'types' | 'steps' | 'templates'
 
@@ -52,6 +53,7 @@ function Overview() {
   const person = (userId: number, name: string) => <Link to={`/users/${userId}/lifecycle`}>{name}</Link>
   return (
     <>
+      <ContractEnds />
       <div className="card">
         <h3>{t('Open checklists')}</h3>
         <p className="small muted">{t('A departure checklist starts by itself when a departure is confirmed. Start a hiring checklist from the person\'s page.')}</p>

@@ -767,6 +767,7 @@ public class LegalFilings {
             case "FIXED_TERM" -> Texts.t("Fixed term");
             case "INTERN" -> Texts.t("Intern");
             case "CONSULTANT" -> Texts.t("Consultant");
+            case "DAILY" -> Texts.t("Day worker");
             default -> type == null ? "" : type;
         };
     }
@@ -778,6 +779,7 @@ public class LegalFilings {
             case "GROSS_MISCONDUCT" -> Texts.t("Dismissal for gross misconduct");
             case "REDUNDANCY" -> Texts.t("Redundancy");
             case "END_OF_CONTRACT" -> Texts.t("End of contract");
+            case "END_OF_TRIAL" -> Texts.t("End of trial");
             case "MUTUAL_AGREEMENT" -> Texts.t("Mutual agreement");
             case "RETIREMENT" -> Texts.t("Retirement");
             case "DEATH" -> Texts.t("Death");

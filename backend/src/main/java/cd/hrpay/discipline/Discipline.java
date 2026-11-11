@@ -90,6 +90,13 @@ public class Discipline {
     private final AuditService audit;
     private final Company company;
 
+    private cd.hrpay.representation.StaffRepresentation representation;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setRepresentation(@org.springframework.context.annotation.Lazy cd.hrpay.representation.StaffRepresentation representation) {
+        this.representation = representation;
+    }
+
     public Discipline(JdbcClient jdbc, UserRepository users, OrgStructure org, Contracts contracts, LeaveService leave,
                       Letters letters, Notifications notifications, AuditService audit, Company company) {
         this.jdbc = jdbc;
@@ -470,6 +477,9 @@ public class Discipline {
         SanctionType t = type(sanctionTypeId);
         if (!t.active()) {
             throw new BusinessRuleException("This sanction is not used any more.");
+        }
+        if (t.dismissal() && representation != null) {
+            representation.requireAuthorisation(c.userId(), "DISMISSAL", today());
         }
         if (t.dismissal() && workingDaysBetween(c.knownDate(), today()) > SERIOUS_MISCONDUCT_DAYS) {
             throw new BusinessRuleException("A dismissal for serious misconduct is notified within %d working days of knowing the facts (Labour Code art. 72); they were known on %s."

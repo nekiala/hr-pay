@@ -745,6 +745,7 @@ public class HrRankings {
             case "GROSS_MISCONDUCT" -> Texts.t("Serious misconduct");
             case "REDUNDANCY" -> Texts.t("Redundancy");
             case "END_OF_CONTRACT" -> Texts.t("End of contract");
+            case "END_OF_TRIAL" -> Texts.t("End of trial");
             case "MUTUAL_AGREEMENT" -> Texts.t("Mutual agreement");
             case "RETIREMENT" -> Texts.t("Retirement");
             case "DEATH" -> Texts.t("Death");

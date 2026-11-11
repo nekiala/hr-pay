@@ -17,7 +17,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Every morning: reminders for documents about to expire and for documents still waiting for a signature, and the
+ * Every morning: reminders for documents about to expire and for documents still waiting for a signature, trials and
+ * fixed-term contracts coming to their end, the staff representation's dates, and the
  * accounts of people who left closed once they no longer need them (their last month's payroll is closed, so their
  * last payslip is out, or 45 days after their last day).
  */
@@ -35,6 +36,15 @@ public class LifecycleJobs {
     private final UserSessions sessions;
     private final JdbcClient jdbc;
     private final Clock clock;
+    private cd.hrpay.career.ContractFollowup followup;
+    private cd.hrpay.representation.StaffRepresentation representation;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setFollowUps(@org.springframework.context.annotation.Lazy cd.hrpay.career.ContractFollowup followup,
+                      @org.springframework.context.annotation.Lazy cd.hrpay.representation.StaffRepresentation representation) {
+        this.followup = followup;
+        this.representation = representation;
+    }
 
     public LifecycleJobs(JobLocks jobs, Documents documents, Notifications notifications, UserService users, UserSessions sessions,
                          JdbcClient jdbc, Clock clock) {
@@ -56,8 +66,11 @@ public class LifecycleJobs {
         int reminded = documents.remind();
         int letters = remindLetters();
         int closed = closeAccounts();
-        if (reminded + letters + closed > 0) {
-            log.info("Lifecycle: {} expiry reminders, {} signature reminders, {} accounts closed", reminded, letters, closed);
+        int contracts = followup == null ? 0 : followup.run();
+        int staff = representation == null ? 0 : representation.run();
+        if (reminded + letters + closed + contracts + staff > 0) {
+            log.info("Lifecycle: {} expiry reminders, {} signature reminders, {} accounts closed, {} contract follow-ups, {} staff representation reminders",
+                    reminded, letters, closed, contracts, staff);
         }
     }
 

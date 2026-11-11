@@ -65,6 +65,13 @@ public class CareerMoves {
     private final Company company;
     private final AuditService audit;
 
+    private cd.hrpay.representation.StaffRepresentation representation;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setRepresentation(@org.springframework.context.annotation.Lazy cd.hrpay.representation.StaffRepresentation representation) {
+        this.representation = representation;
+    }
+
     public CareerMoves(JdbcClient jdbc, EmployeeFile files, NegotiatedPay negotiated, MasterData masterData,
                        OrgStructure org, Letters letters, Company company, AuditService audit) {
         this.jdbc = jdbc;
@@ -152,6 +159,10 @@ public class CareerMoves {
         }
         if (in.kind().equals("PROMOTION_TRANSFER") && toUnit == null && toSite == null) {
             throw new BusinessRuleException("Promotion with transfer: choose the new unit or site.");
+        }
+
+        if ((toUnit != null || toSite != null) && representation != null) {
+            representation.requireAuthorisation(userId, "TRANSFER", in.effectiveOn());
         }
 
         Long contractId = null;

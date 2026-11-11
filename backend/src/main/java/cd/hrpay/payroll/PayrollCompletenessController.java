@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PayrollCompletenessController {
 
     public record DepartureInput(@NotNull LocalDate lastDay,
-                                 @NotNull @Pattern(regexp = "RESIGNATION|DISMISSAL|GROSS_MISCONDUCT|REDUNDANCY|END_OF_CONTRACT|MUTUAL_AGREEMENT|RETIREMENT|DEATH") String reason,
+                                 @NotNull @Pattern(regexp = "RESIGNATION|DISMISSAL|GROSS_MISCONDUCT|REDUNDANCY|END_OF_CONTRACT|END_OF_TRIAL|MUTUAL_AGREEMENT|RETIREMENT|DEATH") String reason,
                                  LocalDate noticeDate,
                                  @Pattern(regexp = "EMPLOYER|EMPLOYEE") String noticeGivenBy,
                                  @Pattern(regexp = "WORKED|PAID|OWED|NONE") String notice,
