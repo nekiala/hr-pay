@@ -100,7 +100,8 @@ services:
       - "${HTTPS_PORT:-443}:443"
     environment:
       DOMAIN: ${DOMAIN}
-      SITE_DOMAIN: ${SITE_DOMAIN:-}
+      # Never empty: Caddy's own default only applies to a missing variable, and an empty address stops it.
+      SITE_DOMAIN: ${SITE_DOMAIN:-site.localhost}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-127.0.0.1/32}
       CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-X-Forwarded-For}
       TLS_MODE: "${TLS_MODE:?Set TLS_MODE in .env to an email address for Let's Encrypt, or to internal}"
