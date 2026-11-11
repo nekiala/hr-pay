@@ -122,13 +122,15 @@ Dans **Mes documents** :
 
 - **À signer** : lisez le PDF, demandez un code (envoyé par e-mail ou WhatsApp), saisissez-le avec votre nom complet. La copie signée est rangée dans votre dossier. Vous pouvez aussi refuser en donnant la raison.
 - **Attestations** : demandez une attestation de travail ou de salaire ; vous êtes prévenu quand elle est prête.
-- **Mon dossier** : les documents que les RH gardent pour vous, et ceux que vous leur envoyez.` },
+- **Mon dossier** : les documents que les RH gardent pour vous, et ceux que vous leur envoyez.
+- **Santé au travail** : vos visites médicales (seul le résultat est montré, jamais un diagnostic) et le bouton pour déclarer un accident du travail ; les RH sont prévenues tout de suite.` },
     en: { title: 'Signing a document and asking for a certificate', body: `
 In **My documents**:
 
 - **To sign**: read the PDF, ask for a code (sent by email or WhatsApp), enter it with your full name. The signed copy goes into your file. You can also refuse and give the reason.
 - **Certificates**: ask for an employment or salary certificate; you are told when it is ready.
-- **My file**: the documents HR keeps for you, and the ones you send them.` },
+- **My file**: the documents HR keeps for you, and the ones you send them.
+- **Health at work**: your medical visits (only the result is shown, never a diagnosis) and the button to report a work accident; HR is told at once.` },
   },
   {
     id: 'jobs', audience: 'everyone', routes: ['/jobs'],
@@ -415,11 +417,59 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
     fr: { title: 'Embauches et départs', body: `
 - **À faire** : les listes de contrôle ouvertes, les certificats demandés, les lettres en attente de signature, les documents qui expirent et le matériel encore chez les partants.
 - Une liste de départ démarre seule quand un départ est confirmé ; une liste d'embauche se démarre depuis la page de la personne.
-- **Réglages** (bouton Paramètres) : les types de documents gardés pour chaque personne, les étapes de chaque liste, et les modèles de contrats et de lettres signés par code. Les textes de départ sont des brouillons : faites-les relire par votre avocat.` },
+- **Réglages** (bouton Paramètres) : les types de documents gardés pour chaque personne, les étapes de chaque liste, et les modèles de contrats et de lettres signés par code. Les textes de départ sont des brouillons : faites-les relire par votre avocat.
+- **Essais et fins de contrat** : les essais qui finissent bientôt (rappels 30, 15 et 5 jours avant) et les CDD (60, 30 et 15 jours avant). Pour un essai : Confirmer ou Mettre fin à l'essai. Pour un CDD : Renouveler, Transformer en CDI ou Laisser prendre fin. Un essai passé sans décision est confirmé par la loi (RDC art. 43). Un CDD dont la date est passée alors que la personne travaille encore devient un contrat à durée indéterminée.
+- **Journaliers** : un journalier embauché à nouveau après 22 jours de travail en 2 mois doit recevoir un contrat permanent (RDC art. 40) ; l'application le refuse avant.` },
     en: { title: 'Hiring and departures', body: `
 - **To do**: open checklists, certificates asked for, letters waiting for a signature, documents about to expire and equipment still out with people leaving.
 - A departure checklist starts by itself when a departure is confirmed; start a hiring checklist from the person's page.
-- **Settings** (Settings button): the document types kept for each person, the steps of each checklist, and the contract and letter templates signed with a code. The starting texts are drafts: have them checked by your lawyer.` },
+- **Settings** (Settings button): the document types kept for each person, the steps of each checklist, and the contract and letter templates signed with a code. The starting texts are drafts: have them checked by your lawyer.
+- **Trials and contract ends**: trials ending soon (reminders 30, 15 and 5 days before) and fixed-term contracts (60, 30 and 15 days before). For a trial: Confirm or End the trial. For a fixed-term contract: Renew, Make permanent or Let it end. A trial passed with no decision is confirmed by law (DRC art. 43). A fixed-term contract whose end date has passed while the person still works becomes permanent.
+- **Day workers**: a day worker hired again after 22 days of work in 2 months must get a permanent contract (DRC art. 40); the app refuses it before.` },
+  },
+  {
+    id: 'staff-representation', audience: 'hr', routes: ['/representation'],
+    fr: { title: 'Délégués du personnel', body: `
+- **Délégués** : titulaires et suppléants, élus le, fin du mandat (3 ans en RDC). La page montre combien de délégués l'effectif demande (RDC : dès 10 travailleurs, arrêté 048/2015 ; Congo : dès 7, nombre à saisir).
+- **Élections, réunions, règlement** : notez l'annonce de l'élection (au moins 3 semaines avant), les réunions avec l'employeur (au moins tous les 3 mois, procès-verbal à l'inspecteur dans les 8 jours) et la date d'envoi du règlement d'entreprise.
+- **Protection** : licencier ou muter un délégué ou un suppléant demande l'autorisation de l'inspecteur du travail (arrêté 036/95). Tant qu'elle n'est pas enregistrée ici, la sanction, le départ ou la mutation est bloqué.
+- **Heures de délégation** : entre 15 et 35 heures payées par mois ; la page signale les écarts.` },
+    en: { title: 'Staff delegates', body: `
+- **Delegates**: titular and alternate delegates, elected on, term end (3 years in the DRC). The page shows how many delegates the headcount requires (DRC: from 10 workers, arrêté 048/2015; Congo: from 7, number to enter).
+- **Elections, meetings, rules**: record the election notice (at least 3 weeks ahead), the meetings with the employer (at least every 3 months, minutes to the inspector within 8 days) and when the company rules were sent.
+- **Protection**: dismissing or transferring a delegate or an alternate needs the labour inspector's authorisation (arrêté 036/95). Until it is recorded here, the sanction, departure or transfer is blocked.
+- **Delegation hours**: 15 to 35 paid hours a month; the page flags anything outside.` },
+  },
+  {
+    id: 'health-safety', audience: 'hr', routes: ['/health'],
+    fr: { title: 'Santé et sécurité', body: `
+**Visites médicales**
+- La liste des visites dues : visite d'embauche, visite annuelle (certificat valable 1 an, 6 mois avant 18 ans) et visite de reprise, planifiée seule après 30 jours d'arrêt ou plus (maladie, accident, maternité).
+- Planifiez une visite (la personne est prévenue), puis enregistrez le résultat : apte, apte avec restrictions, inapte pour l'instant ou inapte. Ne notez jamais de diagnostic : le secret médical l'interdit. Le chef d'unité voit seulement le résultat et les restrictions, dans Présence.
+- « Liste pour la clinique (PDF) » imprime les visites à venir.
+
+**Accidents du travail**
+- Un employé ou un chef d'unité peut déclarer un accident ; les RH complètent les faits et les jours d'arrêt.
+- Les jours d'arrêt deviennent un congé d'accident du travail, payé aux deux tiers pendant six mois au plus en RDC (art. 106).
+- La déclaration à la CNSS est due dans les 60 jours (120 pour une maladie professionnelle) ; l'échéance est rappelée et figure au calendrier des déclarations. « Préparer la déclaration » crée la lettre sur la page de la personne.
+
+**Comité de sécurité (CSHE)**
+- Obligatoire dès 20 travailleurs en RDC (arrêté 043/2008) : membres pour 2 ans, réunion au moins tous les 2 mois, inspection des lieux chaque mois, actions à suivre, rapport annuel avant le 31 mars (PDF ou Excel).
+- Les valeurs du Congo sont à vérifier avec votre expert-comptable.` },
+    en: { title: 'Health and safety', body: `
+**Medical visits**
+- The list of visits due: hiring visit, yearly visit (certificate valid 1 year, 6 months under 18) and return-to-work visit, planned by itself after 30 days or more off (sickness, accident, maternity).
+- Plan a visit (the person is told), then record the result: fit, fit with restrictions, unfit for now or unfit. Never write a diagnosis: medical secrecy forbids it. Unit heads see only the result and restrictions, on Presence.
+- "List for the clinic (PDF)" prints the visits coming up.
+
+**Work accidents**
+- An employee or a unit head can report an accident; HR completes the facts and the days off.
+- The days off become work accident leave, paid at two thirds for up to six months in the DRC (art. 106).
+- The CNSS declaration is due within 60 days (120 for an occupational disease); the deadline is reminded and shown on the declarations calendar. "Draft the declaration" creates the letter on the person's page.
+
+**Safety committee (CSHE)**
+- Required from 20 workers in the DRC (arrêté 043/2008): members for 2 years, a meeting at least every 2 months, a monthly workplace inspection, actions to follow, a yearly report before 31 March (PDF or Excel).
+- The Congo values are to be checked with your accountant.` },
   },
   {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],
