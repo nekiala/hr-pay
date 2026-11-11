@@ -1999,6 +1999,50 @@
     {
      "key": "DISCIPLINE_SUSPENSION_YEAR_DAYS",
      "value": "30"
+    },
+    {
+     "key": "TRIAL_REMIND_DAYS",
+     "value": "30,15,5"
+    },
+    {
+     "key": "CDD_REMIND_DAYS",
+     "value": "60,30,15"
+    },
+    {
+     "key": "TRIAL_END_NOTICE_DAYS",
+     "value": "3"
+    },
+    {
+     "key": "DAILY_WORKER_MAX_DAYS",
+     "value": "22"
+    },
+    {
+     "key": "DAILY_WORKER_WARN_DAYS",
+     "value": "18"
+    },
+    {
+     "key": "DAILY_WORKER_WINDOW_MONTHS",
+     "value": "2"
+    },
+    {
+     "key": "DELEGATES_FROM_WORKERS",
+     "value": "10"
+    },
+    {
+     "key": "DELEGATE_TERM_YEARS",
+     "value": "3"
+    },
+    {
+     "key": "DELEGATE_HOURS_MIN",
+     "value": "15"
+    },
+    {
+     "key": "DELEGATE_HOURS_MAX",
+     "value": "35"
+    },
+    {
+     "key": "DELEGATE_MEETING_MONTHS",
+     "value": "3"
     }
    ]
   },
@@ -2581,6 +2625,14 @@
     {
      "role_id": 4,
      "permission_code": "discipline.propose"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "staff.representation"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "staff.representation"
     }
    ]
   },

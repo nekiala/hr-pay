@@ -255,6 +255,7 @@ public class PayrollReports {
             case "FIXED_TERM" -> Texts.t("Fixed term");
             case "INTERN" -> Texts.t("Intern");
             case "CONSULTANT" -> Texts.t("Consultant");
+            case "DAILY" -> Texts.t("Day worker");
             default -> Texts.t("Not set");
         };
     }

@@ -43,7 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class Departures {
 
     public static final Set<String> REASONS = Set.of("RESIGNATION", "DISMISSAL", "GROSS_MISCONDUCT", "REDUNDANCY",
-            "END_OF_CONTRACT", "MUTUAL_AGREEMENT", "RETIREMENT", "DEATH");
+            "END_OF_CONTRACT", "END_OF_TRIAL", "MUTUAL_AGREEMENT", "RETIREMENT", "DEATH");
 
     /** The reasons that give severance pay, when the rate is set. */
     static final Set<String> SEVERANCE_REASONS = Set.of("DISMISSAL", "REDUNDANCY", "RETIREMENT");
@@ -85,6 +85,15 @@ public class Departures {
     private final cd.hrpay.payment.Letterhead letterhead;
     private final AuditService audit;
     private final Clock clock;
+    private cd.hrpay.representation.StaffRepresentation representation;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setRepresentation(@org.springframework.context.annotation.Lazy cd.hrpay.representation.StaffRepresentation representation) {
+        this.representation = representation;
+    }
+
+    /** The reasons by which the employer ends the contract: a staff delegate's needs the inspector's authorisation. */
+    static final Set<String> EMPLOYER_ENDS = Set.of("DISMISSAL", "GROSS_MISCONDUCT", "REDUNDANCY");
 
     public Departures(JdbcClient jdbc, UserRepository users, SalaryService salaries, EmployeeFile files,
                       StatutoryRates statutory, Loans loans, cd.hrpay.evaluation.ThirteenthMonth thirteenthMonth,
@@ -255,6 +264,9 @@ public class Departures {
 
     private Notice notice(AppUser u, Input in, LocalDate hiredOn, List<String> why) {
         String givenBy = in.noticeGivenBy() != null ? in.noticeGivenBy() : defaultGivenBy(in.reason());
+        if ("END_OF_TRIAL".equals(in.reason())) {
+            return trialNotice(u, in, givenBy == null ? "EMPLOYER" : givenBy, why);
+        }
         if (givenBy == null || "GROSS_MISCONDUCT".equals(in.reason())) {
             String mode = in.notice() != null && !"OWED".equals(in.notice()) && !"PAID".equals(in.notice()) ? in.notice() : "NONE";
             why.add(Texts.t("No notice is due for this reason."));
@@ -313,6 +325,39 @@ public class Departures {
         if (search.signum() > 0 && !"NONE".equals(mode)) {
             why.add(Texts.t("During the notice, the person may take %s paid day(s) a week to look for a job.",
                     search.stripTrailingZeros().toPlainString()));
+        }
+        return new Notice(givenBy, end, mode, days);
+    }
+
+    /**
+     * Ending a trial: in DRC either party gives 3 working days' notice, none in the first 3 days of the trial (Labour
+     * Code art. 71); elsewhere the company's setting (none by default, Congo art. 38).
+     */
+    private Notice trialNotice(AppUser u, Input in, String givenBy, List<String> why) {
+        int length = payrollSetting("TRIAL_END_NOTICE_DAYS").intValue();
+        LocalDate given = in.noticeDate() != null ? in.noticeDate() : in.lastDay();
+        if (given.isAfter(in.lastDay())) {
+            throw new BusinessRuleException("Notice is given on or before the last day.");
+        }
+        LocalDate start = files.contractOn(u.getId(), in.lastDay()).map(EmployeeFile.Contract::startDate).orElse(null);
+        if (length <= 0 || (start != null && given.isBefore(start.plusDays(3)))) {
+            why.add(length <= 0 ? Texts.t("Ending a trial: no notice is due (company setting).")
+                    : Texts.t("Ending a trial in its first 3 days: no notice is due (Labour Code art. 71)."));
+            return new Notice(givenBy, null, "NONE", BigDecimal.ZERO);
+        }
+        Set<LocalDate> holidays = holidays(given, given.plusMonths(2));
+        LocalDate end = addDays(given, length, true, holidays);
+        int unobserved = in.lastDay().isBefore(end) ? countDays(in.lastDay().plusDays(1), end, true, holidays) : 0;
+        why.add(Texts.t("Ending a trial: %d working days' notice from %s, until %s (Labour Code art. 71).", length,
+                Texts.day(given), Texts.day(end)));
+        String mode = in.notice() != null ? in.notice()
+                : unobserved == 0 ? "WORKED" : "EMPLOYEE".equals(givenBy) ? "OWED" : "PAID";
+        BigDecimal days = "PAID".equals(mode) || "OWED".equals(mode) ? BigDecimal.valueOf(unobserved) : BigDecimal.ZERO;
+        if ("PAID".equals(mode)) {
+            why.add(Texts.t("Notice not worked, paid by the employer: %s %s.", days.toPlainString(), Texts.t("working days")));
+        } else if ("OWED".equals(mode)) {
+            why.add(Texts.t("Notice not given or not worked by the employee: %s %s, taken from the settlement.",
+                    days.toPlainString(), Texts.t("working days")));
         }
         return new Notice(givenBy, end, mode, days);
     }
@@ -492,6 +537,9 @@ public class Departures {
         YearMonth month = YearMonth.from(r.lastDay());
         PayrollRuns.requireOpen(jdbc, month);
         Departure d = find(userId).orElseThrow();
+        if (representation != null && EMPLOYER_ENDS.contains(d.reason())) {
+            representation.requireAuthorisation(userId, "DISMISSAL", d.noticeDate() != null ? d.noticeDate() : d.lastDay());
+        }
         String note = Texts.t("final settlement, last day %s", Texts.day(d.lastDay()));
         writeEntry(userId, "NOTICE_PAY", month, d.noticeAmount(), d.currency(),
                 Texts.t("%s days", d.noticeDays().stripTrailingZeros().toPlainString()));

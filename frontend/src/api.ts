@@ -808,7 +808,7 @@ export type CareerMove = {
   letterId: number | null; letterStatus: LetterStatus | null; createdBy: string; createdAt: string
 }
 export type Contract = {
-  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
+  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT' | 'DAILY'; startDate: string; endDate: string | null
   gradeId: number; gradeCode: string; gradeName: string; categoryId: number; occupationId: number | null; occupationName: string | null
   expatriate: boolean; note: string | null; createdBy: string; createdAt: string
 }
@@ -869,7 +869,7 @@ export type EmployeeFileView = {
   /** The places picked, the top one first. */
   birthPlacePath?: Place[]; addressPlacePath?: Place[]
 }
-export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant') }
+export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant'), DAILY: t('Day worker') }
 
 export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
 export type PayMethod = 'COMPUTED' | 'FIXED' | 'PERCENT_OF_BASIC' | 'PER_DAY_WORKED' | 'PER_CHILD' | 'MANUAL'
@@ -919,10 +919,10 @@ export type Payslip = {
   kind: 'REGULAR' | 'COMPLEMENTARY'; correctsId: number | null; correctsNumber: string | null; reason: string | null
 }
 
-export type DepartureReason = 'RESIGNATION' | 'DISMISSAL' | 'GROSS_MISCONDUCT' | 'REDUNDANCY' | 'END_OF_CONTRACT' | 'MUTUAL_AGREEMENT' | 'RETIREMENT' | 'DEATH'
+export type DepartureReason = 'RESIGNATION' | 'DISMISSAL' | 'GROSS_MISCONDUCT' | 'REDUNDANCY' | 'END_OF_CONTRACT' | 'END_OF_TRIAL' | 'MUTUAL_AGREEMENT' | 'RETIREMENT' | 'DEATH'
 export const DEPARTURE_REASONS: Record<DepartureReason, string> = {
   RESIGNATION: t('Resignation'), DISMISSAL: t('Dismissal'), GROSS_MISCONDUCT: t('Dismissal for gross misconduct'),
-  REDUNDANCY: t('Redundancy (economic reasons)'), END_OF_CONTRACT: t('End of a fixed-term contract'),
+  REDUNDANCY: t('Redundancy (economic reasons)'), END_OF_CONTRACT: t('End of a fixed-term contract'), END_OF_TRIAL: t('End of the trial period'),
   MUTUAL_AGREEMENT: t('Mutual agreement'), RETIREMENT: t('Retirement'), DEATH: t('Death'),
 }
 export type Notice = 'WORKED' | 'PAID' | 'OWED' | 'NONE'

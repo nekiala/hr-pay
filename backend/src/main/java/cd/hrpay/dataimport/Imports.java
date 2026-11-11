@@ -104,7 +104,7 @@ public class Imports {
                 col("note", "Note", false, null)));
         COLUMNS.put(Kind.CONTRACTS, List.of(
                 col("registration_no", "Registration no.", true, null),
-                col("contract_type", "Contract type", true, "Permanent (CDI), fixed-term (CDD), intern or consultant."),
+                col("contract_type", "Contract type", true, "Permanent (CDI), fixed-term (CDD), intern, consultant or day worker (DAILY)."),
                 col("start_date", "Start date", true, null),
                 col("end_date", "End date", false, "Required for a fixed-term contract."),
                 col("hire_date", "In the company since", false, "First contract only, when the person was hired before it (seniority). Empty: the start date."),
@@ -762,7 +762,7 @@ public class Imports {
         row.required("registration_no");
         String type = choice(row, "contract_type", Map.of("PERMANENT", "PERMANENT", "CDI", "PERMANENT", "FIXED_TERM", "FIXED_TERM",
                 "FIXEDTERM", "FIXED_TERM", "CDD", "FIXED_TERM", "INTERN", "INTERN", "STAGE", "INTERN", "STAGIAIRE", "INTERN",
-                "CONSULTANT", "CONSULTANT"));
+                "CONSULTANT", "CONSULTANT", "DAILY", "DAILY"));
         LocalDate start = row.requiredDate("start_date");
         LocalDate end = row.date("end_date");
         String gradeCode = row.required("grade");

@@ -212,7 +212,7 @@ public class Documents {
     // ---- helpers --------------------------------------------------------------------------------------------------
 
     /** The file's real type from its first bytes, whatever its name says. */
-    static String sniff(byte[] b) {
+    public static String sniff(byte[] b) {
         if (b.length > 4 && b[0] == '%' && b[1] == 'P' && b[2] == 'D' && b[3] == 'F') {
             return "application/pdf";
         }
@@ -225,7 +225,7 @@ public class Documents {
         return null;
     }
 
-    static String cleanName(String fileName, String contentType) {
+    public static String cleanName(String fileName, String contentType) {
         String n = fileName == null ? "" : fileName.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_").trim();
         if (n.length() > 150) {
             n = n.substring(n.length() - 150);
