@@ -15,7 +15,7 @@ type Movement = {
   due: string; remindFrom: string; status: Status; late: boolean; daysLeft: number; filed: Filed | null
 }
 type Annual = {
-  kind: 'WORKFORCE' | 'BILAN_SOCIAL'; year: number; due: string; status: Status; late: boolean; daysLeft: number
+  kind: 'WORKFORCE' | 'BILAN_SOCIAL' | 'TAX_ANNUAL'; year: number; due: string; status: Status; late: boolean; daysLeft: number
   filed: Filed | null; authority: string; legalBasis: string; verified: boolean
 }
 type Rule = { kind: string; authority: string; dueDays: number | null; remindAfterDays: number | null; dueMonth: number | null; dueDay: number | null; yearOffset: number; legalBasis: string; verified: boolean }
@@ -30,8 +30,11 @@ const yearStart = () => `${new Date().getFullYear()}-01-01`
 
 const KIND_LABEL: Record<string, string> = {
   HIRE: t('Hiring'), DEPARTURE: t('Departure'),
-  WORKFORCE: t('Annual declaration of the workforce'), BILAN_SOCIAL: t('Bilan social'),
+  WORKFORCE: t('Annual declaration of the workforce'), BILAN_SOCIAL: t('Bilan social'), TAX_ANNUAL: t('Annual tax summary'),
 }
+/** The annual tax summary as each country calls it. */
+const kindLabel = (kind: string, country?: string) =>
+  kind === 'TAX_ANNUAL' && country === 'CD' ? t('Annual IPR summary') : kind === 'TAX_ANNUAL' && country === 'CG' ? t('Annual statement of salaries (DAS)') : KIND_LABEL[kind] ?? kind
 
 function StatusBadge({ status, late }: { status: Status; late: boolean }) {
   if (status === 'FILED') return <span className={`badge ${late ? 'warn' : 'on'}`}>{late ? t('Filed late') : t('Filed')}</span>
@@ -100,6 +103,7 @@ export default function LegalFilingsPage() {
   const next = [...open].sort((a, b) => a.due.localeCompare(b.due))[0]
   const movements = (page?.movements ?? []).filter((m) => showFiled || m.status !== 'FILED')
   const movementPath = (m: Movement) => `/api/legal-filings/movements/${m.kind}/${m.userId}/${m.eventDate}`
+  const has = (kind: string) => (page?.rules ?? []).some((r) => r.kind === kind)
   const nothing = s && !s.movements && !s.annual && !s.personnelRegister
 
   return (
@@ -112,7 +116,7 @@ export default function LegalFilingsPage() {
       {page && (s?.movements || s?.annual) && (
         <div className="tiles">
           <div className="tile"><span>{t('Next deadline')}</span><strong>{next ? longDay(next.due) : '—'}</strong>
-            <small>{next ? ('name' in next ? `${KIND_LABEL[next.kind]} · ${next.name}` : `${KIND_LABEL[next.kind]} ${next.year}`) : t('Nothing open')}</small></div>
+            <small>{next ? ('name' in next ? `${KIND_LABEL[next.kind]} · ${next.name}` : `${kindLabel(next.kind, s?.country)} ${next.year}`) : t('Nothing open')}</small></div>
           <div className="tile"><span>{t('To file')}</span><strong>{open.length}</strong><small>{t('hirings, departures and yearly filings')}</small></div>
           <div className={`tile${late.length ? ' warn' : ''}`}><span>{t('Late')}</span><strong>{late.length}</strong><small>{t('past their due date')}</small></div>
         </div>
@@ -163,7 +167,9 @@ export default function LegalFilingsPage() {
       {s?.annual && (
         <div className="card">
           <h3>{t('Yearly filings')}</h3>
-          <p className="hint">{t('The workforce employed on 1 January, national and foreign, and the bilan social of the past year, by 31 January.')}</p>
+          <p className="hint">{has('WORKFORCE')
+            ? t('The workforce employed on 1 January, national and foreign, and the bilan social of the past year, by 31 January.')
+            : t('The yearly summary of the salaries paid and the tax withheld, in January.')}{has('TAX_ANNUAL') && <> {t('The tax summary counts closed months only: close December first.')}</>}</p>
           {(page?.annual ?? []).length > 0 && (
             <div className="table-wrap">
               <table>
@@ -173,13 +179,14 @@ export default function LegalFilingsPage() {
                     const path = `/api/legal-filings/annual/${a.kind}/${a.year}`
                     return (
                       <tr key={`${a.kind}-${a.year}`}>
-                        <td><strong>{KIND_LABEL[a.kind]} {a.year}</strong><div className="small muted">{a.authority}</div></td>
+                        <td><strong>{kindLabel(a.kind, s?.country)} {a.year}</strong><div className="small muted">{a.authority}</div></td>
                         <td>{longDay(a.due)}<DaysLeft status={a.status} daysLeft={a.daysLeft} /></td>
                         <td><StatusBadge status={a.status} late={a.late} /></td>
                         <td className="small">{a.filed ? <>{longDay(a.filed.filedOn)}{a.filed.reference && <div className="muted">{a.filed.reference}</div>}</> : '—'}</td>
                         <td className="nowrap">
                           <Downloads path={path} />
-                          {a.status === 'TO_FILE' && <>{' '}<Button className="link" onClick={() => setFiling({ title: `${KIND_LABEL[a.kind]} ${a.year}`, path })}>{t('Record as filed')}</Button></>}
+                          {a.kind === 'TAX_ANNUAL' && <div className="small">{t('Individual sheets')}: <Downloads path={`${path}/sheets`} /></div>}
+                          {a.status === 'TO_FILE' && <>{' '}<Button className="link" onClick={() => setFiling({ title: `${kindLabel(a.kind, s?.country)} ${a.year}`, path })}>{t('Record as filed')}</Button></>}
                           {a.status === 'FILED' && <>{' '}<Button className="link" onClick={() => ask({
                             title: t('Remove the filing record?'), confirmLabel: t('Remove'), danger: true,
                             onConfirm: () => run(() => api(`${path}/filed`, { method: 'DELETE' }), t('Filing record removed.')),
@@ -194,8 +201,10 @@ export default function LegalFilingsPage() {
           )}
           <div className="row">
             <label>{t('Year')}<input type="number" min={2000} max={new Date().getFullYear() + 1} value={year} onChange={(e) => setYear(Number(e.target.value))} /></label>
-            <span>{t('Workforce on 1 January')}: <Downloads path={`/api/legal-filings/annual/WORKFORCE/${year}`} /></span>
-            <span>{t('Bilan social')}: <Downloads path={`/api/legal-filings/annual/BILAN_SOCIAL/${year}`} /></span>
+            {has('WORKFORCE') && <span>{t('Workforce on 1 January')}: <Downloads path={`/api/legal-filings/annual/WORKFORCE/${year}`} /></span>}
+            {has('BILAN_SOCIAL') && <span>{t('Bilan social')}: <Downloads path={`/api/legal-filings/annual/BILAN_SOCIAL/${year}`} /></span>}
+            {has('TAX_ANNUAL') && <span>{kindLabel('TAX_ANNUAL', s?.country)}: <Downloads path={`/api/legal-filings/annual/TAX_ANNUAL/${year}`} /></span>}
+            {has('TAX_ANNUAL') && <span>{t('Individual sheets')}: <Downloads path={`/api/legal-filings/annual/TAX_ANNUAL/${year}/sheets`} /></span>}
           </div>
         </div>
       )}
@@ -241,7 +250,7 @@ export default function LegalFilingsPage() {
               <tbody>
                 {page.rules.map((r) => (
                   <tr key={r.kind}>
-                    <td><strong>{KIND_LABEL[r.kind] ?? r.kind}</strong> <span className="muted small">{r.authority}</span></td>
+                    <td><strong>{kindLabel(r.kind, s?.country)}</strong> <span className="muted small">{r.authority}</span></td>
                     <td className="small">{r.dueDays !== null
                       ? <>{t('{a} days after the event', { a: r.dueDays })}{r.remindAfterDays ? <div className="muted">{t('reminder after {a} days', { a: r.remindAfterDays })}</div> : null}</>
                       : (r.yearOffset ? t('By {a}/{b} of the next year', { a: r.dueDay ?? '', b: r.dueMonth ?? '' }) : t('By {a}/{b} of the year', { a: r.dueDay ?? '', b: r.dueMonth ?? '' }))}</td>

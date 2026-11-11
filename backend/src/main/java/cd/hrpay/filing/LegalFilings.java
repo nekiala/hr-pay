@@ -42,7 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LegalFilings {
 
     public static final List<String> EVENT_KINDS = List.of("HIRE", "DEPARTURE");
-    public static final List<String> ANNUAL_KINDS = List.of("WORKFORCE", "BILAN_SOCIAL");
+    public static final List<String> ANNUAL_KINDS = List.of("WORKFORCE", "BILAN_SOCIAL", "TAX_ANNUAL");
 
     /** TO_FILE: still to send; UPCOMING: its period has not started or ended yet. */
     public enum Status { UPCOMING, TO_FILE, FILED }
@@ -226,7 +226,7 @@ public class LegalFilings {
                 if (f == null && (due.isBefore(s.filingsFrom()) || due.isAfter(today.plusMonths(3)))) {
                     continue;
                 }
-                // The workforce is counted on 1 January of its year; the bilan social once its year is over.
+                // The workforce is counted on 1 January of its year; the bilan social and the tax summary once the year is over.
                 LocalDate ready = rule.kind().equals("WORKFORCE") ? LocalDate.of(year, 1, 1) : LocalDate.of(year, 12, 31);
                 Status status = f != null ? Status.FILED : today.isBefore(ready) ? Status.UPCOMING : Status.TO_FILE;
                 boolean late = f != null ? f.filedOn().isAfter(due) : today.isAfter(due);
@@ -236,6 +236,16 @@ public class LegalFilings {
         }
         out.sort(Comparator.comparing(Annual::due).reversed().thenComparing(Annual::kind));
         return out;
+    }
+
+    /** A yearly filing's name: the tax summary as the country calls it. */
+    public static String annualName(String kind) {
+        return switch (kind) {
+            case "WORKFORCE" -> Texts.t("Annual declaration of the workforce");
+            case "BILAN_SOCIAL" -> Texts.t("Bilan social");
+            case "TAX_ANNUAL" -> Texts.t("Annual tax summary");
+            default -> kind;
+        };
     }
 
     static LocalDate annualDue(Rule rule, int year) {
@@ -694,7 +704,7 @@ public class LegalFilings {
         return p.nationalityCode() != null ? !p.nationalityCode().equals(country) : p.expatriate();
     }
 
-    private List<Row> employer() {
+    List<Row> employer() {
         Company.Details d = company.get();
         List<Row> rows = new ArrayList<>();
         field(rows, Texts.t("Employer"), d.name());
@@ -711,7 +721,7 @@ public class LegalFilings {
         return rows;
     }
 
-    private String signature() {
+    String signature() {
         Company.Representative r = company.representative();
         String place = r == null || r.signingPlace() == null ? "……………" : r.signingPlace();
         String who = r == null || r.name() == null ? "" : r.name() + (r.title() == null ? "" : ", " + r.title());
@@ -725,11 +735,11 @@ public class LegalFilings {
                 .params(userId, on).query(String.class).optional().orElse(null);
     }
 
-    private static List<Column> fieldColumns() {
+    static List<Column> fieldColumns() {
         return List.of(Column.text(Texts.t("Item")), Column.text(Texts.t("Value")));
     }
 
-    private static void field(List<Row> rows, String label, String value) {
+    static void field(List<Row> rows, String label, String value) {
         rows.add(Row.of(List.of(label, value == null || value.isBlank() ? "—" : value)));
     }
 

@@ -118,6 +118,60 @@ class LegalFilingsIT extends IntegrationTest {
     }
 
     @Test
+    void theAnnualTaxSummaryLedgerAndSheetsAddUpToTheClosedPayslips() throws Exception {
+        usdRate("2025-08-29", 2800);
+        MockHttpSession hr = hrFromStart();
+        MockHttpSession finance = login(FINANCE);
+        var csrf = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf();
+        mvc.perform(post("/api/payroll/runs/2025-08/calculate").session(hr).with(csrf)).andExpect(status().isOk());
+        mvc.perform(post("/api/payroll/runs/2025-08/approve").session(finance).with(csrf)).andExpect(status().isOk());
+        mvc.perform(post("/api/payroll/runs/2025-08/close").session(hr).with(csrf)).andExpect(status().isOk());
+
+        java.math.BigDecimal taxable = jdbc.sql("""
+                select coalesce(sum(p.taxable_base_cdf), 0) from payslip p join payroll_run r on r.id = p.run_id
+                where r.status = 'CLOSED' and p.number is not null and extract(year from r.month) = 2025""")
+                .query(java.math.BigDecimal.class).single()
+                .add(jdbc.sql("select coalesce(sum(taxable_cdf), 0) from ytd_opening where year = 2025").query(java.math.BigDecimal.class).single())
+                .add(jdbc.sql("""
+                        select coalesce(sum(taxable_base_cdf), 0) from leave_allowance
+                        where status in ('APPROVED', 'PAID') and number is not null and extract(year from pay_by) = 2025""")
+                        .query(java.math.BigDecimal.class).single());
+        int people = jdbc.sql("""
+                select count(distinct p.user_id) from payslip p join payroll_run r on r.id = p.run_id
+                where r.status = 'CLOSED' and p.number is not null and extract(year from r.month) = 2025""").query(Integer.class).single();
+        assertThat(people).isPositive();
+
+        String page = mvc.perform(get("/api/legal-filings").session(hr)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<Object>>read(page, "$.rules[?(@.kind=='TAX_ANNUAL')]")).hasSize(1);
+
+        String summary = mvc.perform(get("/api/legal-filings/annual/TAX_ANNUAL/2025").session(hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("legal.tax"))
+                .andExpect(jsonPath("$.tables.length()").value(3))
+                .andReturn().getResponse().getContentAsString();
+        List<Object> total = JsonPath.read(summary, "$.tables[2].rows[-1].cells");
+        assertThat(new java.math.BigDecimal(total.get(7).toString())).isEqualByComparingTo(taxable);
+        List<Object> monthly = JsonPath.read(summary, "$.tables[1].rows[-1].cells");
+        assertThat(new java.math.BigDecimal(monthly.get(3).toString())).isEqualByComparingTo(taxable);
+        assertThat(new java.math.BigDecimal(monthly.get(4).toString())).isEqualByComparingTo(new java.math.BigDecimal(total.get(8).toString()));
+        mvc.perform(get("/api/legal-filings/annual/TAX_ANNUAL/2025").param("format", "pdf").session(hr))
+                .andExpect(status().isOk()).andExpect(content().contentType("application/pdf"));
+        mvc.perform(get("/api/legal-filings/annual/TAX_ANNUAL/2025").param("format", "xlsx").session(hr)).andExpect(status().isOk());
+
+        String sheets = mvc.perform(get("/api/legal-filings/annual/TAX_ANNUAL/2025/sheets").session(hr)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("legal.sheets")).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<Object>>read(sheets, "$.tables")).hasSizeGreaterThanOrEqualTo(people);
+        mvc.perform(get("/api/legal-filings/annual/TAX_ANNUAL/2025/sheets").param("format", "pdf").session(hr)).andExpect(status().isOk());
+
+        String ledger = mvc.perform(get("/api/payroll/ledger/2025").session(finance)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("legal.ledger"))
+                .andExpect(jsonPath("$.tables.length()").value(6)).andReturn().getResponse().getContentAsString();
+        List<Object> ledgerTotal = JsonPath.read(ledger, "$.tables[1].rows[-1].cells");
+        assertThat(new java.math.BigDecimal(ledgerTotal.getLast().toString())).isEqualByComparingTo(taxable);
+        mvc.perform(get("/api/payroll/ledger/2025").param("format", "xlsx").session(finance)).andExpect(status().isOk());
+        mvc.perform(get("/api/payroll/ledger/2025").session(login(EMPLOYEE))).andExpect(status().isForbidden());
+    }
+
+    @Test
     void employeesCannotSeeTheFilings() throws Exception {
         mvc.perform(get("/api/legal-filings").session(login(EMPLOYEE))).andExpect(status().isForbidden());
     }

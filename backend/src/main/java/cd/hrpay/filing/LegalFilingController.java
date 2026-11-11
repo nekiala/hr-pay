@@ -35,11 +35,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class LegalFilingController {
 
     private final LegalFilings filings;
+    private final AnnualPayFilings annualPay;
     private final ReportPdf pdf;
     private final AuditService audit;
 
-    public LegalFilingController(LegalFilings filings, ReportPdf pdf, AuditService audit) {
+    public LegalFilingController(LegalFilings filings, AnnualPayFilings annualPay, ReportPdf pdf, AuditService audit) {
         this.filings = filings;
+        this.annualPay = annualPay;
         this.pdf = pdf;
         this.audit = audit;
     }
@@ -105,16 +107,38 @@ public class LegalFilingController {
     @GetMapping("/annual/{kind}/{year}")
     public ResponseEntity<?> annual(@PathVariable String kind, @PathVariable int year,
                                     @RequestParam(defaultValue = "json") String format, HttpServletResponse response) throws IOException {
-        if (year < 2000 || year > LocalDate.now().getYear() + 1) {
-            throw new BusinessRuleException("Choose a year.");
-        }
+        checkYear(year);
         Report r = switch (kind) {
             case "WORKFORCE" -> filings.workforce(year);
             case "BILAN_SOCIAL" -> filings.bilanSocial(year);
+            case "TAX_ANNUAL" -> annualPay.taxSummary(year);
             default -> throw new cd.hrpay.common.NotFoundException("Unknown filing " + kind + ".");
         };
-        return send(r, format, (kind.equals("WORKFORCE") ? "declaration-main-oeuvre-" : "bilan-social-") + year,
-                Map.of("kind", kind, "year", year), response);
+        String name = switch (kind) {
+            case "WORKFORCE" -> "declaration-main-oeuvre-";
+            case "BILAN_SOCIAL" -> "bilan-social-";
+            default -> "releve-annuel-impot-";
+        };
+        return send(r, format, name + year, Map.of("kind", kind, "year", year), response);
+    }
+
+    /** The individual tax sheets that go with the annual summary: everyone, or one person. */
+    @GetMapping("/annual/TAX_ANNUAL/{year}/sheets")
+    public ResponseEntity<?> sheets(@PathVariable int year, @RequestParam(required = false) Long userId,
+                                    @RequestParam(defaultValue = "json") String format, HttpServletResponse response) throws IOException {
+        checkYear(year);
+        Map<String, Object> what = new LinkedHashMap<>(Map.of("kind", "TAX_SHEETS", "year", year));
+        if (userId != null) {
+            what.put("userId", userId);
+        }
+        return send(annualPay.individualSheets(year, userId), format, "fiches-individuelles-" + year + (userId == null ? "" : "-" + userId),
+                what, response);
+    }
+
+    static void checkYear(int year) {
+        if (year < 2000 || year > LocalDate.now().getYear() + 1) {
+            throw new BusinessRuleException("Choose a year.");
+        }
     }
 
     @GetMapping("/register")
@@ -137,7 +161,17 @@ public class LegalFilingController {
         return filings.addVisit(body.visitedOn(), body.inspector(), body.observations());
     }
 
+    static ResponseEntity<?> send(ReportPdf pdf, AuditService audit, Report r, String format, String name, Map<String, Object> what,
+                                  HttpServletResponse response) throws IOException {
+        return sendWith(pdf, audit, r, format, name, what, response);
+    }
+
     private ResponseEntity<?> send(Report r, String format, String name, Map<String, Object> what,
+                                   HttpServletResponse response) throws IOException {
+        return sendWith(pdf, audit, r, format, name, what, response);
+    }
+
+    private static ResponseEntity<?> sendWith(ReportPdf pdf, AuditService audit, Report r, String format, String name, Map<String, Object> what,
                                    HttpServletResponse response) throws IOException {
         if (!List.of("json", "pdf", "xlsx").contains(format)) {
             throw new BusinessRuleException("Choose the format: json, pdf or xlsx.");
