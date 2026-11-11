@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ApiError, api, longDay, money } from '../api'
+import { ApiError, api, longDay, money, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { localCurrency, t } from '../i18n'
 import { PayDeclarationModal, STATUS_BADGE, statusLabel, type CalendarItem } from '../components/DeclarationStatus'
+import { DateInput } from '../components/DateFields'
 
 type Kind = 'CNSS' | 'IPR' | 'INPP' | 'ONEM' | 'IERE' | 'TUS' | 'CNAMGS' | 'CAC' | 'CFC' | 'FNE' | 'RAV' | 'TDL' | 'TCS' | 'FNH' | 'CFP'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
@@ -130,7 +131,7 @@ export default function DeclarationsPage() {
                     <td>{KIND[s.kind].name}</td><td>{KIND[s.kind].to}</td><td>{s.employees}</td><td>{cdf(s.totalCdf)}</td>
                     <td className="small">{item(s.kind) ? longDay(item(s.kind)!.nextDue) : '—'}</td>
                     <td>{item(s.kind) ? <span className={`badge ${item(s.kind)!.late && item(s.kind)!.status !== 'PAID' ? 'off' : STATUS_BADGE[item(s.kind)!.status]}`}>{statusLabel(item(s.kind)!)}</span>
-                      : s.filed ? `${s.filed.filedOn}${s.filed.reference ? ` · ${s.filed.reference}` : ''}` : <span className="muted">{t('Not yet')}</span>}</td>
+                      : s.filed ? `${day(s.filed.filedOn)}${s.filed.reference ? ` · ${s.filed.reference}` : ''}` : <span className="muted">{t('Not yet')}</span>}</td>
                     <td><Button className="link" onClick={() => setParams({ month, kind: s.kind })}>{t('Open')}</Button></td>
                   </tr>
                 ))}
@@ -144,7 +145,7 @@ export default function DeclarationsPage() {
         <div className="card payslip">
           <h3>{KIND[decl.kind].name} · {decl.month}</h3>
           <p>{employer?.name} · {decl.kind === 'CNSS' ? t('CNSS no. {a}', { a: employer?.cnssNumber ?? '—' }) : decl.kind === 'INPP' ? t('INPP no. {a}', { a: employer?.inppNumber ?? '—' }) : decl.kind === 'ONEM' ? t('ONEM no. {a}', { a: employer?.onemNumber ?? '—' }) : t('NIF {a}', { a: employer?.taxNumber ?? '—' })}</p>
-          <p className="muted small">{t('Amounts in CDF at the payroll\'s rate: 1 USD =')}{' '}{decl.usdCdf}{' '}{t('CDF (')}{decl.rateDate}).</p>
+          <p className="muted small">{t('Amounts in CDF at the payroll\'s rate: 1 USD =')}{' '}{decl.usdCdf}{' '}{t('CDF (')}{day(decl.rateDate)}).</p>
           {decl.warnings.length > 0 && <div className="notice no-print"><ul>{decl.warnings.map((w) => <li key={w}>{w}</li>)}</ul></div>}
           {decl.rows.length === 0 ? <p className="muted">{t('Nobody is concerned this month.')}</p> : (
             <div className="table-wrap">
@@ -170,7 +171,7 @@ export default function DeclarationsPage() {
           {current?.paid && <p>{t('Paid on {a}: {b}', { a: longDay(current.paid.paidOn), b: money(current.paid.amount, localCurrency()) })}{current.paid.reference && t(', reference {a}', { a: current.paid.reference })}.</p>}
           {current?.penalty && current.penalty.total > 0 && <p className="notice small no-print">{t('Penalty estimate: {a}.', { a: money(current.penalty.total, localCurrency()) })}{' '}{current.penalty.how.join(' ')}</p>}
           {current?.annual && <p className="notice small no-print">{current.annual}</p>}
-          {decl.filed && <p>{t('Filed on')}{' '}{decl.filed.filedOn}{decl.filed.reference && t(', reference {a}', { a: decl.filed.reference })}{decl.filed.note && ` (${decl.filed.note})`}{t('. Recorded by')}{' '}{decl.filed.filedBy}.</p>}
+          {decl.filed && <p>{t('Filed on')}{' '}{day(decl.filed.filedOn)}{decl.filed.reference && t(', reference {a}', { a: decl.filed.reference })}{decl.filed.note && ` (${decl.filed.note})`}{t('. Recorded by')}{' '}{decl.filed.filedBy}.</p>}
           <div className="row no-print">
             <a className="button secondary" href={`/api/declarations/${month}/${kind}/file.csv`}>{t('Download CSV')}</a>
             <Button className="secondary" onClick={() => window.print()}>{t('Print or save as PDF')}</Button>
@@ -187,7 +188,7 @@ export default function DeclarationsPage() {
           {filing && (
             <Modal title={t('Record {a} for {b} as filed', { a: kind, b: month })} size="sm" onClose={() => setFiling(null)}>
               <Form onSubmit={() => run(async () => { await api(`/api/declarations/${month}/${kind}/filed`, { method: 'POST', body: { filedOn: filing.filedOn, reference: filing.reference || null, note: filing.note || null } }); setFiling(null) }, t('{a} for {b} recorded as filed.', { a: kind, b: month }))}>
-                <label>{t('Filed on')}<input type="date" required value={filing.filedOn} onChange={(e) => setFiling({ ...filing, filedOn: e.target.value })} /></label>
+                <label>{t('Filed on')}<DateInput required value={filing.filedOn} onChange={(e) => setFiling({ ...filing, filedOn: e.target.value })} /></label>
                 <label>{t('Receipt or reference')}<input maxLength={100} value={filing.reference} onChange={(e) => setFiling({ ...filing, reference: e.target.value })} /></label>
                 <label>{t('Note')}<input maxLength={300} value={filing.note} onChange={(e) => setFiling({ ...filing, note: e.target.value })} /></label>
                 <div className="modal-foot"><Button className="secondary" onClick={() => setFiling(null)}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>

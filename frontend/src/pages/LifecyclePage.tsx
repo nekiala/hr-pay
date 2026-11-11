@@ -10,6 +10,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Tab = 'types' | 'steps' | 'templates'
 
@@ -326,8 +327,8 @@ function Templates() {
                 <label>{t('Classification')}<input maxLength={60} placeholder={t('Internal - Confidential')} value={draft.docClassification ?? ''} onChange={(e) => setDraft({ ...draft, docClassification: e.target.value })} /></label>
                 <label>{t('Document owner')}<input maxLength={100} value={draft.docOwner ?? ''} onChange={(e) => setDraft({ ...draft, docOwner: e.target.value })} /></label>
                 <label>{t('Approver')}<input maxLength={100} value={draft.docApprover ?? ''} onChange={(e) => setDraft({ ...draft, docApprover: e.target.value })} /></label>
-                <label>{t('Date of adoption')}<input type="date" value={draft.docAdoptedOn ?? ''} onChange={(e) => setDraft({ ...draft, docAdoptedOn: e.target.value || null })} /></label>
-                <label>{t('Date in force')}<input type="date" value={draft.docEffectiveOn ?? ''} onChange={(e) => setDraft({ ...draft, docEffectiveOn: e.target.value || null })} /></label>
+                <label>{t('Date of adoption')}<DateInput value={draft.docAdoptedOn ?? ''} onChange={(e) => setDraft({ ...draft, docAdoptedOn: e.target.value || null })} /></label>
+                <label>{t('Date in force')}<DateInput value={draft.docEffectiveOn ?? ''} onChange={(e) => setDraft({ ...draft, docEffectiveOn: e.target.value || null })} /></label>
               </div>
             </fieldset>
           )}

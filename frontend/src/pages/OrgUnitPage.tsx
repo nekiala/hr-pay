@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, type User , personName } from '../api'
+import { ApiError, api, type User , personName, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { UnitSelect } from '../components/OrgCard'
@@ -8,6 +8,7 @@ import { headTitle, unitPath, type OrgHead, type OrgLevel, type OrgMember, type 
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Detail = { unit: OrgUnit; heads: OrgHead[]; members?: OrgMember[] }
 const today = () => new Date().toISOString().slice(0, 10)
@@ -45,7 +46,7 @@ export default function OrgUnitPage() {
       <p className="small muted"><Link to="/org">{t('Org chart')}</Link> · {unitPath(units, u.id)}</p>
       <h2>{u.name} <span className="muted">({u.code})</span></h2>
       <p className="muted">
-        {u.levelName}{u.staff && t(' (staff unit)')}{' '}{t('· since')}{' '}{u.validFrom}{u.validTo && t(' · closed on {a}', { a: u.validTo })}
+        {u.levelName}{u.staff && t(' (staff unit)')}{' '}{t('· since')}{' '}{day(u.validFrom)}{u.validTo && t(' · closed on {a}', { a: u.validTo })}
         {u.costCentre && t(' · cost centre {a}', { a: u.costCentre })}
         {u.totalMembers !== null && t(' · {a} people here, {b} with sub-units', { a: u.members, b: u.totalMembers })}
       </p>
@@ -62,7 +63,7 @@ export default function OrgUnitPage() {
             <table>
               <thead><tr><th>{t('Person')}</th><th>{t('Role')}</th><th>{t('From')}</th><th>{t('To')}</th></tr></thead>
               <tbody>{data.heads.filter((h) => h.validTo !== null).map((h) => (
-                <tr key={h.id}><td>{h.userName}</td><td>{headTitle(u, h, levels)}</td><td>{h.validFrom}</td><td>{h.validTo}</td></tr>
+                <tr key={h.id}><td>{h.userName}</td><td>{headTitle(u, h, levels)}</td><td>{day(h.validFrom)}</td><td>{day(h.validTo)}</td></tr>
               ))}</tbody>
             </table>
           </details>
@@ -86,7 +87,7 @@ export default function OrgUnitPage() {
             <table>
               <thead><tr><th>{t('Name')}</th><th>{t('Registration')}</th><th>{t('Since')}</th><th>{t('Reports to')}</th></tr></thead>
               <tbody>{data.members.map((m) => (
-                <tr key={m.userId}><td><Link to={`/users/${m.userId}`}>{m.name}</Link></td><td>{m.registrationNo}</td><td>{m.since}</td>
+                <tr key={m.userId}><td><Link to={`/users/${m.userId}`}>{m.name}</Link></td><td>{m.registrationNo}</td><td>{day(m.since)}</td>
                   <td>{m.reportsToName ?? <span className="muted">{t('nobody')}</span>}</td></tr>
               ))}</tbody>
             </table>
@@ -150,7 +151,7 @@ function HeadRow({ unit, role, head, levels, editable, onSaved }: {
     <div>
       <p>
         <span className="muted">{label}: </span>
-        {head ? <><strong>{head.userName}</strong> <span className="muted">{headTitle(unit, head, levels)}{' '}{t('since')}{' '}{head.validFrom}</span></>
+        {head ? <><strong>{head.userName}</strong> <span className="muted">{headTitle(unit, head, levels)}{' '}{t('since')}{' '}{day(head.validFrom)}</span></>
           : <span className="muted">{role === 'HEAD' ? t('Vacant. Its people report to the nearest head above.') : t('None')}</span>}
         {editable && !open && <> <Button className="secondary void" onClick={() => setOpen(true)}>{head ? t('Replace') : t('Appoint')}</Button></>}
         {editable && head && !open && <> <Button className="secondary void" onClick={() => end()}>{t('End today')}</Button></>}
@@ -169,7 +170,7 @@ function HeadRow({ unit, role, head, levels, editable, onSaved }: {
               </>
             )}
             <div className="grid3">
-              <label>{t('From')}<input type="date" required value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} /></label>
+              <label>{t('From')}<DateInput required value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} /></label>
               <label>{t('Title (optional)')}<input maxLength={100} placeholder={levels.find((l) => l.id === unit.levelId)?.headTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
               <label className="check"><input type="checkbox" checked={form.interim} onChange={(e) => setForm({ ...form, interim: e.target.checked })} />{t('Ad interim (a.i.)')}</label>
             </div>
@@ -219,7 +220,7 @@ export function UnitForm({ units, levels, unit, parentId, onSaved, onCancel }: {
           </select>
           <span className="hint">{t('Only levels below the unit above are offered; a level may be skipped.')}</span></label>
         <label>{t('Cost centre (optional)')}<input maxLength={40} value={form.costCentre} onChange={(e) => setForm({ ...form, costCentre: e.target.value })} /></label>
-        {!unit && <label>{t('Opens on')}<input type="date" required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>}
+        {!unit && <label>{t('Opens on')}<DateInput required value={form.validFrom} onChange={(e) => setForm({ ...form, validFrom: e.target.value })} /></label>}
       </div>
       <ErrorText error={error} />
       <div className="modal-foot"><Button className="secondary" onClick={onCancel}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
@@ -243,7 +244,7 @@ function CloseForm({ unit, onSaved, onCancel }: { unit: OrgUnit; onSaved: () => 
     <Modal title={t('Close {a}', { a: unit.name })} size="sm" onClose={onCancel}>
     <Form onSubmit={(e) => save(e)}>
       <p className="hint">{t('Move its people and sub-units elsewhere first. Closing ends the head\'s and deputy\'s terms; the history stays.')}</p>
-      <label>{t('Last day')}<input type="date" required value={on} onChange={(e) => setOn(e.target.value)} /></label>
+      <label>{t('Last day')}<DateInput required value={on} onChange={(e) => setOn(e.target.value)} /></label>
       <ErrorText error={error} />
       <div className="modal-foot"><Button className="secondary" onClick={onCancel}>{t('Cancel')}</Button><Button type="submit" className="danger">{t('Close unit')}</Button></div>
     </Form>

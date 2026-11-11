@@ -6,6 +6,7 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { t } from '../i18n'
+import { DateTimeInput } from '../components/DateFields'
 
 type Settings = {
   configured: boolean; enabled: boolean; testMode: boolean; hasSignatureKey: boolean; notificationUrl: string | null
@@ -123,7 +124,7 @@ export function NtpayPanel({ batch, onChange }: { batch: NtpayBatch; onChange: (
       <ErrorText error={error} />
       <div className="row">
         {canSend && <>
-          <label className="small">{t('Pay on (optional)')}<input type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} /></label>
+          <label className="small">{t('Pay on (optional)')}<DateTimeInput value={at} onChange={(e) => setAt(e.target.value)} /></label>
           <Button onClick={() => ask({
             title: t('Send this file with NTPay?'), confirmLabel: t('Send'),
             message: t('NTPay pays each line from your NTPay balance once the batch is approved. A line that fails comes back to the payments to pay, after you correct the number.'),

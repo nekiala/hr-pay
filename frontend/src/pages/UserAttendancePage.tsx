@@ -8,6 +8,7 @@ import MonthView from '../components/MonthView'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput, TimeInput } from '../components/DateFields'
 
 export default function UserAttendancePage() {
   const [adding, setAdding] = useState(false)
@@ -66,8 +67,8 @@ export default function UserAttendancePage() {
           <Form onSubmit={async (e) => { if (await add(e)) setAdding(false) }}>
             <p className="hint">{t('Entries are never edited. Void a wrong one with a reason, then add the right one. Both are kept in the audit log.')}</p>
             <div className="row">
-              <input type="date" value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} required />
-              <input type="time" value={entry.time} onChange={(e) => setEntry({ ...entry, time: e.target.value })} required />
+              <DateInput value={entry.date} onChange={(e) => setEntry({ ...entry, date: e.target.value })} required />
+              <TimeInput value={entry.time} onChange={(e) => setEntry({ ...entry, time: e.target.value })} required />
               <select value={entry.type} onChange={(e) => setEntry({ ...entry, type: e.target.value })}>
                 <option value="IN">{t('Arrival')}</option>
                 <option value="OUT">{t('End of day')}</option>

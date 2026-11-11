@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../api'
+import { api, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Person = {
   userId: number; name: string; registrationNo: string; directionName: string | null; unitName: string | null; siteName: string | null
@@ -74,7 +75,7 @@ export default function PresencePage() {
       {view === 'day' && (
         <>
           <div className="row no-print">
-            <label>{t('Day')}<input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} /></label>
+            <label>{t('Day')}<DateInput value={date} max={today()} onChange={(e) => setDate(e.target.value)} /></label>
             <Button className="secondary" onClick={() => window.print()}>{t('Print')}</Button>
           </div>
           {presence && (
@@ -113,8 +114,8 @@ export default function PresencePage() {
       {view === 'exceptions' && (
         <>
           <div className="row no-print">
-            <label>{t('From')}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></label>
-            <label>{t('To')}<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></label>
+            <label>{t('From')}<DateInput value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></label>
+            <label>{t('To')}<DateInput value={to} min={from} onChange={(e) => setTo(e.target.value)} /></label>
             <label>{t('Kind')}<select value={kind} onChange={(e) => setKind(e.target.value)}>
                 <option value="">{t('All')}</option>
                 {Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v} ({issues?.counts[k] ?? 0})</option>)}
@@ -136,7 +137,7 @@ export default function PresencePage() {
                     <tr key={i}>
                       <td>{r.name}<br /><span className="muted">{r.registrationNo}</span></td>
                       <td>{r.unitName}</td>
-                      <td>{r.date}</td>
+                      <td>{day(r.date)}</td>
                       <td>{KIND[r.kind] ?? r.kind}{r.minutes > 0 && r.kind !== 'ABSENT' ? ` (${r.minutes} min)` : ''}</td>
                       <td className="small">{r.detail}</td>
                     </tr>

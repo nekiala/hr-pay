@@ -1,5 +1,7 @@
 // Small API client: session cookie auth, CSRF token from the XSRF-TOKEN cookie.
-import { language, locale, plural, t } from './i18n'
+import { day, dayTime, language, locale, plural, t } from './i18n'
+
+export { day, dayTime }
 
 export class ApiError extends Error {
   status: number
@@ -792,6 +794,19 @@ export const days = (n: number) => plural('{a} day', '{a} days', Number(n), { a:
 
 export type Grade = { id: number; categoryId: number; categoryCode: string; categoryName: string; code: string; name: string; baseSalary: number; currency: string; active: boolean; smigCoefficient: number | null }
 export type Occupation = { id: number; code: string; name: string; active: boolean }
+export type CareerKind = 'PROMOTION' | 'TRANSFER' | 'PROMOTION_TRANSFER' | 'RECLASSIFICATION'
+export const CAREER_KINDS: Record<CareerKind, string> = {
+  PROMOTION: t('Promotion'), TRANSFER: t('Transfer'), PROMOTION_TRANSFER: t('Promotion with transfer'), RECLASSIFICATION: t('Reclassification'),
+}
+export type CareerMove = {
+  id: number; userId: number; kind: CareerKind; effectiveOn: string
+  fromGradeId: number | null; fromGrade: string | null; toGradeId: number | null; toGrade: string | null
+  fromOccupationId: number | null; fromOccupation: string | null; toOccupationId: number | null; toOccupation: string | null
+  fromUnitId: number | null; fromUnit: string | null; toUnitId: number | null; toUnit: string | null
+  fromSiteId: number | null; fromSite: string | null; toSiteId: number | null; toSite: string | null
+  contractId: number | null; trialMonths: number | null; keepNet: boolean; note: string | null
+  letterId: number | null; letterStatus: LetterStatus | null; createdBy: string; createdAt: string
+}
 export type Contract = {
   id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT'; startDate: string; endDate: string | null
   gradeId: number; gradeCode: string; gradeName: string; categoryId: number; occupationId: number | null; occupationName: string | null
@@ -991,12 +1006,13 @@ export const COUNTRY_NAMES: Record<string, string> = { CD: t('DR Congo'), CG: t(
 
 // ---- phase 15: imports, access keys, webhooks, time clocks, file layouts -----------------------------------------
 
-export type ImportKind = 'EMPLOYEES' | 'CONTRACTS' | 'SALARIES' | 'LEAVE_BALANCES' | 'YEAR_TO_DATE'
+export type ImportKind = 'EMPLOYEES' | 'FAMILY' | 'CONTRACTS' | 'MOVES' | 'SALARIES' | 'LEAVE_BALANCES' | 'YEAR_TO_DATE'
 export const IMPORT_KINDS: Record<ImportKind, string> = {
-  EMPLOYEES: t('Employees'), CONTRACTS: t('Contracts'), SALARIES: t('Salaries'), LEAVE_BALANCES: t('Leave balances'), YEAR_TO_DATE: t('Year-to-date totals'),
+  EMPLOYEES: t('Employees'), FAMILY: t('Family'), CONTRACTS: t('Contracts'), MOVES: t('Promotions and transfers'), SALARIES: t('Salaries'),
+  LEAVE_BALANCES: t('Leave balances'), YEAR_TO_DATE: t('Year-to-date totals'),
 }
 export type ImportColumn = { key: string; header: string; required: boolean; help: string | null }
-export type ImportKindView = { kind: ImportKind; columns: ImportColumn[] }
+export type ImportKindView = { kind: ImportKind; columns: ImportColumn[]; canFill: boolean }
 export type ImportRow = { row: number; registrationNo: string | null; name: string | null; action: string | null; errors: string[]; warnings: string[] }
 export type ImportResult = { kind: ImportKind; saved: boolean; rows: number; withErrors: number; problems: string[]; results: ImportRow[] }
 export type ImportBatch = { id: number; kind: ImportKind; fileName: string | null; rows: number; createdBy: string; createdAt: string }

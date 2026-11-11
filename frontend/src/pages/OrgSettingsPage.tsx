@@ -8,6 +8,7 @@ import { UnitForm } from './OrgUnitPage'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const message = (err: unknown) => err instanceof ApiError ? [err.message, ...Object.values(err.fieldErrors)].join(' ') : t('Something went wrong.')
 type LevelForm = { id: number | null; code: string; name: string; rank: string; headTitle: string; staff: boolean; active: boolean }
@@ -175,7 +176,7 @@ export default function OrgSettingsPage() {
           </fieldset>
         )}
         <div className="grid3">
-          <label>{t('From')}<input type="date" required value={bulk.from} onChange={(e) => setBulk({ ...bulk, from: e.target.value })} /></label>
+          <label>{t('From')}<DateInput required value={bulk.from} onChange={(e) => setBulk({ ...bulk, from: e.target.value })} /></label>
           <label>{t('Why')}<select value={bulk.reason} onChange={(e) => setBulk({ ...bulk, reason: e.target.value })}>
               {['REORGANISATION', 'TRANSFER', 'PROMOTION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
             </select></label>

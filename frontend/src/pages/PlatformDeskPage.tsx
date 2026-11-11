@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal'
 import { locale, t } from '../i18n'
 import { TicketTable, type Ticket } from './HelpPage'
 import { IMPACT, IncidentCard, LEGAL_PATHS, OVERALL, type LegalDoc, type ServiceStatus } from './PublicPages'
+import { DateTimeInput } from '../components/DateFields'
 
 /** The provider's support desk: every company's requests, the open ones first. */
 export function SupportDeskPage() {
@@ -268,7 +269,7 @@ export function IncidentsPage() {
         <div className="grid3">
           <label>{t('Title')}<input required maxLength={150} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
           <label>{t('Impact')}<select value={form.impact} onChange={(e) => setForm({ ...form, impact: e.target.value })}>{Object.entries(IMPACT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label>{t('Starts (empty: now)')}<input type="datetime-local" value={form.startedAt} onChange={(e) => setForm({ ...form, startedAt: e.target.value })} /></label>
+          <label>{t('Starts (empty: now)')}<DateTimeInput value={form.startedAt} onChange={(e) => setForm({ ...form, startedAt: e.target.value })} /></label>
         </div>
         <label>{t('What customers read')}<textarea required maxLength={1000} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} /></label>
         <Button type="submit">{t('Publish on the status page')}</Button>

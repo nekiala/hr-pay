@@ -5,6 +5,7 @@ import { Button, Form } from '../components/Button'
 import { ErrorText } from '../components/ErrorText'
 import { t } from '../i18n'
 import type { FilingSettings } from './LegalFilingsPage'
+import { DateInput } from '../components/DateFields'
 
 /** From when hirings and departures are declared here, and whether the company keeps its personnel register here. */
 export default function LegalFilingSettingsPage() {
@@ -44,7 +45,7 @@ export default function LegalFilingSettingsPage() {
           <Form onSubmit={save}>
             {settings.movements && (
               <label>{t('Declare hirings and departures from')}
-                <input type="date" required value={form.filingsFrom} onChange={(e) => setForm({ ...form, filingsFrom: e.target.value })} />
+                <DateInput required value={form.filingsFrom} onChange={(e) => setForm({ ...form, filingsFrom: e.target.value })} />
                 <span className="hint">{t('Hirings and departures before this date are not listed (they were declared outside HR Pay).')}</span>
               </label>
             )}

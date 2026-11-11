@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api } from '../api'
+import { ApiError, api, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { SignOff } from '../components/SignOff'
 import { locale, localCurrency, t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type RateType = { code: string; name: string; unit: 'PERCENT' | 'COUNT' | 'CDF' | 'XAF'; description: string; value: number | null; effectiveFrom: string | null; nextChange: string | null; nextValue: number | null; lawChangeId: number | null; nextLawChangeId: number | null }
 type RateEntry = { id: number; code: string; effectiveFrom: string; value: number; note: string | null; createdBy: string; createdAt: string; lawChangeId: number | null }
@@ -94,12 +95,12 @@ export default function StatutoryRatesPage() {
         : t('Sample values from memory. A DRC payroll accountant must confirm every rate and the IPR barème before the first real payroll.')} />
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
-      <label className="month-pick">{t('Rates in force on')}{' '}<input type="date" value={on} onChange={(e) => setOn(e.target.value || today())} /></label>
+      <label className="month-pick">{t('Rates in force on')}{' '}<DateInput value={on} onChange={(e) => setOn(e.target.value || today())} /></label>
 
       <div className="card">
         <h3>{t('Exchange rate (BCC)')}</h3>
         {fx?.latest ? (
-          <p><strong>$1 = {new Intl.NumberFormat(locale(), { maximumFractionDigits: 6 }).format(fx.latest.cdfPerUnit)}{' '}{t('CDF')}</strong>{' '}{t('on')}{' '}{fx.latest.rateDate} · {fx.latest.enteredBy ? t('entered by {a}', { a: fx.latest.enteredBy }) : fx.latest.source}</p>
+          <p><strong>$1 = {new Intl.NumberFormat(locale(), { maximumFractionDigits: 6 }).format(fx.latest.cdfPerUnit)}{' '}{t('CDF')}</strong>{' '}{t('on')}{' '}{day(fx.latest.rateDate)} · {fx.latest.enteredBy ? t('entered by {a}', { a: fx.latest.enteredBy }) : fx.latest.source}</p>
         ) : <p className="muted">{t('No rate stored yet.')}</p>}
         {fx?.stale && <p className="notice">{t('The latest rate is more than 4 days old. Fetch it again, or enter today\'s BCC rate by hand.')}</p>}
         <p className="hint">{t('Fetched twice a day. Each payroll run records the rate it used (see Settings below).')}</p>
@@ -116,7 +117,7 @@ export default function StatutoryRatesPage() {
                 setFxEntry({ ...fxEntry, cdfPerUnit: '' })
               }, t('Rate saved.'))
             }}>
-              <input type="date" value={fxEntry.rateDate} required onChange={(e) => setFxEntry({ ...fxEntry, rateDate: e.target.value })} />
+              <DateInput value={fxEntry.rateDate} required onChange={(e) => setFxEntry({ ...fxEntry, rateDate: e.target.value })} />
               <input type="number" min={0.000001} step="any" placeholder={t('CDF per $1')} value={fxEntry.cdfPerUnit} required onChange={(e) => setFxEntry({ ...fxEntry, cdfPerUnit: e.target.value })} />
               <Button type="submit" className="secondary">{t('Enter rate')}</Button>
             </Form>
@@ -125,7 +126,7 @@ export default function StatutoryRatesPage() {
         {fx && fx.recent.length > 1 && (
           <details>
             <summary>{t('Last')}{' '}{fx.recent.length}{' '}{t('rates')}</summary>
-            <ul>{fx.recent.map((r) => <li key={r.id}>{r.rateDate}: {r.cdfPerUnit}{' '}{t('CDF')}{r.enteredBy ? t(' (entered by {a})', { a: r.enteredBy }) : ''}</li>)}</ul>
+            <ul>{fx.recent.map((r) => <li key={r.id}>{day(r.rateDate)}: {r.cdfPerUnit}{' '}{t('CDF')}{r.enteredBy ? t(' (entered by {a})', { a: r.enteredBy }) : ''}</li>)}</ul>
           </details>
         )}
       </div>
@@ -140,7 +141,7 @@ export default function StatutoryRatesPage() {
                 <tr key={r.code}>
                   <td><strong>{r.name}</strong><div className="hint">{r.description}</div></td>
                   <td>{show(r, r.value)}</td>
-                  <td>{r.effectiveFrom ?? '—'}</td>
+                  <td>{r.effectiveFrom ? day(r.effectiveFrom) : '—'}</td>
                   <td>{r.nextChange ? t('{a} from {b}', { a: show(r, r.nextValue), b: r.nextChange }) : ''}</td>
                   <td><Button className="secondary" onClick={() => setOpen(r.code)}>{editable ? t('History and change') : t('History')}</Button></td>
                 </tr>
@@ -152,7 +153,7 @@ export default function StatutoryRatesPage() {
           <Modal title={data?.rates.find((r) => r.code === open)?.name ?? open} size="lg" onClose={() => setOpen(null)}>
             <h4>{t('History')}</h4>
             <ul>
-              {history.map((h) => <li key={h.id}>{show(data!.rates.find((r) => r.code === open)!, h.value)}{' '}{t('from')}{' '}{h.effectiveFrom}{h.note ? ` · ${h.note}` : ''}{h.lawChangeId && <>{' · '}<a href={`/changes#${h.lawChangeId}`} target="_blank" rel="noreferrer">{t('the change')}</a></>} <span className="muted">· {h.createdBy}</span></li>)}
+              {history.map((h) => <li key={h.id}>{show(data!.rates.find((r) => r.code === open)!, h.value)}{' '}{t('from')}{' '}{day(h.effectiveFrom)}{h.note ? ` · ${h.note}` : ''}{h.lawChangeId && <>{' · '}<a href={`/changes#${h.lawChangeId}`} target="_blank" rel="noreferrer">{t('the change')}</a></>} <span className="muted">· {h.createdBy}</span></li>)}
             </ul>
             {editable && (
               <Form className="grid3" onSubmit={(e) => {
@@ -163,7 +164,7 @@ export default function StatutoryRatesPage() {
                 }, t('New value saved.'))
               }}>
                 <label>{t('New value')}<input type="number" min={0} step="any" value={change.value} required onChange={(e) => setChange({ ...change, value: e.target.value })} /></label>
-                <label>{t('From')}<input type="date" value={change.effectiveFrom} required onChange={(e) => setChange({ ...change, effectiveFrom: e.target.value })} /></label>
+                <label>{t('From')}<DateInput value={change.effectiveFrom} required onChange={(e) => setChange({ ...change, effectiveFrom: e.target.value })} /></label>
                 <label>{t('Reference (decree, circular)')}<input value={change.note} maxLength={300} onChange={(e) => setChange({ ...change, note: e.target.value })} /></label>
                 <div><Button type="submit">{t('Add value')}</Button></div>
               </Form>
@@ -182,7 +183,7 @@ export default function StatutoryRatesPage() {
               : t('Yearly bands in XAF, in force since {a}. Each month the taxable income less the contributions taken before tax is multiplied by 12, less the professional deduction and the yearly allowance, taxed on these bands and divided by 12. No tax below the monthly threshold.', { a: data?.ipr.effectiveFrom ?? '' })}</p>
           : congo
           ? <p className="hint">{t('Yearly bands for one part, in XAF, in force since {a}. Each month the taxable income is multiplied by 12, less the professional deduction, divided by the household\'s parts (1, plus 1 for a spouse and ½ per child in charge), taxed on these bands, multiplied back by the parts and divided by 12.', { a: data?.ipr.effectiveFrom ?? '' })}</p>
-          : <p className="hint">{t('Annual taxable income bands in CDF, in force since')}{' '}{data?.ipr.effectiveFrom}{t('. Each month the taxable income is multiplied by 12, taxed on these bands and divided by 12; then the reduction per dependant and the cap apply.')}</p>}
+          : <p className="hint">{t('Annual taxable income bands in CDF, in force since')}{' '}{day(data?.ipr.effectiveFrom)}{t('. Each month the taxable income is multiplied by 12, taxed on these bands and divided by 12; then the reduction per dependant and the cap apply.')}</p>}
         {!scale && (
           <div className="table-wrap">
             <table>
@@ -207,7 +208,7 @@ export default function StatutoryRatesPage() {
               setScale(null)
             }, t('New barème saved.'))
           }}>
-            <label className="month-pick">{t('Applies from')}{' '}<input type="date" value={scale.effectiveFrom} required onChange={(e) => setScale({ ...scale, effectiveFrom: e.target.value })} /></label>
+            <label className="month-pick">{t('Applies from')}{' '}<DateInput value={scale.effectiveFrom} required onChange={(e) => setScale({ ...scale, effectiveFrom: e.target.value })} /></label>
             <div className="table-wrap">
               <table>
                 <thead><tr><th>{t('From (CDF)')}</th><th>{t('Up to (CDF, empty for the last band)')}</th><th>{t('Rate (%)')}</th><th></th></tr></thead>

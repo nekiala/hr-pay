@@ -7,6 +7,7 @@ import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { language, t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Kind = 'SETTING' | 'LEAVE_DAYS' | 'OVERTIME' | 'RATE' | 'NOTE'
 type Rule = {
@@ -133,7 +134,7 @@ export function SectorPage() {
             </select>
           </label>
           <label>{t('Overtime and rates change from')}
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
             <span className="hint">{t('Leave and bonus settings change at once; months already closed never change.')}</span>
           </label>
         </div>
@@ -275,7 +276,7 @@ export function SectorPacksAdminPage() {
                 {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v[0]}</option>)}</select></label>
               <label>{t('Order')}<input type="number" min={0} value={editing.p.displayOrder} onChange={(e) => set({ displayOrder: Number(e.target.value) })} /></label>
               <label>{t('Checked by')}<input maxLength={150} value={editing.p.verifiedBy ?? ''} onChange={(e) => set({ verifiedBy: e.target.value })} /></label>
-              <label>{t('Checked on')}<input type="date" value={editing.p.verifiedOn ?? ''} onChange={(e) => set({ verifiedOn: e.target.value || null })} /></label>
+              <label>{t('Checked on')}<DateInput value={editing.p.verifiedOn ?? ''} onChange={(e) => set({ verifiedOn: e.target.value || null })} /></label>
             </div>
             <fieldset>
               <legend>{t('Rules')}</legend>

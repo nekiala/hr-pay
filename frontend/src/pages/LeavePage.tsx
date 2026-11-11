@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, api, days, fileToBase64, longDay, type AnnualLeave, type LeaveBalance, type LeaveDocument, type LeaveRequest, type LeaveType } from '../api'
+import { ApiError, api, days, fileToBase64, longDay, type AnnualLeave, type LeaveBalance, type LeaveDocument, type LeaveRequest, type LeaveType, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
@@ -9,6 +9,7 @@ import { Modal } from '../components/Modal'
 import { SettingsLink } from '../components/SettingsLink'
 import { AnnualLeavePlanning } from '../components/AnnualLeavePlanning'
 import { t, locale } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const STATUS: Record<LeaveRequest['status'], string> = {
   PENDING: t('Waiting for approval'), AWAITING_HR: t('Approved, HR to check the document'), APPROVED: t('Approved'),
@@ -17,7 +18,7 @@ const STATUS: Record<LeaveRequest['status'], string> = {
 const HALF = { AM: 'morning', PM: 'afternoon' }
 
 const dates = (r: LeaveRequest) =>
-  r.halfDay ? `${r.startDate} (${HALF[r.halfDay]})` : r.startDate === r.endDate ? r.startDate : t('{a} to {b}', { a: r.startDate, b: r.endDate })
+  r.halfDay ? `${day(r.startDate)} (${HALF[r.halfDay]})` : r.startDate === r.endDate ? r.startDate : t('{a} to {b}', { a: r.startDate, b: r.endDate })
 
 /** The supporting documents of one request: links to open them, and a file picker when more can be added. */
 function Documents({ request, canAdd, onChange }: { request: LeaveRequest; canAdd: boolean; onChange: () => void }) {
@@ -222,9 +223,9 @@ export default function LeavePage() {
                   {types.map((tItem) => <option key={tItem.id} value={tItem.id}>{tItem.name}</option>)}
                 </select>
               </label>
-              <label>{t('First day')}<input type="date" value={form.startDate}
+              <label>{t('First day')}<DateInput value={form.startDate}
                 onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate && form.endDate >= e.target.value ? form.endDate : e.target.value })} required /></label>
-              <label>{t('Last day')}<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
+              <label>{t('Last day')}<DateInput value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
             </div>
             {oneDay && (
               <label>{t('Part of the day')}<select value={form.halfDay} onChange={(e) => setForm({ ...form, halfDay: e.target.value })}>

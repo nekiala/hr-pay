@@ -5,6 +5,7 @@ import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
 import { Button, Form } from './Button'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 export function InvoiceStatus({ i }: { i: Invoice }) {
   if (i.status === 'PAID') return <span className="badge ok">{t('Paid')}</span>
@@ -105,7 +106,7 @@ function RecordPayment({ invoice, onClose, onDone }: { invoice: Invoice; onClose
           </label>
           <label>{t('Transaction reference')}<input required maxLength={100} value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t('From the bank or the operator')} /></label>
           <label>{t('Amount (')}{invoice.currency})<input required type="number" min="0.01" step="0.01" max={left} value={sum} onChange={(e) => setSum(e.target.value)} /></label>
-          <label>{t('Paid on')}<input required type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
+          <label>{t('Paid on')}<DateInput required value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></label>
         </div>
         <label>{t('Note')}<input value={note} onChange={(e) => setNote(e.target.value)} /></label>
         <footer className="modal-foot">

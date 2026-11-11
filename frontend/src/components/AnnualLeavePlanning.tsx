@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, days, longDay } from '../api'
 import { ErrorText } from './ErrorText'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 type Planned = {
   id: number; userId: number; employeeName: string; registrationNo: string; startDate: string; endDate: string
@@ -37,8 +38,8 @@ export function AnnualLeavePlanning({ showPay }: { showPay: boolean }) {
       <div className="row space">
         <h3>{t('Annual leave planning')}</h3>
         <div className="row">
-          <label>{t('From')} <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-          <label>{t('To')} <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          <label>{t('From')} <DateInput value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label>{t('To')} <DateInput value={to} onChange={(e) => setTo(e.target.value)} /></label>
         </div>
       </div>
       <ErrorText error={error} />

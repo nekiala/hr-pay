@@ -199,17 +199,34 @@ public class NegotiatedPay {
         if (current.gradeId() == gradeId) {
             throw new BusinessRuleException("The employee is already in this grade.");
         }
+        return changeJob(userId, gradeId, current.occupationId(), from, keepNet, note);
+    }
+
+    /**
+     * From a date, the contract goes on with another grade and/or occupation (an avenant): the current record ends the
+     * day before. With {@code keepNet}, the salary complement absorbs the new basic so that the net stays the same.
+     */
+    @Transactional
+    public EmployeeFile.Contract changeJob(long userId, long gradeId, Long occupationId, LocalDate from, boolean keepNet,
+                                           String note) {
+        EmployeeFile.Contract current = files.contractOn(userId, from).orElseThrow(() -> new BusinessRuleException(
+                Texts.t("There is no contract on %s: start one first, its grade gives the basic salary.", from)));
+        boolean newGrade = current.gradeId() != gradeId;
+        if (!newGrade && java.util.Objects.equals(current.occupationId(), occupationId)) {
+            throw new BusinessRuleException("The employee is already in this grade.");
+        }
         if (current.startDate().equals(from)) {
             throw new BusinessRuleException("The contract starts that day: use Correct to fix its grade.");
         }
         files.requireOpen(from);
-        BigDecimal net = keepNet ? normalMonth(userId, from).net() : null;
+        BigDecimal net = keepNet && newGrade ? normalMonth(userId, from).net() : null;
         MasterData.Grade old = masterData.grade(current.gradeId());
         MasterData.Grade grade = masterData.grade(gradeId);
         String text = note == null || note.isBlank()
-                ? Texts.t("Grade change: %s to %s", old.code(), grade.code()) : note.trim();
+                ? newGrade ? Texts.t("Grade change: %s to %s", old.code(), grade.code()) : Texts.t("Change of occupation")
+                : note.trim();
         EmployeeFile.Contract c = files.startContract(userId, current.contractType(), from, current.endDate(), gradeId,
-                current.occupationId(), current.expatriate(), null, text);
+                occupationId, current.expatriate(), null, text);
         if (net != null) {
             apply(fromNet(userId, from, net, gradeId), text);
         }

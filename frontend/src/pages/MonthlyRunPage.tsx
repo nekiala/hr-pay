@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, downloadJob, money, type PayrollRun, type RunView } from '../api'
+import { ApiError, api, downloadJob, money, type PayrollRun, type RunView, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
@@ -113,7 +113,7 @@ export default function MonthlyRunPage() {
         {!run && <p className="muted">{t('No payroll for')}{' '}{month}{' '}{t('yet.')}</p>}
         {run && (
           <>
-            <p><strong>{STATUS[run.status]}</strong> · {run.employeeCount}{' '}{t('payslips · $1 =')}{' '}{run.usdCdf}{' '}{t('CDF (BCC,')}{' '}{run.rateDate})</p>
+            <p><strong>{STATUS[run.status]}</strong> · {run.employeeCount}{' '}{t('payslips · $1 =')}{' '}{run.usdCdf}{' '}{t('CDF (BCC,')}{' '}{day(run.rateDate)})</p>
             <p className="hint">{t('Calculated by')}{' '}{run.calculatedBy}, {when(run.calculatedAt)}
               {run.approvedBy && t(' · approved by {a}, {b}', { a: run.approvedBy, b: when(run.approvedAt) })}
               {run.closedBy && t(' · closed by {a}, {b}', { a: run.closedBy, b: when(run.closedAt) })}
@@ -239,10 +239,10 @@ export default function MonthlyRunPage() {
                   {raises.map((r) => (
                     <tr key={r.id}>
                       <td>{r.userName}</td>
-                      <td>{r.anniversaryDate} ({r.years}{' '}{t('yr)')}</td>
+                      <td>{day(r.anniversaryDate)} ({r.years}{' '}{t('yr)')}</td>
                       <td>{money(r.raiseAmount, r.currency)} <span className="muted">({r.percent}{t('% of')}{' '}{r.gradeCode})</span></td>
                       <td>{money(r.oldBasic, r.currency)} → <strong>{money(r.newBasic, r.currency)}</strong></td>
-                      <td>{r.effectiveFrom}</td>
+                      <td>{day(r.effectiveFrom)}</td>
                       <td>{r.notifiedAt ? t('Yes') : t('Not yet')}</td>
                     </tr>
                   ))}

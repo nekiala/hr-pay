@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Scale } from 'lucide-react'
-import { ApiError, api, longDay } from '../api'
+import { ApiError, api, longDay, day } from '../api'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { language, t } from '../i18n'
 import { Public } from './PublicPages'
+import { DateInput } from '../components/DateFields'
 
 type Rate = { code: string; effectiveFrom: string; value: number }
 export type LawChange = {
@@ -138,7 +139,7 @@ export function LawChangesAdminPage() {
                   <td>{longDay(c.effectiveFrom)}</td><td>{c.countryCode}{c.sectorPackCode && <div className="small muted">{c.sectorPackCode}</div>}</td>
                   <td><strong>{title(c)}</strong><div className="small muted">{c.reference}</div>
                     {!c.verifiedBy && <span className="badge warn">{t('To confirm')}</span>}</td>
-                  <td className="small">{c.rates.map((r) => `${r.code} ${r.value} (${r.effectiveFrom})`).join(', ') || '—'}</td>
+                  <td className="small">{c.rates.map((r) => `${r.code} ${r.value} (${day(r.effectiveFrom)})`).join(', ') || '—'}</td>
                   <td>{c.status === 'PUBLISHED' ? <span className="badge ok">{t('Published')}</span> : c.status === 'DRAFT' ? <span className="badge warn">{t('Draft')}</span> : <span className="badge">{t('Withdrawn')}</span>}
                     {c.status === 'PUBLISHED' && c.rates.length > 0 && <div className="small muted">{t('{a} companies updated', { a: c.appliedTo })}</div>}</td>
                   <td>
@@ -176,7 +177,7 @@ export function LawChangesAdminPage() {
                 <option value="">{t('All companies of the country')}</option>
                 {packs.filter((p) => p.countryCode === editing.d.countryCode && p.status !== 'RETIRED').map((p) => <option key={p.code} value={p.code}>{fr() ? p.nameFr : p.nameEn}</option>)}
               </select></label>
-              <label>{t('In force from')}<input type="date" required value={editing.d.effectiveFrom} onChange={(e) => set({ effectiveFrom: e.target.value })} /></label>
+              <label>{t('In force from')}<DateInput required value={editing.d.effectiveFrom} onChange={(e) => set({ effectiveFrom: e.target.value })} /></label>
               <label>{t('Kind')}<select value={editing.d.category} onChange={(e) => set({ category: e.target.value })}>
                 {Object.entries(CATEGORY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
               <label>{t('In HR Pay')}<select value={editing.d.inApp} onChange={(e) => set({ inApp: e.target.value as Draft['inApp'] })}>
@@ -190,14 +191,14 @@ export function LawChangesAdminPage() {
               <label>{t('Legal reference')}<input required maxLength={300} value={editing.d.reference} onChange={(e) => set({ reference: e.target.value })} /></label>
               <label>{t('Link to the official text')}<input type="url" maxLength={500} placeholder="https://" value={editing.d.sourceUrl ?? ''} onChange={(e) => set({ sourceUrl: e.target.value })} /></label>
               <label>{t('Checked by')}<input maxLength={200} value={editing.d.verifiedBy ?? ''} onChange={(e) => set({ verifiedBy: e.target.value })} /></label>
-              <label>{t('Checked on')}<input type="date" value={editing.d.verifiedOn ?? ''} onChange={(e) => set({ verifiedOn: e.target.value || null })} /></label>
+              <label>{t('Checked on')}<DateInput value={editing.d.verifiedOn ?? ''} onChange={(e) => set({ verifiedOn: e.target.value || null })} /></label>
             </div>
             <fieldset>
               <legend>{t('Rates added to the companies on publishing')}</legend>
               {editing.d.rates.map((r, i) => (
                 <div className="row" key={i}>
                   <input aria-label={t('Code')} placeholder="ONEM" disabled={ratesLocked} value={r.code} onChange={(e) => set({ rates: editing.d.rates.map((x, j) => j === i ? { ...x, code: e.target.value.toUpperCase() } : x) })} />
-                  <input aria-label={t('From')} type="date" disabled={ratesLocked} value={r.effectiveFrom} onChange={(e) => set({ rates: editing.d.rates.map((x, j) => j === i ? { ...x, effectiveFrom: e.target.value } : x) })} />
+                  <DateInput aria-label={t('From')} disabled={ratesLocked} value={r.effectiveFrom} onChange={(e) => set({ rates: editing.d.rates.map((x, j) => j === i ? { ...x, effectiveFrom: e.target.value } : x) })} />
                   <input aria-label={t('Value')} type="number" step="any" min="0" disabled={ratesLocked} value={r.value} onChange={(e) => set({ rates: editing.d.rates.map((x, j) => j === i ? { ...x, value: e.target.value as unknown as number } : x) })} />
                   {!ratesLocked && <Button className="link" onClick={() => set({ rates: editing.d.rates.filter((_, j) => j !== i) })}>{t('Remove')}</Button>}
                 </div>

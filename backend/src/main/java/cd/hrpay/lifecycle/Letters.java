@@ -118,6 +118,13 @@ public class Letters {
         m.put("discipline.suspension_from", "Discipline: first day of mise à pied");
         m.put("discipline.suspension_to", "Discipline: last day of mise à pied");
         m.put("discipline.return_date", "Discipline: day work resumes");
+        // A promotion's or transfer's own fields, filled in by the career moves when they write the document.
+        m.put("career.effective_on", "Move: date it takes effect");
+        m.put("career.change", "Move: what changes (grade, occupation, unit, site)");
+        m.put("career.new_basic", "Move: basic salary of the new grade");
+        m.put("career.pay_note", "Move: what happens to the pay");
+        m.put("career.trial", "Move: trial period of the promotion");
+        m.put("career.housing", "Move: housing when the place of work changes (art. 138)");
         return m;
     }
 

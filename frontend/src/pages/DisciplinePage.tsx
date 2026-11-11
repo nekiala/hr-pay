@@ -8,6 +8,7 @@ import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import type { MyPerson } from '../components/UnitFilter'
 import { t } from '../i18n'
+import { DateInput, DateTimeInput } from '../components/DateFields'
 
 export type CaseStatus = 'PROPOSED' | 'OPEN' | 'HEARING' | 'HEARD' | 'DECIDED' | 'NOTIFIED' | 'CLOSED' | 'REJECTED' | 'CANCELLED'
 
@@ -145,8 +146,8 @@ function OpenCase({ hr, initial, onClose, onDone }: { hr: boolean; initial: { us
           </select>
         </label>
         <div className="grid2">
-          <label>{t('Date of the facts')}<input type="date" required max={today()} value={factsDate} onChange={(e) => setFactsDate(e.target.value)} /></label>
-          <label>{t('Known on')}<input type="date" required max={today()} value={knownDate} onChange={(e) => setKnownDate(e.target.value)} /></label>
+          <label>{t('Date of the facts')}<DateInput required max={today()} value={factsDate} onChange={(e) => setFactsDate(e.target.value)} /></label>
+          <label>{t('Known on')}<DateInput required max={today()} value={knownDate} onChange={(e) => setKnownDate(e.target.value)} /></label>
         </div>
         <p className="hint">{t('The day the company learned of the facts: a dismissal for serious misconduct must be notified within 15 working days of it (art. 72).')}</p>
         <label>{t('Facts')}<textarea required rows={4} value={facts} onChange={(e) => setFacts(e.target.value)} placeholder={t('What happened, when and where, and who saw it.')} /></label>
@@ -263,7 +264,7 @@ function Convene({ c, onDone }: { c: DisciplineCase; onDone: (at: string, place:
   return (
     <Form className="card" onSubmit={() => onDone(at.length === 16 ? `${at}:00` : at, place)}>
       <div className="grid2">
-        <label>{t('Day and time')}<input type="datetime-local" required value={at} onChange={(e) => setAt(e.target.value)} /></label>
+        <label>{t('Day and time')}<DateTimeInput required value={at} onChange={(e) => setAt(e.target.value)} /></label>
         <label>{t('Place')}<input required value={place} onChange={(e) => setPlace(e.target.value)} placeholder={t('For example: the HR office')} /></label>
       </div>
       <p className="hint">{t('A letter inviting the employee is drafted from the template "Invitation to a disciplinary hearing". Read it, then send it: the employee signs it for receipt in HR Pay.')}</p>
@@ -280,7 +281,7 @@ function Heard({ c, onDone }: { c: DisciplineCase; onDone: (body: unknown) => Pr
   return (
     <Form className="card" onSubmit={() => onDone({ on, attended, statement, note })}>
       <div className="grid2">
-        <label>{t('Held on')}<input type="date" required max={today()} value={on} onChange={(e) => setOn(e.target.value)} /></label>
+        <label>{t('Held on')}<DateInput required max={today()} value={on} onChange={(e) => setOn(e.target.value)} /></label>
         <label className="check"><input type="checkbox" checked={!attended} onChange={(e) => setAttended(!e.target.checked)} />{t('The employee did not come')}</label>
       </div>
       <label>{t('What the employee said in their defence')}<textarea rows={3} required={attended} value={statement} onChange={(e) => setStatement(e.target.value)} /></label>
@@ -310,7 +311,7 @@ function Decide({ types, onDone }: { types: SanctionType[]; onDone: (body: unkno
       </label>
       {chosen?.suspends && (
         <div className="grid2">
-          <label>{t('First day')}<input type="date" required min={today()} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label>{t('First day')}<DateInput required min={today()} value={from} onChange={(e) => setFrom(e.target.value)} /></label>
           <label>{t('Days')}<input type="number" min={1} max={15} required value={days} onChange={(e) => setDays(e.target.value)} /></label>
         </div>
       )}

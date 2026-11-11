@@ -7,6 +7,7 @@ import { InvoiceTable } from '../components/Invoices'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t, locale } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Detail = {
   id: number
@@ -145,8 +146,8 @@ export default function PlatformCompanyPage() {
                   <option value="CDF">{t('CDF at the BCC rate')}</option>
                 </select>
               </label>
-              {s.status === 'TRIAL' && <label>{t('Trial ends')}<input type="date" value={form.trialEnds} onChange={(e) => setForm({ ...form, trialEnds: e.target.value, nextInvoiceOn: e.target.value })} /></label>}
-              {s.status !== 'CANCELLED' && <label>{t('Next invoice')}<input type="date" value={form.nextInvoiceOn} onChange={(e) => setForm({ ...form, nextInvoiceOn: e.target.value })} /></label>}
+              {s.status === 'TRIAL' && <label>{t('Trial ends')}<DateInput value={form.trialEnds} onChange={(e) => setForm({ ...form, trialEnds: e.target.value, nextInvoiceOn: e.target.value })} /></label>}
+              {s.status !== 'CANCELLED' && <label>{t('Next invoice')}<DateInput value={form.nextInvoiceOn} onChange={(e) => setForm({ ...form, nextInvoiceOn: e.target.value })} /></label>}
             </div>
             <label className="check"><input type="checkbox" checked={form.autoSuspend} onChange={(e) => setForm({ ...form, autoSuspend: e.target.checked })} />{' '}{t('Make the company read-only when an invoice is unpaid past the grace days')}</label>
             <Button type="submit">{t('Save')}</Button>

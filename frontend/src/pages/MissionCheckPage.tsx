@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { api, type MissionCheck } from '../api'
+import { api, type MissionCheck, day } from '../api'
 import { t } from '../i18n'
 
 /** The page the QR code of an ordre de mission opens, for anyone (border officer, host): is this order genuine? */
@@ -26,7 +26,7 @@ export default function MissionCheckPage() {
               <dt>{t('Employer')}</dt><dd>{check.company}</dd>
               <dt>{t('Bearer')}</dt><dd>{check.employeeName}</dd>
               <dt>{t('Destination')}</dt><dd>{check.destination}</dd>
-              <dt>{t('Dates')}</dt><dd>{check.startDate} → {check.endDate}</dd>
+              <dt>{t('Dates')}</dt><dd>{day(check.startDate)} → {day(check.endDate)}</dd>
             </dl>
             <p className="muted small">{t('Checked with HR Pay. The printed order must show the same number, name, destination and dates.')}</p>
           </>
