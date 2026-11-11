@@ -10,6 +10,7 @@ import type { OrgUnit } from '../org'
 import { useAuth } from '../auth'
 import { locale, t } from '../i18n'
 import { SalaryIncreaseTab } from './SalaryIncreaseTab'
+import { DateInput } from '../components/DateFields'
 
 type SimType = 'MONTH' | 'QUINZAINE' | 'LEAVE_PAY' | 'THIRTEENTH' | 'SETTLEMENT'
 type Line = { elementCode: string; label: string; kind: 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'; base: number | null; rate: number | null; amount: number }
@@ -210,11 +211,11 @@ function Simulate({ person }: { person: User }) {
           {type === 'THIRTEENTH' && <label>{t('Year')}<input type="number" className="narrow-input" min={2000} max={2100} value={year}
             onChange={(e) => e.target.value.length === 4 && setYear(Number(e.target.value))} /></label>}
           {type === 'LEAVE_PAY' && <>
-            <label>{t('First day of leave')}<input type="date" value={leaveFrom} onChange={(e) => setLeaveFrom(e.target.value)} /></label>
-            <label>{t('Last day of leave')}<input type="date" value={leaveTo} min={leaveFrom} onChange={(e) => setLeaveTo(e.target.value)} /></label>
+            <label>{t('First day of leave')}<DateInput value={leaveFrom} onChange={(e) => setLeaveFrom(e.target.value)} /></label>
+            <label>{t('Last day of leave')}<DateInput value={leaveTo} min={leaveFrom} onChange={(e) => setLeaveTo(e.target.value)} /></label>
           </>}
           {type === 'SETTLEMENT' && <>
-            <label>{t('Last day of work')}<input type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} /></label>
+            <label>{t('Last day of work')}<DateInput value={lastDay} onChange={(e) => setLastDay(e.target.value)} /></label>
             <label>{t('Reason')}<select value={reason} onChange={(e) => setReason(e.target.value)}>
               {Object.entries(DEPARTURE_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select></label>

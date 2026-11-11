@@ -55,12 +55,47 @@ export function setCountry(country: string | null | undefined, local: string | n
 /** The local currency the texts use: CDF, or the company's own. */
 export const localCurrency = () => terms.find(([re]) => re.source.includes('CDF'))?.[1] ?? 'CDF'
 
+/**
+ * A day as people write it in HR Pay's language: 14/02/1989 in French, 14 Feb 1989 in English. Takes 1989-02-14 (or
+ * a full date and time); anything else comes back as it is.
+ */
+export function day(d: string | null | undefined): string {
+  if (!d) return ''
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d)
+  if (!m) return d
+  if (current === 'fr') return `${m[3]}/${m[2]}/${m[1]}`
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+}
+
+/** A moment, in the browser's time zone: 14/02/1989 14:30 in French, 14 Feb 1989, 2:30 PM in English. */
+export function dayTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const time = current === 'fr'
+    ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return current === 'fr' ? `${day(local)} ${time}` : `${day(local)}, ${time}`
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
+const ISO_MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$/
+
+/** A value put into a text: numbers and dates written the language's way. */
+function shown(v: string | number): string {
+  if (typeof v === 'number') return v.toLocaleString(locale())
+  if (ISO_DAY.test(v)) return day(v)
+  if (ISO_MOMENT.test(v)) return dayTime(v)
+  return v
+}
+
 export function t(english: string, vars?: Record<string, string | number | null | undefined>): string {
   let text = current === 'fr' ? dictionary[english] ?? english : english
   for (const [re, word] of terms) text = text.replace(re, word)
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
-      text = text.split(`{${k}}`).join(v === null || v === undefined ? '' : typeof v === 'number' ? v.toLocaleString(locale()) : v)
+      text = text.split(`{${k}}`).join(v === null || v === undefined ? '' : shown(v))
     }
   }
   return text

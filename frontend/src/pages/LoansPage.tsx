@@ -6,6 +6,7 @@ import { useAsk } from '../components/Dialogs'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 const STATUS = { ACTIVE: t('Being repaid'), REPAID: t('Repaid'), CANCELLED: t('Cancelled') }
@@ -134,7 +135,7 @@ export default function LoansPage() {
                   <option value="LOAN">{t('Loan, repaid in installments')}</option><option value="ADVANCE">{t('Salary advance, taken back in one month')}</option>
                 </select>
               </label>
-              <label>{t('Granted on')}<input type="date" value={form.grantedOn} required onChange={(e) => setForm({ ...form, grantedOn: e.target.value })} /></label>
+              <label>{t('Granted on')}<DateInput value={form.grantedOn} required onChange={(e) => setForm({ ...form, grantedOn: e.target.value })} /></label>
               <label>{t('Amount')}<input type="number" min={0.01} step={0.01} value={form.principal} required onChange={(e) => setForm({ ...form, principal: e.target.value })} /></label>
               <label>{t('Currency')}<select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })}><option>{t('USD')}</option><option>{t('CDF')}</option></select></label>
               {form.kind === 'LOAN' && (

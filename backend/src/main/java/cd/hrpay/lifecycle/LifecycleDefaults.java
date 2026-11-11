@@ -293,7 +293,53 @@ public class LifecycleDefaults {
 
                     Vous avez été entendu(e) le {{discipline.heard_on}}. Après examen de vos explications, nous considérons que ces faits constituent une faute lourde (Code du travail, art. 72). Nous mettons donc fin à votre contrat sans préavis, à compter du {{discipline.decided_on}}.
 
-                    Votre décompte final, votre certificat de travail et vos documents de fin de contrat vous seront remis. Vous pouvez contester cette décision par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"));
+                    Votre décompte final, votre certificat de travail et vos documents de fin de contrat vous seront remis. Vous pouvez contester cette décision par écrit. Votre signature atteste la réception de la présente, non votre accord.""", "LETTER"),
+            new Letter("CAREER_PROMOTION", "LETTER", "Amendment to the employment contract: promotion", "Avenant au contrat de travail : promotion", """
+                    Between {{company.name}}, represented by {{company.representative}}, {{company.representative_title}}, and {{employee.civility}} {{employee.name}}, registration no. {{employee.registration_no}}, the following is agreed as an amendment to the employment contract in force.
+
+                    Article 1. From {{career.effective_on}}, {{employee.civility}} {{employee.name}} is promoted:
+                    {{career.change}}
+
+                    Article 2. The basic salary is that of the grade: {{career.new_basic}}. {{career.pay_note}}
+
+                    Article 3. {{career.trial}}
+
+                    Article 4. {{career.housing}} The seniority acquired is kept, and all the other clauses of the employment contract remain unchanged.
+
+                    Done at {{contract.signed_place}}, on {{today}}, in two copies. The employee's signature confirms the agreement to this amendment.""", """
+                    Entre {{company.name}}, représentée par {{company.representative}}, {{company.representative_title}}, et {{employee.civility}} {{employee.name}}, matricule {{employee.registration_no}}, il est convenu ce qui suit, en avenant au contrat de travail en cours.
+
+                    Article 1. À compter du {{career.effective_on}}, {{employee.civility}} {{employee.name}} est promu(e) :
+                    {{career.change}}
+
+                    Article 2. Le salaire de base est celui du grade : {{career.new_basic}}. {{career.pay_note}}
+
+                    Article 3. {{career.trial}}
+
+                    Article 4. {{career.housing}} L'ancienneté acquise est conservée et toutes les autres clauses du contrat de travail restent inchangées.
+
+                    Fait à {{contract.signed_place}}, le {{today}}, en deux exemplaires. La signature du travailleur atteste son accord avec le présent avenant.""", "CONTRACT"),
+            new Letter("CAREER_TRANSFER", "LETTER", "Transfer note", "Note de mutation", """
+                    Dear {{employee.name}}, registration no. {{employee.registration_no}},
+
+                    We inform you that from {{career.effective_on}} you are transferred:
+                    {{career.change}}
+
+                    {{career.housing}}
+
+                    Your grade, your salary, your seniority and the other clauses of your employment contract do not change.
+
+                    Your signature confirms that you agree to this transfer.""", """
+                    Madame, Monsieur {{employee.name}}, matricule {{employee.registration_no}},
+
+                    Nous vous informons qu'à compter du {{career.effective_on}}, vous êtes muté(e) :
+                    {{career.change}}
+
+                    {{career.housing}}
+
+                    Votre grade, votre salaire, votre ancienneté et les autres clauses de votre contrat de travail restent inchangés.
+
+                    Votre signature atteste votre accord avec cette mutation.""", "CONTRACT"));
 
     private final JdbcClient jdbc;
     private final Tenants tenants;
@@ -319,6 +365,7 @@ public class LifecycleDefaults {
             try {
                 tenants.runAs(id, this::addContractModels);
                 tenants.runAs(id, this::addDisciplineLetters);
+                tenants.runAs(id, this::addCareerLetters);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -359,15 +406,28 @@ public class LifecycleDefaults {
     /** The discipline register's letters, once per company that was set up before the register existed. */
     @Transactional
     public void addDisciplineLetters() {
-        if (jdbc.sql("select count(*) from payroll_setting where key = ?").param(DISCIPLINE_LETTERS_ADDED)
+        addLetters("DISCIPLINE_", DISCIPLINE_LETTERS_ADDED);
+    }
+
+    private static final String CAREER_LETTERS_ADDED = "CAREER_LETTERS_ADDED";
+
+    /** The avenant de promotion and the note de mutation, once per company that was set up before them. */
+    @Transactional
+    public void addCareerLetters() {
+        addLetters("CAREER_", CAREER_LETTERS_ADDED);
+    }
+
+    private void addLetters(String prefix, String flag) {
+        if (jdbc.sql("select count(*) from payroll_setting where key = ?").param(flag)
                 .query(Integer.class).single() > 0) {
             return;
         }
         boolean fr = "fr".equals(jdbc.sql("select language from company where id = current_company_id()").query(String.class)
                 .optional().orElse("fr"));
-        Long type = jdbc.sql("select id from document_type where code = 'LETTER'").query(Long.class).optional().orElse(null);
         for (Letter l : LETTERS) {
-            if (l.code().startsWith("DISCIPLINE_")) {
+            if (l.code().startsWith(prefix)) {
+                Long type = jdbc.sql("select id from document_type where code = ?").param(l.documentType()).query(Long.class)
+                        .optional().orElse(null);
                 jdbc.sql("""
                         insert into letter_template (code, name, kind, body, requires_signature, document_type_id, updated_by)
                         values (?, ?, ?, ?, true, ?, 'system') on conflict do nothing""")
@@ -375,7 +435,7 @@ public class LifecycleDefaults {
             }
         }
         jdbc.sql("insert into payroll_setting (key, value) values (?, 'true') on conflict do nothing")
-                .param(DISCIPLINE_LETTERS_ADDED).update();
+                .param(flag).update();
     }
 
     static String model(String file) {
@@ -422,6 +482,7 @@ public class LifecycleDefaults {
         }
         addContractModels();
         addDisciplineLetters();
+        addCareerLetters();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

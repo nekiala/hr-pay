@@ -25,7 +25,8 @@ export default function ImportPage() {
     void loadHistory()
   }, [])
 
-  const columns = kinds.find((k) => k.kind === kind)?.columns ?? []
+  const view = kinds.find((k) => k.kind === kind)
+  const columns = view?.columns ?? []
   const choose = (k: ImportKind) => { setKind(k); setResult(null); setError(null) }
 
   const send = async (apply: boolean) => {
@@ -58,6 +59,14 @@ export default function ImportPage() {
           <Button className="secondary" onClick={() => download(`/api/imports/${path(kind)}/template.xlsx`, `hr-pay-${path(kind)}.xlsx`).catch((e: Error) => setError(e.message))}>{t('Download Excel')}</Button>
           <Button className="secondary" onClick={() => download(`/api/imports/${path(kind)}/template.csv`, `hr-pay-${path(kind)}.csv`).catch((e: Error) => setError(e.message))}>{t('Download CSV')}</Button>
         </div>
+        {view?.canFill && (
+          <>
+            <div className="row">
+              <Button className="secondary" onClick={() => download(`/api/imports/${path(kind)}/template.xlsx?filled=true`, `hr-pay-${path(kind)}-current.xlsx`).catch((e: Error) => setError(e.message))}>{t('Download with the current data')}</Button>
+            </div>
+            <p className="small muted">{t('The file comes filled with what HR Pay holds today: change what you need, then import it back. Rows left as they are change nothing.')}</p>
+          </>
+        )}
         <p className="small muted">{t('Headers in French or English are both understood. Columns marked * are required; an empty cell leaves what is already saved.')}</p>
         <div className="table-wrap">
           <table>

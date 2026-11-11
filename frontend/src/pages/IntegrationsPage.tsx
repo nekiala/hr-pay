@@ -5,6 +5,7 @@ import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const when = (d: string | null) => d ? new Date(d).toLocaleString() : '—'
 
@@ -182,7 +183,7 @@ export default function IntegrationsPage() {
         <Modal title={t('New access key')} onClose={() => setNewKey(null)}>
           <Form onSubmit={createKey}>
             <label>{t('Name')}<input required maxLength={100} value={newKey.name} placeholder={t('For example: Sage accounting')} onChange={(e) => setNewKey({ ...newKey, name: e.target.value })} /></label>
-            <label>{t('Expires on (optional)')}<input type="date" value={newKey.expiresOn} onChange={(e) => setNewKey({ ...newKey, expiresOn: e.target.value })} /></label>
+            <label>{t('Expires on (optional)')}<DateInput value={newKey.expiresOn} onChange={(e) => setNewKey({ ...newKey, expiresOn: e.target.value })} /></label>
             <fieldset><legend>{t('What the key may do')}</legend>
               <Checks options={scopes} chosen={newKey.permissions} onChange={(permissions) => setNewKey({ ...newKey, permissions })} />
             </fieldset>

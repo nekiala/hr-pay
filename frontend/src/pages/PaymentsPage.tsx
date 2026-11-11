@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ApiError, api, money } from '../api'
+import { ApiError, api, money, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 export type PayMethodKind = 'BANK' | 'MOBILE_MONEY' | 'CASH'
 type Group = { method: PayMethodKind; provider: string; currency: string; count: number; total: number }
@@ -127,7 +128,7 @@ export default function PaymentsPage() {
                         <td>{money(b.total, b.currency)}</td>
                         <td>
                           {b.status === 'PREPARED' && t('Made, not paid yet')}
-                          {b.status === 'PAID' && <>{t('Paid on')}{' '}{b.paidOn}{b.reference && <span className="muted">{' '}{t('· ref.')}{' '}{b.reference}</span>}</>}
+                          {b.status === 'PAID' && <>{t('Paid on')}{' '}{day(b.paidOn)}{b.reference && <span className="muted">{' '}{t('· ref.')}{' '}{b.reference}</span>}</>}
                           {b.status === 'CANCELLED' && <span className="muted">{t('Cancelled:')}{' '}{b.cancelReason}</span>}
                         </td>
                         <td><span className="row">
@@ -153,7 +154,7 @@ export default function PaymentsPage() {
             {paying && (
               <Modal title={t('Record payment of file #{a}', { a: paying.id })} size="sm" onClose={() => setPaying(null)}>
                 <Form onSubmit={() => run(async () => { await api(`/api/payment-batches/${paying.id}/paid`, { method: 'POST', body: { paidOn: paying.paidOn, reference: paying.reference || null } }); setPaying(null) }, t('Payment recorded.'))}>
-                  <label>{t('Paid on')}<input type="date" required max={today()} value={paying.paidOn} onChange={(e) => setPaying({ ...paying, paidOn: e.target.value })} /></label>
+                  <label>{t('Paid on')}<DateInput required max={today()} value={paying.paidOn} onChange={(e) => setPaying({ ...paying, paidOn: e.target.value })} /></label>
                   <label>{t('Bank or operator reference')}<input maxLength={100} value={paying.reference} onChange={(e) => setPaying({ ...paying, reference: e.target.value })} /></label>
                   <ErrorText error={error} />
                   <div className="modal-foot">

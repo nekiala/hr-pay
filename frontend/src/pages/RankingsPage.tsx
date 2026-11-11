@@ -9,6 +9,7 @@ import { PageTitle } from '../components/SettingsLink'
 import { Spinner } from '../components/Button'
 import type { OrgUnit } from '../org'
 import { localCurrency, locale, t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type KindInfo = { kind: string; title: string; hint: string; period: boolean; byUnit: boolean }
 type Column = { key: string; label: string; type: 'TEXT' | 'NUMBER' | 'HOURS' | 'PERCENT' | 'MONEY' | 'DATE' }
@@ -131,8 +132,8 @@ export default function RankingsPage() {
           )}
           {range === 'custom' && info?.period !== false && (
             <div className="row">
-              <label>{t('From')}<input type="date" value={from} onChange={(e) => setPeriod([e.target.value, to])} /></label>
-              <label>{t('To')}<input type="date" value={to} onChange={(e) => setPeriod([from, e.target.value])} /></label>
+              <label>{t('From')}<DateInput value={from} onChange={(e) => setPeriod([e.target.value, to])} /></label>
+              <label>{t('To')}<DateInput value={to} onChange={(e) => setPeriod([from, e.target.value])} /></label>
             </div>
           )}
           <label>{t('Unit (with the units below it)')}<UnitSelect units={units} value={unit} placeholder={data?.companyWide === false ? t('My team') : t('Everyone')} onChange={setUnit} /></label>

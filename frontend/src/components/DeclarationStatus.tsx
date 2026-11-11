@@ -3,6 +3,7 @@ import { money } from '../api'
 import { Button, Form } from './Button'
 import { Modal } from './Modal'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 export type Status = 'TO_PREPARE' | 'READY' | 'DECLARED' | 'PAID' | 'NIL'
 export type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
@@ -34,7 +35,7 @@ export function PayDeclarationModal({ item, currency, onClose, onSave }: { item:
     <Modal title={t('Payment of {a} for {b}', { a: item.kind, b: item.month })} size="sm" onClose={onClose}>
       <Form onSubmit={() => onSave({ paidOn: form.paidOn, amount: Number(form.amount), reference: form.reference || null, mode: form.mode })}>
         {item.amount !== null && <p className="hint">{t('Declared: {a}', { a: money(item.amount, currency) })}</p>}
-        <label>{t('Paid on')}<input type="date" required value={form.paidOn} onChange={(e) => setForm({ ...form, paidOn: e.target.value })} /></label>
+        <label>{t('Paid on')}<DateInput required value={form.paidOn} onChange={(e) => setForm({ ...form, paidOn: e.target.value })} /></label>
         <label>{t('Amount paid ({a})', { a: currency })}<input type="number" min="0" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></label>
         <label>{t('How')}<select value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}>
           {PAY_MODES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>

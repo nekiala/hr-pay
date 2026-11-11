@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   ApiError, CONTRACT_TYPES, FIXED_TERM_REASONS, api, type ContractIssue, type ContractTermsView, type Contract as EmployeeContract,
   type FixedTermReason, type Letter, type LetterDraft, type LetterTemplate, type Site,
+  day,
 } from '../api'
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
 import { CityPicker, OldValue } from './ReferencePickers'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 /** The Labour Code points of a contract: what blocks the document, and what to look at. */
 export function ContractIssues({ issues }: { issues: ContractIssue[] }) {
@@ -98,7 +100,7 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
     <Modal title={t('Contract document')} size="lg" onClose={onClose}>
       <p className="muted">
         {CONTRACT_TYPES[contract.contractType]} · {contract.gradeName} ({contract.gradeCode}){contract.occupationName ? ` · ${contract.occupationName}` : ''}
-        {' · '}{t('from')}{' '}{contract.startDate}{contract.endDate ? t(' to {a}', { a: contract.endDate }) : ''}
+        {' · '}{t('from')}{' '}{day(contract.startDate)}{contract.endDate ? t(' to {a}', { a: contract.endDate }) : ''}
       </p>
       <ErrorText error={error} />
       {saved && <p className="success">{saved}</p>}
@@ -131,16 +133,16 @@ export function ContractDocumentModal({ userId, contract, onClose }: { userId: s
             {!form.workSiteId && <OldValue value={view?.terms.workSiteId ? null : view?.terms.workPlace} />}
           </label>
           <label>{t('Supervisor')}<input value={form.supervisor} maxLength={150} placeholder={view?.defaultSupervisor ?? ''} onChange={(e) => set({ supervisor: e.target.value })} /></label>
-          <label>{t('Medical fitness: certificate of')}<input type="date" value={form.medicalFitOn} onChange={(e) => set({ medicalFitOn: e.target.value })} /></label>
+          <label>{t('Medical fitness: certificate of')}<DateInput value={form.medicalFitOn} onChange={(e) => set({ medicalFitOn: e.target.value })} /></label>
           <label>{t('Doctor')}<input value={form.medicalDoctor} maxLength={150} onChange={(e) => set({ medicalDoctor: e.target.value })} /></label>
           <CityPicker country={form.signedCountry || null} cityId={form.signedPlaceId ? Number(form.signedPlaceId) : null} cityLabel={t('Signed at')}
             emptyLabel={view?.defaultSignedPlace ? t('The company\'s town ({a})', { a: view.defaultSignedPlace }) : t('Choose…')}
             onChange={(country, city) => set({ signedCountry: country ?? '', signedPlaceId: city ? String(city.id) : '' })} />
           {!form.signedPlaceId && view?.terms.signedPlace && !view.terms.signedPlaceId && <OldValue value={view.terms.signedPlace} />}
-          <label>{t('Signed on (paper)')}<input type="date" value={form.signedOn} onChange={(e) => set({ signedOn: e.target.value })} /></label>
-          <label>{t('Paper draft handed over on')}<input type="date" value={form.draftGivenOn} onChange={(e) => set({ draftGivenOn: e.target.value })} /></label>
+          <label>{t('Signed on (paper)')}<DateInput value={form.signedOn} onChange={(e) => set({ signedOn: e.target.value })} /></label>
+          <label>{t('Paper draft handed over on')}<DateInput value={form.draftGivenOn} onChange={(e) => set({ draftGivenOn: e.target.value })} /></label>
           <label>{t('ONEM visa no.')}<input value={form.onemVisaNo} maxLength={40} onChange={(e) => set({ onemVisaNo: e.target.value })} /></label>
-          <label>{t('ONEM visa date')}<input type="date" value={form.onemVisaOn} onChange={(e) => set({ onemVisaOn: e.target.value })} /></label>
+          <label>{t('ONEM visa date')}<DateInput value={form.onemVisaOn} onChange={(e) => set({ onemVisaOn: e.target.value })} /></label>
         </div>
         <p className="hint">{t('Empty fields take the value shown in grey or in the list. The draft is given to the employee at least two working days before signing (Labour Code art. 46); the signed contract goes to the ONEM visa within 15 days (art. 47).')}</p>
         <div className="modal-foot">

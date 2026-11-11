@@ -5,6 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
 import { t, locale } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -89,7 +90,7 @@ export default function HolidaysPage() {
       {editing && (
         <Modal title={`${editing.name} ${editing.year}`} onClose={() => setEditing(null)}>
           <Form onSubmit={saveMove}>
-            <label>{t('Observed date')}<input type="date" value={observed} onChange={(e) => setObserved(e.target.value)} required /></label>
+            <label>{t('Observed date')}<DateInput value={observed} onChange={(e) => setObserved(e.target.value)} required /></label>
             <label>{t('Government announcement (reference)')}<input value={announcement} onChange={(e) => setAnnouncement(e.target.value)} placeholder={t('e.g. Communiqué du Ministère, 25 June')} /></label>
             <p className="hint">{t('A change in a closed month is settled on the next payroll not yet approved.')}</p>
             <ErrorText error={error} />
@@ -101,7 +102,7 @@ export default function HolidaysPage() {
         <Modal title={t('Add a recurring holiday')} size="sm" onClose={() => setAdding(false)}>
           <Form onSubmit={addHoliday}>
             <label>{t('Name')}<input value={newName} onChange={(e) => setNewName(e.target.value)} required /></label>
-            <label>{t('Usual date (any year)')}<input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} required /></label>
+            <label>{t('Usual date (any year)')}<DateInput value={newDate} onChange={(e) => setNewDate(e.target.value)} required /></label>
             <ErrorText error={error} />
             <div className="modal-foot"><Button type="button" className="secondary" onClick={() => setAdding(false)}>{t('Cancel')}</Button><Button type="submit">{t('Add holiday')}</Button></div>
           </Form>

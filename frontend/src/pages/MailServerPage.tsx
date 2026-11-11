@@ -133,7 +133,7 @@ function MailServerForm({ base, settings, onSaved, intro }: {
         <Button className="secondary" onClick={test}>{t('Test the connection')}</Button>
         <Button className="secondary" onClick={testEmail}>{t('Send me a test email')}</Button>
       </div>
-      {settings && <p className="small muted">{t('Last changed by {a} on {b}.', { a: settings.updatedBy, b: new Date(settings.updatedAt).toLocaleString() })}</p>}
+      {settings && <p className="small muted">{t('Last changed by {a} on {b}.', { a: settings.updatedBy, b: settings.updatedAt })}</p>}
     </Form>
   )
 }

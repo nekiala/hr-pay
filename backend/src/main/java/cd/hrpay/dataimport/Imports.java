@@ -45,7 +45,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class Imports {
 
-    public enum Kind { EMPLOYEES, CONTRACTS, SALARIES, LEAVE_BALANCES, YEAR_TO_DATE }
+    public enum Kind { EMPLOYEES, FAMILY, CONTRACTS, MOVES, SALARIES, LEAVE_BALANCES, YEAR_TO_DATE }
+
+    /** The kinds whose template can come filled with what HR Pay holds, to edit and import back. */
+    public static final java.util.Set<Kind> FILLED = java.util.EnumSet.of(Kind.EMPLOYEES, Kind.FAMILY, Kind.YEAR_TO_DATE);
 
     public record Column(String key, String header, boolean required, String help) {}
 
@@ -63,8 +66,9 @@ public class Imports {
                 col("last_name", "Last name", true, null),
                 col("email", "Email", true, "Used to sign in; unique."),
                 col("phone", "Phone", true, "International format, for example +243812345678."),
-                col("site", "Site code", false, "Code of the site on the Sites page."),
-                col("unit", "Unit code", false, "Code of the unit in the structure. Empty: the top unit."),
+                col("site", "Site code", false, "Code of the site on the Sites page. Another site for someone already in HR Pay is a transfer."),
+                col("unit", "Unit code", false, "Code of the unit in the structure. Empty: the top unit. Another unit for someone already in HR Pay is a transfer."),
+                col("move_date", "Date of the change", false, "When the unit or the site changes for someone already in HR Pay: the day the transfer takes effect. Empty: today."),
                 col("grade_category", "Grade category code", false, null),
                 col("manager", "Manager's registration no.", false, "Only when the manager is not the head of the unit."),
                 col("clock_pin", "Time clock number", false, "The number the person is enrolled under on the time clock. Empty: the registration number."),
@@ -72,7 +76,15 @@ public class Imports {
                 col("gender", "Gender", false, "F or M."),
                 col("nationality", "Nationality", false, "A country or nationality from the lists: Congolaise, RDC, Française, or the country code (CD, FR)."),
                 col("postnom", "Postnom", false, "The middle name, as on the identity card."),
+                col("birth_country", "Country of birth", false, "A country from the lists, or its code (CD, CG). Empty: the company's country."),
+                col("birth_place", "Place of birth", false, "A town or territory from the lists. Abroad, or not in the lists: written as it is."),
                 col("commune", "Commune or territory", false, "Where the person lives, from the lists of places. Two places with the same name: add the town, as in Kalamu (Boma)."),
+                col("address_quarter", "Quarter", false, null),
+                col("address_street", "Avenue and number", false, null),
+                col("id_document_type", "Identity document", false, "National identity card, voter card, passport, residence permit, driving licence or other."),
+                col("id_document_number", "Document number", false, null),
+                col("id_document_issued_on", "Issued on", false, null),
+                col("id_document_issued_at", "Issued at", false, null),
                 col("marital_status", "Marital status", false, "Single, married, divorced or widowed."),
                 col("cnss_number", "CNSS number", false, null),
                 col("tax_number", "Tax number", false, null),
@@ -81,6 +93,15 @@ public class Imports {
                 col("bank_account", "Bank account", false, null),
                 col("mobile_money_operator", "Mobile money operator", false, "An operator from the lists: M-Pesa, Orange Money, Airtel Money, Afrimoney."),
                 col("mobile_money_number", "Mobile money number", false, null)));
+        COLUMNS.put(Kind.FAMILY, List.of(
+                col("registration_no", "Registration no.", true, null),
+                col("full_name", "Full name of the family member", true, "The same name and birth date as someone already recorded updates that person."),
+                col("relationship", "Relationship", true, "Spouse or child."),
+                col("birth_date", "Birth date", false, "Needed for a child: the age decides the family allowances."),
+                col("in_charge", "In charge", false, "Yes or no. Empty: yes."),
+                col("student", "Full-time student", false, "Yes or no, for a child."),
+                col("disabled", "Disabled", false, "Yes or no, for a child."),
+                col("note", "Note", false, null)));
         COLUMNS.put(Kind.CONTRACTS, List.of(
                 col("registration_no", "Registration no.", true, null),
                 col("contract_type", "Contract type", true, "Permanent (CDI), fixed-term (CDD), intern or consultant."),
@@ -92,6 +113,21 @@ public class Imports {
                 col("expatriate", "Expatriate", false, "Yes or no."),
                 col("negotiated_basic", "Agreed salary", false, "At least the grade's basic; the rest is the salary complement. Empty: the grade's basic salary."),
                 col("agreed_net", "Agreed net salary", false, "Instead of the agreed salary: HR Pay works out the complement that gives this net."),
+                col("trial_months", "Trial period (months)", false, "0 to 6; 1 at most for an unskilled labourer (Labour Code art. 43)."),
+                col("work_site", "Place of work (site code)", false, "Code of the site on the Sites page. Empty: the person's site."),
+                col("signed_place", "Town where it is signed", false, "A town from the lists. Empty: the company's town."),
+                col("signed_on", "Signed on", false, null),
+                col("note", "Note", false, null)));
+        COLUMNS.put(Kind.MOVES, List.of(
+                col("registration_no", "Registration no.", true, null),
+                col("effective_on", "Takes effect on", true, null),
+                col("kind", "Kind of move", true, "Promotion, transfer, promotion with transfer or reclassification."),
+                col("grade", "New grade code", false, "Empty: the grade does not change."),
+                col("occupation", "New occupation code", false, "Empty: the occupation does not change."),
+                col("unit", "New unit code", false, "Empty: the unit does not change."),
+                col("site", "New site code", false, "Empty: the site does not change."),
+                col("trial_months", "Trial period (months)", false, "Promotion only, 6 at most."),
+                col("keep_net", "Keep the same net", false, "Yes or no. Yes: the salary complement absorbs the new basic."),
                 col("note", "Note", false, null)));
         COLUMNS.put(Kind.SALARIES, List.of(
                 col("registration_no", "Registration no.", true, null),
@@ -155,6 +191,12 @@ public class Imports {
     @org.springframework.beans.factory.annotation.Autowired
     private cd.hrpay.reference.References refs;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.career.CareerMoves careerMoves;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private cd.hrpay.lifecycle.ContractTerms contractTerms;
+
     public Imports(JdbcClient jdbc, UserService users, UserRepository userRepository, SiteRepository sites, OrgStructure org,
                    EmployeeFile employees, MasterData masterData, SalaryService salaries, LeaveService leave,
                    AuditService audit, PlatformTransactionManager txManager, javax.sql.DataSource dataSource) {
@@ -177,6 +219,134 @@ public class Imports {
         return COLUMNS.get(kind).stream()
                 .map(c -> new Column(c.key(), Texts.t(c.header()), c.required(), c.help() == null ? null : Texts.t(c.help())))
                 .toList();
+    }
+
+    /**
+     * The template filled with what HR Pay holds today, one row per person (or family member, or opening), in the order
+     * of the columns, so that HR edits the file and imports it back: a cell left as it is changes nothing.
+     */
+    public List<List<Object>> filled(Kind kind) {
+        if (!FILLED.contains(kind)) {
+            throw new BusinessRuleException("This import adds records: its template comes empty.");
+        }
+        List<Map<String, Object>> rows = switch (kind) {
+            case EMPLOYEES -> employeeRows();
+            case FAMILY -> familyRows();
+            default -> ytdRows();
+        };
+        audit.record("data.exported", "import", kind.name(), Map.of("kind", kind.name(), "rows", rows.size()));
+        return rows.stream().map(r -> COLUMNS.get(kind).stream().map(c -> r.getOrDefault(c.key(), "")).map(v -> v == null ? "" : v)
+                .toList()).toList();
+    }
+
+    private String placeName(Long id) {
+        if (id == null) {
+            return null;
+        }
+        return jdbc.sql("""
+                select case when up.name is null or up.name = p.name then p.name else p.name || ' (' || up.name || ')' end
+                from place p left join place up on up.id = p.parent_id where p.id = ?""").param(id).query(String.class)
+                .optional().orElse(null);
+    }
+
+    private String institutionName(Long id) {
+        return id == null ? null : jdbc.sql("select name from financial_institution where id = ?").param(id).query(String.class)
+                .optional().orElse(null);
+    }
+
+    private List<Map<String, Object>> employeeRows() {
+        record U(long id, String registrationNo, String firstName, String middleName, String lastName, String email,
+                 String phoneE164, String siteCode, String unitCode, String categoryCode, String managerNo, String clockPin) {}
+        List<U> people = jdbc.sql("""
+                select u.id, u.registration_no, u.first_name, u.middle_name, u.last_name, u.email, u.phone_e164,
+                       s.code as site_code, ou.code as unit_code, gc.code as category_code, m.registration_no as manager_no,
+                       u.clock_pin
+                from app_user u
+                left join site s on s.id = u.site_id
+                left join org_assignment a on a.user_id = u.id and a.valid_to is null
+                left join org_unit ou on ou.id = a.unit_id
+                left join grade_category gc on gc.id = u.grade_category_id
+                left join app_user m on m.id = u.manager_id
+                where u.status = 'ACTIVE' and not u.not_employee
+                order by upper(u.registration_no)""").query(U.class).list();
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (U u : people) {
+            EmployeeFile.Profile p = employees.profile(u.id());
+            Map<String, Object> r = new HashMap<>();
+            r.put("registration_no", u.registrationNo());
+            r.put("first_name", u.firstName());
+            r.put("last_name", u.lastName());
+            r.put("postnom", u.middleName());
+            r.put("email", u.email());
+            r.put("phone", u.phoneE164());
+            r.put("site", u.siteCode());
+            r.put("unit", u.unitCode());
+            r.put("grade_category", u.categoryCode());
+            r.put("manager", u.managerNo());
+            r.put("clock_pin", u.clockPin());
+            r.put("birth_date", p.birthDate() == null ? null : p.birthDate().toString());
+            r.put("gender", p.gender() == null ? null : p.gender().equals("FEMALE") ? "F" : "M");
+            r.put("nationality", p.nationalityCode());
+            r.put("birth_country", p.birthCountryCode());
+            r.put("birth_place", p.birthPlaceId() != null ? placeName(p.birthPlaceId()) : p.birthPlaceText());
+            r.put("commune", p.addressPlaceId() != null ? placeName(p.addressPlaceId()) : null);
+            r.put("address_quarter", p.addressQuarter());
+            r.put("address_street", p.addressStreet());
+            r.put("id_document_type", p.idDocumentType());
+            r.put("id_document_number", p.idDocumentNumber());
+            r.put("id_document_issued_on", p.idDocumentIssuedOn() == null ? null : p.idDocumentIssuedOn().toString());
+            r.put("id_document_issued_at", p.idDocumentIssuedAt());
+            r.put("marital_status", p.maritalStatus());
+            r.put("cnss_number", p.cnssNumber());
+            r.put("tax_number", p.taxNumber());
+            r.put("payment_method", p.paymentMethod());
+            r.put("bank_name", p.bankId() != null ? institutionName(p.bankId()) : null);
+            r.put("bank_account", p.bankAccount());
+            r.put("mobile_money_operator", p.mobileMoneyOperatorId() != null ? institutionName(p.mobileMoneyOperatorId()) : null);
+            r.put("mobile_money_number", p.mobileMoneyNumber());
+            out.add(r);
+        }
+        return out;
+    }
+
+    private List<Map<String, Object>> familyRows() {
+        return jdbc.sql("""
+                select u.registration_no, d.full_name, d.relationship, d.birth_date, d.in_charge, d.student, d.disabled, d.note
+                from dependant d join app_user u on u.id = d.user_id
+                where u.status = 'ACTIVE'
+                order by upper(u.registration_no), d.birth_date nulls first, d.id""").query((rs, i) -> {
+                    Map<String, Object> r = new HashMap<>();
+                    r.put("registration_no", rs.getString("registration_no"));
+                    r.put("full_name", rs.getString("full_name"));
+                    r.put("relationship", rs.getString("relationship"));
+                    LocalDate b = rs.getObject("birth_date", LocalDate.class);
+                    r.put("birth_date", b == null ? null : b.toString());
+                    r.put("in_charge", rs.getBoolean("in_charge") ? "yes" : "no");
+                    r.put("student", rs.getBoolean("student") ? "yes" : "no");
+                    r.put("disabled", rs.getBoolean("disabled") ? "yes" : "no");
+                    r.put("note", rs.getString("note"));
+                    return r;
+                }).list();
+    }
+
+    private List<Map<String, Object>> ytdRows() {
+        return jdbc.sql("""
+                select u.registration_no, y.year, y.through_month, y.currency, y.gross, y.cnss, y.tax, y.other_deductions, y.net,
+                       y.taxable_cdf, y.tax_cdf, y.note
+                from ytd_opening y join app_user u on u.id = y.user_id
+                order by y.year desc, upper(u.registration_no), y.currency""").query((rs, i) -> {
+                    Map<String, Object> r = new HashMap<>();
+                    for (String k : List.of("registration_no", "currency", "note")) {
+                        r.put(k, rs.getString(k));
+                    }
+                    for (String k : List.of("year", "through_month")) {
+                        r.put(k, rs.getInt(k));
+                    }
+                    for (String k : List.of("gross", "cnss", "tax", "other_deductions", "net", "taxable_cdf", "tax_cdf")) {
+                        r.put(k, rs.getBigDecimal(k));
+                    }
+                    return r;
+                }).list();
     }
 
     public List<Map<String, Object>> history() {
@@ -265,7 +435,9 @@ public class Imports {
             inSavepoint(() -> {
                 switch (kind) {
                     case EMPLOYEES -> employee(row, out, ctx);
+                    case FAMILY -> familyMember(row, out);
                     case CONTRACTS -> contract(row, out);
+                    case MOVES -> move(row, out);
                     case SALARIES -> salary(row, out);
                     case LEAVE_BALANCES -> leaveBalance(row, out);
                     case YEAR_TO_DATE -> yearToDate(row, out);
@@ -403,12 +575,28 @@ public class Imports {
             if (ctx.created.containsKey(registration.trim().toUpperCase())) {
                 throw new BusinessRuleException(Texts.t("The registration number %s appears twice in the file.", registration));
             }
+            Long oldSite = existing.get().getSite() == null ? null : existing.get().getSite().getId();
             user = users.update(existing.get().getId(), new UserService.UserData(email, registration, phone, first, last,
-                    siteId != null ? siteId : existing.get().getSite() == null ? null : existing.get().getSite().getId(),
-                    postnom != null ? postnom : existing.get().getMiddleName()));
+                    oldSite, postnom != null ? postnom : existing.get().getMiddleName()));
             out.action = "UPDATE";
-            if (unitId != null && org.currentAssignment(user.getId()).map(a -> a.unitId()).filter(unitId::equals).isEmpty()) {
-                row.warnings.add(Texts.t("The unit is not changed for someone already in HR Pay: move them on the Structure page."));
+            // Another unit or site for someone already here is a transfer, kept in the career history.
+            Long newUnit = unitId != null && org.currentAssignment(user.getId()).map(a -> a.unitId()).filter(unitId::equals).isEmpty()
+                    ? unitId : null;
+            Long newSite = siteId != null && !siteId.equals(oldSite) ? siteId : null;
+            if (newUnit != null || newSite != null) {
+                LocalDate when = row.date("move_date");
+                if (!row.errors.isEmpty()) {
+                    throw new RowFailed();
+                }
+                if (oldSite == null && newUnit == null) {
+                    jdbc.sql("update app_user set site_id = ? where id = ?").params(newSite, user.getId()).update();
+                } else {
+                    cd.hrpay.career.CareerMoves.Result moved = careerMoves.move(user.getId(), new cd.hrpay.career.CareerMoves.Input(
+                            "TRANSFER", when == null ? LocalDate.now() : when, null, null, newUnit, newSite, null, false,
+                            Texts.t("Imported")));
+                    row.warnings.add(Texts.t("Transfer recorded from %s; the note de mutation is ready as a draft.",
+                            Texts.day(moved.move().effectiveOn())));
+                }
             }
         } else {
             user = users.create(data, List.of(), null);
@@ -432,7 +620,9 @@ public class Imports {
 
     private void profile(Row row, long userId) {
         String[] keys = {"birth_date", "gender", "nationality", "marital_status", "cnss_number", "tax_number", "payment_method",
-                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number", "commune"};
+                "bank_name", "bank_account", "mobile_money_operator", "mobile_money_number", "commune", "birth_country",
+                "birth_place", "address_quarter", "address_street", "id_document_type", "id_document_number",
+                "id_document_issued_on", "id_document_issued_at"};
         boolean any = false;
         for (String k : keys) {
             any |= row.text(k) != null;
@@ -451,6 +641,16 @@ public class Imports {
         String method = row.text("payment_method") == null ? p.paymentMethod() : choice(row, "payment_method", Map.of(
                 "BANK", "BANK", "BANQUE", "BANK", "VIREMENT", "BANK", "MOBILEMONEY", "MOBILE_MONEY", "MOBILE_MONEY", "MOBILE_MONEY",
                 "CASH", "CASH", "ESPECES", "CASH", "CAISSE", "CASH"));
+        String idType = row.text("id_document_type") == null ? p.idDocumentType() : choice(row, "id_document_type", Map.ofEntries(
+                Map.entry("NATIONALID", "NATIONAL_ID"), Map.entry("NATIONALIDENTITYCARD", "NATIONAL_ID"), Map.entry("IDCARD", "NATIONAL_ID"),
+                Map.entry("CARTEDIDENTITE", "NATIONAL_ID"), Map.entry("CARTENATIONALEDIDENTITE", "NATIONAL_ID"), Map.entry("CNI", "NATIONAL_ID"),
+                Map.entry("ELECTORCARD", "ELECTOR_CARD"), Map.entry("VOTERCARD", "ELECTOR_CARD"), Map.entry("CARTEDELECTEUR", "ELECTOR_CARD"),
+                Map.entry("PASSPORT", "PASSPORT"), Map.entry("PASSEPORT", "PASSPORT"), Map.entry("RESIDENCEPERMIT", "RESIDENCE_PERMIT"),
+                Map.entry("CARTEDESEJOUR", "RESIDENCE_PERMIT"), Map.entry("PERMISDESEJOUR", "RESIDENCE_PERMIT"),
+                Map.entry("DRIVINGLICENCE", "DRIVING_LICENCE"), Map.entry("DRIVINGLICENSE", "DRIVING_LICENCE"),
+                Map.entry("PERMISDECONDUIRE", "DRIVING_LICENCE"), Map.entry("OTHER", "OTHER"), Map.entry("AUTRE", "OTHER"),
+                Map.entry("OTHERDOCUMENT", "OTHER"), Map.entry("AUTREDOCUMENT", "OTHER")));
+        LocalDate issuedOn = row.text("id_document_issued_on") == null ? p.idDocumentIssuedOn() : row.date("id_document_issued_on");
         if (!row.errors.isEmpty()) {
             throw new RowFailed();
         }
@@ -479,6 +679,27 @@ public class Imports {
             if (operatorId == null) {
                 row.errors.add(Texts.t("%s: %s is not in the list of mobile money operators.", row.header("mobile_money_operator"),
                         row.text("mobile_money_operator")));
+            }
+        }
+        String birthCountry = p.birthCountryCode();
+        if (row.text("birth_country") != null) {
+            birthCountry = refs.matchCountry(row.text("birth_country"), home).orElse(null);
+            if (birthCountry == null) {
+                row.errors.add(Texts.t("%s: %s is not in the list of countries.", row.header("birth_country"), row.text("birth_country")));
+            }
+        }
+        Long birthPlaceId = p.birthPlaceId();
+        String birthPlaceText = p.birthPlaceText();
+        if (row.text("birth_place") != null) {
+            String country = birthCountry == null ? home : birthCountry;
+            birthPlaceId = refs.matchPlace(row.text("birth_place"), country).map(cd.hrpay.reference.References.Place::id).orElse(null);
+            birthPlaceText = birthPlaceId == null ? row.text("birth_place") : null;
+            if (birthPlaceId == null && country.equals(home)) {
+                row.warnings.add(Texts.t("%s: %s is not in the lists of places; it is kept as written.", row.header("birth_place"),
+                        row.text("birth_place")));
+            }
+            if (birthCountry == null) {
+                birthCountry = country;
             }
         }
         Long addressPlaceId = p.addressPlaceId();
@@ -511,9 +732,10 @@ public class Imports {
         employees.saveProfile(userId, new EmployeeFile.Profile(birth, gender, p.nationality(),
                 marital == null ? "SINGLE" : marital, or(row.text("cnss_number"), p.cnssNumber()), or(row.text("tax_number"), p.taxNumber()),
                 method, bankId == null ? p.bankName() : null, account, operatorId == null ? p.mobileMoneyOperator() : null, number,
-                addressPlaceId == null ? p.commune() : null, p.nursingBreakUntil(), nationalityCode, p.birthCountryCode(),
-                p.birthPlaceId(), p.birthPlaceText(), addressPlaceId, p.addressQuarter(), p.addressStreet(), bankId, operatorId,
-                p.idDocumentType(), p.idDocumentNumber(), p.idDocumentIssuedOn(), p.idDocumentIssuedAt()));
+                addressPlaceId == null ? p.commune() : null, p.nursingBreakUntil(), nationalityCode, birthCountry,
+                birthPlaceId, birthPlaceText, addressPlaceId, or(row.text("address_quarter"), p.addressQuarter()),
+                or(row.text("address_street"), p.addressStreet()), bankId, operatorId, idType,
+                or(row.text("id_document_number"), p.idDocumentNumber()), issuedOn, or(row.text("id_document_issued_at"), p.idDocumentIssuedAt())));
     }
 
     private RowResult managerOf(Row row, RowResult r, Context ctx) {
@@ -560,8 +782,95 @@ public class Imports {
                     .map(MasterData.Occupation::id)
                     .orElseThrow(() -> new BusinessRuleException(Texts.t("No occupation has the code %s.", occupation)));
         }
-        negotiated.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic, net, row.text("note"),
-                row.date("hire_date"));
+        BigDecimal trial = row.number("trial_months");
+        LocalDate signedOn = row.date("signed_on");
+        String workSite = row.text("work_site");
+        String signedAt = row.text("signed_place");
+        if (!row.errors.isEmpty()) {
+            return;
+        }
+        EmployeeFile.Contract c = negotiated.startContract(p.id(), type, start, end, grade.id(), occupationId, expatriate, basic,
+                net, row.text("note"), row.date("hire_date"));
+        out.action = "ADD";
+        if (trial != null || signedOn != null || workSite != null || signedAt != null) {
+            Long siteId = workSite == null ? null : sites.findByCodeIgnoreCase(workSite).map(s -> s.getId())
+                    .orElseThrow(() -> new BusinessRuleException(Texts.t("No site has the code %s.", workSite)));
+            String home = jdbc.sql("select country_code from company where id = current_company_id()").query(String.class)
+                    .optional().orElse("CD");
+            Long signedPlaceId = signedAt == null ? null : refs.matchPlace(signedAt, home)
+                    .map(cd.hrpay.reference.References.Place::id)
+                    .orElseThrow(() -> new BusinessRuleException(Texts.t("%s: %s is not in the list of towns.", row.header("signed_place"), signedAt)));
+            cd.hrpay.lifecycle.ContractTerms.Terms t = contractTerms.terms(c.id());
+            contractTerms.save(p.id(), c.id(), new cd.hrpay.lifecycle.ContractTerms.Terms(c.id(),
+                    trial == null ? t.trialMonths() : trial.intValue(), t.unskilledLabourer(), t.fixedTermReason(),
+                    t.fixedTermDetail(), t.permanentJob(), t.workPlace(), t.supervisor(), t.signedPlace(),
+                    signedOn == null ? t.signedOn() : signedOn, t.draftGivenOn(), t.medicalFitOn(), t.medicalDoctor(), t.onemVisaNo(),
+                    t.onemVisaOn(), null, null, siteId == null ? t.workSiteId() : siteId,
+                    signedPlaceId == null ? t.signedPlaceId() : signedPlaceId));
+        }
+    }
+
+    private void familyMember(Row row, Outcome out) {
+        row.required("registration_no");
+        String name = row.required("full_name");
+        String relationship = choice(row, "relationship", Map.of("SPOUSE", "SPOUSE", "CONJOINT", "SPOUSE", "CONJOINTE", "SPOUSE",
+                "EPOUX", "SPOUSE", "EPOUSE", "SPOUSE", "WIFE", "SPOUSE", "HUSBAND", "SPOUSE", "CHILD", "CHILD", "ENFANT", "CHILD"));
+        LocalDate birth = row.date("birth_date");
+        boolean inCharge = row.text("in_charge") == null || row.bool("in_charge");
+        boolean student = row.bool("student");
+        boolean disabled = row.bool("disabled");
+        Person p = requirePerson(row, out);
+        if (!row.errors.isEmpty()) {
+            return;
+        }
+        String key = normal(name);
+        Optional<EmployeeFile.Dependant> same = employees.dependants(p.id()).stream()
+                .filter(d -> normal(d.fullName()).equals(key) && (birth == null || d.birthDate() == null || birth.equals(d.birthDate())))
+                .findFirst();
+        if (same.isPresent()) {
+            EmployeeFile.Dependant d = same.get();
+            employees.updateDependant(p.id(), d.id(), name, relationship, birth == null ? d.birthDate() : birth, inCharge,
+                    row.text("student") == null ? d.student() : student, row.text("disabled") == null ? d.disabled() : disabled,
+                    or(row.text("note"), d.note()));
+            out.action = "UPDATE";
+        } else {
+            employees.addDependant(p.id(), name, relationship, birth, inCharge, student, disabled, row.text("note"));
+            out.action = "ADD";
+        }
+    }
+
+    private void move(Row row, Outcome out) {
+        row.required("registration_no");
+        LocalDate on = row.requiredDate("effective_on");
+        String kind = choice(row, "kind", Map.ofEntries(Map.entry("PROMOTION", "PROMOTION"), Map.entry("TRANSFER", "TRANSFER"),
+                Map.entry("MUTATION", "TRANSFER"), Map.entry("PROMOTIONWITHTRANSFER", "PROMOTION_TRANSFER"),
+                Map.entry("PROMOTION_TRANSFER", "PROMOTION_TRANSFER"), Map.entry("PROMOTIONAVECMUTATION", "PROMOTION_TRANSFER"),
+                Map.entry("PROMOTIONETMUTATION", "PROMOTION_TRANSFER"), Map.entry("RECLASSIFICATION", "RECLASSIFICATION"),
+                Map.entry("RECLASSEMENT", "RECLASSIFICATION")));
+        BigDecimal trial = row.number("trial_months");
+        boolean keepNet = row.bool("keep_net");
+        Person p = requirePerson(row, out);
+        if (!row.errors.isEmpty()) {
+            return;
+        }
+        String gradeCode = row.text("grade");
+        Long gradeId = gradeCode == null ? null : masterData.grades().stream().filter(g -> g.code().equalsIgnoreCase(gradeCode))
+                .findFirst().map(MasterData.Grade::id)
+                .orElseThrow(() -> new BusinessRuleException(Texts.t("No grade has the code %s.", gradeCode)));
+        String occupationCode = row.text("occupation");
+        Long occupationId = occupationCode == null ? null : masterData.occupations().stream()
+                .filter(o -> o.code().equalsIgnoreCase(occupationCode)).findFirst().map(MasterData.Occupation::id)
+                .orElseThrow(() -> new BusinessRuleException(Texts.t("No occupation has the code %s.", occupationCode)));
+        String unitCode = row.text("unit");
+        Long unitId = unitCode == null ? null : jdbc.sql("select id from org_unit where upper(code) = upper(?) and valid_to is null")
+                .param(unitCode).query(Long.class).optional()
+                .orElseThrow(() -> new BusinessRuleException(Texts.t("No open unit has the code %s.", unitCode)));
+        String siteCode = row.text("site");
+        Long siteId = siteCode == null ? null : sites.findByCodeIgnoreCase(siteCode).map(s -> s.getId())
+                .orElseThrow(() -> new BusinessRuleException(Texts.t("No site has the code %s.", siteCode)));
+        cd.hrpay.career.CareerMoves.Result r = careerMoves.move(p.id(), new cd.hrpay.career.CareerMoves.Input(kind, on, gradeId,
+                occupationId, unitId, siteId, trial == null ? null : trial.intValue(), keepNet, row.text("note")));
+        row.warnings.addAll(r.warnings());
         out.action = "ADD";
     }
 

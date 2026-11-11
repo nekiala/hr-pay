@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError, CONTRACT_TYPES, ID_DOCUMENTS, api, money, type Dependant, type EmployeeFileView, type Grade, type IdDocumentType, type Occupation, type PayAssignment, type PayElement, type Profile, type User , personName } from '../api'
+import { ApiError, CONTRACT_TYPES, ID_DOCUMENTS, api, money, type Dependant, type EmployeeFileView, type Grade, type IdDocumentType, type Occupation, type PayAssignment, type PayElement, type Profile, type User , personName, day, type CareerMove } from '../api'
 import { CountrySelect, InstitutionSelect, OldValue, PlacePicker, useCountries } from '../components/ReferencePickers'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
@@ -9,7 +9,9 @@ import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { GradeChangeModal } from '../components/GradeChange'
 import { ContractDocumentModal } from '../components/ContractDocument'
+import { CareerHistory, CareerMoveModal } from '../components/CareerMove'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 export default function EmployeeFilePage() {
   // null: closed; 0: adding; an id: editing that person.
@@ -18,6 +20,8 @@ export default function EmployeeFilePage() {
   const [addingItem, setAddingItem] = useState(false)
   const [contracting, setContracting] = useState(false)
   const [documentFor, setDocumentFor] = useState<number | null>(null)
+  const [moving, setMoving] = useState(new URLSearchParams(window.location.search).has('move'))
+  const [moves, setMoves] = useState<CareerMove[]>([])
   const ask = useAsk()
   const { id } = useParams()
   const { can, me } = useAuth()
@@ -41,6 +45,8 @@ export default function EmployeeFilePage() {
   const load = () => Promise.all([
     api<EmployeeFileView>(`/api/users/${id}/file`).then((f) => { setFile(f); setProfile(f.profile) }),
     api<PayAssignment[]>(`/api/users/${id}/pay-elements`).then(setItems),
+    api<CareerMove[]>(`/api/users/${id}/career`).then(setMoves),
+    api<User>(`/api/users/${id}`).then(setUser),
   ]).catch((e: Error) => setError(e.message))
   useEffect(() => {
     load()
@@ -133,19 +139,48 @@ export default function EmployeeFilePage() {
       <div className="card">
         <h3>{t('Contracts')}</h3>
         {file?.contracts.length === 0 && <p className="muted">{t('No contract yet.')}</p>}
-        {file?.contracts.map((c) => (
-          <p key={c.id}>
-            <strong>{CONTRACT_TYPES[c.contractType]}</strong> · {c.gradeName} ({c.gradeCode}){c.occupationName ? ` · ${c.occupationName}` : ''}{c.expatriate ? t(' · expatriate') : ''}
-            <br /><span className="muted">{t('from')}{' '}{c.startDate}{c.endDate ? t(' to {a}', { a: c.endDate }) : ''}{c.note ? ` · ${c.note}` : ''}</span>
-            {can('lifecycle.manage') && <>{' '}<Button className="secondary small" onClick={() => setDocumentFor(c.id)}>{t('Contract document')}</Button></>}
-          </p>
-        ))}
+        {file && file.contracts.length > 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{t('Type')}</th><th>{t('Grade')}</th><th>{t('Occupation')}</th><th>{t('From')}</th><th>{t('To')}</th>
+                  <th>{t('Status')}</th><th>{t('Note')}</th>{can('lifecycle.manage') && <th><span className="sr-only">{t('Document')}</span></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {file.contracts.map((c) => {
+                  const state = c.startDate > today ? 'FUTURE' : c.endDate && c.endDate < today ? 'ENDED' : 'CURRENT'
+                  return (
+                    <tr key={c.id} className={c.id === currentContract?.id ? 'current' : undefined}>
+                      <td><strong>{CONTRACT_TYPES[c.contractType]}</strong>{c.expatriate && <div className="hint">{t('Expatriate')}</div>}</td>
+                      <td><strong>{c.gradeCode}</strong><div className="small muted">{c.gradeName}</div></td>
+                      <td>{c.occupationName ?? '—'}</td>
+                      <td>{day(c.startDate)}</td>
+                      <td>{c.endDate ? day(c.endDate) : '—'}</td>
+                      <td><span className={state === 'CURRENT' ? 'badge ok' : state === 'FUTURE' ? 'badge warn' : 'badge'}>
+                        {state === 'CURRENT' ? t('In force') : state === 'FUTURE' ? t('Coming') : t('Ended')}</span></td>
+                      <td className="small">{c.note ?? ''}</td>
+                      {can('lifecycle.manage') && <td><Button className="secondary small" onClick={() => setDocumentFor(c.id)}>{t('Contract document')}</Button></td>}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
         {editable && (
           <div className="row">
             <Button className="secondary" onClick={() => setContracting(true)}>{t('New contract or change')}</Button>
+            {can('org.manage') && <Button className="secondary" onClick={() => setMoving(true)}>{t('Promote or transfer')}</Button>}
             {currentContract && <Button className="secondary" onClick={() => setGradeMode('change')}>{t('Change grade')}</Button>}
             {latestContract && <Button className="secondary void" onClick={() => setGradeMode('correct')}>{t('Correct the grade')}</Button>}
           </div>
+        )}
+        {moving && (
+          <CareerMoveModal userId={id!} contract={currentContract} unitId={user?.unitId ?? null} siteId={user?.siteId ?? null}
+            onClose={() => setMoving(false)}
+            onDone={(warnings) => { setMoving(false); load(); setMessage([t('Move saved.'), ...warnings].join(' ')) }} />
         )}
         {documentFor !== null && file?.contracts.find((c) => c.id === documentFor) && (
           <ContractDocumentModal userId={id!} contract={file.contracts.find((c) => c.id === documentFor)!} onClose={() => setDocumentFor(null)} />
@@ -162,8 +197,8 @@ export default function EmployeeFilePage() {
                     {Object.entries(CONTRACT_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </label>
-                <label>{t('Starts')}<input type="date" value={contract.startDate} onChange={(e) => setContract({ ...contract, startDate: e.target.value })} required /></label>
-                <label>{t('Ends')}<input type="date" value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM'} /></label>
+                <label>{t('Starts')}<DateInput value={contract.startDate} onChange={(e) => setContract({ ...contract, startDate: e.target.value })} required /></label>
+                <label>{t('Ends')}<DateInput value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM'} /></label>
               </div>
               <div className="grid2">
                 <label>{t('Grade')}<select value={contract.gradeId} onChange={(e) => setContract({ ...contract, gradeId: e.target.value })} required>
@@ -184,7 +219,7 @@ export default function EmployeeFilePage() {
                 <label>{t('Note')}<input value={contract.note} maxLength={300} onChange={(e) => setContract({ ...contract, note: e.target.value })} /></label>
               </div>
               {firstContract && (
-                <label>{t('In the company since (optional)')}<input type="date" value={contract.hireDate} max={contract.startDate || undefined}
+                <label>{t('In the company since (optional)')}<DateInput value={contract.hireDate} max={contract.startDate || undefined}
                     onChange={(e) => setContract({ ...contract, hireDate: e.target.value })} />
                   <span className="hint">{t('The hire date. Empty: the contract start. Give an earlier date only for someone hired before this contract (seniority).')}</span>
                 </label>
@@ -199,13 +234,18 @@ export default function EmployeeFilePage() {
         )}
       </div>
 
+      <div className="card">
+        <h3>{t('Career: promotions and transfers')}</h3>
+        <CareerHistory userId={id!} moves={moves} />
+      </div>
+
       {p && (
         <Form className="card" onSubmit={saveProfile}>
           <h3>{t('Personal and payment details')}</h3>
           <fieldset disabled={!editable}>
             <h4>{t('Identity')}</h4>
             <div className="grid3">
-              <label>{t('Date of birth')}<input type="date" value={p.birthDate ?? ''} onChange={(e) => setP({ birthDate: e.target.value || null })} /></label>
+              <label>{t('Date of birth')}<DateInput value={p.birthDate ?? ''} onChange={(e) => setP({ birthDate: e.target.value || null })} /></label>
               <label>{t('Gender')}<select value={p.gender ?? ''} onChange={(e) => setP({ gender: (e.target.value || null) as Profile['gender'] })}>
                   <option value="">{t('Not given')}</option><option value="FEMALE">{t('Female')}</option><option value="MALE">{t('Male')}</option>
                 </select>
@@ -231,7 +271,7 @@ export default function EmployeeFilePage() {
               <label>{t('Document number')}<input value={p.idDocumentNumber ?? ''} maxLength={40} onChange={(e) => setP({ idDocumentNumber: e.target.value })} /></label>
             </div>
             <div className="grid2">
-              <label>{t('Issued on')}<input type="date" value={p.idDocumentIssuedOn ?? ''} onChange={(e) => setP({ idDocumentIssuedOn: e.target.value || null })} /></label>
+              <label>{t('Issued on')}<DateInput value={p.idDocumentIssuedOn ?? ''} onChange={(e) => setP({ idDocumentIssuedOn: e.target.value || null })} /></label>
               <label>{t('Issued at')}<input value={p.idDocumentIssuedAt ?? ''} maxLength={100} onChange={(e) => setP({ idDocumentIssuedAt: e.target.value })} /></label>
             </div>
 
@@ -260,7 +300,7 @@ export default function EmployeeFilePage() {
             <p className="hint">{t('The commune or territory goes on the tax declaration; the CNSS registration asks for the full address.')}</p>
 
             {p.gender !== 'MALE' && (
-              <label>{t('Nursing breaks until')}<input type="date" value={p.nursingBreakUntil ?? ''} onChange={(e) => setP({ nursingBreakUntil: e.target.value || null })} />
+              <label>{t('Nursing breaks until')}<DateInput value={p.nursingBreakUntil ?? ''} onChange={(e) => setP({ nursingBreakUntil: e.target.value || null })} />
                 <span className="muted small">{t('Two paid half hours a day while she nurses her child (Code du travail art. 132): an hour less at work is not deducted.')}</span>
               </label>
             )}
@@ -404,7 +444,7 @@ export default function EmployeeFilePage() {
                 <option value="CHILD">{t('Child')}</option><option value="SPOUSE">{t('Spouse')}</option>
               </select></label>
               <label>{t('Full name')}<input value={dependant.fullName} maxLength={150} onChange={(e) => setDependant({ ...dependant, fullName: e.target.value })} required /></label>
-              <label>{t('Date of birth')}<input type="date" value={dependant.birthDate} onChange={(e) => setDependant({ ...dependant, birthDate: e.target.value })} required={dependant.relationship === 'CHILD'} /></label>
+              <label>{t('Date of birth')}<DateInput value={dependant.birthDate} onChange={(e) => setDependant({ ...dependant, birthDate: e.target.value })} required={dependant.relationship === 'CHILD'} /></label>
               <label className="check"><input type="checkbox" checked={dependant.inCharge} onChange={(e) => setDependant({ ...dependant, inCharge: e.target.checked })} />{t('In the employee\'s charge')}</label>
               {dependant.relationship === 'CHILD' && (
                 <>

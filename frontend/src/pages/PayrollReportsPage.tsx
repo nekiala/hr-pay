@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api, download } from '../api'
+import { api, download, day } from '../api'
 import { useAuth } from '../auth'
 import { Button } from '../components/Button'
 import { ErrorText } from '../components/ErrorText'
@@ -188,7 +188,7 @@ export default function PayrollReportsPage() {
                 setParams(next, { replace: true })
               }}>
                 <option value="">{t('Choose')}</option>
-                {options?.quinzaines.map((q) => <option key={q.id} value={q.id}>{q.month.slice(0, 7)} · {q.payDate}</option>)}
+                {options?.quinzaines.map((q) => <option key={q.id} value={q.id}>{q.month.slice(0, 7)} · {day(q.payDate)}</option>)}
               </select>
             </label>
           ) : (

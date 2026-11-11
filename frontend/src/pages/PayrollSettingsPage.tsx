@@ -5,6 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type LegalMinimum = {
   from: string; smigDaily: number; usdLocal: number; rateDate: string; applied: boolean
@@ -246,7 +247,7 @@ export default function PayrollSettingsPage() {
             </>
           )}>
           <p className="hint">{t('Each grade base below SMIG x coefficient x 26 days (Décret 25/22) is raised. Each person on a raised grade keeps the same net: the basic becomes the new base and the complement shrinks; when the net is too low for the new base, the person moves to the nearest grade below whose base fits, with a complement for the rest.')}</p>
-          <label>{t('From')}<input type="date" value={minimumFrom} disabled={minimum.applied} onChange={(e) => setMinimumFrom(e.target.value)} onBlur={() => !minimum.applied && legalMinimum(false)} /></label>
+          <label>{t('From')}<DateInput value={minimumFrom} disabled={minimum.applied} onChange={(e) => setMinimumFrom(e.target.value)} onBlur={() => !minimum.applied && legalMinimum(false)} /></label>
           <ErrorText error={minimumError} />
           {minimumBusy && <p className="muted">{t('Working it out…')}</p>}
           {!minimumBusy && minimum.smigDaily > 0 && (

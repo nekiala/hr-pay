@@ -175,13 +175,15 @@ A unit's head approves for their whole team, sub-units included; their deputy on
 - **Rôles** : chaque rôle est une liste de permissions. Les rôles sensibles (Administrateur, RH, Finance) demandent une deuxième étape à la connexion.
 - **Embauches et départs** : les listes de contrôle, les documents à réunir, les lettres à signer.
 - **Départ** : le décompte final (préavis, congés, indemnités) se calcule dans Départs ; le dernier bulletin le reprend.
-- **Importer des données** : modèles Excel pour les employés, contrats, salaires, soldes de congés et cumuls de l'année. Rien n'est enregistré avant la vérification.` },
+- **Promouvoir ou muter** (fiche contrat et famille) : un nouveau grade ou une nouvelle fonction fait un avenant ; une nouvelle unité ou un nouveau site fait une mutation. HR Pay rédige l'avenant ou la note de mutation à faire signer : le poste et le lieu de travail font partie du contrat écrit (Code du travail, art. 36, 44, 55 et 61 ter). Une période d'essai éventuelle est écrite dans l'avenant, 6 mois au plus (art. 43). Une mutation hors du lieu d'emploi oblige à loger le travailleur et sa famille ou à verser une indemnité (art. 138). L'ancienneté ne change pas.
+- **Importer des données** : modèles Excel pour les employés, la famille, les contrats, les mouvements (promotions et mutations), les salaires, les soldes de congés et les cumuls de l'année. Les employés, la famille et les cumuls se téléchargent aussi remplis avec les données actuelles : modifiez le fichier et importez-le. Rien n'est enregistré avant la vérification.` },
     en: { title: 'HR: employees, roles, hiring and departures', body: `
 - **Users**: create the person, their unit, contract and salary. A temporary password is changed at the first sign-in.
 - **Roles**: each role is a list of permissions. Sensitive roles (Administrator, HR, Finance) ask for a second step at sign-in.
 - **Hiring and departures**: checklists, documents to collect, letters to sign.
 - **Departure**: the final settlement (notice, leave, severance) is calculated in Departures; the last payslip carries it.
-- **Import data**: Excel templates for employees, contracts, salaries, leave balances and year-to-date totals. Nothing is saved before the check.` },
+- **Promote or transfer** (contract and family page): a new grade or occupation makes an avenant; a new unit or site makes a transfer. HR Pay writes the avenant or the note de mutation for the employee to sign: the post and the place of work belong to the written contract (Labour Code art. 36, 44, 55 and 61 ter). A trial period, if any, is written in the avenant, 6 months at most (art. 43). A transfer outside the place of employment owes housing for the worker and the family, or an allowance (art. 138). Seniority does not change.
+- **Import data**: Excel templates for employees, family, contracts, moves (promotions and transfers), salaries, leave balances and year-to-date totals. Employees, family and year-to-date totals also download filled with the current data: change the file and import it back. Nothing is saved before the check.` },
   },
   {
     id: 'payroll', audience: 'payroll', routes: ['/payroll', '/payslips', '/payroll/runs/monthly', '/payroll/runs/corrections', '/payroll/new', '/payroll/compare'],

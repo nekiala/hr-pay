@@ -38,7 +38,7 @@ public class ImportController {
         }
     }
 
-    public record KindView(Imports.Kind kind, List<Imports.Column> columns) {}
+    public record KindView(Imports.Kind kind, List<Imports.Column> columns, boolean canFill) {}
 
     private final Imports imports;
     private final cd.hrpay.job.BackgroundJobs jobs;
@@ -50,7 +50,7 @@ public class ImportController {
 
     @GetMapping("/kinds")
     public List<KindView> kinds() {
-        return Arrays.stream(Imports.Kind.values()).map(k -> new KindView(k, imports.columns(k))).toList();
+        return Arrays.stream(Imports.Kind.values()).map(k -> new KindView(k, imports.columns(k), Imports.FILLED.contains(k))).toList();
     }
 
     @GetMapping("/history")
@@ -59,10 +59,17 @@ public class ImportController {
     }
 
     @GetMapping({"/{kind}/template.xlsx", "/{kind}/template.csv"})
-    public void template(@PathVariable String kind, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void template(@PathVariable String kind, @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean filled,
+                         HttpServletRequest request, HttpServletResponse response) throws IOException {
         Imports.Kind k = kind(kind);
-        Sheet sheet = Sheet.open(request, response, "hr-pay-" + k.name().toLowerCase(Locale.ROOT).replace('_', '-'));
+        // Filled first: a refusal is still an ordinary error answer, before the file starts.
+        List<List<Object>> rows = filled ? imports.filled(k) : List.of();
+        Sheet sheet = Sheet.open(request, response, "hr-pay-" + k.name().toLowerCase(Locale.ROOT).replace('_', '-')
+                + (filled ? "-current" : ""));
         sheet.row(imports.columns(k).stream().map(c -> (Object) (c.header() + (c.required() ? " *" : ""))).toArray());
+        for (List<Object> r : rows) {
+            sheet.row(r.toArray());
+        }
         sheet.finish();
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   ApiError, api, personName, type Mission, type MissionExpense, type MissionPayment, type Page, type TravelMission,
   type TravelMissionDetail, type User,
+  day,
 } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
@@ -11,6 +12,7 @@ import { Modal } from '../components/Modal'
 import { CountrySelect } from '../components/ReferencePickers'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
+import { DateInput, TimeInput } from '../components/DateFields'
 
 const SHORT_STATUS: Record<Mission['status'], string> = {
   PENDING: t('Waiting for approval'), APPROVED: t('Approved'), REJECTED: t('Rejected'), CANCELLED: t('Cancelled'), CLOSED: t('Closed'),
@@ -133,7 +135,7 @@ export default function MissionsPage() {
             <div key={`t${m.id}`} className="mission">
               <p><strong>{m.employeeName}</strong> <span className="muted">{m.registrationNo} · {units.unitName(m.userId)}</span>
                 {' '}<span className="badge">{m.scope === 'INTERNATIONAL' ? t('International') : t('In the country')}</span></p>
-              <p>{m.city}, {m.countryName} · {m.startDate} → {m.endDate} ({t('{a} days', { a: m.days })})</p>
+              <p>{m.city}, {m.countryName} · {day(m.startDate)} → {day(m.endDate)} ({t('{a} days', { a: m.days })})</p>
               <p className="muted">{m.purpose}{m.firstApprovedBy ? ` · ${t('Approved by the unit head: {a}', { a: m.firstApprovedBy })}` : ''}</p>
               <div className="row">
                 <input placeholder={t('Note (required to reject)')} value={notes[`t${m.id}`] ?? ''}
@@ -147,7 +149,7 @@ export default function MissionsPage() {
           {shortWaiting.map((m) => (
             <div key={`s${m.id}`} className="mission">
               <p><strong>{m.employeeName}</strong> <span className="muted">{m.registrationNo} · {units.unitName(m.userId)}</span></p>
-              <p>{m.workDate}, {hm(m.startTime)}–{hm(m.endTime)} · {m.location}</p>
+              <p>{day(m.workDate)}, {hm(m.startTime)}–{hm(m.endTime)} · {m.location}</p>
               <p className="muted">{m.purpose}</p>
               <div className="row">
                 <input placeholder={t('Note (required to reject)')} value={notes[`s${m.id}`] ?? ''}
@@ -168,8 +170,8 @@ export default function MissionsPage() {
           </div>
           {tab === 'all' && (
             <div className="row">
-              <label>{t('From')}{' '}<input type="date" value={period.from} onChange={(e) => e.target.value && setPeriod({ ...period, from: e.target.value })} /></label>
-              <label>{t('To')}{' '}<input type="date" value={period.to} onChange={(e) => e.target.value && setPeriod({ ...period, to: e.target.value })} /></label>
+              <label>{t('From')}{' '}<DateInput value={period.from} onChange={(e) => e.target.value && setPeriod({ ...period, from: e.target.value })} /></label>
+              <label>{t('To')}{' '}<DateInput value={period.to} onChange={(e) => e.target.value && setPeriod({ ...period, to: e.target.value })} /></label>
               {units.select}
             </div>
           )}
@@ -192,7 +194,7 @@ export default function MissionsPage() {
                 <td>{m.number ?? <span className="muted">{t('Not yet numbered')}</span>}{m.amendment > 0 && <span className="muted"> · {t('amendment {a}', { a: m.amendment })}</span>}</td>
                 {tab === 'all' && <td>{m.employeeName}<br /><span className="muted small">{m.registrationNo}</span></td>}
                 <td>{m.city}, {m.countryName}<br /><span className="muted small">{m.purpose}</span></td>
-                <td>{m.startDate} → {m.endDate}<br /><span className="muted small">{t('{a} days', { a: m.days })}</span></td>
+                <td>{day(m.startDate)} → {day(m.endDate)}<br /><span className="muted small">{t('{a} days', { a: m.days })}</span></td>
                 <td>{travelStatus(m)}</td>
                 <td className="row">
                   <Button className="secondary" onClick={() => setOpen(m.id)}>{t('Open')}</Button>
@@ -214,7 +216,7 @@ export default function MissionsPage() {
               <tbody>
                 {shortMine.map((m) => (
                   <tr key={m.id}>
-                    <td>{m.workDate}</td>
+                    <td>{day(m.workDate)}</td>
                     <td>{hm(m.startTime)}–{hm(m.endTime)}</td>
                     <td>{m.location}<br /><span className="muted">{m.purpose}</span></td>
                     <td>{SHORT_STATUS[m.status]}{m.decidedBy ? <><br /><span className="muted">{t('by')}{' '}{m.decidedBy}{m.decisionNote ? `: ${m.decisionNote}` : ''}</span></> : null}</td>
@@ -234,9 +236,9 @@ export default function MissionsPage() {
           <p className="muted">{t('Work away from the office for part of a day. You check in as usual; once approved, you can end your day where the mission is.')}</p>
           <Form onSubmit={async (e) => { if (await submitShort(e)) setRequestingShort(false) }}>
             <div className="grid3">
-              <label>{t('Date')}<input type="date" value={shortForm.workDate} onChange={(e) => setShortForm({ ...shortForm, workDate: e.target.value })} required /></label>
-              <label>{t('From')}<input type="time" value={shortForm.startTime} onChange={(e) => setShortForm({ ...shortForm, startTime: e.target.value })} required /></label>
-              <label>{t('To')}<input type="time" value={shortForm.endTime} onChange={(e) => setShortForm({ ...shortForm, endTime: e.target.value })} required /></label>
+              <label>{t('Date')}<DateInput value={shortForm.workDate} onChange={(e) => setShortForm({ ...shortForm, workDate: e.target.value })} required /></label>
+              <label>{t('From')}<TimeInput value={shortForm.startTime} onChange={(e) => setShortForm({ ...shortForm, startTime: e.target.value })} required /></label>
+              <label>{t('To')}<TimeInput value={shortForm.endTime} onChange={(e) => setShortForm({ ...shortForm, endTime: e.target.value })} required /></label>
             </div>
             <label>{t('Where')}<input value={shortForm.location} maxLength={200} onChange={(e) => setShortForm({ ...shortForm, location: e.target.value })} placeholder={t('For example Ministry of Labour, Gombe')} required /></label>
             <label>{t('Why')}<input value={shortForm.purpose} maxLength={500} onChange={(e) => setShortForm({ ...shortForm, purpose: e.target.value })} placeholder={t('For example submit the CNSS declaration')} required /></label>
@@ -291,8 +293,8 @@ function NewMission({ manage, canRequest, onClose, onDone }: { manage: boolean; 
           <label>{t('City')}<input value={form.city} maxLength={120} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('For example Lubumbashi or Tokyo')} required /></label>
         </div>
         <div className="grid2">
-          <label>{t('Departure')}<input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate < e.target.value ? e.target.value : form.endDate })} required /></label>
-          <label>{t('Return')}<input type="date" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
+          <label>{t('Departure')}<DateInput value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value, endDate: form.endDate < e.target.value ? e.target.value : form.endDate })} required /></label>
+          <label>{t('Return')}<DateInput value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} required /></label>
         </div>
         <label>{t('Purpose of the mission')}<input value={form.purpose} maxLength={500} onChange={(e) => setForm({ ...form, purpose: e.target.value })} placeholder={t('For example training session, deployment at the client')} required /></label>
         <div className="grid2">
@@ -420,7 +422,7 @@ function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
       {message && <p className="success">{message}</p>}
       <div className="row space">
         <p><strong>{m.employeeName}</strong> <span className="muted">{m.registrationNo}</span><br />
-          {m.city}, {m.countryName} · {m.startDate} → {m.endDate} ({t('{a} days', { a: m.days })})<br />
+          {m.city}, {m.countryName} · {day(m.startDate)} → {day(m.endDate)} ({t('{a} days', { a: m.days })})<br />
           <span className="muted">{m.purpose}</span></p>
         <p className="right">
           <span className="badge">{travelStatus(m)}</span><br />
@@ -496,7 +498,7 @@ function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
               <tbody>
                 {d.expenses.map((x) => (
                   <tr key={x.id}>
-                    <td>{x.spentOn}</td><td>{EXPENSE[x.category]}</td><td>{x.description}</td><td className="num">{money(x.amount, x.currency)}</td>
+                    <td>{day(x.spentOn)}</td><td>{EXPENSE[x.category]}</td><td>{x.description}</td><td className="num">{money(x.amount, x.currency)}</td>
                     <td>{x.hasReceipt ? <a href={`/api/travel-missions/${id}/expenses/${x.id}/receipt`} target="_blank" rel="noreferrer">{t('Receipt')}</a> : <span className="muted">{t('No receipt')}</span>}</td>
                     <td>{x.status === 'SUBMITTED' ? t('To check') : x.status === 'ACCEPTED' ? t('Accepted') : `${t('Refused')}${x.decisionNote ? `: ${x.decisionNote}` : ''}`}</td>
                     <td className="row">
@@ -514,7 +516,7 @@ function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
           {canWork && (
             <Form onSubmit={addExpense}>
               <div className="grid4">
-                <label>{t('Date')}<input type="date" value={expense.spentOn} onChange={(e) => setExpense({ ...expense, spentOn: e.target.value })} required /></label>
+                <label>{t('Date')}<DateInput value={expense.spentOn} onChange={(e) => setExpense({ ...expense, spentOn: e.target.value })} required /></label>
                 <label>{t('For')}<select value={expense.category} onChange={(e) => setExpense({ ...expense, category: e.target.value as MissionExpense['category'] })}>
                   {Object.entries(EXPENSE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select></label>
@@ -580,8 +582,8 @@ function Amend({ mission, onClose, onDone }: { mission: TravelMission; onClose: 
         <div className="grid2">
           <label>{t('Country')}<CountrySelect value={f.countryCode} onChange={(c) => setF({ ...f, countryCode: c })} required /></label>
           <label>{t('City')}<input value={f.city} onChange={(e) => setF({ ...f, city: e.target.value })} required /></label>
-          <label>{t('Departure')}<input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} required /></label>
-          <label>{t('Return')}<input type="date" value={f.endDate} min={f.startDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} required /></label>
+          <label>{t('Departure')}<DateInput value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} required /></label>
+          <label>{t('Return')}<DateInput value={f.endDate} min={f.startDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} required /></label>
           <label>{t('Transport')}<select value={f.transport} onChange={(e) => setF({ ...f, transport: e.target.value as TravelMission['transport'] })}>
             {Object.entries(TRANSPORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <label>{t('Daily rate')}<input type="number" min={0} step="0.01" value={f.perDiemRate} onChange={(e) => setF({ ...f, perDiemRate: e.target.value })} /></label>

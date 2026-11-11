@@ -12,6 +12,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { ContractIssues } from '../components/ContractDocument'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -336,8 +337,8 @@ export function UploadModal({ userId, types, onClose, onDone, mine }: { userId?:
         </label>
         <label>{t('File (PDF, JPEG or PNG, at most 10 MB)')}<input type="file" required accept="application/pdf,image/jpeg,image/png" capture={mine ? 'environment' : undefined} onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
         <div className="grid2">
-          <label>{t('Issued on (optional)')}<input type="date" value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} /></label>
-          <label>{type?.hasExpiry ? t('Expires on') : t('Expires on (optional)')}<input type="date" required={type?.hasExpiry} value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} /></label>
+          <label>{t('Issued on (optional)')}<DateInput value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} /></label>
+          <label>{type?.hasExpiry ? t('Expires on') : t('Expires on (optional)')}<DateInput required={type?.hasExpiry} value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} /></label>
         </div>
         {!mine && <label>{t('Note (optional)')}<input maxLength={300} value={note} onChange={(e) => setNote(e.target.value)} /></label>}
         <ErrorText error={error} />
@@ -364,7 +365,7 @@ function LendModal({ userId, onClose, onDone }: { userId: number; onClose: () =>
         <label>{t('Description (optional)')}<input maxLength={200} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
         <div className="grid2">
           <label>{t('Serial number (optional)')}<input maxLength={80} value={form.serialNo} onChange={(e) => setForm({ ...form, serialNo: e.target.value })} /></label>
-          <label>{t('Lent on')}<input type="date" required value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} /></label>
+          <label>{t('Lent on')}<DateInput required value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} /></label>
         </div>
         <ErrorText error={error} />
         <div className="modal-foot"><Button type="submit">{t('Save')}</Button></div>

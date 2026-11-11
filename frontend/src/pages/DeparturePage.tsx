@@ -6,6 +6,7 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Draft = {
   lastDay: string; reason: DepartureReason; noticeDate: string; noticeGivenBy: NoticeGivenBy | ''; notice: Notice | ''; noticeDays: string; leaveDays: string
@@ -102,7 +103,7 @@ export default function DeparturePage() {
 
       <Form className="card" onSubmit={save}>
         <div className="grid3">
-          <label>{t('Last day of work')}<input type="date" value={draft.lastDay} onChange={set('lastDay')} required disabled={confirmed || !edit} /></label>
+          <label>{t('Last day of work')}<DateInput value={draft.lastDay} onChange={set('lastDay')} required disabled={confirmed || !edit} /></label>
           <label>{t('Reason')}
             <select value={draft.reason} onChange={choose('reason')} disabled={confirmed || !edit}>
               {Object.entries(DEPARTURE_REASONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -121,7 +122,7 @@ export default function DeparturePage() {
               {Object.entries(NOTICE_GIVERS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
-          <label>{t('Notice given on')}<input type="date" value={draft.noticeDate} onChange={choose('noticeDate')} max={draft.lastDay || undefined} disabled={confirmed || !edit} /></label>
+          <label>{t('Notice given on')}<DateInput value={draft.noticeDate} onChange={choose('noticeDate')} max={draft.lastDay || undefined} disabled={confirmed || !edit} /></label>
           <div className="field-note">
             {shown?.noticeEnd && <span>{t('Notice ends on {a}.', { a: longDay(shown.noticeEnd) })}{' '}
               {!confirmed && edit && shown.noticeEnd !== draft.lastDay && draft.noticeDate &&

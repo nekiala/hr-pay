@@ -4,6 +4,7 @@ import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 /**
  * Moves an employee to another grade. "change": from a date, the contract going on under the new grade (a
@@ -58,7 +59,7 @@ export function GradeChangeModal({ userId, contract, mode, onDone, onClose }: {
         {mode === 'change' ? (
           <>
             <div className="grid2">
-              <label>{t('From')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} required /></label>
+              <label>{t('From')}<DateInput value={from} onChange={(e) => setFrom(e.target.value)} required /></label>
               <label>{t('Note')}<input value={note} maxLength={300} placeholder={t('For example: promotion')} onChange={(e) => setNote(e.target.value)} /></label>
             </div>
             <label className="check"><input type="checkbox" checked={keepNet} onChange={(e) => setKeepNet(e.target.checked)} />{t('Keep the same net pay (the salary complement absorbs the new basic)')}</label>

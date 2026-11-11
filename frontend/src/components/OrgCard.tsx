@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { ApiError, api } from '../api'
+import { ApiError, api, day } from '../api'
 import { useAuth } from '../auth'
 import { flatten, REASON, unitPath, type OrgAssignment, type OrgBoss, type OrgHead, type OrgUnit } from '../org'
 import { ErrorText } from './ErrorText'
 import { Button, Form } from './Button'
 import { Modal } from './Modal'
 import { t } from '../i18n'
+import { DateInput } from './DateFields'
 
 /** A select of the open units, indented by depth. */
 export function UnitSelect({ units, value, onChange, required, exclude, placeholder = t('Choose a unit') }: {
@@ -58,7 +59,7 @@ export function OrgCard({ userId }: { userId: number }) {
     <div className="card">
       <h3>{t('Organization')}</h3>
       {current ? (
-        <p><Link to={`/org/units/${current.unitId}`}>{current.unitName}</Link> <span className="muted">{t('since')}{' '}{current.validFrom}</span>
+        <p><Link to={`/org/units/${current.unitId}`}>{current.unitName}</Link> <span className="muted">{t('since')}{' '}{day(current.validFrom)}</span>
           <br /><span className="small muted">{unitPath(units, current.unitId)}</span></p>
       ) : <p className="muted">{t('No unit.')}</p>}
       <p>{t('Reports to:')}{' '}{info?.manager ? <><strong>{info.manager.userName}</strong> <span className="muted">{info.manager.manual ? t('(set by hand)') : t('(head of the unit)')}</span></> : <span className="muted">{t('nobody (top of the structure)')}</span>}</p>
@@ -74,23 +75,29 @@ export function OrgCard({ userId }: { userId: number }) {
           <table>
             <thead><tr><th>{t('Unit')}</th><th>{t('From')}</th><th>{t('To')}</th><th>{t('Why')}</th></tr></thead>
             <tbody>{info.history.map((a) => (
-              <tr key={a.id}><td>{a.unitName}</td><td>{a.validFrom}</td><td>{a.validTo ?? '—'}</td><td>{REASON[a.reason]}{a.note && <div className="hint">{a.note}</div>}</td></tr>
+              <tr key={a.id}><td>{a.unitName}</td><td>{day(a.validFrom)}</td><td>{a.validTo ? day(a.validTo) : '—'}</td><td>{REASON[a.reason]}{a.note && <div className="hint">{a.note}</div>}</td></tr>
             ))}</tbody>
           </table>
         </details>
       )}
-      {editable && !move && <Button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'TRANSFER', note: '' })}>{t('Move to another unit')}</Button>}
+      {editable && !move && (
+        <div className="row">
+          {can('salary.write') && <Link className="button secondary" to={`/users/${userId}/file?move=1`}>{t('Promote or transfer')}</Link>}
+          <Button className="secondary" onClick={() => setMove({ unitId: '', from: today(), reason: 'REORGANISATION', note: '' })}>{t('Reorganisation or correction')}</Button>
+        </div>
+      )}
       {move && (
-        <Modal title={t('Move to another unit')} size="md" onClose={() => setMove(null)}>
+        <Modal title={t('Reorganisation or correction')} size="md" onClose={() => setMove(null)}>
           <Form onSubmit={(e) => save(e)}>
             <div className="grid3">
               <label>{t('New unit')}<UnitSelect units={units} value={move.unitId} required exclude={current?.unitId} onChange={(v) => setMove({ ...move, unitId: v })} /></label>
-              <label>{t('From')}<input type="date" required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
+              <label>{t('From')}<DateInput required value={move.from} onChange={(e) => setMove({ ...move, from: e.target.value })} /></label>
               <label>{t('Why')}<select value={move.reason} onChange={(e) => setMove({ ...move, reason: e.target.value })}>
-                  {['TRANSFER', 'PROMOTION', 'REORGANISATION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
+                  {['REORGANISATION', 'CORRECTION'].map((r) => <option key={r} value={r}>{REASON[r]}</option>)}
                 </select>
               </label>
             </div>
+            <p className="hint">{t('A transfer or a promotion goes through Promote or transfer, which writes the note de mutation or the avenant to sign.')}</p>
             {move.reason === 'CORRECTION' && <p className="hint">{t('A correction fixes the current unit without adding a line to the history.')}</p>}
             <label>{t('Note (optional)')}<input maxLength={300} value={move.note} onChange={(e) => setMove({ ...move, note: e.target.value })} /></label>
             <ErrorText error={error} />

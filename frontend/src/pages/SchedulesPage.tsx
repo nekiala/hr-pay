@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
+import { TimeInput } from '../components/DateFields'
 
 type Draft = Omit<Schedule, 'id' | 'weeklyMinutes' | 'warnings'> & { id?: number }
 
@@ -96,11 +97,11 @@ export default function SchedulesPage() {
                       <td><input type="checkbox" checked={d.workday} onChange={(e) => setDay(i, e.target.checked
                         ? { workday: true, startTime: '08:00', endTime: '17:00' }
                         : { workday: false, lunchEnabled: false })} /></td>
-                      <td><input type="time" disabled={!d.workday} value={hhmm(d.startTime)} onChange={(e) => setDay(i, { startTime: e.target.value })} /></td>
-                      <td><input type="time" disabled={!d.workday} value={hhmm(d.endTime)} onChange={(e) => setDay(i, { endTime: e.target.value })} /></td>
+                      <td><TimeInput disabled={!d.workday} value={hhmm(d.startTime)} onChange={(e) => setDay(i, { startTime: e.target.value })} /></td>
+                      <td><TimeInput disabled={!d.workday} value={hhmm(d.endTime)} onChange={(e) => setDay(i, { endTime: e.target.value })} /></td>
                       <td><input type="checkbox" disabled={!d.workday} checked={d.lunchEnabled} onChange={(e) => setDay(i, e.target.checked
                         ? { lunchEnabled: true, lunchStart: '12:00', lunchMinutes: 60 } : { lunchEnabled: false })} /></td>
-                      <td><input type="time" disabled={!d.lunchEnabled} value={hhmm(d.lunchStart)} onChange={(e) => setDay(i, { lunchStart: e.target.value })} /></td>
+                      <td><TimeInput disabled={!d.lunchEnabled} value={hhmm(d.lunchStart)} onChange={(e) => setDay(i, { lunchStart: e.target.value })} /></td>
                       <td><input type="number" disabled={!d.lunchEnabled} value={d.lunchMinutes ?? ''} onChange={(e) => setDay(i, { lunchMinutes: Number(e.target.value) })} /></td>
                       <td><input type="checkbox" disabled={!d.lunchEnabled} checked={d.lunchPaid} onChange={(e) => setDay(i, { lunchPaid: e.target.checked })} /></td>
                     </tr>

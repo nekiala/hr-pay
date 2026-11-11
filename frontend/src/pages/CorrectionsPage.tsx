@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, time } from '../api'
+import { ApiError, api, time, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
 import { t } from '../i18n'
+import { DateInput, TimeInput } from '../components/DateFields'
 
 type Request = {
   id: number; userId: number; employeeName: string; registrationNo: string; workDate: string; action: 'ADD' | 'VOID'
@@ -112,7 +113,7 @@ export default function CorrectionsPage() {
           {shown.map((r) => (
             <div key={r.id} className="mission">
               <p><strong>{r.employeeName}</strong> <span className="muted">{r.registrationNo} · {units.unitName(r.userId)}</span></p>
-              <p>{r.workDate}: {what(r)}</p>
+              <p>{day(r.workDate)}: {what(r)}</p>
               <p className="muted">{r.reason}</p>
               <p className="muted">
                 {STATUS[r.status]}{t('. Asked by')}{' '}{r.requestedBy}
@@ -143,7 +144,7 @@ export default function CorrectionsPage() {
                   </select>
                 </label>
               )}
-              <label>{t('Day')}<input type="date" value={form.workDate} max={today()} required
+              <label>{t('Day')}<DateInput value={form.workDate} max={today()} required
                 onChange={(e) => setForm({ ...form, workDate: e.target.value, eventId: '' })} /></label>
               <label>{t('What')}<select value={form.action} onChange={(e) => setForm({ ...form, action: e.target.value as 'ADD' | 'VOID' })}>
                   <option value="ADD">{t('Add a missing entry')}</option>
@@ -158,7 +159,7 @@ export default function CorrectionsPage() {
                     <option value="OUT">{t('Check-out')}</option>
                   </select>
                 </label>
-                <label>{t('Time')}<input type="time" value={form.time} required onChange={(e) => setForm({ ...form, time: e.target.value })} /></label>
+                <label>{t('Time')}<TimeInput value={form.time} required onChange={(e) => setForm({ ...form, time: e.target.value })} /></label>
               </div>
             ) : (
               <label>{t('Entry to remove')}<select value={form.eventId} required onChange={(e) => setForm({ ...form, eventId: e.target.value })}>
@@ -183,7 +184,7 @@ export default function CorrectionsPage() {
             <tbody>
               {mine.map((r) => (
                 <tr key={r.id}>
-                  <td>{r.workDate}</td>
+                  <td>{day(r.workDate)}</td>
                   <td>{what(r)}</td>
                   <td>{r.reason}</td>
                   <td>{STATUS[r.status]}{r.decidedBy && r.status !== 'CANCELLED'

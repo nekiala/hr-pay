@@ -7,6 +7,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Status = 'UPCOMING' | 'TO_FILE' | 'FILED'
 type Filed = { filedOn: string; reference: string | null; note: string | null; filedBy: string; filedAt: string }
@@ -58,7 +59,7 @@ function FiledModal({ filing, onClose, onSave }: { filing: Filing; onClose: () =
   return (
     <Modal title={t('Filed: {a}', { a: filing.title })} size="sm" onClose={onClose}>
       <Form onSubmit={() => onSave({ filedOn: form.filedOn, reference: form.reference || null, note: form.note || null })}>
-        <label>{t('Filed on')}<input type="date" required max={today()} value={form.filedOn} onChange={(e) => setForm({ ...form, filedOn: e.target.value })} /></label>
+        <label>{t('Filed on')}<DateInput required max={today()} value={form.filedOn} onChange={(e) => setForm({ ...form, filedOn: e.target.value })} /></label>
         <label>{t('Receipt or reference')}<input maxLength={100} value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></label>
         <label>{t('Note')}<input maxLength={300} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
         <div className="modal-foot"><Button className="secondary" onClick={onClose}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
@@ -157,8 +158,8 @@ export default function LegalFilingsPage() {
           )}
           <label className="check"><input type="checkbox" checked={showFiled} onChange={(e) => setShowFiled(e.target.checked)} />{t('Show those already filed')}</label>
           <div className="row">
-            <label>{t('From')}<input type="date" value={period.from} onChange={(e) => setPeriod({ ...period, from: e.target.value })} /></label>
-            <label>{t('To')}<input type="date" value={period.to} onChange={(e) => setPeriod({ ...period, to: e.target.value })} /></label>
+            <label>{t('From')}<DateInput value={period.from} onChange={(e) => setPeriod({ ...period, from: e.target.value })} /></label>
+            <label>{t('To')}<DateInput value={period.to} onChange={(e) => setPeriod({ ...period, to: e.target.value })} /></label>
             <span>{t('List of the period')}: <Downloads path={`/api/legal-filings/movements?from=${period.from}&to=${period.to}`} /></span>
           </div>
         </div>
@@ -214,8 +215,8 @@ export default function LegalFilingsPage() {
           <h3>{t('Personnel register')}</h3>
           <p className="hint">{t('Part 1: the workers and their contracts, numbered in the order they were hired. Part 2: each month\'s days worked, leave and pay. Part 3: the labour inspector\'s visits. Keep it at the workplace for the inspector.')}</p>
           <div className="row">
-            <label>{t('From')}<input type="date" value={register.from} onChange={(e) => setRegister({ ...register, from: e.target.value })} /></label>
-            <label>{t('To')}<input type="date" value={register.to} onChange={(e) => setRegister({ ...register, to: e.target.value })} /></label>
+            <label>{t('From')}<DateInput value={register.from} onChange={(e) => setRegister({ ...register, from: e.target.value })} /></label>
+            <label>{t('To')}<DateInput value={register.to} onChange={(e) => setRegister({ ...register, to: e.target.value })} /></label>
             <span>{t('Register')}: <Downloads path={`/api/legal-filings/register?from=${register.from}&to=${register.to}`} /></span>
           </div>
           <h4>{t('Visits of the labour inspector')}</h4>
@@ -232,7 +233,7 @@ export default function LegalFilingsPage() {
             setVisit({ visitedOn: today(), inspector: '', observations: '' })
           }, t('Visit recorded.'))}>
             <div className="grid2">
-              <label>{t('Date of the visit')}<input type="date" required max={today()} value={visit.visitedOn} onChange={(e) => setVisit({ ...visit, visitedOn: e.target.value })} /></label>
+              <label>{t('Date of the visit')}<DateInput required max={today()} value={visit.visitedOn} onChange={(e) => setVisit({ ...visit, visitedOn: e.target.value })} /></label>
               <label>{t('Inspector')}<input required maxLength={150} value={visit.inspector} onChange={(e) => setVisit({ ...visit, inspector: e.target.value })} /></label>
             </div>
             <label>{t('Observations and formal notices')}<textarea maxLength={2000} rows={3} value={visit.observations} onChange={(e) => setVisit({ ...visit, observations: e.target.value })} /></label>

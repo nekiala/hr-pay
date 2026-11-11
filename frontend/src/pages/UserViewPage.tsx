@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CONTRACT_TYPES, api, days, money, personName, type EmployeeFileView, type Grade, type LeaveBalance, type Role, type ScheduleAssignment, type User } from '../api'
+import { CONTRACT_TYPES, api, days, money, personName, type EmployeeFileView, type Grade, type LeaveBalance, type Role, type ScheduleAssignment, type User, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { locale, t } from '../i18n'
@@ -59,7 +59,10 @@ export default function UserViewPage() {
             {' · '}{user.roles.map(roleName).join(', ')}
           </p>
         </div>
-        {can('user.update') && <Link className="button" to={`/users/${id}/edit`}>{t('Edit')}</Link>}
+        <div className="row">
+          {can('salary.write') && can('org.manage') && <Link className="button secondary" to={`/users/${id}/file?move=1`}>{t('Promote or transfer')}</Link>}
+          {can('user.update') && <Link className="button" to={`/users/${id}/edit`}>{t('Edit')}</Link>}
+        </div>
       </div>
 
       <div className="tiles">
@@ -74,7 +77,7 @@ export default function UserViewPage() {
           <div className="tile">
             <span>{t('Contract')}</span>
             <strong>{contract ? CONTRACT_TYPES[contract.contractType] : '—'}</strong>
-            <small>{contract ? `${t('from')} ${contract.startDate}${contract.endDate ? t(' to {a}', { a: contract.endDate }) : ''}` : ''}</small>
+            <small>{contract ? `${t('from')} ${day(contract.startDate)}${contract.endDate ? t(' to {a}', { a: contract.endDate }) : ''}` : ''}</small>
           </div>
         )}
         {leave && leave.length > 0 && (
@@ -112,7 +115,7 @@ export default function UserViewPage() {
           {fact(t('Site'), user.siteName)}
           {fact(t('Manager'), manager ? <Link to={`/users/${manager.id}`}>{personName(manager)}</Link> : <span className="muted">{t('The head of the unit')}</span>)}
           {fact(t('Hire date'), user.hireDate ?? <span className="muted">{user.notEmployee ? t('Not an employee') : t('No contract')}</span>)}
-          {fact(t('Work schedule'), schedule ? `${schedule.scheduleName} (${t('from')} ${schedule.effectiveFrom})` : null)}
+          {fact(t('Work schedule'), schedule ? `${schedule.scheduleName} (${t('from')} ${day(schedule.effectiveFrom)})` : null)}
           {can('salary.read') && fact(t('Occupation'), contract?.occupationName ?? null)}
           {fact(t('Last sign-in'), user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString(locale()) : <span className="muted">{t('Never signed in')}</span>)}
         </dl>

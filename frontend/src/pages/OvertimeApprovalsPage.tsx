@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ApiError, api, hours, time, type PendingOvertime } from '../api'
+import { ApiError, api, hours, time, type PendingOvertime, day } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button } from '../components/Button'
@@ -28,7 +28,7 @@ export default function OvertimeApprovalsPage() {
         method: 'POST',
         body: { userId: p.userId, workDate: p.date, approve, minutes: approve ? edit.minutes ?? p.minutes : null, note: edit.note },
       })
-      setMessage(`${approve ? t('Approved') : t('Rejected')}: ${p.employeeName}, ${p.date}.`)
+      setMessage(`${approve ? t('Approved') : t('Rejected')}: ${p.employeeName}, ${day(p.date)}.`)
       await load()
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t('Could not save.'))
@@ -53,7 +53,7 @@ export default function OvertimeApprovalsPage() {
                 return (
                   <tr key={key(p)}>
                     <td>{p.employeeName}<br /><span className="muted">{p.registrationNo} · {units.unitName(p.userId)}</span></td>
-                    <td>{p.date}<br /><span className="muted">{KIND[p.kind]}</span></td>
+                    <td>{day(p.date)}<br /><span className="muted">{KIND[p.kind]}</span></td>
                     <td>{p.firstIn ? time(p.firstIn) : ''} – {p.lastOut ? time(p.lastOut) : ''}</td>
                     <td>{hours(p.minutes)}</td>
                     <td><input type="number" min={0} max={p.minutes} step={15} value={edit.minutes ?? p.minutes} className="narrow-input"

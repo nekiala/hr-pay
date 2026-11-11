@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User, type MatriculeFormat, personName } from '../api'
+import { ApiError, api, download, days, money, type Contract, type EmployeeFileView, type Grade, type GradeCategory, type LeaveBalance, type LeaveLedgerEntry, type LeaveType, type Role, type Salary, type Schedule, type ScheduleAssignment, type Site, type User, type MatriculeFormat, personName, day } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { OrgCard, UnitSelect } from '../components/OrgCard'
@@ -9,6 +9,7 @@ import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { GradeChangeModal } from '../components/GradeChange'
 import { locale, plural, t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 type Form = { email: string; registrationNo: string; phone: string; firstName: string; middleName: string; lastName: string; siteId: string }
 const empty: Form = { email: '', registrationNo: '', phone: '+243', firstName: '', middleName: '', lastName: '', siteId: '' }
@@ -209,7 +210,7 @@ export default function UserFormPage() {
           <h3>{t('Work schedule')}</h3>
           {assignments.length === 0 && <p className="muted">{t('No schedule yet. Without one, no hours are expected.')}</p>}
           {assignments.map((a) => (
-            <p key={a.id}>{a.scheduleName} <span className="muted">{t('from')}{' '}{a.effectiveFrom}</span></p>
+            <p key={a.id}>{a.scheduleName} <span className="muted">{t('from')}{' '}{day(a.effectiveFrom)}</span></p>
           ))}
           {can('schedule.manage') && (
             <div className="row">
@@ -217,7 +218,7 @@ export default function UserFormPage() {
                 <option value="">{t('Choose a schedule')}</option>
                 {schedules.filter((s) => s.active).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-              <input type="date" value={scheduleFrom} onChange={(e) => setScheduleFrom(e.target.value)} />
+              <DateInput value={scheduleFrom} onChange={(e) => setScheduleFrom(e.target.value)} />
               <Button className="secondary" disabled={!newSchedule} onClick={() => assignSchedule()}>{t('Assign')}</Button>
             </div>
           )}
@@ -340,7 +341,7 @@ function SalaryCard({ userId, user }: { userId: number; user: User }) {
       <h3>{t('Monthly salary')}</h3>
       {history.length === 0 && <p className="muted">{t('No salary yet.')}</p>}
       {history.map((s) => (
-        <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">{t('from')}{' '}{s.effectiveFrom}{s.note ? ` · ${s.note}` : ''}{' '}{t('· set by')}{' '}{s.createdBy}</span></p>
+        <p key={s.id}>{money(s.grossMonthly, s.currency)} <span className="muted">{t('from')}{' '}{day(s.effectiveFrom)}{s.note ? ` · ${s.note}` : ''}{' '}{t('· set by')}{' '}{s.createdBy}</span></p>
       ))}
       {!user.underContract && (
         <p className="muted">{user.notEmployee
@@ -350,7 +351,7 @@ function SalaryCard({ userId, user }: { userId: number; user: User }) {
       )}
       {can('salary.write') && user.underContract && (
         <Form className="row" onSubmit={preview}>
-          <input type="date" value={form.effectiveFrom} onChange={(e) => { setForm({ ...form, effectiveFrom: e.target.value }); setPlan(null) }} required />
+          <DateInput value={form.effectiveFrom} onChange={(e) => { setForm({ ...form, effectiveFrom: e.target.value }); setPlan(null) }} required />
           <input type="number" min="0.01" step="0.01" placeholder={t('Agreed net per month')} value={form.net}
             onChange={(e) => { setForm({ ...form, net: e.target.value }); setPlan(null) }} required />
           <input placeholder={t('Reason (optional)')} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
@@ -499,7 +500,7 @@ function EmploymentCard({ user, editable, onChange }: { user: User; editable: bo
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({days(c.annualLeaveDays)}{' '}{t('leave)')}</option>)}
           </select>
         </label>
-        <label>{t('Hire date')}<input type="date" value={user.hireDate ?? ''} disabled />
+        <label>{t('Hire date')}<DateInput value={user.hireDate ?? ''} disabled />
           <span className="hint">{user.hireDate ? t('Set by the first contract.') : t('No contract: no hire date.')}</span></label>
       </div>
       <p className="hint">{categoryFollowsGrade
@@ -556,7 +557,7 @@ function LeaveCard({ userId }: { userId: number }) {
         <details>
           <summary>{t('History')}</summary>
           {data.ledger.map((l) => (
-            <p key={l.id} className="muted">{l.entryDate} · {l.leaveType} · {l.days > 0 ? '+' : ''}{days(l.days)} · {l.kind.toLowerCase()}{l.note ? ` · ${l.note}` : ''} · {l.createdBy}</p>
+            <p key={l.id} className="muted">{day(l.entryDate)} · {l.leaveType} · {l.days > 0 ? '+' : ''}{days(l.days)} · {l.kind.toLowerCase()}{l.note ? ` · ${l.note}` : ''} · {l.createdBy}</p>
           ))}
         </details>
       )}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, type ClockPunch, type Site, type TimeClock } from '../api'
+import { api, dayTime, type ClockPunch, type Site, type TimeClock } from '../api'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
@@ -10,7 +10,7 @@ type Draft = { id?: number; serialNo: string; name: string; siteId: number | '';
 const OUTCOMES: Record<ClockPunch['outcome'], [string, string]> = {
   RECORDED: [t('Recorded'), 'badge ok'], UNKNOWN_PIN: [t('Unknown person'), 'badge warn'], IGNORED: [t('Ignored'), 'badge'],
 }
-const when = (d: string | null) => d ? new Date(d).toLocaleString() : '—'
+const when = (d: string | null) => d ? dayTime(d) : '—'
 
 /** Biometric time clocks (ZKTeco and compatible) that send their punches to HR Pay over the network. */
 export default function TimeClocksPage() {

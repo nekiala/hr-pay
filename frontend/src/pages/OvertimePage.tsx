@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { t } from '../i18n'
+import { DateInput } from '../components/DateFields'
 
 const kindLabel: Record<OvertimeTier['kind'], string> = { WEEKDAY: t('Workday overtime'), REST_DAY: t('Rest day'), HOLIDAY: t('Public holiday') }
 
@@ -46,7 +47,7 @@ export default function OvertimePage() {
       <div className="card">
         <fieldset disabled={!editable}>
           <div className="grid2">
-            <label>{t('Effective from')}<input type="date" value={draft.effectiveFrom} onChange={(e) => setDraft({ ...draft, effectiveFrom: e.target.value })} /></label>
+            <label>{t('Effective from')}<DateInput value={draft.effectiveFrom} onChange={(e) => setDraft({ ...draft, effectiveFrom: e.target.value })} /></label>
             <label>{t('Round overtime to (min)')}<input type="number" min={1} max={60} value={draft.roundingMinutes} onChange={(e) => setDraft({ ...draft, roundingMinutes: Number(e.target.value) })} /></label>
           </div>
           <label className="check"><input type="checkbox" checked={draft.allowed} onChange={(e) => setDraft({ ...draft, allowed: e.target.checked })} />{t('Overtime is authorized')}</label>
