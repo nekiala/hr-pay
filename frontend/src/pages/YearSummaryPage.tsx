@@ -47,7 +47,12 @@ export function YearSummariesPage() {
               </tbody>
             </table>
           </div>
-          <a className="button secondary" href={`/api/year-summaries.csv?year=${year}`}>{t('Download CSV')}</a>
+          <div className="row">
+            <a className="button secondary" href={`/api/year-summaries.csv?year=${year}`}>{t('Download CSV')}</a>
+            <span className="small">{t('Year-to-date ledger, month by month')}:{' '}
+              <a className="button link" href={`/api/payroll/ledger/${year}?format=pdf`}>PDF</a>{' '}
+              <a className="button link" href={`/api/payroll/ledger/${year}?format=xlsx`}>Excel</a></span>
+          </div>
         </div>
       ))}
     </section>

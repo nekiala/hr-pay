@@ -69,8 +69,7 @@ public class FilingReminders {
         for (LegalFilings.Annual a : filings.annual()) {
             if (a.status() == LegalFilings.Status.TO_FILE && remindToday(a.daysLeft())) {
                 anyLate |= a.daysLeft() < 0;
-                lines.add(Texts.t("%s %d: by %s", a.kind().equals("WORKFORCE") ? Texts.t("Annual declaration of the workforce")
-                        : Texts.t("Bilan social"), a.year(), Texts.day(a.due())));
+                lines.add(Texts.t("%s %d: by %s", LegalFilings.annualName(a.kind()), a.year(), Texts.day(a.due())));
             }
         }
         if (lines.isEmpty()) {

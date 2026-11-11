@@ -3415,6 +3415,13 @@ const fr: Record<string, string> = {
   "Not kept here": "Non tenu ici",
   "Required in the Republic of the Congo (Code du travail art. 182). Optional elsewhere.": "Obligatoire en République du Congo (Code du travail art. 182). Facultatif ailleurs.",
   "Legal filings": "Déclarations légales",
+  "Annual tax summary": "Relevé fiscal annuel",
+  "Annual IPR summary": "Relevé récapitulatif annuel IPR",
+  "Annual statement of salaries (DAS)": "Déclaration annuelle des salaires (DAS)",
+  "Individual sheets": "Fiches individuelles",
+  "The yearly summary of the salaries paid and the tax withheld, in January.": "Le relevé annuel des salaires payés et de l'impôt retenu, en janvier.",
+  "The tax summary counts closed months only: close December first.": "Le relevé fiscal ne compte que les mois clôturés : clôturez d'abord décembre.",
+  "Year-to-date ledger, month by month": "Grand livre cumulé, mois par mois",
 }
 
 export default fr
