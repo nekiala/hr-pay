@@ -4,7 +4,7 @@ import {
   api, CERTIFICATE_KINDS, CERTIFICATE_STATUS, CHECKLIST_KINDS, DOC_SOURCES, download, fileSize, fileToBase64, LETTER_KINDS, LETTER_STATUS, longDay, openFile,
   type CertificateKind, type ContractIssue, type Checklist, type ChecklistKind, type DocumentType, type Letter, type LetterDraft, type LetterKind, type LetterTemplate,
   type PersonLifecycle, type User,
-  personName,
+  personName, STEP_OWNERS,
 } from '../api'
 import { Button, Form } from '../components/Button'
 import { useAsk } from '../components/Dialogs'
@@ -197,6 +197,7 @@ function ChecklistCard({ checklist: c, onChange, onError }: { checklist: Checkli
             <span style={{ flex: 1 }}>
               <span className="step-label">{i.label}</span>
               {i.auto && <span className="small muted"> · {t('ticks itself')}</span>}
+              {c.kind === 'HIRING' && !i.done && <div className="small muted">{STEP_OWNERS[i.owner] ?? i.owner}{i.dueOn && ` · ${t('by {d}', { d: longDay(i.dueOn) })}`}</div>}
               {i.done && i.doneBy && <div className="small muted">{longDay(i.doneAt)} · {i.doneBy}{i.note && ` · ${i.note}`}</div>}
             </span>
           </li>

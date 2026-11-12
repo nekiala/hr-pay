@@ -609,6 +609,25 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - A candidate's file is deleted 12 months after their last vacancy closes, unless they agreed to be kept for later offers.` },
   },
   {
+    id: 'onboarding', audience: 'hr', routes: ['/onboarding', '/welcome'],
+    fr: { title: 'Accueil des nouveaux', body: `
+- Embaucher un candidat ouvre l'accueil : la liste d'embauche (chaque étape avec son responsable et sa date), le lien du formulaire et les bilans d'essai. Les RH peuvent aussi ouvrir un accueil pour une personne embauchée sans le recrutement (« Ouvrir un accueil »).
+- **Avant le premier jour** : « Envoyer le lien » envoie au nouveau, par e-mail, un lien personnel sans compte. Il y remplit son identité, sa pièce d'identité, son numéro CNSS, son mode de paiement et sa famille, et envoie ses pièces (PDF, JPEG ou PNG). Le lien fonctionne jusqu'au premier jour ; un nouveau lien remplace l'ancien.
+- Les informations sont chiffrées. Vérifiez chaque pièce : acceptée, elle va dans le dossier de l'employé (avec sa date d'expiration si elle en a une) ; refusée, le nouveau lit le motif et peut en envoyer une autre. Puis « Reporter dans le dossier de l'employé » : les réponses vides ne changent rien, la famille s'ajoute aux ayants droit. Sans compte bancaire connu, le paiement passe en espèces jusqu'à ce qu'il soit saisi.
+- **Étapes** : dans Paramètres de Embauches et départs, chaque étape de la liste d'embauche a un responsable (RH, responsable, informatique, nouveau, parrain) et une échéance en jours depuis l'entrée (-3 : trois jours avant). La veille, son responsable reçoit un rappel. Le responsable hiérarchique coche ses étapes depuis cette page.
+- **Parrain** : le responsable ou les RH choisissent un collègue de l'unité, prévenu par une notification.
+- **Page de bienvenue** : le premier jour, le nouveau voit sur l'accueil un lien vers sa page : son poste, son responsable, son parrain, ses premières étapes et le texte de l'entreprise (bouton « Page de bienvenue »).
+- **Bilans d'essai** : avec une période d'essai au contrat, un point à un mois et un bilan deux semaines avant la fin sont prévus pour le responsable, rappelés le jour venu. Le bilan de fin demande une recommandation (confirmer ou mettre fin) qui est envoyée aux RH : mettre fin à l'essai demande une notification écrite avant son dernier jour (art. 43 du Code du travail).` },
+    en: { title: 'Onboarding new hires', body: `
+- Hiring a candidate opens the onboarding: the hiring checklist (each step with its owner and date), the form link and the trial reviews. HR can also open one for someone hired without the recruitment pages ("Start an onboarding").
+- **Before day one**: "Send the link" emails the new hire a personal link, with no account. They fill in their identity, ID document, CNSS number, how they want to be paid and their family, and send their papers (PDF, JPEG or PNG). The link works until the first day; a new link replaces the old one.
+- The answers are encrypted. Check each paper: accepted, it goes into the employee file (with its expiry date when it has one); refused, the new hire reads why and can send another. Then "Copy into the employee file": empty answers change nothing, family members are added to the dependants. With no bank account known yet, the pay is in cash until it is entered.
+- **Steps**: in the settings of Hiring and departures, each hiring step has an owner (HR, manager, IT, new hire, buddy) and a due day counted from the start date (-3: three days before). The owner is reminded the day before. The manager ticks their steps from this page.
+- **Buddy**: the manager or HR picks a colleague from the unit, who is told by a notification.
+- **Welcome page**: on day one the new hire sees a link on their home page to their welcome page: their post, manager, buddy, first steps and the company's text ("Welcome page" button).
+- **Trial reviews**: with a trial period on the contract, a one-month review and an end-of-trial review two weeks before the end are planned for the manager and reminded on the day. The end review needs a recommendation (confirm or end), which goes to HR: ending the trial needs a written notice before its last day (Labour Code art. 43).` },
+  },
+  {
     id: 'job-offers', audience: 'everyone', routes: ['/job-offers'],
     fr: { title: 'Offres d’emploi internes', body: `
 - « Offres d'emploi » montre les postes ouverts dans l'entreprise, y compris ceux réservés au personnel.

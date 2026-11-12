@@ -71,6 +71,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/lifecycle', label: t('Hiring and departures'), icon: ClipboardList, end: true, show: can('lifecycle.manage') },
         { to: '/positions', label: t('Jobs and positions'), icon: BriefcaseBusiness, show: can('jobs.manage') },
         { to: '/recruitment', label: t('Recruitment'), icon: UserPlus, show: any('recruitment.manage', 'evaluation.score.team') },
+        { to: '/onboarding', label: t('Onboarding'), icon: Handshake, show: any('lifecycle.manage', 'evaluation.score.team') },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
         { to: '/discipline', label: t('Discipline'), icon: Gavel, show: any('discipline.manage', 'discipline.propose') },

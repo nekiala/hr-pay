@@ -25,12 +25,14 @@ public class Checklists {
 
     public static final Set<String> KINDS = Set.of("HIRING", "DEPARTURE");
     public static final Set<String> ACTIONS = Set.of("DOCUMENT", "EQUIPMENT", "CONTRACT_SIGNED", "SETTLEMENT", "ACCOUNT_CLOSED");
+    /** Who does a step: HR, the manager, IT, the new hire, or their buddy. */
+    public static final Set<String> OWNERS = Set.of("HR", "MANAGER", "IT", "NEW_HIRE", "BUDDY");
 
     public record TemplateItem(long id, String kind, int position, String label, Long documentTypeId, String action,
-                               boolean active) {}
+                               boolean active, String owner, Integer dueDays) {}
 
     public record Item(long id, int position, String label, Long documentTypeId, String action, boolean done, boolean auto,
-                       OffsetDateTime doneAt, String doneBy, String note) {}
+                       OffsetDateTime doneAt, String doneBy, String note, String owner, LocalDate dueOn) {}
 
     public record Checklist(long id, long userId, String kind, String status, LocalDate dueOn, String startedBy,
                             OffsetDateTime startedAt, OffsetDateTime closedAt, List<Item> items) {}
@@ -54,7 +56,7 @@ public class Checklists {
     // ---- the company's steps ------------------------------------------------------------------------------------
 
     public List<TemplateItem> template(String kind) {
-        return jdbc.sql("select id, kind, position, label, document_type_id, action, active from checklist_template_item"
+        return jdbc.sql("select id, kind, position, label, document_type_id, action, active, owner, due_days from checklist_template_item"
                 + (kind == null ? "" : " where kind = ?") + " order by kind, position, id")
                 .params(kind == null ? List.of() : List.of(kind)).query(TemplateItem.class).list();
     }
@@ -62,6 +64,16 @@ public class Checklists {
     @Transactional
     public TemplateItem saveTemplateItem(Long id, String kind, int position, String label, Long documentTypeId, String action,
                                          boolean active) {
+        return saveTemplateItem(id, kind, position, label, documentTypeId, action, active, "HR", null);
+    }
+
+    @Transactional
+    public TemplateItem saveTemplateItem(Long id, String kind, int position, String label, Long documentTypeId, String action,
+                                         boolean active, String owner, Integer dueDays) {
+        String who = owner == null ? "HR" : owner;
+        if (!OWNERS.contains(who)) {
+            throw new BusinessRuleException("Unknown owner of the step.");
+        }
         if (!KINDS.contains(kind)) {
             throw new BusinessRuleException("A checklist is for a hiring or a departure.");
         }
@@ -75,20 +87,20 @@ public class Checklists {
         long saved;
         if (id == null) {
             saved = jdbc.sql("""
-                    insert into checklist_template_item (kind, position, label, document_type_id, action, active)
-                    values (?, ?, ?, ?, ?, ?) returning id""").params(kind, position, label.trim(), type, action, active)
+                    insert into checklist_template_item (kind, position, label, document_type_id, action, active, owner, due_days)
+                    values (?, ?, ?, ?, ?, ?, ?, ?) returning id""").params(kind, position, label.trim(), type, action, active, who, dueDays)
                     .query(Long.class).single();
         } else {
             int n = jdbc.sql("""
-                    update checklist_template_item set kind = ?, position = ?, label = ?, document_type_id = ?, action = ?, active = ?
-                    where id = ?""").params(kind, position, label.trim(), type, action, active, id).update();
+                    update checklist_template_item set kind = ?, position = ?, label = ?, document_type_id = ?, action = ?, active = ?,
+                           owner = ?, due_days = ? where id = ?""").params(kind, position, label.trim(), type, action, active, who, dueDays, id).update();
             if (n == 0) {
                 throw new NotFoundException("Step not found.");
             }
             saved = id;
         }
         audit.record("checklist_step.saved", "checklist_template_item", saved, Map.of("kind", kind, "label", label.trim()));
-        return jdbc.sql("select id, kind, position, label, document_type_id, action, active from checklist_template_item where id = ?")
+        return jdbc.sql("select id, kind, position, label, document_type_id, action, active, owner, due_days from checklist_template_item where id = ?")
                 .param(saved).query(TemplateItem.class).single();
     }
 
@@ -111,9 +123,9 @@ public class Checklists {
         long id = jdbc.sql("insert into employee_checklist (user_id, kind, due_on, started_by) values (?, ?, ?, ?) returning id")
                 .params(userId, kind, dueOn, CurrentUser.email()).query(Long.class).single();
         jdbc.sql("""
-                insert into employee_checklist_item (checklist_id, position, label, document_type_id, action)
-                select ?, position, label, document_type_id, action from checklist_template_item
-                where kind = ? and active order by position, id""").params(id, kind).update();
+                insert into employee_checklist_item (checklist_id, position, label, document_type_id, action, owner, due_on)
+                select ?, position, label, document_type_id, action, owner, cast(? as date) + due_days from checklist_template_item
+                where kind = ? and active order by position, id""").params(id, dueOn, kind).update();
         audit.record("checklist.started", "user", userId, Map.of("kind", kind, "checklist", id));
         return find(id);
     }
@@ -156,14 +168,14 @@ public class Checklists {
 
     private List<Item> items(long checklistId, long userId, String kind) {
         record Row(long id, int position, String label, Long documentTypeId, String action, OffsetDateTime doneAt, String doneBy,
-                   String note) {}
+                   String note, String owner, LocalDate dueOn) {}
         return jdbc.sql("""
-                select id, position, label, document_type_id, action, done_at, done_by, note from employee_checklist_item
+                select id, position, label, document_type_id, action, done_at, done_by, note, owner, due_on from employee_checklist_item
                 where checklist_id = ? order by position, id""").param(checklistId).query(Row.class).list().stream()
                 .map(r -> {
                     boolean auto = happened(userId, kind, r.action(), r.documentTypeId());
                     return new Item(r.id(), r.position(), r.label(), r.documentTypeId(), r.action(), auto || r.doneAt() != null,
-                            auto, r.doneAt(), r.doneBy(), r.note());
+                            auto, r.doneAt(), r.doneBy(), r.note(), r.owner(), r.dueOn());
                 }).toList();
     }
 

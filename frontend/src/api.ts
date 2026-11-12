@@ -1082,8 +1082,12 @@ export const CHECKLIST_ACTIONS: Record<ChecklistAction, string> = {
   SETTLEMENT: t('The final settlement is confirmed'),
   ACCOUNT_CLOSED: t('The account is closed'),
 }
-export type ChecklistStep = { id: number; kind: ChecklistKind; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; active: boolean }
-export type ChecklistItem = { id: number; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; done: boolean; auto: boolean; doneAt: string | null; doneBy: string | null; note: string | null }
+export type StepOwner = 'HR' | 'MANAGER' | 'IT' | 'NEW_HIRE' | 'BUDDY'
+export const STEP_OWNERS: Record<StepOwner, string> = { HR: t('HR'), MANAGER: t('Manager'), IT: t('IT'), NEW_HIRE: t('New hire'), BUDDY: t('Buddy') }
+/** When a hiring step is due, from the start date. */
+export const dueWords = (d: number) => d === 0 ? t('on the first day') : d < 0 ? plural('{a} day before the start', '{a} days before the start', -d, { a: -d }) : plural('{a} day after the start', '{a} days after the start', d, { a: d })
+export type ChecklistStep = { id: number; kind: ChecklistKind; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; active: boolean; owner: StepOwner; dueDays: number | null }
+export type ChecklistItem = { id: number; position: number; label: string; documentTypeId: number | null; action: ChecklistAction | null; owner: StepOwner; dueOn: string | null; done: boolean; auto: boolean; doneAt: string | null; doneBy: string | null; note: string | null }
 export type Checklist = { id: number; userId: number; kind: ChecklistKind; status: 'OPEN' | 'DONE' | 'CANCELLED'; dueOn: string | null; startedBy: string; startedAt: string; closedAt: string | null; items: ChecklistItem[] }
 export type OpenChecklist = { id: number; userId: number; name: string; registrationNo: string; kind: ChecklistKind; dueOn: string | null; startedAt: string; done: number; total: number }
 export type Equipment = { id: number; userId: number; kind: string; description: string | null; serialNo: string | null; issuedOn: string; returnedOn: string | null; returnedTo: string | null; note: string | null }

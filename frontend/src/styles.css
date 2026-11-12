@@ -724,3 +724,10 @@ tr.current > td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 .careers-offer h3 { margin: 0 0 4px; }
 .careers-facts { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; }
 .careers-facts span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Trial review rating */
+.stars { display: flex; align-items: center; gap: 4px; border: 0; padding: 0; margin: 0 0 12px; }
+.stars > span { margin-right: 8px; }
+.stars .star { background: none; border: 0; padding: 2px; color: var(--border-strong); cursor: pointer; }
+.stars .star.on { color: var(--warn); }
+.stars .star.on svg { fill: currentColor; }

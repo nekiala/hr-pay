@@ -148,6 +148,12 @@ public class Recruitment {
     private final UserService users;
     private final NegotiatedPay pay;
     private final Checklists checklists;
+    private cd.hrpay.lifecycle.Onboarding onboarding;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOnboarding(@org.springframework.context.annotation.Lazy cd.hrpay.lifecycle.Onboarding onboarding) {
+        this.onboarding = onboarding;
+    }
     private final JsonMapper json;
     private final Clock clock;
     private final cd.hrpay.career.CareerMoves moves;
@@ -1168,11 +1174,8 @@ public class Recruitment {
                     on conflict (contract_id) do update set trial_months = excluded.trial_months""")
                     .params(o.trialMonths(), userId).update();
         }
-        try {
-            checklists.start(userId, "HIRING", o.start());
-        } catch (ConflictException ignored) {
-            // already open
-        }
+        // The onboarding: hiring steps with owners and dates, the pre-start link, the trial reviews.
+        onboarding.start(userId, o.start());
         jdbc.sql("update application set hired_user_id = ? where id = ?").params(userId, applicationId).update();
         jdbc.sql("update candidate set user_id = ?, delete_after = null where id = ?").params(userId, c.id()).update();
         moveTo(applicationId, "HIRED", null);
