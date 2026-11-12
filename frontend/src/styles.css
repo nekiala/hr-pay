@@ -735,3 +735,20 @@ tr.current > td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 /* Skills gap matrix: one narrow column per skill. */
 table.matrix th.small { max-width: 110px; white-space: normal; line-height: 1.2; vertical-align: bottom; }
 table.matrix td:not(:first-child):not(:nth-child(2)) { text-align: center; }
+
+/* Talent review: the 9-box grid, potential up, performance right. */
+.ninebox { display: grid; grid-template-columns: 22px 1fr; grid-template-rows: 1fr auto; gap: 6px; }
+.ninebox-axis { font-size: 12px; color: var(--muted); font-weight: 600; }
+.ninebox-axis.potential { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; }
+.ninebox-axis.performance { grid-column: 2; text-align: center; }
+.ninebox-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ninebox-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 92px; padding: 10px; text-align: left;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); cursor: pointer; font: inherit; }
+.ninebox-cell:hover { border-color: var(--border-strong); }
+.ninebox-cell.chosen { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ninebox-cell .count { font-size: 22px; font-weight: 700; line-height: 1; }
+.ninebox-cell .small { color: var(--muted); }
+.ninebox-cell.b9, .ninebox-cell.b8, .ninebox-cell.b6 { background: var(--ok-soft); border-color: var(--ok-border); }
+.ninebox-cell.b1 { background: var(--danger-soft); }
+.ninebox-cell.b4, .ninebox-cell.b2 { background: var(--warn-soft); }
+@media (max-width: 640px) { .ninebox-cell { min-height: 72px; padding: 6px; } .ninebox-cell .small { display: none; } }

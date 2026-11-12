@@ -688,6 +688,38 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - Your licences and certifications are listed at the bottom; add one in "My documents".` },
   },
   {
+    id: 'talent', audience: 'hr', routes: ['/talent', '/talent/settings'],
+    fr: { title: 'Talents et succession', body: `
+- **Confidentiel** : seuls les RH et le responsable de la Direction générale ouvrent cette page ; chaque consultation est enregistrée dans le journal. Les employés ne voient jamais leur case, leur potentiel ni s'ils sont successeurs, et ces données ne sortent pas dans l'export de leurs données personnelles.
+- **Postes clés** : « Proposer les postes de direction » ajoute le responsable de la Direction générale et de chaque direction ; ajoutez d'autres postes (le responsable d'une unité ou un emploi de l'unité) avec la raison. Chaque poste montre son titulaire, et prévient quand il part à la retraite dans les deux ans ou quand son risque de départ est élevé.
+- **Successeurs** : jusqu'à trois par poste, chacun prêt maintenant, dans 1 à 2 ans ou dans 3 ans ou plus. Les candidats proposés viennent des filières de carrière (avec leurs conditions d'ancienneté et de note), des compétences que demande l'emploi et de la dernière revue des talents ; vous pouvez choisir une autre personne.
+- **Développement** : pour chaque successeur, une formation, une mission, un tuteur, un intérim ou autre, avec une échéance. Une formation devient un besoin de formation (source « Succession ») que les RH planifient avec le reste.
+- **Revue des talents** : une fois par an, pour tout le personnel, une catégorie ou une unité. La performance vient de la dernière évaluation approuvée (seuils dans Paramètres) ; chaque responsable propose le potentiel de ses collaborateurs (1 faible, 2 moyen, 3 élevé) avec une raison ; puis les RH et la Direction arrêtent les deux, le risque de départ et la mobilité. Une performance différente de l'évaluation demande une raison. La grille à 9 cases montre combien de personnes sont dans chaque case ; cliquez sur une case pour filtrer.
+- **Couverture** : les postes couverts par un successeur prêt d'ici 2 ans, et les postes à risque (aucun successeur prêt d'ici 2 ans, titulaire susceptible de partir ou proche de la retraite, ou poste vacant).
+- **Paramètres** : l'âge de la retraite (à vérifier auprès de la CNSS) et les seuils qui transforment la note d'évaluation en performance 1, 2 ou 3.` },
+    en: { title: 'Talent and succession', body: `
+- **Confidential**: only HR and the head of the Direction générale open this page; every visit is recorded in the audit log. Employees never see their box, their potential or whether they are a successor, and this data is left out of their personal data export.
+- **Critical posts**: "Suggest the top posts" adds the head of the Direction générale and of each direction; add other posts (the head of a unit or a job in the unit) with the reason. Each post shows its holder and warns when they retire within two years or their flight risk is high.
+- **Successors**: up to three per post, each ready now, in 1-2 years or in 3 years or more. The suggested candidates come from the career ladders (with their seniority and score conditions), the skills the job needs and the last talent review; you can choose another person.
+- **Development**: for each successor, a course, a mission, a mentor, acting in the post or other, with a due date. A course becomes a training need (source "Succession") that HR plans with the rest.
+- **Talent review**: once a year, for all staff, a category or a unit. Performance comes from the last approved evaluation (thresholds in Settings); each manager proposes the potential of their people (1 low, 2 medium, 3 high) with a reason; then HR and the Direction settle both, the flight risk and the mobility. A performance that differs from the evaluation needs a reason. The 9-box grid shows how many people are in each box; click a box to filter.
+- **Coverage**: the posts covered by a successor ready within 2 years, and the posts at risk (no successor ready within 2 years, a holder who may leave or is close to retirement, or no holder).
+- **Settings**: the retirement age (to check with the CNSS) and the thresholds that turn the evaluation score into performance 1, 2 or 3.` },
+  },
+  {
+    id: 'talent-proposals', audience: 'managers', routes: ['/talent/proposals'],
+    fr: { title: 'Potentiel de mon équipe', body: `
+- Pendant une revue des talents, les RH vous demandent le potentiel de chacun de vos collaborateurs : jusqu'où il ou elle pourrait évoluer dans les prochaines années.
+- 1 faible : reste à ce niveau ; 2 moyen : un échelon au-dessus ; 3 élevé : pourrait assumer des rôles bien plus larges. Donnez toujours une courte raison, avec des faits.
+- Vous ne voyez que vos collaborateurs et votre proposition. Les RH et la Direction décident ; le résultat est confidentiel et la personne ne le voit pas.
+- Vous pouvez changer votre proposition tant que la revue est ouverte.` },
+    en: { title: 'Potential of my team', body: `
+- During a talent review, HR asks you for the potential of each of your people: how far they could grow in the next years.
+- 1 low: stays at this level; 2 medium: one step up; 3 high: could take on much larger roles. Always give a short reason, with facts.
+- You see only your people and your proposal. HR and the Direction decide; the result is confidential and the person does not see it.
+- You can change your proposal while the review is open.` },
+  },
+  {
     id: 'job-offers', audience: 'everyone', routes: ['/job-offers'],
     fr: { title: 'Offres d’emploi internes', body: `
 - « Offres d'emploi » montre les postes ouverts dans l'entreprise, y compris ceux réservés au personnel.
