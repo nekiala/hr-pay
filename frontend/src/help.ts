@@ -559,6 +559,13 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - En RDC, déclarez le poste vacant au service de placement (ONEM) et saisissez la date : un rappel arrive deux jours après l'ouverture si elle manque (AD 87/005).
 - Ajoutez les candidats reçus par e-mail, recommandation ou agence, avec leur CV (PDF ou Word, 5 Mo au plus). Une même personne qui postule deux fois garde un seul dossier.
 
+**La page carrières et les offres internes**
+- Sous « Page carrières », choisissez un nom court (par exemple ntoprog) et activez la page : elle est publique à l'adresse …/careers/ntoprog, avec votre logo. Elle montre les postes « publics », et ceux « d'abord le personnel » une fois leurs jours réservés passés.
+- Les candidats y postulent sans compte et sans frais, avec leur CV ; ils acceptent que le dossier soit gardé et reçoivent un e-mail avec un lien pour retirer leur candidature et effacer leurs données.
+- Sur un poste ouvert, « Diffuser l'offre » donne des liens pour WhatsApp, LinkedIn ou un site d'emploi : la provenance de chaque candidat est notée.
+- Le personnel voit tous les postes ouverts dans « Offres d'emploi » et postule en un clic. Vous voyez son unité, son grade, son ancienneté dans l'emploi, sa moyenne d'évaluation et si le parcours de carrière mène à ce poste. Son responsable n'est prévenu qu'à la présélection.
+- Un membre du personnel retenu n'est pas engagé une seconde fois : « Affecter à ce poste » fait une promotion, une mutation ou les deux, avec l'avenant à signer.
+
 **Les candidats**
 - Faites avancer chaque candidat : présélectionné, entretien, offre, engagé ; ou gardé pour plus tard, retiré, non retenu. Un candidat non retenu reçoit un court e-mail courtois, sauf si vous dites non.
 - Planifiez un entretien avec un jury : chaque membre est prévenu et remplit sa grille, compétence par compétence de 1 à 5. Un membre ne voit les notes des autres qu'après avoir donné les siennes. Ne notez jamais le sexe, l'âge, la famille, la religion ou l'origine.
@@ -581,6 +588,13 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - In the DRC, declare the vacancy to the placement office (ONEM) and enter the date: a reminder comes two days after opening if it is missing (AD 87/005).
 - Add candidates received by email, referral or agency, with their CV (PDF or Word, 5 MB at most). The same person applying twice keeps one file.
 
+**Careers page and internal offers**
+- Under "Careers page", choose a short name (for example ntoprog) and turn the page on: it is public at …/careers/ntoprog, with your logo. It shows the "public" vacancies, and the "staff first" ones once their staff-only days have passed.
+- Candidates apply there with no account and no fee, with their CV; they agree to their file being kept and get an email with a link to withdraw and delete their data.
+- On an open vacancy, "Share the offer" gives links for WhatsApp, LinkedIn or a job board: where each candidate came from is recorded.
+- Staff see every open vacancy under "Job offers" and apply in one click. You see their unit, grade, time in the job, evaluation average and whether the career ladder leads to this job. Their manager is told only at the shortlist.
+- A staff member who is selected is not hired again: "Move to this post" makes a promotion, a transfer or both, with the avenant to sign.
+
 **Candidates**
 - Move each candidate along: shortlisted, interview, offer, hired; or kept for later, withdrew, not selected. A candidate not selected gets a short, polite email unless you say no.
 - Plan an interview with a panel: each member is told and fills their scorecard, skill by skill from 1 to 5. A member sees the others' scores only after giving their own. Never score sex, age, family, religion or origin.
@@ -593,6 +607,21 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 
 **Candidate data**
 - A candidate's file is deleted 12 months after their last vacancy closes, unless they agreed to be kept for later offers.` },
+  },
+  {
+    id: 'job-offers', audience: 'everyone', routes: ['/job-offers'],
+    fr: { title: 'Offres d’emploi internes', body: `
+- « Offres d'emploi » montre les postes ouverts dans l'entreprise, y compris ceux réservés au personnel.
+- Ouvrez une offre pour lire l'annonce, puis « Postuler », avec un mot pour les RH si vous le souhaitez. Les RH voient votre dossier.
+- Votre responsable n'est prévenu que si les RH vous présélectionnent, pas au moment où vous postulez.
+- Vous suivez où en est votre candidature sur la même page, et vous pouvez la retirer tant qu'aucune décision n'est prise.
+- Si vous êtes retenu(e), vous recevez un avenant (promotion ou mutation) à signer : vous gardez votre ancienneté.` },
+    en: { title: 'Internal job offers', body: `
+- "Job offers" shows the open posts in the company, including those for staff only.
+- Open an offer to read the ad, then "Apply", with a word for HR if you like. HR sees your file.
+- Your manager is told only if HR shortlists you, not when you apply.
+- You follow where your application stands on the same page, and can withdraw it while no decision is made.
+- If you are selected, you get an avenant (promotion or transfer) to sign: you keep your seniority.` },
   },
   {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],

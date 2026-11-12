@@ -50,8 +50,14 @@ type Warning = { level: 'BLOCK' | 'WARN'; code: string; message: string }
 type Application = {
   row: AppRow; candidate: Candidate; vacancyTitle: string; vacancyStatus: VacancyStatus; coverLetter: string | null; rejectReason: string | null
   noRefusalEmail: boolean; events: { at: string; byName: string | null; stage: string | null; note: string | null }[]; interviews: Interview[]
-  offer: Offer | null; warnings: Warning[]; skills: string[]; canHire: boolean
+  offer: Offer | null; warnings: Warning[]; skills: string[]; canHire: boolean; internal: Internal | null; channel: string | null
 }
+type Internal = {
+  userId: number; registrationNo: string | null; unit: string | null; occupation: string | null; grade: string | null; inJobSince: string | null
+  years: number | null; score: number | null; evaluations: number; onLadder: boolean; minYears: number | null; minScore: number | null
+  eligible: boolean; requirement: string | null; manager: string | null; managerToldAt: string | null
+}
+type CareersSettings = { slug: string | null; enabled: boolean; link: string | null }
 type MyInterview = { id: number; applicationId: number; candidate: string; vacancyTitle: string; startsAt: string; place: string | null; scored: boolean }
 type Overview = { openVacancies: number; pendingRequests: number; activeApplications: number; sources: Record<string, number>; averageDaysToHire: number | null; hiredThisYear: number; foreignShare: { foreign: number; staff: number } }
 type Me = { hr: boolean; units: number[]; interviews: number }
@@ -91,9 +97,13 @@ export default function RecruitmentPage() {
   if (hr || (me?.units.length ?? 0) > 0) { tabs.requests = t('Requests to hire'); tabs.vacancies = t('Vacancies') }
   if ((me?.interviews ?? 0) > 0) tabs.interviews = t('My interviews')
   const go = (k: Tab) => { setTab(k); setParams({}) }
+  const [careers, setCareers] = useState(false)
   return (
     <section>
-      <PageTitle title={t('Recruitment')} />
+      <PageTitle title={t('Recruitment')}>
+        {hr && <Button className="secondary" onClick={() => setCareers(true)}>{t('Careers page')}</Button>}
+      </PageTitle>
+      {careers && <CareersModal onClose={() => setCareers(false)} />}
       {Object.keys(tabs).length > 1 && !vacancy && !application && (
         <div className="segmented" role="tablist">
           {(Object.keys(tabs) as Tab[]).map((k) => (
@@ -110,6 +120,69 @@ export default function RecruitmentPage() {
             {tab === 'interviews' && <InterviewsTab open={(id) => setParams({ application: String(id) })} />}
           </>}
     </section>
+  )
+}
+
+// ---- careers page settings ---------------------------------------------------------------------------------------
+
+function CareersModal({ onClose }: { onClose: () => void }) {
+  const [data, setData] = useState<CareersSettings | null>(null)
+  const [slug, setSlug] = useState('')
+  const [enabled, setEnabled] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+  useEffect(() => {
+    api<CareersSettings>('/api/recruitment/careers').then((d) => { setData(d); setSlug(d.slug ?? ''); setEnabled(d.enabled) }).catch((e) => setError(errorText(e)))
+  }, [])
+  const submit = async () => {
+    setError(null); setSaved(false)
+    try {
+      const d = await api<CareersSettings>('/api/recruitment/careers', { method: 'PUT', body: { slug: slug.trim() || null, enabled } })
+      setData(d); setSaved(true)
+    } catch (e) { setError(errorText(e)) }
+  }
+  return (
+    <Modal title={t('Careers page')} onClose={onClose}
+      footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Close')}</Button><Button type="submit" form="careers">{t('Save')}</Button></>}>
+      <Form id="careers" onSubmit={submit}>
+        <p className="small">{t('A public page lists the vacancies marked public, and those for staff first once their days have passed. Candidates apply there without an account; staff see every open vacancy on Job offers.')}</p>
+        <label>{t('Short name in the link')}<input maxLength={40} value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} placeholder="ntoprog" pattern="[a-z0-9][a-z0-9-]{1,38}[a-z0-9]" /></label>
+        <p className="muted small">{t('3 to 40 lowercase letters, digits or dashes.')}</p>
+        <label className="check"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />{t('The careers page is on')}</label>
+        {data?.link && data.enabled && <p className="small">{t('Page link')}: <a href={data.link} target="_blank" rel="noreferrer">{data.link}</a></p>}
+        {saved && <p className="success small">{t('Saved.')}</p>}
+        <ErrorText error={error} />
+      </Form>
+    </Modal>
+  )
+}
+
+/** The links HR posts on WhatsApp, LinkedIn or a job board: each records where the candidate came from. */
+function ShareOffer({ v }: { v: VacancyRow }) {
+  const [settings, setSettings] = useState<CareersSettings | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
+  useEffect(() => { api<CareersSettings>('/api/recruitment/careers').then(setSettings).catch(() => undefined) }, [])
+  if (v.status !== 'OPEN') return null
+  if (v.visibility === 'INTERNAL') return <p className="small muted">{t('Staff see this offer on Job offers. It is not on the careers page.')}</p>
+  if (!settings) return null
+  if (!settings.enabled || !settings.link) return <p className="small muted">{t('Turn the careers page on to share this offer outside the company.')}</p>
+  const url = (src: string) => `${settings.link}/${v.id}?src=${src}`
+  const copy = async (src: string) => {
+    try { await navigator.clipboard.writeText(url(src)); setCopied(src) } catch { window.prompt(t('Copy the link'), url(src)) }
+  }
+  const later = v.visibility === 'INTERNAL_FIRST' && v.openedOn
+    ? new Date(new Date(v.openedOn + 'T00:00:00').getTime() + v.internalDays * 86400000) : null
+  return (
+    <div className="small">
+      <strong>{t('Share the offer')}</strong>
+      {later && later > new Date() && <span className="muted"> · {t('on the careers page from {a}', { a: longDay(later.toISOString().slice(0, 10)) })}</span>}
+      <div className="row">
+        <a className="button secondary" href={`https://wa.me/?text=${encodeURIComponent(`${v.title} ${url('whatsapp')}`)}`} target="_blank" rel="noreferrer">WhatsApp</a>
+        <a className="button secondary" href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url('linkedin'))}`} target="_blank" rel="noreferrer">LinkedIn</a>
+        <Button className="secondary" onClick={() => copy('jobboard')}>{copied === 'jobboard' ? t('Copied') : t('Copy the link for a job board')}</Button>
+        <Button className="secondary" onClick={() => copy('link')}>{copied === 'link' ? t('Copied') : t('Copy the link')}</Button>
+      </div>
+    </div>
   )
 }
 
@@ -410,6 +483,7 @@ function VacancyPanel({ id, hr, onBack, openApp }: { id: number; hr: boolean; on
           {hr && !closedVacancy && <> · <button type="button" className="link" onClick={onem}>{v.onemDeclaredOn ? t('Change') : t('Enter the date')}</button></>}
         </p>
         <AdFlags flags={data.flags} />
+        {hr && <ShareOffer v={v} />}
         <details><summary>{t('Ad')}</summary><div className="pre small">{data.adText}</div></details>
       </div>
       <div className="card">
@@ -531,7 +605,7 @@ function ApplicationPanel({ id, hr, onBack }: { id: number; hr: boolean; onBack:
         <div className="row space">
           <div>
             <h3>{a.name} {stageBadge(a.stage)}</h3>
-            <p className="muted small">{data.vacancyTitle} · {SOURCE[a.source] ?? a.source}</p>
+            <p className="muted small">{data.vacancyTitle} · {SOURCE[a.source] ?? a.source}{data.channel ? ` (${data.channel})` : ''}</p>
           </div>
           {hr && <div className="row">
             <Button className="secondary" onClick={() => setModal('edit')}>{t('Edit')}</Button>
@@ -550,6 +624,7 @@ function ApplicationPanel({ id, hr, onBack }: { id: number; hr: boolean; onBack:
           <div>{t('CV')}: {a.hasCv ? <button type="button" className="link" onClick={() => void openFile(`/api/recruitment/candidates/${c.id}/cv`).catch((e) => setError(errorText(e)))}>{c.cvName ?? t('Open')}</button> : '—'}</div>
           <div>{c.keepForFuture ? t('Kept for later offers') : c.deleteAfter ? t('File deleted after {a}', { a: longDay(c.deleteAfter) }) : ''}</div>
         </div>
+        {data.internal && <InternalFacts i={data.internal} />}
         {data.coverLetter && <details><summary>{t('Cover letter')}</summary><div className="pre small">{data.coverLetter}</div></details>}
         {c.note && <p className="small">{c.note}</p>}
         {data.rejectReason && <p className="small muted">{t('Reason: {a}', { a: data.rejectReason })}</p>}
@@ -606,7 +681,7 @@ function ApplicationPanel({ id, hr, onBack }: { id: number; hr: boolean; onBack:
               {a.stage === 'OFFER' && <Button className="secondary" onClick={offerSent}>{data.offer.sentOn ? t('Change the date sent') : t('Mark as sent')}</Button>}
               {a.stage === 'OFFER' && data.offer.answer !== 'ACCEPTED' && <Button className="secondary" onClick={() => answer('ACCEPTED')}>{t('Accepted')}</Button>}
               {a.stage === 'OFFER' && data.offer.answer == null && <button type="button" className="link" onClick={() => answer('DECLINED')}>{t('Declined')}</button>}
-              {data.canHire && <Button onClick={() => setModal('hire')}>{t('Hire')}</Button>}
+              {data.canHire && <Button onClick={() => setModal('hire')}>{a.userId ? t('Move to this post') : t('Hire')}</Button>}
             </div>
           </div>
           <div className="grid2 small">
@@ -631,7 +706,8 @@ function ApplicationPanel({ id, hr, onBack }: { id: number; hr: boolean; onBack:
       {modal === 'edit' && <CandidateModal application={data} onClose={() => setModal(null)} onDone={() => { setModal(null); void load() }} />}
       {modal === 'interview' && <InterviewModal applicationId={id} onClose={() => setModal(null)} onDone={(x) => { setModal(null); setData(x) }} />}
       {modal === 'offer' && <OfferModal data={data} onClose={() => setModal(null)} onDone={(x) => { setModal(null); setData(x) }} />}
-      {modal === 'hire' && <HireModal data={data} onClose={() => setModal(null)} onDone={(userId) => navigate(`/users/${userId}`)} />}
+      {modal === 'hire' && (a.userId ? <MoveModal data={data} onClose={() => setModal(null)} onDone={(userId) => navigate(`/users/${userId}`)} />
+        : <HireModal data={data} onClose={() => setModal(null)} onDone={(userId) => navigate(`/users/${userId}`)} />)}
       {modal && typeof modal === 'object' && <ScoreModal interview={modal.score} skills={data.skills} onClose={() => setModal(null)} onDone={(x) => { setModal(null); setData(x) }} />}
     </>
   )
@@ -752,6 +828,28 @@ function OfferModal({ data, onClose, onDone }: { data: Application; onClose: () 
   )
 }
 
+/** A staff applicant: where they stand today, and what the ladder asks to reach this job. */
+function InternalFacts({ i }: { i: Internal }) {
+  return (
+    <div className="sub-card small">
+      <strong>{t('Staff member')}</strong>{i.registrationNo && <span className="muted"> · {i.registrationNo}</span>}
+      {' · '}<a href={`/users/${i.userId}`}>{t('Employee file')}</a>
+      <div className="grid2">
+        <div>{t('Unit')}: {i.unit ?? '—'}</div><div>{t('Job title')}: {i.occupation ?? '—'}</div>
+        <div>{t('Grade')}: {i.grade ?? '—'}</div><div>{t('In the job since')}: {i.inJobSince ? `${longDay(i.inJobSince)} (${t('{a} years', { a: num(i.years, 1) })})` : '—'}</div>
+        <div>{t('Evaluation average (2 years)')}: {i.score == null ? '—' : `${num(i.score, 1)} % (${i.evaluations})`}</div>
+        <div>{t('Manager')}: {i.manager ?? '—'}{i.managerToldAt ? ` · ${t('told on {a}', { a: longDay(i.managerToldAt) })}` : ` · ${t('told at the shortlist')}`}</div>
+      </div>
+      {i.onLadder ? (
+        <p className={i.eligible ? 'success' : 'warn-text'}>
+          {i.eligible ? t('The ladder leads here and its conditions are met.') : t('The ladder leads here, but not all conditions are met.')}
+          {' '}{t('Asks {y} years in the job', { y: num(i.minYears, 1) })}{i.minScore != null ? `, ${t('an average of {s} %', { s: num(i.minScore, 1) })}` : ''}{i.requirement ? `, ${i.requirement}` : ''}.
+        </p>
+      ) : <p className="muted">{t('No ladder leads from their job to this one.')}</p>}
+    </div>
+  )
+}
+
 function HireModal({ data, onClose, onDone }: { data: Application; onClose: () => void; onDone: (userId: number) => void }) {
   const c = data.candidate
   const minor = data.warnings.some((w) => w.code === 'MINOR')
@@ -778,6 +876,27 @@ function HireModal({ data, onClose, onDone }: { data: Application; onClose: () =
         <label>{t('Registration number (optional)')}<input maxLength={32} value={registrationNo} onChange={(e) => setRegistrationNo(e.target.value)} placeholder={t('Empty: numbered by HR Pay when the company has a format')} /></label>
         {minor && <label>{t('Date of the waiver of the Président du Tribunal de paix')}<DateInput required value={waiver} onChange={(e) => setWaiver(e.target.value)} /></label>}
         {data.offer?.earliestHire && <p className="muted small">{t('The contract can be signed from {a}, two working days after the draft reached the person (art. 46).', { a: longDay(data.offer.earliestHire) })}</p>}
+        <ErrorText error={error} />
+      </Form>
+    </Modal>
+  )
+}
+
+/** A staff member who won the vacancy: a promotion or a transfer, with its avenant, not a second hire. */
+function MoveModal({ data, onClose, onDone }: { data: Application; onClose: () => void; onDone: (userId: number) => void }) {
+  const [error, setError] = useState<string | null>(null)
+  const submit = async () => {
+    setError(null)
+    try {
+      const r = await api<{ userId: number }>(`/api/recruitment/applications/${data.row.id}/hire`, { method: 'POST', body: {} })
+      onDone(r.userId)
+    } catch (e) { setError(errorText(e)) }
+  }
+  return (
+    <Modal title={t('Move {a} to this post', { a: data.row.name })} onClose={onClose}
+      footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="move">{t('Move to this post')}</Button></>}>
+      <Form id="move" onSubmit={submit}>
+        <p className="small">{t('From the offer\'s start date, the employee moves to the vacancy\'s unit, job and grade: a promotion, a transfer or both. The avenant is drafted in Documents and letters, and the pay follows the new grade.')}</p>
         <ErrorText error={error} />
       </Form>
     </Modal>
