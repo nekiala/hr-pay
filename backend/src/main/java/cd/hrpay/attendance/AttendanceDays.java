@@ -35,7 +35,8 @@ public class AttendanceDays {
                                int payableMinutesToDate, int workedMinutesToDate, int overtimeMinutesToDate,
                                int lateDays, int absentDays, int missingCheckOutDays, Earnings earnings,
                                int overtimeApprovedMinutes, int overtimePendingMinutes, List<OvertimeDay> overtime,
-                               List<DayResult> days) {}
+                               List<DayResult> days,
+                               @com.fasterxml.jackson.annotation.JsonIgnore Map<LocalDate, BigDecimal> weightedOvertime) {}
 
     private final WorkCalendar calendar;
     private final ClockEventRepository events;
@@ -171,6 +172,10 @@ public class AttendanceDays {
                 policy == null ? List.of() : policy.getTiers());
         BigDecimal weightedInMonth = priced.stream().filter(p -> !p.date().isBefore(from))
                 .map(cd.hrpay.overtime.OvertimeValuation.Priced::weightedMinutes).reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Each day's weighted minutes, for a payroll whose attendance period is not the calendar month (decades).
+        Map<LocalDate, BigDecimal> weightedByDay = new java.util.TreeMap<>();
+        priced.stream().filter(p -> !p.date().isBefore(from))
+                .forEach(p -> weightedByDay.merge(p.date(), p.weightedMinutes(), BigDecimal::add));
         List<OvertimeDay> monthOvertime = overtimeDays.stream().filter(o -> !o.date().isBefore(from)).toList();
         int approvedMinutes = monthOvertime.stream().mapToInt(OvertimeDay::approvedMinutes).sum();
         int pendingMinutes = monthOvertime.stream().filter(o -> o.status() == OvertimeStatus.PENDING)
@@ -187,6 +192,6 @@ public class AttendanceDays {
             }).orElse(null);
         }
         return new MonthSummary(month, zone.getId(), asOf, scheduledMonth, scheduledToDate, payable, worked, overtime, lateDays,
-                absent, missing, earnings, approvedMinutes, pendingMinutes, monthOvertime, days);
+                absent, missing, earnings, approvedMinutes, pendingMinutes, monthOvertime, days, weightedByDay);
     }
 }

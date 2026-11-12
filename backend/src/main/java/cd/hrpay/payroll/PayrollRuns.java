@@ -117,6 +117,12 @@ public class PayrollRuns {
     }
 
     private PayrollChecks checks;
+    private PayPeriods periods;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setPeriods(PayPeriods periods) {
+        this.periods = periods;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setChecks(PayrollChecks checks) {
@@ -330,6 +336,10 @@ public class PayrollRuns {
         LocalDate leaves = sc.lastDay() != null && !sc.lastDay().isBefore(first) && !sc.lastDay().isAfter(last)
                 ? sc.lastDay() : lastDayIn(userId, month).orElse(null);
         var summary = attendance.month(user, month, true);
+        // The attendance period: the calendar month, or three decades (e.g. 21 October to 20 November).
+        PayPeriods.Period period = periods == null ? null : periods.forPerson(userId, contract.categoryId(), month);
+        Window w = period == null || period.calendar() ? null
+                : window(user, userId, period, summary, leaves, salary, usdLocal);
         BigDecimal basicMonthly = sc.basic() != null ? sc.basic() : salary.grossMonthly();
         int paid;
         int daysWorked;
@@ -355,11 +365,22 @@ public class PayrollRuns {
         int travelDays = (int) summary.days().stream()
                 .filter(d -> d.status() == DayCalculator.Status.MISSION && (lastPaid == null || !d.date().isAfter(lastPaid)))
                 .count();
+        if (w != null) {
+            paid = w.paid();
+            daysWorked = w.daysWorked();
+            travelDays = w.travelDays();
+        }
         boolean transportStops = travelDays > 0 && "STOP".equals(jdbc.sql(
                 "select value from payroll_setting where key = 'MISSION_TRANSPORT_ON_TRAVEL'").query(String.class).optional().orElse("STOP"));
         BigDecimal overtime = summary.earnings() == null ? BigDecimal.ZERO
                 : ExchangeRates.convert(summary.earnings().overtimeEarned(), summary.earnings().currency(), salary.currency(), usdLocal);
         int overtimeMinutes = summary.overtimeApprovedMinutes();
+        if (w != null) {
+            overtime = w.overtime();
+            overtimeMinutes = w.overtimeMinutes();
+        }
+        int overtimePending = w != null ? w.overtimePendingMinutes() : summary.overtimePendingMinutes();
+        int missingCheckOut = w != null ? w.missingCheckOutDays() : summary.missingCheckOutDays();
         // A simulation's changes: days not paid, and more overtime priced like the recorded overtime.
         if (sc.unpaidDays() != null && sc.unpaidDays().signum() > 0 && scheduledDays > 0) {
             int perDay = summary.scheduledMinutesMonth() / scheduledDays;
@@ -437,12 +458,12 @@ public class PayrollRuns {
                         leaves != null && leaves.isBefore(last) ? leaves : last),
                 transportStops ? Math.max(0, daysWorked - travelDays) : null));
         List<String> warnings = new ArrayList<>(r.warnings());
-        if (summary.overtimePendingMinutes() > 0) {
-            warnings.add(summary.overtimePendingMinutes() / 60 + " h " + summary.overtimePendingMinutes() % 60
+        if (overtimePending > 0) {
+            warnings.add(overtimePending / 60 + " h " + overtimePending % 60
                     + " min of overtime still wait for approval and are not paid.");
         }
-        if (summary.missingCheckOutDays() > 0) {
-            warnings.add(summary.missingCheckOutDays() + " day(s) without a check-out.");
+        if (missingCheckOut > 0) {
+            warnings.add(missingCheckOut + " day(s) without a check-out.");
         }
         if (leaves != null) {
             warnings.add(cd.hrpay.i18n.Texts.t("Last payslip: the person leaves on %s.", leaves));
@@ -476,8 +497,19 @@ public class PayrollRuns {
             snapshot.put("missionDays", travelDays);
         }
         // For the checks before approval (PayrollChecks).
-        snapshot.put("absentDays", summary.absentDays());
-        snapshot.put("overtimePendingMinutes", summary.overtimePendingMinutes());
+        snapshot.put("absentDays", w != null ? w.absentDays() : summary.absentDays());
+        snapshot.put("overtimePendingMinutes", overtimePending);
+        if (period != null) {
+            // The attendance period of the payslip, kept on the payslip row too (var_from, var_to): the next month starts
+            // the day after. A leaver's period runs to the last day.
+            LocalDate settledTo = leaves != null && leaves.isAfter(period.to()) ? leaves : period.to();
+            snapshot.put("periodFrom", period.from().toString());
+            snapshot.put("periodTo", settledTo.toString());
+            if (cd.hrpay.payroll.PayPeriods.DECADES.equals(period.kind())) {
+                snapshot.put("decades", PayPeriods.decades(period.from(), settledTo).stream()
+                        .map(d -> Map.of("number", d.number(), "from", d.from().toString(), "to", d.to().toString())).toList());
+            }
+        }
         snapshot.put("overtimeWeekMaxMinutes", summary.overtime().stream()
                 .filter(o -> o.status() != AttendanceDays.OvertimeStatus.REJECTED)
                 .collect(java.util.stream.Collectors.groupingBy(o -> o.date().with(java.time.DayOfWeek.MONDAY),
@@ -497,11 +529,18 @@ public class PayrollRuns {
         LocalDate serviceFrom = hired != null && hired.isAfter(first) ? hired : first;
         LocalDate serviceTo = leaves != null && leaves.isBefore(last) ? leaves : last;
         List<DayCalculator.DayResult> scheduled = summary.days().stream().filter(d -> d.scheduledMinutes() > 0).toList();
+        // With decades, absences after the period's end count next month, and those of the previous month's tail now.
+        LocalDate bodyCut = w == null ? last : w.bodyCut();
         int serviceDays = (int) scheduled.stream()
                 .filter(d -> !d.date().isBefore(serviceFrom) && !d.date().isAfter(serviceTo))
-                .filter(d -> !(d.status() == DayCalculator.Status.ABSENT && !d.date().isAfter(summary.asOf())))
-                .filter(d -> !(d.status() == DayCalculator.Status.LEAVE && unpaidType != null && unpaidType.equals(d.leaveType())))
+                .filter(d -> !(d.status() == DayCalculator.Status.ABSENT && !d.date().isAfter(summary.asOf())
+                        && !d.date().isAfter(bodyCut)))
+                .filter(d -> !(d.status() == DayCalculator.Status.LEAVE && unpaidType != null && unpaidType.equals(d.leaveType())
+                        && !d.date().isAfter(bodyCut)))
                 .count();
+        if (w != null) {
+            serviceDays = Math.max(0, serviceDays - w.headNotServiceDays(unpaidType));
+        }
         leave.earned(userId, month, scheduled.size(), serviceDays).ifPresent(e -> {
             snapshot.put("leaveEarned", e.days());
             boolean credited = jdbc.sql("""
@@ -533,19 +572,133 @@ public class PayrollRuns {
                 place == null ? null : place.unitId(), null);
     }
 
+    /**
+     * What a payslip takes from an attendance period that is not the calendar month. The month's own days count as
+     * recorded up to the period's end (or the last day of a leaver) and as scheduled after it; the days of the previous
+     * month's tail, paid as scheduled last month, are settled now: their unpaid time is taken off at that month's rate
+     * (converted to this month's minutes) and their overtime paid at that month's rate.
+     */
+    record Window(int paid, int daysWorked, int travelDays, BigDecimal overtime, int overtimeMinutes,
+                  int overtimePendingMinutes, int absentDays, int missingCheckOutDays, LocalDate bodyCut,
+                  List<DayCalculator.DayResult> head) {
+
+        int headNotServiceDays(String unpaidType) {
+            return (int) head.stream().filter(d -> d.scheduledMinutes() > 0)
+                    .filter(d -> d.status() == DayCalculator.Status.ABSENT || (d.status() == DayCalculator.Status.LEAVE
+                            && unpaidType != null && unpaidType.equals(d.leaveType())))
+                    .count();
+        }
+    }
+
+    private Window window(AppUser user, long userId, PayPeriods.Period period, AttendanceDays.MonthSummary summary,
+                          LocalDate leaves, cd.hrpay.salary.SalaryService.Salary salary, BigDecimal usdLocal) {
+        YearMonth month = period.month();
+        LocalDate first = month.atDay(1);
+        LocalDate asOf = summary.asOf();
+        LocalDate bodyCut = leaves != null ? leaves : period.to().isAfter(month.atEndOfMonth()) ? month.atEndOfMonth() : period.to();
+        int paid = 0;
+        int daysWorked = 0;
+        int travel = 0;
+        int absent = 0;
+        int missing = 0;
+        for (DayCalculator.DayResult d : summary.days()) {
+            if (leaves != null && d.date().isAfter(leaves)) {
+                continue;
+            }
+            boolean recorded = !d.date().isAfter(asOf) && !d.date().isAfter(bodyCut);
+            if (recorded) {
+                paid += d.payableMinutes();
+                daysWorked += d.workedMinutes() > 0 || d.mission() ? 1 : 0;
+                travel += d.status() == DayCalculator.Status.MISSION ? 1 : 0;
+                absent += d.status() == DayCalculator.Status.ABSENT ? 1 : 0;
+                missing += d.missingCheckOut() ? 1 : 0;
+            } else {
+                paid += d.scheduledMinutes();
+                daysWorked += d.scheduledMinutes() > 0 && d.status() != DayCalculator.Status.HOLIDAY ? 1 : 0;
+            }
+        }
+        int otMinutes = summary.overtime().stream().filter(o -> !o.date().isAfter(bodyCut))
+                .mapToInt(AttendanceDays.OvertimeDay::approvedMinutes).sum();
+        int otPending = summary.overtime().stream().filter(o -> !o.date().isAfter(bodyCut)
+                        && o.status() == AttendanceDays.OvertimeStatus.PENDING).mapToInt(AttendanceDays.OvertimeDay::minutes).sum();
+        BigDecimal overtime = overtimeAmount(summary, d -> !d.isAfter(bodyCut), salary.currency(), usdLocal);
+
+        List<DayCalculator.DayResult> head = List.of();
+        if (period.from().isBefore(first)) {
+            YearMonth prev = month.minusMonths(1);
+            AttendanceDays.MonthSummary before = attendance.month(user, prev, true);
+            LocalDate from = period.from();
+            head = before.days().stream().filter(d -> !d.date().isBefore(from)).toList();
+            // Leave paid by its own allocation was already left out of last month's payslip by its dates.
+            List<LocalDate[]> allocated = jdbc.sql("""
+                    select r.start_date, r.end_date from leave_allowance a join leave_request r on r.id = a.leave_request_id
+                    where a.user_id = ? and a.status in ('APPROVED', 'PAID') and r.start_date <= ? and r.end_date >= ?""")
+                    .params(userId, prev.atEndOfMonth(), from)
+                    .query((rs, i) -> new LocalDate[] {rs.getObject(1, LocalDate.class), rs.getObject(2, LocalDate.class)}).list();
+            int shortfall = 0;
+            for (DayCalculator.DayResult d : head) {
+                boolean allocatedDay = d.status() == DayCalculator.Status.LEAVE && allocated.stream()
+                        .anyMatch(x -> !d.date().isBefore(x[0]) && !d.date().isAfter(x[1]));
+                if (!allocatedDay) {
+                    shortfall += d.scheduledMinutes() - d.payableMinutes();
+                }
+                // Last month counted each scheduled day as worked; now the day is known.
+                int counted = d.scheduledMinutes() > 0 && d.status() != DayCalculator.Status.HOLIDAY ? 1 : 0;
+                daysWorked += (d.workedMinutes() > 0 || d.mission() ? 1 : 0) - counted;
+                travel += d.status() == DayCalculator.Status.MISSION ? 1 : 0;
+                absent += d.status() == DayCalculator.Status.ABSENT ? 1 : 0;
+                missing += d.missingCheckOut() ? 1 : 0;
+            }
+            if (shortfall != 0 && before.scheduledMinutesMonth() > 0) {
+                // Valued at last month's rate: minutes of last month x (its basic / its minutes), in this month's minutes.
+                BigDecimal ratio = BigDecimal.valueOf(summary.scheduledMinutesMonth())
+                        .divide(BigDecimal.valueOf(before.scheduledMinutesMonth()), 10, java.math.RoundingMode.HALF_UP);
+                var prevSalary = salaries.on(userId, prev.atEndOfMonth()).orElse(null);
+                if (prevSalary != null && prevSalary.currency().equals(salary.currency()) && salary.grossMonthly().signum() > 0) {
+                    ratio = ratio.multiply(prevSalary.grossMonthly())
+                            .divide(salary.grossMonthly(), 10, java.math.RoundingMode.HALF_UP);
+                }
+                paid -= ratio.multiply(BigDecimal.valueOf(shortfall)).setScale(0, java.math.RoundingMode.HALF_UP).intValue();
+            }
+            otMinutes += before.overtime().stream().filter(o -> !o.date().isBefore(from))
+                    .mapToInt(AttendanceDays.OvertimeDay::approvedMinutes).sum();
+            otPending += before.overtime().stream().filter(o -> !o.date().isBefore(from)
+                    && o.status() == AttendanceDays.OvertimeStatus.PENDING).mapToInt(AttendanceDays.OvertimeDay::minutes).sum();
+            overtime = overtime.add(overtimeAmount(before, d -> !d.isBefore(from), salary.currency(), usdLocal));
+        }
+        return new Window(Math.max(0, paid), Math.max(0, daysWorked), travel, overtime, otMinutes, otPending, absent, missing,
+                bodyCut, head);
+    }
+
+    /** The approved overtime of some days of a month summary, at that month's minute rate, in the payslip currency. */
+    private static BigDecimal overtimeAmount(AttendanceDays.MonthSummary s, java.util.function.Predicate<LocalDate> days,
+                                             String currency, BigDecimal usdLocal) {
+        if (s.earnings() == null || s.scheduledMinutesMonth() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal rate = s.earnings().grossMonthly().divide(BigDecimal.valueOf(s.scheduledMinutesMonth()), 10,
+                java.math.RoundingMode.HALF_UP);
+        BigDecimal weighted = s.weightedOvertime().entrySet().stream().filter(e -> days.test(e.getKey()))
+                .map(Map.Entry::getValue).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return ExchangeRates.convert(rate.multiply(weighted).setScale(2, java.math.RoundingMode.HALF_UP),
+                s.earnings().currency(), currency, usdLocal);
+    }
+
     /** Writes a payslip and its lines; returns its id. */
     long store(long runId, Computed c, String kind, Long correctsId, String reason) {
         PayslipCalculator.Result r = c.result();
         long slipId = jdbc.sql("""
                 insert into payslip (run_id, user_id, currency, gross, cnss_base, taxable_base, taxable_base_cdf,
                     employee_deductions, net, employer_charges, scheduled_minutes, paid_minutes, days_worked,
-                    snapshot, warnings, unit_id, kind, corrects_id, reason, created_by, site_id, category_id, grade_id)
-                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
+                    snapshot, warnings, unit_id, kind, corrects_id, reason, created_by, site_id, category_id, grade_id,
+                    var_from, var_to)
+                values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, cast(? as jsonb), cast(? as jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning id""")
                 .params(runId, c.userId(), r.currency(), r.gross(), r.cnssBase(), r.taxableBase(), r.taxableBaseCdf(),
                         r.employeeDeductions(), r.net(), r.employerCharges(), c.scheduledMinutes(), c.paidMinutes(),
                         c.daysWorked(), json.writeValueAsString(c.snapshot()), json.writeValueAsString(c.warnings()),
                         c.unitId(), kind, correctsId, reason, CurrentUser.email(), id(c.snapshot().get("siteId")),
-                        id(c.snapshot().get("categoryId")), id(c.snapshot().get("gradeId")))
+                        id(c.snapshot().get("categoryId")), id(c.snapshot().get("gradeId")),
+                        date(c.snapshot().get("periodFrom")), date(c.snapshot().get("periodTo")))
                 .query(Long.class).single();
         for (PayslipCalculator.Line l : r.lines()) {
             jdbc.sql("""
@@ -559,6 +712,10 @@ public class PayrollRuns {
 
     private static Long id(Object v) {
         return v instanceof Number n ? n.longValue() : null;
+    }
+
+    private static LocalDate date(Object v) {
+        return v instanceof String t ? LocalDate.parse(t) : null;
     }
 
     @Transactional
@@ -628,6 +785,13 @@ public class PayrollRuns {
             }
         }
         jdbc.sql("update payroll_run set employee_count = ? where id = ?").params(count, runId).update();
+        // Final once every payslip's attendance period has ended: people on decades ending the 20th are final on the
+        // 21st, people on the calendar month at the month's end.
+        if (count > 0) {
+            projected = jdbc.sql("select coalesce(bool_or(coalesce(var_to, ?) >= ?), false) from payslip where run_id = ? and kind = 'REGULAR'")
+                    .params(last, today, runId).query(Boolean.class).single();
+            jdbc.sql("update payroll_run set projected = ? where id = ?").params(projected, runId).update();
+        }
         audit.record("payroll.calculated", "payroll_run", runId, Map.of("month", month.toString(), "payslips", count,
                 "usdCdf", usd.cdfPerUnit().toPlainString(), "projected", projected));
         return view(month, skipped);
@@ -716,9 +880,12 @@ public class PayrollRuns {
         if (Objects.equals(run.calculatedBy(), CurrentUser.email())) {
             throw new AccessDeniedException("The person who calculated the payroll cannot also approve it.");
         }
-        if (run.projected() && !month.atEndOfMonth().isBefore(LocalDate.now(clock))) {
-            throw new BusinessRuleException("This payroll counts the rest of the month as worked. Calculate it again after "
-                    + month.atEndOfMonth() + ", or once the attendance is final.");
+        LocalDate periodEnd = jdbc.sql("select max(coalesce(var_to, ?)) from payslip where run_id = ? and kind = 'REGULAR'")
+                .params(month.atEndOfMonth(), run.id()).query(LocalDate.class).list().stream().filter(Objects::nonNull)
+                .findFirst().orElse(month.atEndOfMonth());
+        if (run.projected() && !periodEnd.isBefore(LocalDate.now(clock))) {
+            throw new BusinessRuleException(cd.hrpay.i18n.Texts.t("This payroll counts the rest of the attendance period as worked. "
+                    + "Calculate it again after %s, or once the attendance is final.", periodEnd));
         }
         checks.requireClear(month);
         jdbc.sql("update payroll_run set status = 'APPROVED', approved_by = ?, approved_at = now() where id = ?")

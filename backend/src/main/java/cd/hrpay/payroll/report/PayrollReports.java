@@ -1,5 +1,7 @@
 package cd.hrpay.payroll.report;
 
+import cd.hrpay.payroll.PayPeriods;
+
 import cd.hrpay.common.BusinessRuleException;
 import cd.hrpay.common.NotFoundException;
 import cd.hrpay.i18n.Texts;
@@ -1170,6 +1172,10 @@ public class PayrollReports {
             }
             if (p.text("lastDay") != null) {
                 notes.add(Texts.t("Leaves on %s", p.text("lastDay")));
+            }
+            if (p.text("periodFrom") != null && p.text("periodTo") != null
+                    && !PayPeriods.isCalendarMonth(LocalDate.parse(p.text("periodFrom")), LocalDate.parse(p.text("periodTo")))) {
+                notes.add(Texts.t("Attendance %s to %s", p.text("periodFrom"), p.text("periodTo")));
             }
             order++;
             rows.add(Row.of(cells(Objects.requireNonNullElse(p.s().registrationNo(), String.valueOf(order)),

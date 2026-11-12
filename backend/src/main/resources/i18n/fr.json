@@ -2837,5 +2837,9 @@
  "Give a short reason.": "Donnez une courte raison.",
  "Head of %s": "Responsable de %s",
  "The high threshold must be above the low one.": "Le seuil haut doit être au-dessus du seuil bas.",
- "no approved evaluation (%s needed)": "aucune évaluation approuvée (%s requis)"
+ "no approved evaluation (%s needed)": "aucune évaluation approuvée (%s requis)",
+ " · attendance %s to %s": " · pointage du %s au %s",
+ "Attendance %s to %s": "Pointage du %s au %s",
+ "This payroll counts the rest of the attendance period as worked. Calculate it again after %s, or once the attendance is final.": "Cette paie compte le reste de la période de pointage comme travaillé. Recalculez-la après le %s, ou une fois les présences définitives.",
+ "The first decade starts on the 1st, the 11th or the 21st.": "La première décade commence le 1er, le 11 ou le 21."
 }

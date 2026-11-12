@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ApiError, api, money, type GradeCategory, type Grade, type Occupation } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
 import { Modal } from '../components/Modal'
-import { t } from '../i18n'
+import { day, locale, t } from '../i18n'
 import { DateInput } from '../components/DateFields'
 
 type LegalMinimum = {
@@ -19,6 +20,30 @@ const firstOfMonth = () => { const d = new Date(); return `${d.getFullYear()}-${
 type CategoryWithRaise = GradeCategory & {
   anniversaryRaisePercent?: number; raiseTiming?: 'ANNIVERSARY_MONTH' | 'NEXT_MONTH'
   noticeBase: number; noticeBaseUnit: 'DAYS' | 'MONTHS'; noticeDaysPerYear: number; noticeDayKind: 'WORKING' | 'CALENDAR'; noticeResignationShare: number
+  payPeriod: 'MONTH' | 'DECADES'; firstDecadeDay: number
+}
+
+const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateString(locale(), { month: 'long', year: 'numeric', timeZone: 'UTC' })
+
+type PayPeriod = { month: string; from: string; to: string; decades: { number: number; from: string; to: string }[] }
+
+/** The next payroll months' attendance periods for a setting, as the server works them out. */
+function PeriodPreview({ kind, firstDay }: { kind: string; firstDay: number }) {
+  const [periods, setPeriods] = useState<PayPeriod[] | null>(null)
+  useEffect(() => {
+    api<PayPeriod[]>(`/api/grade-categories/pay-period-preview?kind=${kind}&firstDecadeDay=${firstDay}`).then(setPeriods).catch(() => setPeriods(null))
+  }, [kind, firstDay])
+  if (!periods) return null
+  return (
+    <span className="small muted">
+      {periods.slice(0, 2).map((p) => (
+        <span key={p.month} style={{ display: 'block' }}
+          title={kind === 'DECADES' ? p.decades.map((d) => t('Decade {a}: {b} to {c}', { a: d.number, b: day(d.from), c: day(d.to) })).join('\n') : undefined}>
+          {t('{m}: {a} to {b}', { m: monthName(p.month), a: day(p.from), b: day(p.to) })}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 export default function PayrollSettingsPage() {
@@ -99,6 +124,41 @@ export default function PayrollSettingsPage() {
                     </select>
                   </td>
                   <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grade-categories/${c.id}/raise`, { method: 'PUT', body: { percent: c.anniversaryRaisePercent ?? 0, timing: c.raiseTiming ?? 'NEXT_MONTH' } }), t("{a} saved.", { a: c.code }))}>{t('Save')}</Button>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>{t('Pay period by grade category')}</h3>
+        <p className="hint">{t('The salary, taxes and declarations are always for the calendar month. With decades, absences, unpaid leave, overtime and days-worked allowances come from three decades (1 to 10, 11 to 20, 21 to the end of the month): starting on the 21st, the November payroll reads 21 October to 20 November, and the days after the 20th are paid as scheduled and settled next month.')}{' '}
+          <Link to="/help/pay-periods">{t('More')}</Link></p>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>{t('Category')}</th><th>{t('Attendance period')}</th><th>{t('First decade starts')}</th><th>{t('Next periods')}</th><th></th></tr></thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>
+                    <select className="auto-width" value={c.payPeriod ?? 'MONTH'} disabled={!editable} onChange={(e) => setCategory(c.id, { payPeriod: e.target.value as CategoryWithRaise['payPeriod'] })}>
+                      <option value="MONTH">{t('Calendar month')}</option>
+                      <option value="DECADES">{t('Three decades')}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <select className="auto-width" value={String(c.firstDecadeDay ?? 1)} disabled={!editable || c.payPeriod !== 'DECADES'} onChange={(e) => setCategory(c.id, { firstDecadeDay: Number(e.target.value) })}>
+                      <option value="1">{t('on the 1st')}</option>
+                      <option value="11">{t('on the 11th of the month before')}</option>
+                      <option value="21">{t('on the 21st of the month before')}</option>
+                    </select>
+                  </td>
+                  <td><PeriodPreview kind={c.payPeriod ?? 'MONTH'} firstDay={c.payPeriod === 'DECADES' ? c.firstDecadeDay ?? 1 : 1} /></td>
+                  <td>{editable && <Button className="secondary" onClick={() => run(() => api(`/api/grade-categories/${c.id}/pay-period`, { method: 'PUT', body: {
+                    kind: c.payPeriod ?? 'MONTH', firstDecadeDay: c.payPeriod === 'DECADES' ? c.firstDecadeDay ?? 1 : 1 } }),
+                  t("{a} saved.", { a: c.code }))}>{t('Save')}</Button>}</td>
                 </tr>
               ))}
             </tbody>

@@ -4,7 +4,7 @@ import { api, days, money, type Employer, type Payslip, type PayslipLine, type P
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
-import { locale, plural, t } from '../i18n'
+import { day, locale, plural, t } from '../i18n'
 
 const monthName = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString(locale(), { month: 'long', year: 'numeric' })
 const hours = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`
@@ -101,6 +101,12 @@ export default function PayslipPage() {
           <div>{t('Children (family allowances):')}{' '}{String(s.childrenInCharge ?? 0)}</div>
           <div>{t('Hours paid:')}{' '}{hours(slip.paidMinutes)}{' '}{t('of')}{' '}{hours(slip.scheduledMinutes)}</div>
           <div>{t('Days worked:')}{' '}{slip.daysWorked}</div>
+          {s.periodFrom && s.periodTo && (Array.isArray(s.decades) || !String(s.periodFrom).endsWith('-01')) && (
+            <div title={Array.isArray(s.decades) ? (s.decades as { number: number; from: string; to: string }[])
+              .map((d) => t('Decade {a}: {b} to {c}', { a: d.number, b: day(d.from), c: day(d.to) })).join('\n') : undefined}>
+              {t('Attendance period:')}{' '}{day(String(s.periodFrom))}{' '}{t('to')}{' '}{day(String(s.periodTo))}
+            </div>
+          )}
           {s.leaveEarned != null && <div>{t('Annual leave: {a} earned this month, balance {b}', { a: days(Number(s.leaveEarned)), b: days(Number(s.leaveBalance)) })}</div>}
           <div>{t('Monthly basic:')}{' '}{money(Number(s.basicMonthly), cur)}</div>
         </div>

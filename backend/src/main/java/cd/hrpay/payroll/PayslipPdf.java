@@ -396,9 +396,25 @@ public class PayslipPdf {
                 : Texts.t("Payslip · %s", Texts.month(p.month())), TITLE));
         title.add(new Chunk("    " + (p.number() == null ? Texts.t("not numbered yet") : Texts.t("No. %s", p.number()))
                 + (p.leave() ? " · " + p.reason()
-                : Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth())))), SMALL));
+                : Texts.t(" · period %s to %s", Texts.day(p.month()), Texts.day(p.month().withDayOfMonth(p.month().lengthOfMonth())))
+                        + attendancePeriod(p)), SMALL));
         title.setSpacingBefore(8);
         return title;
+    }
+
+    /** The attendance period when it is not the calendar month (decades): absences and overtime were taken from it. */
+    static String attendancePeriod(PayrollRuns.Payslip p) {
+        Object from = p.snapshot() == null ? null : p.snapshot().get("periodFrom");
+        Object to = p.snapshot() == null ? null : p.snapshot().get("periodTo");
+        if (!(from instanceof String f) || !(to instanceof String t)) {
+            return "";
+        }
+        java.time.LocalDate a = java.time.LocalDate.parse(f);
+        java.time.LocalDate b = java.time.LocalDate.parse(t);
+        if (a.equals(p.month()) && b.equals(p.month().withDayOfMonth(p.month().lengthOfMonth()))) {
+            return "";
+        }
+        return Texts.t(" · attendance %s to %s", Texts.day(a), Texts.day(b));
     }
 
     /** Writes SIMULATION across each page of a simulated payslip. */

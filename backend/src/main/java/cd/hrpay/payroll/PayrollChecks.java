@@ -349,8 +349,11 @@ public class PayrollChecks {
 
         // Requests still waiting.
         jdbc.sql("""
-                select user_id, count(*) from leave_request where status in ('PENDING', 'AWAITING_HR') and start_date <= ? and end_date >= ?
-                group by user_id""").params(last, first).query((rs, i) -> {
+                select l.user_id, count(*) from leave_request l
+                left join payslip p on p.run_id = ? and p.user_id = l.user_id and p.kind = 'REGULAR'
+                where l.status in ('PENDING', 'AWAITING_HR') and l.start_date <= coalesce(p.var_to, ?)
+                  and l.end_date >= coalesce(p.var_from, ?)
+                group by l.user_id""").params(run.id(), last, first).query((rs, i) -> {
                     Slip s = byUser.get(rs.getLong(1));
                     if (s != null) {
                         add.add("LEAVE_PENDING", s, Texts.t("%s leave request(s) in this month still wait for a decision.", rs.getInt(2)));
@@ -358,8 +361,10 @@ public class PayrollChecks {
                     return null;
                 }).list();
         jdbc.sql("""
-                select user_id, count(*) from correction_request where status in ('PENDING', 'PROPOSED') and work_date between ? and ?
-                group by user_id""").params(first, last).query((rs, i) -> {
+                select c.user_id, count(*) from correction_request c
+                left join payslip p on p.run_id = ? and p.user_id = c.user_id and p.kind = 'REGULAR'
+                where c.status in ('PENDING', 'PROPOSED') and c.work_date between coalesce(p.var_from, ?) and coalesce(p.var_to, ?)
+                group by c.user_id""").params(run.id(), first, last).query((rs, i) -> {
                     Slip s = byUser.get(rs.getLong(1));
                     if (s != null) {
                         add.add("CORRECTION_PENDING", s, Texts.t("%s attendance correction(s) in this month still wait for a decision.", rs.getInt(2)));
