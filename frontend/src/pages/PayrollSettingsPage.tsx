@@ -36,8 +36,12 @@ function PeriodPreview({ kind, firstDay }: { kind: string; firstDay: number }) {
   if (!periods) return null
   return (
     <span className="small muted">
-      {periods.map((p) => t('{m}: {a} to {b}', { m: monthName(p.month), a: day(p.from), b: day(p.to) })
-        + (kind === 'DECADES' ? ` (${p.decades.map((d) => `${day(d.from)}–${day(d.to)}`).join(', ')})` : '')).join(' · ')}
+      {periods.slice(0, 2).map((p) => (
+        <span key={p.month} style={{ display: 'block' }}
+          title={kind === 'DECADES' ? p.decades.map((d) => t('Decade {a}: {b} to {c}', { a: d.number, b: day(d.from), c: day(d.to) })).join('\n') : undefined}>
+          {t('{m}: {a} to {b}', { m: monthName(p.month), a: day(p.from), b: day(p.to) })}
+        </span>
+      ))}
     </span>
   )
 }
