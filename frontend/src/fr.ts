@@ -4881,6 +4881,20 @@ const fr: Record<string, string> = {
   "Vacant post": "Vacant",
   "{a}: {b}": "{a} : {b}",
   "Box:": "Case :",
+  'Pay period by grade category': 'Période de paie par catégorie de grade',
+  'The salary, taxes and declarations are always for the calendar month. With decades, absences, unpaid leave, overtime and days-worked allowances come from three decades (1 to 10, 11 to 20, 21 to the end of the month): starting on the 21st, the November payroll reads 21 October to 20 November, and the days after the 20th are paid as scheduled and settled next month.': 'Le salaire, les impôts et les déclarations restent toujours ceux du mois civil. Avec les décades, les absences, les congés sans solde, les heures supplémentaires et les indemnités par jour travaillé viennent de trois décades (du 1 au 10, du 11 au 20, du 21 à la fin du mois) : en commençant le 21, la paie de novembre lit du 21 octobre au 20 novembre, et les jours après le 20 sont payés comme prévu puis régularisés le mois suivant.',
+  'More': 'En savoir plus',
+  'Attendance period': 'Période de pointage',
+  'First decade starts': 'Début de la première décade',
+  'Next periods': 'Prochaines périodes',
+  'Calendar month': 'Mois civil',
+  'Three decades': 'Trois décades',
+  'on the 1st': 'le 1er',
+  'on the 11th of the month before': 'le 11 du mois précédent',
+  'on the 21st of the month before': 'le 21 du mois précédent',
+  '{m}: {a} to {b}': '{m} : du {a} au {b}',
+  'Decade {a}: {b} to {c}': 'Décade {a} : du {b} au {c}',
+  'Attendance period:': 'Période de pointage :',
 }
 
 export default fr

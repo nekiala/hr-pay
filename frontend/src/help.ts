@@ -304,6 +304,37 @@ An advance on the month's pay, paid around the middle of the month. It is worked
 **The law.** DRC (Labour Code art. 99): pay at least once a month, within six days after it; advances may be taken back on the pay (art. 112). Republic of the Congo (art. 88 and 89): pay within eight days after the month; where day or hour workers are paid monthly, the acompte each fortnight must be at least a third of the previous month's pay. To confirm with your payroll expert.` },
   },
   {
+    id: 'pay-periods', audience: 'payroll', routes: [],
+    fr: { title: 'Période de paie : mois civil ou décades', body: `
+Chaque catégorie de grade a sa période de pointage : le **mois civil** (par défaut) ou **trois décades**.
+
+- **Les décades** suivent toujours le calendrier : du 1 au 10, du 11 au 20, du 21 au dernier jour du mois. La catégorie choisit le jour où commence la première : le 1er, le 11 ou le 21 du mois précédent.
+- **Exemple** : en commençant le 21, la paie de novembre lit les présences du 21 au 31 octobre, du 1er au 10 novembre et du 11 au 20 novembre.
+- **Mois courts** : seule la décade qui contient une fin de mois change de longueur (du 21 au 28 février, par exemple). Chaque période dure exactement un mois : aucun jour n'est perdu ni compté deux fois.
+- **Ce qui suit la période** : les absences, les congés sans solde, les heures supplémentaires et les indemnités par jour travaillé (transport, jours de mission).
+- **Ce qui reste au mois civil** : le salaire, l'IPR ou l'ITS, la CNSS et les autres cotisations, les déclarations et le livre de paie.
+- **Les jours après la période** (du 21 au 30 novembre dans l'exemple) sont payés comme prévus. Une absence ces jours-là est retenue sur la paie suivante, au taux journalier de son propre mois.
+- **Arrivées et départs** : une embauche est payée à partir de sa date. Un départ n'attend jamais la décade : le dernier bulletin compte les jours réels jusqu'au dernier jour (RDC art. 100).
+- **Approbation** : la paie peut être approuvée une fois que toutes ses périodes sont terminées. Si une catégorie reste au mois civil, cela reste la fin du mois.
+- **Changer de réglage** : la période suivante commence le lendemain du dernier jour déjà payé à chaque personne. Le premier mois après un changement est donc plus long ou plus court.
+
+Le bulletin et le livre de paie indiquent la période de pointage. **Le droit** : RDC (Code du travail art. 99) et République du Congo (Loi 45-75) demandent un paiement au moins une fois par mois, à date fixe. Aucun des deux textes ne parle des décades. À confirmer avec votre expert paie.` },
+    en: { title: 'Pay period: calendar month or decades', body: `
+Each grade category has its attendance period: the **calendar month** (the default) or **three decades**.
+
+- **Decades** always follow the calendar: 1 to 10, 11 to 20, 21 to the last day of the month. The category chooses the day the first one starts: the 1st, or the 11th or 21st of the month before.
+- **Example**: starting on the 21st, the November payroll reads the attendance of 21 to 31 October, 1 to 10 November and 11 to 20 November.
+- **Short months**: only the decade holding a month end changes length (21 to 28 February, for example). Each period lasts exactly one month: no day is lost or counted twice.
+- **What follows the period**: absences, unpaid leave, overtime and days-worked allowances (transport, mission days).
+- **What stays on the calendar month**: the salary, IPR or ITS, CNSS and the other contributions, the declarations and the livre de paie.
+- **Days after the period** (21 to 30 November in the example) are paid as scheduled. An absence on those days is taken off the next payroll, at its own month's day rate.
+- **Hires and leavers**: a hire is paid from the start date. A leaver never waits for the decade: the last payslip counts actual days up to the last day (DRC art. 100).
+- **Approval**: the payroll can be approved once all its periods have ended. If a category stays on the calendar month, that is still the month end.
+- **Changing the setting**: the next period starts the day after the last day already paid to each person. The first month after a change is therefore longer or shorter.
+
+The payslip and the livre de paie show the attendance period. **The law**: DRC (Labour Code art. 99) and the Republic of the Congo (Loi 45-75) require pay at least once a month, on a fixed date. Neither text mentions decades. To confirm with your payroll expert.` },
+  },
+  {
     id: 'payroll-reports', audience: 'payroll', routes: ['/payroll/reports'],
     fr: { title: 'Les états généraux de la paie', body: `
 Les états d'un mois de paie, à l'écran, en PDF ou en Excel. Tous les montants viennent des bulletins enregistrés : un état est toujours égal à ce qui a été payé.

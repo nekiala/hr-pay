@@ -142,6 +142,30 @@ public class MasterDataController {
         return Map.of("percent", masterData.raisePercent(id));
     }
 
+    public record PayPeriodInput(@NotNull @Pattern(regexp = "MONTH|DECADES") String kind,
+                                 @NotNull @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(21) Integer firstDecadeDay) {}
+
+    /** The next payroll months' attendance periods a setting gives, to show before saving. */
+    @GetMapping("/grade-categories/pay-period-preview")
+    public List<PayPeriods.Period> payPeriodPreview(@org.springframework.web.bind.annotation.RequestParam String kind,
+                                                    @org.springframework.web.bind.annotation.RequestParam int firstDecadeDay,
+                                                    @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.YearMonth from) {
+        if (firstDecadeDay != 1 && firstDecadeDay != 11 && firstDecadeDay != 21) {
+            throw new cd.hrpay.common.BusinessRuleException("The first decade starts on the 1st, the 11th or the 21st.");
+        }
+        return PayPeriods.preview(from != null ? from : java.time.YearMonth.now(clock),
+                new PayPeriods.Setting(kind, PayPeriods.MONTH.equals(kind) ? 1 : firstDecadeDay), 3);
+    }
+
+    @PutMapping("/grade-categories/{id}/pay-period")
+    @PreAuthorize("hasAuthority('masterdata.manage')")
+    public void setPayPeriod(@PathVariable long id, @Valid @RequestBody PayPeriodInput b) {
+        if (b.firstDecadeDay() != 1 && b.firstDecadeDay() != 11 && b.firstDecadeDay() != 21) {
+            throw new cd.hrpay.common.BusinessRuleException("The first decade starts on the 1st, the 11th or the 21st.");
+        }
+        masterData.setPayPeriod(id, b.kind(), b.firstDecadeDay());
+    }
+
     @PutMapping("/grade-categories/{id}/notice")
     @PreAuthorize("hasAuthority('masterdata.manage')")
     public void setNotice(@PathVariable long id, @Valid @RequestBody NoticeInput b) {

@@ -96,6 +96,17 @@ public class MasterData {
                 "perYear", perYear.toPlainString(), "dayKind", dayKind, "resignationShare", share.toPlainString()));
     }
 
+    /** The category's pay period: the calendar month, or three decades starting on the 1st, 11th or 21st. */
+    @Transactional
+    public void setPayPeriod(long categoryId, String kind, int firstDecadeDay) {
+        int day = PayPeriods.MONTH.equals(kind) ? 1 : firstDecadeDay;
+        if (jdbc.sql("update grade_category set pay_period = ?, first_decade_day = ? where id = ?")
+                .params(kind, day, categoryId).update() == 0) {
+            throw new NotFoundException("Grade category not found.");
+        }
+        audit.record("grade_category.pay_period", "grade_category", categoryId, Map.of("kind", kind, "firstDecadeDay", day));
+    }
+
     public BigDecimal raisePercent(long categoryId) {
         return jdbc.sql("select anniversary_raise_percent from grade_category where id = ?").param(categoryId)
                 .query(BigDecimal.class).single();
