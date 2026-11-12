@@ -2727,6 +2727,14 @@
     {
      "role_id": 2,
      "permission_code": "jobs.manage"
+    },
+    {
+     "role_id": 1,
+     "permission_code": "recruitment.manage"
+    },
+    {
+     "role_id": 2,
+     "permission_code": "recruitment.manage"
     }
    ]
   },

@@ -548,6 +548,53 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - The "Overview" shows, by unit, who has objectives, who acknowledged them, the check-ins done and the objectives reached (100% progress or a score of 75 or more), then the people with no objectives, late check-ins and development needs.` },
   },
   {
+    id: 'recruitment', audience: 'managers', routes: ['/recruitment'],
+    fr: { title: 'Recrutement', body: `
+**Demander un recrutement (chef d'unité)**
+- Sous « Demandes de recrutement », choisissez l'unité, l'emploi, le nombre de postes, le motif et le contrat. S'il n'y a plus de poste approuvé libre dans l'unité, un avertissement s'affiche, et les RH le voient.
+- Les RH approuvent ou refusent. Une demande approuvée devient un poste à pourvoir en brouillon, avec une annonce reprise de la fiche de poste.
+
+**Le poste à pourvoir (RH)**
+- Relisez l'annonce avant de l'ouvrir. HR Pay signale les mots qui pourraient exclure quelqu'un pour son sexe, son âge, son état civil, sa religion, son origine, sa nationalité, une grossesse ou un handicap (AM 012/2008 art. 15 ; Code du travail art. 1 et 128). Aucun frais ne peut être demandé aux candidats.
+- En RDC, déclarez le poste vacant au service de placement (ONEM) et saisissez la date : un rappel arrive deux jours après l'ouverture si elle manque (AD 87/005).
+- Ajoutez les candidats reçus par e-mail, recommandation ou agence, avec leur CV (PDF ou Word, 5 Mo au plus). Une même personne qui postule deux fois garde un seul dossier.
+
+**Les candidats**
+- Faites avancer chaque candidat : présélectionné, entretien, offre, engagé ; ou gardé pour plus tard, retiré, non retenu. Un candidat non retenu reçoit un court e-mail courtois, sauf si vous dites non.
+- Planifiez un entretien avec un jury : chaque membre est prévenu et remplit sa grille, compétence par compétence de 1 à 5. Un membre ne voit les notes des autres qu'après avoir donné les siennes. Ne notez jamais le sexe, l'âge, la famille, la religion ou l'origine.
+
+**L'offre et l'engagement**
+- L'offre fixe le grade, le net mensuel, la date d'entrée, la date de fin pour un CDD et la période d'essai (au plus 1 mois pour un manœuvre, 6 mois sinon, art. 43). La lettre d'offre (PDF) se rédige à partir de ces conditions ; vous pouvez la modifier.
+- Une fois l'offre acceptée, « Engager » crée l'employé dans l'unité du poste avec son premier contrat, ouvre la liste d'embauche et lance la déclaration d'embauche à l'ONEM (48 heures).
+- Avant l'engagement : pas d'embauche avant 15 ans ; de 15 à 17 ans, la dérogation du Président du Tribunal de paix est exigée (art. 6 et 133). Un étranger a besoin d'une carte de travail, et le poste doit être resté vacant 30 jours après sa déclaration. Le certificat d'aptitude médicale (art. 38), la remise du projet de contrat deux jours ouvrables avant la signature (art. 46) et le visa de l'ONEM (art. 47) restent suivis sur le contrat.
+- Quand tous les postes sont pourvus, le poste se ferme et les autres candidats sont prévenus.
+
+**Données des candidats**
+- Le dossier d'un candidat est supprimé 12 mois après la fermeture de son dernier poste, sauf s'il a accepté d'être gardé pour d'autres offres.` },
+    en: { title: 'Recruitment', body: `
+**Asking to hire (unit heads)**
+- Under "Requests to hire", choose the unit, the job, the number of posts, the reason and the contract. If the unit has no free approved post left, a warning shows, and HR sees it.
+- HR approves or refuses. An approved request becomes a draft vacancy, with an ad taken from the job description.
+
+**The vacancy (HR)**
+- Read the ad before opening it. HR Pay flags words that could exclude someone for their sex, age, marital status, religion, origin, nationality, a pregnancy or a disability (AM 012/2008 art. 15; Labour Code art. 1 and 128). Candidates can never be asked to pay.
+- In the DRC, declare the vacancy to the placement office (ONEM) and enter the date: a reminder comes two days after opening if it is missing (AD 87/005).
+- Add candidates received by email, referral or agency, with their CV (PDF or Word, 5 MB at most). The same person applying twice keeps one file.
+
+**Candidates**
+- Move each candidate along: shortlisted, interview, offer, hired; or kept for later, withdrew, not selected. A candidate not selected gets a short, polite email unless you say no.
+- Plan an interview with a panel: each member is told and fills their scorecard, skill by skill from 1 to 5. A member sees the others' scores only after giving their own. Never score sex, age, family, religion or origin.
+
+**Offer and hire**
+- The offer sets the grade, the monthly net, the start date, the end date for a fixed-term contract and the trial period (at most 1 month for an unskilled labourer, 6 months otherwise, art. 43). The offer letter (PDF) is written from these terms; you can change it.
+- Once the offer is accepted, "Hire" creates the employee in the vacancy's unit with their first contract, opens the hiring checklist and starts the hire declaration to ONEM (48 hours).
+- Before hiring: nobody under 15; from 15 to 17, the waiver of the Président du Tribunal de paix is needed (art. 6 and 133). A foreigner needs a work card, and the post must have stayed unfilled 30 days after it was declared. The medical fitness certificate (art. 38), the draft contract given two working days before signing (art. 46) and the ONEM visa (art. 47) are still followed on the contract.
+- When every post is filled, the vacancy closes and the other candidates are told.
+
+**Candidate data**
+- A candidate's file is deleted 12 months after their last vacancy closes, unless they agreed to be kept for later offers.` },
+  },
+  {
     id: 'support', audience: 'everyone', routes: ['/help', '/support'],
     fr: { title: 'Obtenir de l’aide', body: `
 - **Signaler un problème** (menu de votre nom, ou cette page) : décrivez ce qui se passe ; la page ouverte et la version sont jointes automatiquement.

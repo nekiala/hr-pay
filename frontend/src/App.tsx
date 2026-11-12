@@ -36,6 +36,7 @@ import StaffRepresentationPage from './pages/StaffRepresentationPage'
 import HealthSafetyPage from './pages/HealthSafetyPage'
 import PositionsPage from './pages/PositionsPage'
 import ObjectivesPage from './pages/ObjectivesPage'
+import RecruitmentPage from './pages/RecruitmentPage'
 import DisciplineSettingsPage from './pages/DisciplineSettingsPage'
 import EmployeeFilePage from './pages/EmployeeFilePage'
 import PayrollSettingsPage from './pages/PayrollSettingsPage'
@@ -311,6 +312,7 @@ export default function App() {
           <Route path="/leave/settings" element={<Guard permission="leave.manage"><LeaveSettingsPage /></Guard>} />
           <Route path="/evaluations" element={<EvaluationsPage />} />
           <Route path="/objectives" element={<ObjectivesPage />} />
+          <Route path="/recruitment" element={<RecruitmentPage />} />
           <Route path="/evaluations/settings" element={<Guard permission="evaluation.manage"><EvaluationSettingsPage /></Guard>} />
           <Route path="/evaluations/:id" element={<EvaluationPage />} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
