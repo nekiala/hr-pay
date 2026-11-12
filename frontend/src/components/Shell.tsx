@@ -6,7 +6,7 @@ import {
   Percent, PencilLine, ReceiptText, ScrollText, ShieldCheck, SlidersHorizontal, Star, Sun, Timer, UserCheck, UserRound, Users, X,
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
-  FlaskConical, Trophy, Gavel, Vote, HeartPulse, Goal, UserPlus,
+  FlaskConical, Trophy, Gavel, Vote, HeartPulse, Goal, UserPlus, Search,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -48,6 +48,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/my/advance', label: t('My salary advance'), icon: PiggyBank, show: pay && advances },
         { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
         { to: '/announcements', label: t('Announcements'), icon: Megaphone, show: true },
+        { to: '/job-offers', label: t('Job offers'), icon: Search, show: !me?.firm },
         { to: '/jobs', label: t('My jobs'), icon: ListChecks, show: true },
       ],
     },

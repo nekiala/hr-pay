@@ -105,7 +105,16 @@ public class Recruitment {
     public record Application(ApplicationRow row, Candidate candidate, String vacancyTitle, String vacancyStatus,
                               String coverLetter, String rejectReason, boolean noRefusalEmail, List<Event> events,
                               List<Interview> interviews, Offer offer, List<Warning> warnings, List<String> skills,
-                              boolean canHire) {}
+                              boolean canHire, Internal internal, String channel) {}
+
+    /**
+     * What HR weighs for a staff applicant: where they are now, their time in the job, their evaluations, and whether
+     * the ladder leads from their job to this one with its conditions met.
+     */
+    public record Internal(long userId, String registrationNo, String unit, String occupation, String grade,
+                           LocalDate inJobSince, BigDecimal years, BigDecimal score, int evaluations, boolean onLadder,
+                           BigDecimal minYears, BigDecimal minScore, boolean eligible, String requirement, String manager,
+                           OffsetDateTime managerToldAt) {}
 
     public record MyInterview(long id, long applicationId, String candidate, String vacancyTitle, OffsetDateTime startsAt,
                               String place, boolean scored) {}
@@ -141,11 +150,16 @@ public class Recruitment {
     private final Checklists checklists;
     private final JsonMapper json;
     private final Clock clock;
+    private final cd.hrpay.career.CareerMoves moves;
+    private final cd.hrpay.position.JobCatalogue jobs;
 
     public Recruitment(JdbcClient jdbc, OrgStructure org, Positions positions, Notifications notifications,
                        NotificationService mail, AuditService audit, Company company, MasterData masterData,
-                       UserService users, NegotiatedPay pay, Checklists checklists, JsonMapper json, Clock clock) {
+                       UserService users, NegotiatedPay pay, Checklists checklists, JsonMapper json, Clock clock,
+                       cd.hrpay.career.CareerMoves moves, cd.hrpay.position.JobCatalogue jobs) {
         this.jdbc = jdbc;
+        this.moves = moves;
+        this.jobs = jobs;
         this.org = org;
         this.positions = positions;
         this.notifications = notifications;
@@ -558,6 +572,15 @@ public class Recruitment {
     /** The same person applying again is found by email, then by phone, and their details are brought up to date. */
     @Transactional
     public long saveCandidate(CandidateInput in, boolean consent) {
+        return saveCandidate(in, consent, true);
+    }
+
+    /**
+     * With overwrite off (someone applying from the public page), a known person's file only gets what it lacks: a
+     * stranger who types another candidate's email cannot change their name or replace their CV.
+     */
+    @Transactional
+    public long saveCandidate(CandidateInput in, boolean consent, boolean overwrite) {
         checkCv(in.cv(), in.cvType());
         String email = blank(in.email()) == null ? null : in.email().strip().toLowerCase();
         String phone = blank(in.phone()) == null ? null : in.phone().replaceAll("\\s", "");
@@ -580,6 +603,15 @@ public class Recruitment {
                             in.cv() == null ? null : in.cvName(), in.cv() == null ? null : in.cvType(), in.keepForFuture(),
                             consent ? OffsetDateTime.now(clock) : null, blank(in.note()))
                     .query(Long.class).single();
+        } else if (!overwrite) {
+            jdbc.sql("""
+                    update candidate set email = coalesce(email, ?), phone = coalesce(phone, ?),
+                           keep_for_future = keep_for_future or ?, consent_at = coalesce(?, consent_at), delete_after = null,
+                           cv_name = case when cv is null then ? else cv_name end,
+                           cv_type = case when cv is null then ? else cv_type end, cv = coalesce(cv, ?) where id = ?""")
+                    .params(email, phone, in.keepForFuture(), consent ? OffsetDateTime.now(clock) : null,
+                            in.cv() == null ? null : in.cvName(), in.cv() == null ? null : in.cvType(), in.cv(), id)
+                    .update();
         } else {
             jdbc.sql("""
                     update candidate set first_name = ?, middle_name = ?, last_name = ?, email = coalesce(?, email),
@@ -631,6 +663,11 @@ public class Recruitment {
 
     @Transactional
     public Application apply(long vacancyId, long candidateId, String source, String coverLetter) {
+        return application(applyId(vacancyId, candidateId, source, coverLetter));
+    }
+
+    /** The application itself, without the access check (the careers page and staff applying use it). */
+    long applyId(long vacancyId, long candidateId, String source, String coverLetter) {
         if (jdbc.sql("select count(*) from application where vacancy_id = ? and candidate_id = ?").params(vacancyId, candidateId)
                 .query(Integer.class).single() > 0) {
             throw new ConflictException("This person has already applied to this vacancy.");
@@ -639,10 +676,10 @@ public class Recruitment {
                 insert into application (vacancy_id, candidate_id, source, cover_letter) values (?, ?, ?, ?) returning id""")
                 .params(vacancyId, candidateId, source, blank(coverLetter)).query(Long.class).single();
         event(id, "APPLIED", null);
-        return application(id);
+        return id;
     }
 
-    private void event(long applicationId, String stage, String note) {
+    void event(long applicationId, String stage, String note) {
         String by = CurrentUser.id() == null ? null : myName();
         jdbc.sql("insert into application_event (application_id, by_name, stage, note) values (?, ?, ?, ?)")
                 .params(applicationId, by, stage, blank(note)).update();
@@ -672,8 +709,29 @@ public class Recruitment {
         List<Warning> warnings = warnings(a, v, c, x.offerStart(), x.minorWaiverOn());
         boolean canHire = isHr() && "OFFER".equals(a.stage()) && "ACCEPTED".equals(x.offerAnswer())
                 && warnings.stream().noneMatch(w -> "BLOCK".equals(w.level()));
+        record More(String channel, OffsetDateTime managerToldAt) {}
+        More m = jdbc.sql("select channel, manager_told_at from application where id = ?").param(id).query(More.class).single();
+        Internal internal = a.userId() == null || !isHr() ? null : internal(a.userId(), v.occupationId(), m.managerToldAt());
         return new Application(a, c, v.title(), v.status(), x.coverLetter(), x.rejectReason(), x.noRefusalEmail(), events,
-                interviews(id), offer, warnings, skills(job(v.occupationId()).skills()), canHire);
+                interviews(id), offer, warnings, skills(job(v.occupationId()).skills()), canHire, internal, m.channel());
+    }
+
+    Internal internal(long userId, long toOccupation, OffsetDateTime managerToldAt) {
+        record Now(String registrationNo, String unit, String grade) {}
+        Now now = jdbc.sql("""
+                select u.registration_no, ou.name as unit,
+                       (select g.code from employee_contract ec join grade g on g.id = ec.grade_id where ec.user_id = u.id
+                          and ec.start_date <= ? order by ec.start_date desc limit 1) as grade
+                from app_user u left join org_assignment oa on oa.user_id = u.id and oa.valid_to is null
+                left join org_unit ou on ou.id = oa.unit_id where u.id = ?""").params(today(), userId).query(Now.class)
+                .optional().orElse(new Now(null, null, null));
+        var steps = jobs.nextSteps(userId);
+        var step = steps.steps().stream().filter(st -> st.toId() == toOccupation).findFirst().orElse(null);
+        String manager = org.managerOf(userId).map(OrgStructure.Boss::userName).orElse(null);
+        return new Internal(userId, now.registrationNo(), now.unit(), steps.occupationName(), now.grade(), steps.inJobSince(),
+                steps.years(), steps.score(), steps.evaluations(), step != null, step == null ? null : step.minYears(),
+                step == null ? null : step.minScore(), step != null && step.eligible(), step == null ? null : step.requirement(),
+                manager, managerToldAt);
     }
 
     /** The day the person may sign the contract: two working days after the draft reached them (Code art. 46). */
@@ -790,6 +848,32 @@ public class Recruitment {
     private void moveTo(long id, String stage, String note) {
         jdbc.sql("update application set stage = ?, stage_at = now() where id = ?").params(stage, id).update();
         event(id, stage, note);
+        if (SHORTLIST.contains(stage)) {
+            tellManager(id);
+        }
+    }
+
+    static final Set<String> SHORTLIST = Set.of("SCREENED", "INTERVIEW", "OFFER");
+
+    /** A staff applicant's manager hears of it once, when HR shortlists them, not when they apply. */
+    void tellManager(long applicationId) {
+        record Row(Long userId, String title, String name, OffsetDateTime managerToldAt) {}
+        Row r = jdbc.sql("""
+                select c.user_id, v.title, person_name(c.first_name, c.middle_name, c.last_name) as name, a.manager_told_at
+                from application a join candidate c on c.id = a.candidate_id join vacancy v on v.id = a.vacancy_id
+                where a.id = ?""").param(applicationId).query(Row.class).single();
+        if (r.userId() == null || r.managerToldAt() != null) {
+            return;
+        }
+        org.managerOf(r.userId()).ifPresent(boss -> {
+            if (boss.userId() != r.userId()) {
+                notifications.send(boss.userId(), "recruitment.shortlist",
+                        () -> Texts.t("Your team member is shortlisted: %s", r.name()),
+                        () -> Texts.t("%s is shortlisted for the post of %s. HR will talk with you before any move.", r.name(), r.title()),
+                        null);
+            }
+        });
+        jdbc.sql("update application set manager_told_at = now() where id = ?").param(applicationId).update();
     }
 
     @Transactional
@@ -1054,10 +1138,10 @@ public class Recruitment {
                 throw new BusinessRuleException(w.message());
             }
         }
-        if (a.userId() != null) {
-            throw new ConflictException("This person already works here: move them with a promotion or a transfer from their Career tab.");
-        }
         VacancyRow v = row(a.vacancyId());
+        if (a.userId() != null) {
+            return moveInternal(app, v);
+        }
         Candidate c = app.candidate();
         String email = blank(in.email()) != null ? in.email().strip() : c.email();
         String phone = blank(in.phone()) != null ? in.phone().strip() : c.phone();
@@ -1093,6 +1177,38 @@ public class Recruitment {
         jdbc.sql("update candidate set user_id = ?, delete_after = null where id = ?").params(userId, c.id()).update();
         moveTo(applicationId, "HIRED", null);
         audit.record("recruitment.hired", "user", userId, Map.of("vacancy", v.id(), "application", applicationId));
+        int hired = jdbc.sql("select count(*) from application where vacancy_id = ? and stage = 'HIRED'").param(v.id())
+                .query(Integer.class).single();
+        if (hired >= v.posts()) {
+            close(v.id(), "FILLED");
+        }
+        return userId;
+    }
+
+    /**
+     * A staff member who wins a vacancy is not hired again: the move is a promotion, a transfer or both, with the
+     * avenant drafted by Career moves. The pay follows the new grade.
+     */
+    private long moveInternal(Application app, VacancyRow v) {
+        long userId = app.row().userId();
+        Offer o = app.offer();
+        record Now(Long gradeId, Long occupationId) {}
+        Now now = jdbc.sql("""
+                select grade_id, occupation_id from employee_contract where user_id = ? and start_date <= ?
+                order by start_date desc limit 1""").params(userId, o.start()).query(Now.class).optional().orElse(new Now(null, null));
+        Long unit = org.currentAssignment(userId).map(OrgStructure.Assignment::unitId).orElse(null);
+        boolean jobChange = !java.util.Objects.equals(now.gradeId(), o.gradeId()) || !java.util.Objects.equals(now.occupationId(), v.occupationId());
+        boolean unitChange = !java.util.Objects.equals(unit, v.unitId());
+        if (!jobChange && !unitChange) {
+            throw new ConflictException("This person already holds this job in this unit.");
+        }
+        String kind = jobChange && unitChange ? "PROMOTION_TRANSFER" : jobChange ? "PROMOTION" : "TRANSFER";
+        var result = moves.move(userId, new cd.hrpay.career.CareerMoves.Input(kind, o.start(), o.gradeId(), v.occupationId(),
+                v.unitId(), null, jobChange ? o.trialMonths() : null, false, Texts.t("Vacancy: %s", v.title())));
+        jdbc.sql("update application set hired_user_id = ?, career_move_id = ? where id = ?")
+                .params(userId, result.move().id(), app.row().id()).update();
+        moveTo(app.row().id(), "HIRED", null);
+        audit.record("recruitment.moved", "user", userId, Map.of("vacancy", v.id(), "move", result.move().id()));
         int hired = jdbc.sql("select count(*) from application where vacancy_id = ? and stage = 'HIRED'").param(v.id())
                 .query(Integer.class).single();
         if (hired >= v.posts()) {
