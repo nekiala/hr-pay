@@ -372,6 +372,30 @@ public class PayrollChecks {
                     return null;
                 }).list();
 
+        // Attendance decades of the payslips' periods not closed yet (categories paid on decades).
+        List<LocalDate[]> ranges = jdbc.sql("""
+                select distinct var_from, var_to from payslip
+                where run_id = ? and kind = 'REGULAR' and snapshot -> 'decades' is not null and var_from is not null and var_to is not null""")
+                .param(run.id()).query((rs, i) -> new LocalDate[] {rs.getObject(1, LocalDate.class), rs.getObject(2, LocalDate.class)})
+                .list();
+        java.util.Set<LocalDate> open = new java.util.TreeSet<>();
+        for (LocalDate[] r : ranges) {
+            for (PayPeriods.Decade d : PayPeriods.decades(r[0], r[1])) {
+                LocalDate start = cd.hrpay.attendance.AttendanceDecades.of(d.from()).from();
+                open.add(start);
+            }
+        }
+        if (!open.isEmpty()) {
+            java.util.Set<LocalDate> closed = new java.util.HashSet<>(jdbc.sql(
+                    "select start_date from attendance_decade where status = 'CLOSED' and start_date between ? and ?")
+                    .params(((java.util.TreeSet<LocalDate>) open).first(), ((java.util.TreeSet<LocalDate>) open).last())
+                    .query(LocalDate.class).list());
+            List<String> notClosed = open.stream().filter(d -> !closed.contains(d)).map(Texts::day).toList();
+            if (!notClosed.isEmpty()) {
+                add.add("DECADE_OPEN", null, Texts.t("Attendance decade(s) not closed yet, starting on: %s.", String.join(", ", notClosed)));
+            }
+        }
+
         // The exchange rate, when pay is converted.
         String local = jdbc.sql("select local_currency from company where id = current_company_id()").query(String.class)
                 .optional().orElse("CDF");

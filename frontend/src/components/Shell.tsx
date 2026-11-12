@@ -67,6 +67,7 @@ function useNav(): { title: string; items: Item[] }[] {
       items: [
         { to: '/presence', label: t('Presence'), icon: UserCheck, show: att && any('attendance.read.all', 'attendance.read.team') },
         { to: '/overtime/approvals', label: t('Approve overtime'), icon: Timer, show: att && any('overtime.approve.all', 'overtime.approve.team') },
+        { to: '/attendance/decades', label: t('Attendance decades'), icon: CalendarRange, show: att && can('attendance.decade.close') },
         { to: '/evaluations', label: t('Evaluations'), icon: Star, end: true, show: has('EVALUATIONS') },
         { to: '/objectives', label: t('Objectives'), icon: Goal, show: has('EVALUATIONS') },
         { to: '/org', label: t('Org chart'), icon: Network, show: true },
