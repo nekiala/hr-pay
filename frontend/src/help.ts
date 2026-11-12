@@ -304,7 +304,7 @@ An advance on the month's pay, paid around the middle of the month. It is worked
 **The law.** DRC (Labour Code art. 99): pay at least once a month, within six days after it; advances may be taken back on the pay (art. 112). Republic of the Congo (art. 88 and 89): pay within eight days after the month; where day or hour workers are paid monthly, the acompte each fortnight must be at least a third of the previous month's pay. To confirm with your payroll expert.` },
   },
   {
-    id: 'pay-periods', audience: 'payroll', routes: [],
+    id: 'pay-periods', audience: 'payroll', routes: ['/attendance/decades'],
     fr: { title: 'Période de paie : mois civil ou décades', body: `
 Chaque catégorie de grade a sa période de pointage : le **mois civil** (par défaut) ou **trois décades**.
 
@@ -317,6 +317,8 @@ Chaque catégorie de grade a sa période de pointage : le **mois civil** (par d�
 - **Arrivées et départs** : une embauche est payée à partir de sa date. Un départ n'attend jamais la décade : le dernier bulletin compte les jours réels jusqu'au dernier jour (RDC art. 100).
 - **Approbation** : la paie peut être approuvée une fois que toutes ses périodes sont terminées. Si une catégorie reste au mois civil, cela reste la fin du mois.
 - **Changer de réglage** : la période suivante commence le lendemain du dernier jour déjà payé à chaque personne. Le premier mois après un changement est donc plus long ou plus court.
+
+**Clôturer les décades** (page **Décades de pointage**, RH) : une fois une décade terminée, décidez ce qui attend encore (corrections, congés, heures supplémentaires), puis clôturez-la. Ses pointages, corrections, décisions d'heures supplémentaires et approbations de congé sont alors verrouillés ; la rouvrir demande un motif. La **fiche de pointage décadaire** (PDF ou Excel, par unité) liste les jours de chacun pour la signature du chef d'unité. Deux jours avant la fin d'une décade, les managers qui ont encore des heures supplémentaires ou des corrections en attente reçoivent un rappel. Avant d'approuver la paie, un contrôle signale les décades de la période pas encore clôturées.
 
 Le bulletin et le livre de paie indiquent la période de pointage. **Le droit** : RDC (Code du travail art. 99) et République du Congo (Loi 45-75) demandent un paiement au moins une fois par mois, à date fixe. Aucun des deux textes ne parle des décades. À confirmer avec votre expert paie.` },
     en: { title: 'Pay period: calendar month or decades', body: `
@@ -331,6 +333,8 @@ Each grade category has its attendance period: the **calendar month** (the defau
 - **Hires and leavers**: a hire is paid from the start date. A leaver never waits for the decade: the last payslip counts actual days up to the last day (DRC art. 100).
 - **Approval**: the payroll can be approved once all its periods have ended. If a category stays on the calendar month, that is still the month end.
 - **Changing the setting**: the next period starts the day after the last day already paid to each person. The first month after a change is therefore longer or shorter.
+
+**Closing decades** (**Attendance decades** page, HR): once a decade has ended, decide what still waits (corrections, leave, overtime), then close it. Its clock entries, corrections, overtime decisions and leave approvals are then locked; reopening it takes a reason. The **decade sheet** (PDF or Excel, per unit) lists each person's days for the unit head to sign. Two days before a decade ends, managers with overtime or corrections still waiting get a reminder. Before the payroll is approved, a check points out the decades of the period not closed yet.
 
 The payslip and the livre de paie show the attendance period. **The law**: DRC (Labour Code art. 99) and the Republic of the Congo (Loi 45-75) require pay at least once a month, on a fixed date. Neither text mentions decades. To confirm with your payroll expert.` },
   },

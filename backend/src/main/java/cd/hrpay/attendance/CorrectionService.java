@@ -36,6 +36,20 @@ public class CorrectionService {
     private final AuditService audit;
     private final Clock clock;
 
+    private org.springframework.jdbc.core.simple.JdbcClient decadeJdbc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setDecadeJdbc(org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        this.decadeJdbc = jdbc;
+    }
+
+    /** Closed attendance decades cannot change (AttendanceDecades). */
+    private void decadeOpen(LocalDate from, LocalDate to) {
+        if (decadeJdbc != null) {
+            AttendanceDecades.requireOpen(decadeJdbc, from, to);
+        }
+    }
+
     private cd.hrpay.user.Contracts contracts;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -57,6 +71,7 @@ public class CorrectionService {
         ZoneId zone = CheckInService.zone(user.getSite());
         OffsetDateTime at = localTime.atZone(zone).toOffsetDateTime();
         LocalDate date = workDate != null ? workDate : localTime.toLocalDate();
+        decadeOpen(date, date);
         if (at.toInstant().isAfter(clock.instant())) {
             throw new BusinessRuleException("The time cannot be in the future.");
         }
@@ -101,6 +116,7 @@ public class CorrectionService {
         if (e.getVoidedAt() != null) {
             throw new ConflictException("This entry is already voided.");
         }
+        decadeOpen(e.getWorkDate(), e.getWorkDate());
         e.voidIt(CurrentUser.email(), reason.trim());
         audit.record("attendance.voided", "user", e.getUserId(), Map.of("eventId", e.getId(),
                 "type", e.getType().name(), "at", e.getOccurredAt().toString(), "reason", reason.trim()));

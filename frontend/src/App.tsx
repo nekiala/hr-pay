@@ -72,6 +72,7 @@ import PayrollReportsPage from './pages/PayrollReportsPage'
 import PaySimulationPage from './pages/PaySimulationPage'
 import OvertimeApprovalsPage from './pages/OvertimeApprovalsPage'
 import CorrectionsPage from './pages/CorrectionsPage'
+import DecadesPage from './pages/DecadesPage'
 import PresencePage from './pages/PresencePage'
 import PrivacyPage, { PrivacyGate } from './components/PrivacyNotice'
 import EvaluationsPage from './pages/EvaluationsPage'
@@ -338,6 +339,7 @@ export default function App() {
           <Route path="/evaluations/:id" element={<EvaluationPage />} />
           <Route path="/overtime/approvals" element={<OvertimeApprovalsPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
+          <Route path="/attendance/decades" element={<Guard permission="attendance.decade.close"><DecadesPage /></Guard>} />
           <Route path="/presence" element={<PresencePage />} />
           <Route path="/platform/companies" element={<Guard permission="platform.manage"><CompaniesPage /></Guard>} />
           <Route path="/platform/companies/:id" element={<Guard permission="platform.manage"><PlatformCompanyPage /></Guard>} />

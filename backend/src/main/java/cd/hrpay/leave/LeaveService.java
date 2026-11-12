@@ -777,6 +777,9 @@ public class LeaveService {
             throw new BusinessRuleException("Give a reason for the rejection.");
         }
         LeaveType type = type(r.leaveTypeId());
+        if (approve) {
+            cd.hrpay.attendance.AttendanceDecades.requireOpen(jdbc, r.startDate(), r.endDate());
+        }
         if (approve && type.usesBalance()) {
             BigDecimal free = available(r.userId(), type.id());
             if (free.compareTo(r.workingDays()) < 0) {
@@ -826,6 +829,7 @@ public class LeaveService {
             throw new BusinessRuleException("This leave is not waiting for HR.");
         }
         if (accept) {
+            cd.hrpay.attendance.AttendanceDecades.requireOpen(jdbc, r.startDate(), r.endDate());
             requireDocument(r);
             jdbc.sql("update leave_request set status = 'APPROVED', document_checked_by = ?, document_checked_at = now() where id = ?")
                     .params(CurrentUser.email(), id).update();
@@ -916,6 +920,7 @@ public class LeaveService {
             if (note == null || note.isBlank()) {
                 throw new BusinessRuleException("Give a reason for cancelling approved leave.");
             }
+            cd.hrpay.attendance.AttendanceDecades.requireOpen(jdbc, r.startDate(), r.endDate());
             if (type(r.leaveTypeId()).usesBalance()) {
                 jdbc.sql("""
                         insert into leave_ledger (user_id, leave_type_id, entry_date, days, kind, leave_request_id, note, created_by)

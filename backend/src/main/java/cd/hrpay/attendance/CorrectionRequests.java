@@ -118,6 +118,7 @@ public class CorrectionRequests {
         if (workDate.isAfter(today)) {
             throw new BusinessRuleException("The day cannot be in the future.");
         }
+        AttendanceDecades.requireOpen(jdbc, workDate, workDate);
         if (workDate.isBefore(today.minusDays(62))) {
             throw new BusinessRuleException("Corrections can be asked for up to two months back; older days go to HR directly.");
         }

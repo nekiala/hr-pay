@@ -32,6 +32,7 @@ export const CHECK_TITLES: Record<string, string> = {
   LEAVE_PENDING: t('Leave waiting for a decision'),
   CORRECTION_PENDING: t('Attendance corrections waiting'),
   RATE_OLD: t('Old exchange rate'),
+  DECADE_OPEN: t('Attendance decades not closed'),
   RATE_CHANGED: t('Rates changed since the calculation'),
 }
 

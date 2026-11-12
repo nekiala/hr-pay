@@ -32,6 +32,20 @@ public class OvertimeApprovals {
     private final UserRepository userRepository;
     private final UserService users;
     private final AuditService audit;
+
+    private org.springframework.jdbc.core.simple.JdbcClient decadeJdbc;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setDecadeJdbc(org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        this.decadeJdbc = jdbc;
+    }
+
+    /** Closed attendance decades cannot change (AttendanceDecades). */
+    private void decadeOpen(LocalDate from, LocalDate to) {
+        if (decadeJdbc != null) {
+            AttendanceDecades.requireOpen(decadeJdbc, from, to);
+        }
+    }
     private cd.hrpay.org.OrgStructure org;
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -86,6 +100,7 @@ public class OvertimeApprovals {
         if (!inScope(user)) {
             throw new AccessDeniedException("You cannot decide on this employee's overtime.");
         }
+        decadeOpen(date, date);
         if (decisions.find(userId, date).isPresent()) {
             throw new ConflictException("Overtime for " + date + " was already decided.");
         }
