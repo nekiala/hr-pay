@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, money, type Page, type PayElement, type PayEntry, type User , personName } from '../api'
+import { ApiError, api, money, type PayElement, type PayEntry } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Button, Form } from '../components/Button'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 
 const thisMonth = () => new Date().toISOString().slice(0, 7)
@@ -17,8 +18,7 @@ export default function PayEntriesPage() {
   const [elements, setElements] = useState<PayElement[]>([])
   const [month, setMonth] = useState(thisMonth())
   const [entries, setEntries] = useState<PayEntry[]>([])
-  const [entry, setEntry] = useState({ userQuery: '', userId: '', elementId: '', amount: '', currency: 'USD', note: '' })
-  const [people, setPeople] = useState<User[]>([])
+  const [entry, setEntry] = useState({ userId: '', elementId: '', amount: '', currency: 'USD', note: '' })
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -26,13 +26,6 @@ export default function PayEntriesPage() {
   useEffect(() => { api<PayElement[]>('/api/pay-elements').then(setElements).catch((e: Error) => setError(e.message)) }, [])
   useEffect(() => { void loadEntries() }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!writePay || entry.userQuery.trim().length < 2) return
-    const handle = setTimeout(() => {
-      api<Page<User>>(`/api/users?${new URLSearchParams({ q: entry.userQuery.trim(), size: '10' })}`).then((p) => setPeople(p.items)).catch(() => undefined)
-    }, 250)
-    return () => clearTimeout(handle)
-  }, [entry.userQuery, writePay])
 
   const run = async (action: () => Promise<unknown>, done: string) => {
     setError(null)
@@ -55,8 +48,7 @@ export default function PayEntriesPage() {
         method: 'POST',
         body: { userId: Number(entry.userId), elementId: Number(entry.elementId), month, amount: Number(entry.amount), currency: entry.currency, note: entry.note || null },
       })
-      setEntry({ userQuery: '', userId: '', elementId: '', amount: '', currency: entry.currency, note: '' })
-      setPeople([])
+      setEntry({ userId: '', elementId: '', amount: '', currency: entry.currency, note: '' })
     }, t('Entry added.'))
   }
 
@@ -93,15 +85,7 @@ export default function PayEntriesPage() {
           {writePay && (
             <Form onSubmit={addEntry}>
               <div className="grid3">
-                <label>{t('Employee')}<input list="pay-people" placeholder={t('Type a name or number')} value={entry.userQuery} required
-                    onChange={(e) => {
-                      const match = people.find((p) => `${personName(p)} (${p.registrationNo ?? p.email})` === e.target.value)
-                      setEntry({ ...entry, userQuery: e.target.value, userId: match ? String(match.id) : '' })
-                    }} />
-                  <datalist id="pay-people">
-                    {people.map((p) => <option key={p.id} value={`${personName(p)} (${p.registrationNo ?? p.email})`} />)}
-                  </datalist>
-                </label>
+                <label>{t('Employee')}<PersonSelect required value={entry.userId} onChange={(v) => setEntry({ ...entry, userId: v })} /></label>
                 <label>{t('Element')}<select value={entry.elementId} required onChange={(e) => setEntry({ ...entry, elementId: e.target.value })}>
                     <option value="">{t('Choose')}</option>
                     {manual.map((e) => <option key={e.id} value={e.id}>{e.name}{e.kind === 'DEDUCTION' ? t(' (deduction)') : ''}</option>)}
@@ -111,7 +95,6 @@ export default function PayEntriesPage() {
                 <label>{t('Currency')}<select value={entry.currency} onChange={(e) => setEntry({ ...entry, currency: e.target.value })}><option>{t('USD')}</option><option>{t('CDF')}</option></select></label>
                 <label>{t('Note')}<input value={entry.note} maxLength={300} onChange={(e) => setEntry({ ...entry, note: e.target.value })} /></label>
               </div>
-              {entry.userQuery && !entry.userId && <p className="hint">{t('Pick the employee from the list.')}</p>}
               <Button type="submit" disabled={!entry.userId}>{t('Add for')}{' '}{month}</Button>
             </Form>
           )}

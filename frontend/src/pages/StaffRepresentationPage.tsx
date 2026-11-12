@@ -7,7 +7,7 @@ import { DateInput } from '../components/DateFields'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 
 type Seat = 'TITULAR' | 'ALTERNATE'
@@ -50,7 +50,6 @@ const thisMonth = () => new Date().toISOString().slice(0, 7)
 export default function StaffRepresentationPage() {
   const [data, setData] = useState<Overview | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [people, setPeople] = useState<MyPerson[]>([])
   const [modal, setModal] = useState<'delegate' | 'event' | 'authorisation' | 'hours' | null>(null)
   const [ending, setEnding] = useState<Delegate | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -58,7 +57,6 @@ export default function StaffRepresentationPage() {
   const load = () => api<Overview>('/api/representation').then(setData).catch((e: Error) => setError(e.message))
   useEffect(() => {
     void load()
-    api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined)
   }, [])
   const done = (w: string[] = []) => { setModal(null); setEnding(null); setWarnings(w); void load() }
   const remove = (path: string, question: string) => ask({
@@ -156,18 +154,18 @@ export default function StaffRepresentationPage() {
         </div>
       </div>
 
-      <HoursCard people={people} delegates={active} onAdd={() => setModal('hours')} key={String(modal === null)} />
+      <HoursCard delegates={active} onAdd={() => setModal('hours')} key={String(modal === null)} />
 
-      {modal === 'delegate' && <DelegateModal people={people} onClose={() => setModal(null)} onDone={done} />}
+      {modal === 'delegate' && <DelegateModal onClose={() => setModal(null)} onDone={done} />}
       {modal === 'event' && <EventModal onClose={() => setModal(null)} onDone={done} />}
-      {modal === 'authorisation' && <AuthorisationModal people={people} delegates={data.delegates} onClose={() => setModal(null)} onDone={done} />}
+      {modal === 'authorisation' && <AuthorisationModal delegates={data.delegates} onClose={() => setModal(null)} onDone={done} />}
       {modal === 'hours' && <HoursModal delegates={active} onClose={() => setModal(null)} onDone={done} />}
       {ending && <EndModal delegate={ending} onClose={() => setEnding(null)} onDone={done} />}
     </section>
   )
 }
 
-function HoursCard({ delegates, onAdd }: { people: MyPerson[]; delegates: Delegate[]; onAdd: () => void }) {
+function HoursCard({ delegates, onAdd }: { delegates: Delegate[]; onAdd: () => void }) {
   const [month, setMonth] = useState(thisMonth())
   const [hours, setHours] = useState<Hours | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -218,7 +216,8 @@ function HoursCard({ delegates, onAdd }: { people: MyPerson[]; delegates: Delega
   )
 }
 
-function PersonSelect({ people, value, onChange }: { people: { userId: number; name: string; registrationNo: string }[]; value: string; onChange: (v: string) => void }) {
+/** A select over a short list (the delegates). */
+function ListSelect({ people, value, onChange }: { people: { userId: number; name: string; registrationNo: string }[]; value: string; onChange: (v: string) => void }) {
   return (
     <select required value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">{t('Choose…')}</option>
@@ -227,7 +226,7 @@ function PersonSelect({ people, value, onChange }: { people: { userId: number; n
   )
 }
 
-function DelegateModal({ people, onClose, onDone }: { people: MyPerson[]; onClose: () => void; onDone: (w: string[]) => void }) {
+function DelegateModal({ onClose, onDone }: { onClose: () => void; onDone: (w: string[]) => void }) {
   const [userId, setUserId] = useState('')
   const [seat, setSeat] = useState<Seat>('TITULAR')
   const [unionName, setUnionName] = useState('')
@@ -244,7 +243,7 @@ function DelegateModal({ people, onClose, onDone }: { people: MyPerson[]; onClos
     <Modal title={t('Add a delegate')} onClose={onClose}
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="delegate">{t('Add')}</Button></>}>
       <Form id="delegate" onSubmit={submit}>
-        <label>{t('Person')}<PersonSelect people={people} value={userId} onChange={setUserId} /></label>
+        <label>{t('Person')}<PersonSelect required value={userId} onChange={setUserId} /></label>
         <div className="grid2">
           <label>{t('Seat')}
             <select value={seat} onChange={(e) => setSeat(e.target.value as Seat)}>
@@ -330,11 +329,9 @@ function EventModal({ onClose, onDone }: { onClose: () => void; onDone: (w: stri
   )
 }
 
-function AuthorisationModal({ people, delegates, onClose, onDone }: { people: MyPerson[]; delegates: Delegate[]; onClose: () => void; onDone: () => void }) {
-  const choices = useMemo(() => {
-    const ids = new Set(delegates.map((d) => d.userId))
-    return people.filter((p) => ids.has(p.userId))
-  }, [people, delegates])
+function AuthorisationModal({ delegates, onClose, onDone }: { delegates: Delegate[]; onClose: () => void; onDone: () => void }) {
+  // Each delegate once, even with several terms.
+  const choices = useMemo(() => [...new Map(delegates.map((d) => [d.userId, d])).values()].sort((a, b) => a.name.localeCompare(b.name)), [delegates])
   const [userId, setUserId] = useState('')
   const [action, setAction] = useState<Action>('DISMISSAL')
   const [decidedOn, setDecidedOn] = useState(today())
@@ -357,7 +354,7 @@ function AuthorisationModal({ people, delegates, onClose, onDone }: { people: My
     <Modal title={t('Record the inspector\'s decision')} onClose={onClose}
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="authorisation">{t('Save')}</Button></>}>
       <Form id="authorisation" onSubmit={submit}>
-        <label>{t('Delegate')}<PersonSelect people={choices.length ? choices : people} value={userId} onChange={setUserId} /></label>
+        <label>{t('Delegate')}{choices.length ? <ListSelect people={choices} value={userId} onChange={setUserId} /> : <PersonSelect required value={userId} onChange={setUserId} />}</label>
         <div className="grid2">
           <label>{t('For')}
             <select value={action} onChange={(e) => setAction(e.target.value as Action)}>
@@ -400,7 +397,7 @@ function HoursModal({ delegates, onClose, onDone }: { delegates: Delegate[]; onC
     <Modal title={t('Add hours of the mandate')} onClose={onClose}
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="hours">{t('Add')}</Button></>}>
       <Form id="hours" onSubmit={submit}>
-        <label>{t('Delegate')}<PersonSelect people={delegates} value={userId} onChange={setUserId} /></label>
+        <label>{t('Delegate')}<ListSelect people={delegates} value={userId} onChange={setUserId} /></label>
         <div className="grid2">
           <label>{t('Day')}<DateInput required max={today()} value={onDay} onChange={(e) => setOnDay(e.target.value)} /></label>
           <label>{t('Hours')}<input required type="number" min="0.25" max="12" step="0.25" value={hours} onChange={(e) => setHours(e.target.value)} /></label>

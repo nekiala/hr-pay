@@ -53,9 +53,11 @@ public class HealthSafetyController {
     private final ReportPdf pdf;
     private final AuditService audit;
     private final JdbcClient jdbc;
+    private final cd.hrpay.org.OrgStructure org;
 
     public HealthSafetyController(MedicalVisits visits, WorkAccidents accidents, SafetyCommittee committee, HealthSafety health,
-                                  ReportPdf pdf, AuditService audit, JdbcClient jdbc) {
+                                  ReportPdf pdf, AuditService audit, JdbcClient jdbc, cd.hrpay.org.OrgStructure org) {
+        this.org = org;
         this.visits = visits;
         this.accidents = accidents;
         this.committee = committee;
@@ -203,21 +205,20 @@ public class HealthSafetyController {
         return new AccidentPage(y, accidents.list(y), accidents.undeclared(), accidents.figures(y));
     }
 
-    public record Reportable(long userId, String name, String registrationNo) {}
 
     /** Who the current user can report an accident for: themself, their team, everyone for HR. */
     @GetMapping("/accidents/reportable")
     @PreAuthorize("isAuthenticated()")
-    public List<Reportable> reportable() {
+    public List<cd.hrpay.org.OrgStructure.Found> reportable(@RequestParam(required = false) String q,
+                                                           @RequestParam(required = false) List<Long> ids,
+                                                           @RequestParam(defaultValue = "20") int size) {
         long me = CurrentUser.id();
-        String select = "select id as user_id, person_name(first_name, middle_name, last_name) as name, registration_no from app_user";
-        if (CurrentUser.has(HealthSupport.PERMISSION)) {
-            return jdbc.sql(select + " where status = 'ACTIVE' and not not_employee order by name").query(Reportable.class).list();
+        java.util.Set<Long> team = null;
+        if (!CurrentUser.has(HealthSupport.PERMISSION)) {
+            team = new java.util.HashSet<>(visits.teamIds(me));
+            team.add(me);
         }
-        java.util.Set<Long> ids = new java.util.HashSet<>(visits.teamIds(me));
-        ids.add(me);
-        return jdbc.sql(select + " where id in (:ids) order by (id = :me) desc, name").param("ids", ids).param("me", me)
-                .query(Reportable.class).list();
+        return org.search(q == null || q.isBlank() ? null : q.trim(), ids, team, size);
     }
 
     @PostMapping("/accidents/report")

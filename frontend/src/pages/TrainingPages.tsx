@@ -8,7 +8,7 @@ import { DateInput } from '../components/DateFields'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 import type { Skill } from './SkillsPages'
 
@@ -377,11 +377,9 @@ function NeedsTab({ year, courses, hr }: { year: number; courses: Course[]; hr: 
   const [deciding, setDeciding] = useState<Need | null>(null)
   const [opining, setOpining] = useState<Need | null>(null)
   const [planning, setPlanning] = useState<Need | null>(null)
-  const [people, setPeople] = useState<MyPerson[]>([])
   const ask = useAsk()
   const load = () => api<Need[]>(`/api/training/needs?year=${year}`).then(setNeeds).catch((e: Error) => setError(e.message))
   useEffect(() => { setNeeds(null); void load() }, [year]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined) }, [])
   const collect = async () => {
     setError(null)
     try {
@@ -442,7 +440,7 @@ function NeedsTab({ year, courses, hr }: { year: number; courses: Course[]; hr: 
           </table>
         </div>
       </div>
-      {asking && <AskModal year={year} courses={courses} people={people} hr={hr} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); void load() }} />}
+      {asking && <AskModal year={year} courses={courses} hr={hr} onClose={() => setAsking(false)} onSaved={() => { setAsking(false); void load() }} />}
       {deciding && <DecideModal need={deciding} onClose={() => setDeciding(null)} onSaved={() => { setDeciding(null); void load() }} />}
       {opining && <OpinionModal need={opining} onClose={() => setOpining(null)} onSaved={() => { setOpining(null); void load() }} />}
       {planning && <PlanLineModal need={planning} onClose={() => setPlanning(null)} onSaved={() => { setPlanning(null); void load() }} />}
@@ -450,8 +448,8 @@ function NeedsTab({ year, courses, hr }: { year: number; courses: Course[]; hr: 
   )
 }
 
-function AskModal({ year, courses, people, hr, self, onClose, onSaved }: {
-  year: number; courses: Course[]; people: MyPerson[]; hr: boolean; self?: boolean; onClose: () => void; onSaved: () => void
+function AskModal({ year, courses, hr, self, onClose, onSaved }: {
+  year: number; courses: Course[]; hr: boolean; self?: boolean; onClose: () => void; onSaved: () => void
 }) {
   const [units, setUnits] = useState<Unit[]>([])
   const [form, setForm] = useState({ who: self ? 'me' : 'person', userId: '', unitId: '', topic: '', courseId: '', reason: '', priority: 'MEDIUM' })
@@ -474,8 +472,7 @@ function AskModal({ year, courses, people, hr, self, onClose, onSaved }: {
           <div className="grid2">
             {hr && <label>{t('For')}<select value={form.who} onChange={(e) => setForm({ ...form, who: e.target.value })}>
               <option value="person">{t('A person')}</option><option value="unit">{t('A whole unit')}</option></select></label>}
-            {form.who === 'person' && <label>{t('Person')}<select value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value })} required>
-              <option value="">{t('Choose')}</option>{people.map((p) => <option key={p.userId} value={p.userId}>{p.name} · {p.registrationNo}</option>)}</select></label>}
+            {form.who === 'person' && <label>{t('Person')}<PersonSelect required value={form.userId} onChange={(v) => setForm({ ...form, userId: v })} /></label>}
             {form.who === 'unit' && <label>{t('Unit')}<select value={form.unitId} onChange={(e) => setForm({ ...form, unitId: e.target.value })} required>
               <option value="">{t('Choose')}</option>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>}
           </div>
@@ -645,7 +642,6 @@ function SessionModal({ year, courses, session, onClose, onSaved }: { year: numb
 function SessionDetail({ id, courses, year, onClose }: { id: number; courses: Course[]; year: number; onClose: () => void }) {
   const [view, setView] = useState<SessionView | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [people, setPeople] = useState<MyPerson[]>([])
   const [adding, setAdding] = useState('')
   const [present, setPresent] = useState<Set<number>>(new Set())
   const [cost, setCost] = useState('')
@@ -653,7 +649,6 @@ function SessionDetail({ id, courses, year, onClose }: { id: number; courses: Co
   const ask = useAsk()
   const load = () => api<SessionView>(`/api/training/sessions/${id}`).then((v) => { setView(v); setPresent(new Set(v.attendees.map((a) => a.userId))) }).catch((e: Error) => setError(e.message))
   useEffect(() => { void load() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined) }, [])
   const call = async (path: string, method: string, body?: unknown) => {
     setError(null)
     try { const v = await api<SessionView>(path, { method, body }); setView(v); setPresent(new Set(v.attendees.map((a) => a.userId))) } catch (e) { setError(errorText(e)) }
@@ -671,10 +666,8 @@ function SessionDetail({ id, courses, year, onClose }: { id: number; courses: Co
       <ErrorText error={error} />
       {planned && (
         <div className="row">
-          <select className="auto-width" value={adding} onChange={(e) => setAdding(e.target.value)} aria-label={t('Person')}>
-            <option value="">{t('Add a person')}</option>
-            {people.filter((p) => !view.attendees.some((a) => a.userId === p.userId)).map((p) => <option key={p.userId} value={p.userId}>{p.name} · {p.registrationNo}</option>)}
-          </select>
+          <PersonSelect className="grow" value={adding} onChange={setAdding} placeholder={t('Add a person')}
+            exclude={view.attendees.map((a) => a.userId)} />
           <Button className="secondary" disabled={!adding} onClick={() => { void call(`/api/training/sessions/${id}/attendees`, 'POST', { userIds: [Number(adding)] }); setAdding('') }}>{t('Enrol')}</Button>
           <Button className="secondary" onClick={() => setEditing(true)}>{t('Edit the session')}</Button>
         </div>
@@ -918,7 +911,6 @@ function ApprenticesTab() {
 }
 
 export function ApprenticeModal({ apprentice, onClose, onSaved }: { apprentice: Apprentice; onClose: () => void; onSaved: (a: Apprentice) => void }) {
-  const [people, setPeople] = useState<MyPerson[]>([])
   const a = apprentice
   const [form, setForm] = useState({
     trade: a.trade ?? '', masterUserId: a.masterUserId?.toString() ?? '', onemVisaOn: a.onemVisaOn ?? '', onemVisaNo: a.onemVisaNo ?? '', medicalOn: a.medicalOn ?? '',
@@ -926,7 +918,6 @@ export function ApprenticeModal({ apprentice, onClose, onSaved }: { apprentice: 
     stayMonths: a.stayMonths?.toString() ?? '', note: a.note ?? '',
   })
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((x, y) => x.name.localeCompare(y.name)))).catch(() => undefined) }, [])
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) => setForm({ ...form, [k]: e.target.value })
   const save = async (e: FormEvent) => {
     e.preventDefault()
@@ -939,8 +930,7 @@ export function ApprenticeModal({ apprentice, onClose, onSaved }: { apprentice: 
         <Notices warnings={a.warnings} />
         <div className="grid2">
           <label>{t('Trade learned')}<input maxLength={200} value={form.trade} placeholder={a.occupationName ?? ''} onChange={set('trade')} /></label>
-          <label>{t('Master')}<select value={form.masterUserId} onChange={set('masterUserId')}>
-            <option value="">{t('Choose')}</option>{people.filter((p) => p.userId !== a.userId).map((p) => <option key={p.userId} value={p.userId}>{p.name}</option>)}</select></label>
+          <label>{t('Master')}<PersonSelect value={form.masterUserId} exclude={[a.userId]} onChange={(v) => setForm({ ...form, masterUserId: v })} /></label>
         </div>
         <div className="grid3">
           <label>{t('ONEM visa on')}<DateInput value={form.onemVisaOn} onChange={set('onemVisaOn')} /></label>
@@ -1134,7 +1124,7 @@ export function MyTrainingPage() {
         <h3>{t('My training history')}</h3>
         <HistoryTable rows={past} onRate={(h) => { setRating(h); setStars5(h.rating ?? 4); setComment(h.ratingComment ?? '') }} />
       </div>
-      {asking && <AskModal year={new Date().getFullYear()} courses={data.courses} people={[]} hr={false} self onClose={() => setAsking(false)} onSaved={() => { setAsking(false); void load() }} />}
+      {asking && <AskModal year={new Date().getFullYear()} courses={data.courses} hr={false} self onClose={() => setAsking(false)} onSaved={() => { setAsking(false); void load() }} />}
       {rating && (
         <Modal title={t('How was {a}?', { a: rating.courseTitle })} onClose={() => setRating(null)}>
           <div className="row" role="radiogroup" aria-label={t('Rating')}>

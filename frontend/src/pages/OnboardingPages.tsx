@@ -14,6 +14,7 @@ import { LanguageToggle } from '../components/Language'
 import { Markdown } from '../components/Markdown'
 import { Modal } from '../components/Modal'
 import { PageTitle } from '../components/SettingsLink'
+import { PersonSelect } from '../components/PersonSelect'
 import { language, setLanguage, t, type Language } from '../i18n'
 
 // Kinshasa is UTC+1.
@@ -44,7 +45,6 @@ type Review = {
 }
 type Detail = { row: Row; buddyUserId: number | null; answers: Answers | null; documents: SentDocument[]; checklist: Checklist | null; reviews: Review[]; link: string | null; linkExpiresOn: string | null }
 type Overview = { open: number; lateSteps: number; waitingCheck: number; trialsConfirmed: number; trialsEnded: number; reviewsLate: number }
-type Colleague = { id: number; name: string; job: string | null }
 export type Welcome = { firstName: string; startOn: string; manager: string | null; buddy: string | null; unit: string | null; job: string | null; steps: ChecklistItem[]; text: string | null; seen: boolean }
 
 const EMPTY: Answers = {
@@ -309,14 +309,13 @@ function DetailModal({ userId, hr, onClose }: { userId: number; hr: boolean; onC
   const ask = useAsk()
   const [d, setD] = useState<Detail | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [colleagues, setColleagues] = useState<Colleague[]>([])
   const [review, setReview] = useState<Review | null>(null)
   const [refusing, setRefusing] = useState<SentDocument | null>(null)
   const [accepting, setAccepting] = useState<SentDocument | null>(null)
   const [copied, setCopied] = useState(false)
   const base = `/api/onboarding/${userId}`
   const load = () => api<Detail>(base).then(setD).catch((e: Error) => setError(e.message))
-  useEffect(() => { void load(); api<Colleague[]>(`${base}/colleagues`).then(setColleagues).catch(() => undefined) }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void load() }, [userId]) // eslint-disable-line react-hooks/exhaustive-deps
   const run = async (f: () => Promise<Detail>) => { setError(null); try { setD(await f()) } catch (e) { setError((e as Error).message) } }
   const post = (path: string, body?: unknown) => run(() => api<Detail>(path, { method: 'POST', body }))
   const accept = (doc: SentDocument) => doc.hasExpiry ? setAccepting(doc) : post(`/api/onboarding/documents/${doc.id}/check`, { accept: true })
@@ -388,11 +387,8 @@ function DetailModal({ userId, hr, onClose }: { userId: number; hr: boolean; onC
           <div className="card">
             <h3>{t('Buddy')}</h3>
             <p className="small muted">{t('A colleague who shows the new hire around in the first weeks: the team, the places, the habits. They are told by a notification.')}</p>
-            <select value={d.buddyUserId ?? ''} disabled={!open} onChange={(e) => run(() => api<Detail>(`${base}/buddy`, { method: 'PUT', body: { buddyUserId: Number(e.target.value) || null } }))}>
-              <option value="">{t('No buddy')}</option>
-              {d.buddyUserId && !colleagues.some((c) => c.id === d.buddyUserId) && <option value={d.buddyUserId}>{r.buddy}</option>}
-              {colleagues.map((c) => <option key={c.id} value={c.id}>{c.job ? `${c.name} · ${c.job}` : c.name}</option>)}
-            </select>
+            <PersonSelect value={d.buddyUserId ?? ''} disabled={!open} exclude={[userId]}
+              onChange={(v) => run(() => api<Detail>(`${base}/buddy`, { method: 'PUT', body: { buddyUserId: Number(v) || null } }))} />
           </div>
 
           {d.checklist && (

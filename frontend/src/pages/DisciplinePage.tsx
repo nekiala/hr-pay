@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ApiError, api, longDay, openFile } from '../api'
 import { useAuth } from '../auth'
@@ -6,7 +6,7 @@ import { Button, Form } from '../components/Button'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 import { DateInput, DateTimeInput } from '../components/DateFields'
 
@@ -118,15 +118,12 @@ export default function DisciplinePage() {
 }
 
 function OpenCase({ hr, initial, onClose, onDone }: { hr: boolean; initial: { userId: string; month: string }; onClose: () => void; onDone: (c: DisciplineCase) => void }) {
-  const [people, setPeople] = useState<MyPerson[]>([])
   const [userId, setUserId] = useState(initial.userId)
   const [factsDate, setFactsDate] = useState(initial.month ? `${initial.month}-01` : today())
   const [knownDate, setKnownDate] = useState(today())
   const [facts, setFacts] = useState(initial.month ? t('Late on several days in {a}, beyond the grace period.', { a: initial.month }) : '')
   const [rule, setRule] = useState('')
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { api<MyPerson[]>('/api/org/my-people').then(setPeople).catch(() => undefined) }, [])
-  const sorted = useMemo(() => [...people].sort((a, b) => a.name.localeCompare(b.name)), [people])
   const submit = async () => {
     setError(null)
     try {
@@ -140,10 +137,7 @@ function OpenCase({ hr, initial, onClose, onDone }: { hr: boolean; initial: { us
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="open-case">{hr ? t('Open the case') : t('Propose the case')}</Button></>}>
       <Form id="open-case" onSubmit={submit}>
         <label>{t('Employee')}
-          <select required value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">{t('Choose…')}</option>
-            {sorted.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
-          </select>
+          <PersonSelect required value={userId} onChange={setUserId} />
         </label>
         <div className="grid2">
           <label>{t('Date of the facts')}<DateInput required max={today()} value={factsDate} onChange={(e) => setFactsDate(e.target.value)} /></label>

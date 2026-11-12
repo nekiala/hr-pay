@@ -8,7 +8,7 @@ import { ErrorText } from '../components/ErrorText'
 import { ACCIDENT_KINDS, type Accident, type AccidentKind, ReportAccidentModal, RESULTS, type Result, VISIT_KINDS, type Visit, type VisitKind } from '../components/HealthCards'
 import { Modal } from '../components/Modal'
 import { PageTitle } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 
 type Due = {
@@ -53,9 +53,7 @@ const resultBadge = (r: Result | null) => r ? <span className={`badge ${r === 'F
 /** Health and safety at work: medical visits, the work accident register and the health and safety committee. */
 export default function HealthSafetyPage() {
   const [tab, setTab] = useState<Tab>('visits')
-  const [people, setPeople] = useState<MyPerson[]>([])
   useEffect(() => {
-    api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined)
   }, [])
   const tabs: Record<Tab, string> = { visits: t('Medical visits'), accidents: t('Work accidents'), committee: t('Safety committee') }
   return (
@@ -66,9 +64,9 @@ export default function HealthSafetyPage() {
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{tabs[k]}</button>
         ))}
       </div>
-      {tab === 'visits' && <Visits people={people} />}
+      {tab === 'visits' && <Visits />}
       {tab === 'accidents' && <Accidents />}
-      {tab === 'committee' && <CommitteeTab people={people} />}
+      {tab === 'committee' && <CommitteeTab />}
     </section>
   )
 }
@@ -79,7 +77,7 @@ function Notices({ warnings }: { warnings: string[] }) {
 
 // ---- medical visits ------------------------------------------------------------------------------------------------
 
-function Visits({ people }: { people: MyPerson[] }) {
+function Visits() {
   const [days, setDays] = useState(60)
   const [data, setData] = useState<VisitPage | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -170,7 +168,7 @@ function Visits({ people }: { people: MyPerson[] }) {
           </table>
         </div>
       </div>
-      {adding && <VisitModal people={people} start={adding} onClose={() => setAdding(null)} onDone={done} />}
+      {adding && <VisitModal start={adding} onClose={() => setAdding(null)} onDone={done} />}
       {recording && <ResultModal visit={recording} onClose={() => setRecording(null)} onDone={done} />}
     </>
   )
@@ -193,8 +191,8 @@ function ResultFields({ result, setResult, restrictions, setRestrictions }: {
   )
 }
 
-function VisitModal({ people, start, onClose, onDone }: {
-  people: MyPerson[]; start: { userId?: number; kind?: VisitKind; dueOn?: string }; onClose: () => void; onDone: (w: string[]) => void
+function VisitModal({ start, onClose, onDone }: {
+  start: { userId?: number; kind?: VisitKind; dueOn?: string }; onClose: () => void; onDone: (w: string[]) => void
 }) {
   const [userId, setUserId] = useState(start.userId ? String(start.userId) : '')
   const [kind, setKind] = useState<VisitKind>(start.kind ?? 'YEARLY')
@@ -222,10 +220,7 @@ function VisitModal({ people, start, onClose, onDone }: {
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="visit">{t('Save')}</Button></>}>
       <Form id="visit" onSubmit={submit}>
         <label>{t('Person')}
-          <select required value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">{t('Choose…')}</option>
-            {people.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
-          </select>
+          <PersonSelect required value={userId} onChange={setUserId} />
         </label>
         <div className="grid2">
           <label>{t('Visit')}
@@ -466,7 +461,7 @@ function DeclareModal({ accident, onClose, onDone }: { accident: Accident; onClo
 
 // ---- the committee -------------------------------------------------------------------------------------------------
 
-function CommitteeTab({ people }: { people: MyPerson[] }) {
+function CommitteeTab() {
   const [data, setData] = useState<Committee | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [modal, setModal] = useState<'member' | 'event' | 'action' | null>(null)
@@ -563,14 +558,14 @@ function CommitteeTab({ people }: { people: MyPerson[] }) {
           </table>
         </div>
       </div>
-      {modal === 'member' && <MemberModal people={people} onClose={() => setModal(null)} onDone={done} />}
+      {modal === 'member' && <MemberModal onClose={() => setModal(null)} onDone={done} />}
       {modal === 'event' && <SafetyEventModal onClose={() => setModal(null)} onDone={done} />}
-      {modal === 'action' && <ActionModal people={people} onClose={() => setModal(null)} onDone={done} />}
+      {modal === 'action' && <ActionModal onClose={() => setModal(null)} onDone={done} />}
     </>
   )
 }
 
-function MemberModal({ people, onClose, onDone }: { people: MyPerson[]; onClose: () => void; onDone: () => void }) {
+function MemberModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [userId, setUserId] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState<Role>('WORKER')
@@ -593,10 +588,8 @@ function MemberModal({ people, onClose, onDone }: { people: MyPerson[]; onClose:
           </select>
         </label>
         <label>{t('Employee')}
-          <select value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">{t('Someone from outside')}</option>
-            {people.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
-          </select>
+          <PersonSelect value={userId} onChange={setUserId} />
+          <span className="hint">{t('Leave empty for someone from outside the company.')}</span>
         </label>
         {!userId && <label>{t('Name')}<input required maxLength={150} value={name} onChange={(e) => setName(e.target.value)} placeholder={t('For example: the company doctor')} /></label>}
         <label>{t('From')}<DateInput required value={fromOn} onChange={(e) => setFromOn(e.target.value)} /></label>
@@ -644,7 +637,7 @@ function SafetyEventModal({ onClose, onDone }: { onClose: () => void; onDone: ()
   )
 }
 
-function ActionModal({ people, onClose, onDone }: { people: MyPerson[]; onClose: () => void; onDone: () => void }) {
+function ActionModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [risk, setRisk] = useState('')
   const [action, setAction] = useState('')
   const [ownerId, setOwnerId] = useState('')
@@ -665,10 +658,7 @@ function ActionModal({ people, onClose, onDone }: { people: MyPerson[]; onClose:
         <label>{t('Action')}<input required maxLength={500} value={action} onChange={(e) => setAction(e.target.value)} /></label>
         <div className="grid2">
           <label>{t('Who')}
-            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-              <option value="">{t('Not set')}</option>
-              {people.map((p) => <option key={p.userId} value={p.userId}>{p.name}</option>)}
-            </select>
+            <PersonSelect value={ownerId} onChange={setOwnerId} />
           </label>
           <label>{t('Due')}<DateInput value={dueOn} onChange={(e) => setDueOn(e.target.value)} /></label>
         </div>

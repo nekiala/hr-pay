@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ApiError, api, money, type Loan, type Page, type User , personName } from '../api'
+import { ApiError, api, money, type Loan } from '../api'
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { useAsk } from '../components/Dialogs'
 import { Modal } from '../components/Modal'
 import { Button, Form } from '../components/Button'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 import { DateInput } from '../components/DateFields'
 
@@ -18,20 +19,12 @@ export default function LoansPage() {
   const manage = can('loan.manage')
   const [status, setStatus] = useState('ACTIVE')
   const [loans, setLoans] = useState<Loan[]>([])
-  const [form, setForm] = useState({ userQuery: '', userId: '', kind: 'LOAN', principal: '', currency: 'USD', installment: '', startMonth: thisMonth(), grantedOn: new Date().toISOString().slice(0, 10), note: '' })
-  const [people, setPeople] = useState<User[]>([])
+  const [form, setForm] = useState({ userId: '', kind: 'LOAN', principal: '', currency: 'USD', installment: '', startMonth: thisMonth(), grantedOn: new Date().toISOString().slice(0, 10), note: '' })
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const load = () => api<Loan[]>(`/api/loans${status ? `?status=${status}` : ''}`).then(setLoans).catch((e: Error) => setError(e.message))
   useEffect(() => { void load() }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!manage || form.userQuery.trim().length < 2) return
-    const tItem = setTimeout(() => {
-      api<Page<User>>(`/api/users?${new URLSearchParams({ q: form.userQuery.trim(), size: '10' })}`).then((p) => setPeople(p.items)).catch(() => undefined)
-    }, 250)
-    return () => clearTimeout(tItem)
-  }, [form.userQuery, manage])
 
   const run = async (action: () => Promise<unknown>, done: string) => {
     setError(null)
@@ -57,12 +50,10 @@ export default function LoansPage() {
           installment: form.kind === 'ADVANCE' ? null : Number(form.installment), startMonth: form.startMonth, grantedOn: form.grantedOn, note: form.note || null,
         },
       })
-      setForm({ ...form, userQuery: '', userId: '', principal: '', installment: '', note: '' })
-      setPeople([])
+      setForm({ ...form, userId: '', principal: '', installment: '', note: '' })
     }, t('Saved. Payroll takes the installment from the first month.'))
   }
 
-  const label = (p: User) => `${personName(p)} (${p.registrationNo ?? p.email})`
   const months = form.kind === 'LOAN' && Number(form.principal) > 0 && Number(form.installment) > 0 ? Math.ceil(Number(form.principal) / Number(form.installment)) : null
 
   return (
@@ -124,13 +115,7 @@ export default function LoansPage() {
         <Modal title={t('New loan or advance')} size="lg" onClose={() => setGranting(false)}>
           <Form onSubmit={async (e) => { if (await grant(e)) setGranting(false) }}>
             <div className="grid3">
-              <label>{t('Employee')}<input list="loan-people" placeholder={t('Type a name or number')} value={form.userQuery} required
-                  onChange={(e) => {
-                    const match = people.find((p) => label(p) === e.target.value)
-                    setForm({ ...form, userQuery: e.target.value, userId: match ? String(match.id) : '' })
-                  }} />
-                <datalist id="loan-people">{people.map((p) => <option key={p.id} value={label(p)} />)}</datalist>
-              </label>
+              <label>{t('Employee')}<PersonSelect required value={form.userId} onChange={(v) => setForm({ ...form, userId: v })} /></label>
               <label>{t('Type')}<select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
                   <option value="LOAN">{t('Loan, repaid in installments')}</option><option value="ADVANCE">{t('Salary advance, taken back in one month')}</option>
                 </select>
