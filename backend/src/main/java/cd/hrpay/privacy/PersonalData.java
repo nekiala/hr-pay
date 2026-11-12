@@ -33,7 +33,8 @@ public class PersonalData {
     public record Due(long userId, String name, String registrationNo, LocalDate leftOn, LocalDate eraseFrom) {}
 
     /** Tables that are about one person but hold secrets or delivery internals, not data about them. */
-    private static final Set<String> NOT_EXPORTED = Set.of("user_two_step", "user_session", "otp_challenge", "outbox_message");
+    private static final Set<String> NOT_EXPORTED = Set.of("user_two_step", "user_session", "otp_challenge", "outbox_message",
+            "talent_review_member", "successor");   // the talent review and succession stay confidential (HR and the Direction)
     private static final Pattern SECRET_COLUMN = Pattern.compile(".*(hash|secret|recovery_codes|session_id|token).*");
     private static final Pattern ENCRYPTED = Pattern.compile("enc:v1:[A-Za-z0-9+/=]+");
     static final Set<String> FIELDS = Set.of("NAME", "EMAIL", "PHONE", "BIRTH_DATE", "MARITAL_STATUS", "DEPENDANTS",

@@ -6,6 +6,7 @@ import { ErrorText } from '../components/ErrorText'
 import { locale, t } from '../i18n'
 import { SkillsCard } from './SkillsPages'
 import { TrainingHistoryCard } from './TrainingPages'
+import { TalentCard } from './TalentPages'
 
 /** A person's record, read-only: who they are, where they work, their contract, leave and family. Edit opens the form. */
 export default function UserViewPage() {
@@ -125,6 +126,7 @@ export default function UserViewPage() {
 
       {(can('skills.manage') || can('evaluation.score.team')) && <SkillsCard userId={id!} />}
       {(can('training.manage') || can('evaluation.score.team')) && <TrainingHistoryCard userId={id!} />}
+      <TalentCard userId={id!} />
 
       <p className="row">
         {can('attendance.read.all') && <Link className="button secondary" to={`/users/${id}/attendance`}>{t('View attendance and earnings')}</Link>}

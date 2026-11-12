@@ -7,7 +7,7 @@ import {
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
   FlaskConical, Trophy, Gavel, Vote, HeartPulse, Goal, UserPlus, Search,
-  GraduationCap, Award,
+  GraduationCap, Award, Crown, Sprout,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -35,6 +35,13 @@ function useNav(): { title: string; items: Item[] }[] {
     if (!pay || !me) return
     api<boolean>('/api/advances/offered').then(setAdvances).catch(() => setAdvances(false))
   }, [pay, me?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Talent and succession: HR, or the head of the Direction générale (asked of the server, since no permission names it).
+  const [talent, setTalent] = useState(false)
+  useEffect(() => {
+    if (!me || me.firm) return
+    if (can('talent.manage')) { setTalent(true); return }
+    api<{ talent: boolean }>('/api/talent/access').then((a) => setTalent(a.talent)).catch(() => setTalent(false))
+  }, [me?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   return [
     {
       title: t('My work'),
@@ -64,6 +71,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/objectives', label: t('Objectives'), icon: Goal, show: has('EVALUATIONS') },
         { to: '/org', label: t('Org chart'), icon: Network, show: true },
         { to: '/dashboards', label: t('Dashboards'), icon: ChartNoAxesCombined, show: can('dashboard.read') },
+        { to: '/talent/proposals', label: t('Potential of my team'), icon: Sprout, show: has('EVALUATIONS') && can('evaluation.score.team') },
         { to: '/reports/rankings', label: t('HR rankings'), icon: Trophy, show: any('report.hr', 'attendance.read.all', 'attendance.read.team', 'mission.manage', 'discipline.manage', 'discipline.propose') },
       ],
     },
@@ -77,6 +85,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/onboarding', label: t('Onboarding'), icon: Handshake, show: any('lifecycle.manage', 'evaluation.score.team') },
         { to: '/training', label: t('Training'), icon: GraduationCap, show: any('training.manage', 'evaluation.score.team') },
         { to: '/skills', label: t('Skills'), icon: Award, show: any('skills.manage', 'evaluation.score.team') },
+        { to: '/talent', label: t('Talent and succession'), icon: Crown, show: talent },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
         { to: '/discipline', label: t('Discipline'), icon: Gavel, show: any('discipline.manage', 'discipline.propose') },

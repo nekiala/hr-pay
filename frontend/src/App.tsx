@@ -33,6 +33,7 @@ import JobOffersPage from './pages/JobOffersPage'
 import OnboardingPage, { WelcomeFormPage, WelcomePage } from './pages/OnboardingPages'
 import TrainingPage, { MyTrainingPage, TrainingSettingsPage } from './pages/TrainingPages'
 import SkillsPage, { MySkillsPage } from './pages/SkillsPages'
+import TalentPage, { TalentProposalsPage, TalentSettingsPage } from './pages/TalentPages'
 import LeavePage from './pages/LeavePage'
 import ReportsPage from './pages/ReportsPage'
 import RankingsPage from './pages/RankingsPage'
@@ -264,6 +265,9 @@ export default function App() {
           <Route path="/my/training" element={<MyTrainingPage />} />
           <Route path="/skills" element={<SkillsPage />} />
           <Route path="/my/skills" element={<MySkillsPage />} />
+          <Route path="/talent" element={<TalentPage />} />
+          <Route path="/talent/proposals" element={<TalentProposalsPage />} />
+          <Route path="/talent/settings" element={<TalentSettingsPage />} />
           <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/announcements/:id" element={<AnnouncementPage />} />
           <Route path="/my/advance" element={<MyAdvancePage />} />
