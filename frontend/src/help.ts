@@ -658,6 +658,36 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - After a session, rate it: it helps HR choose the next ones. Your certificate, when there is one, is in "My documents".` },
   },
   {
+    id: 'skills', audience: 'hr', routes: ['/skills'],
+    fr: { title: 'Compétences', body: `
+- **Catalogue** : les compétences, par famille (techniques, comportementales, langues, outils). Chacune a quatre niveaux : 1 notions, 2 praticien, 3 confirmé, 4 expert, avec une ligne qui décrit chaque niveau. Un catalogue de départ est fourni ; renommez, ajoutez ou mettez de côté.
+- **Compétences par emploi** : pour chaque emploi, les compétences demandées et le niveau. Le texte libre de la fiche de poste reste affiché pour vous aider.
+- **Niveaux des personnes** : l'employé s'évalue dans « Mes compétences » ; son responsable confirme ou corrige depuis l'onglet « À confirmer » ou la fiche de la personne. Seul le niveau confirmé compte. Les RH peuvent fixer un niveau directement, par exemple après un test.
+- **Matrice des écarts** : chaque personne face aux compétences que demande son emploi (vert atteint, orange un niveau en dessous, rouge plus). « Transformer les écarts en besoins de formation » ajoute les besoins de l'année dans Formation, avec une formation qui développe la compétence quand le catalogue en a une (case « Compétences développées » d'une formation).
+- **Rechercher** : qui a une compétence à un niveau donné ou plus, pour trouver un formateur, un successeur ou un candidat interne.
+- **Permis et certifications** : ajoutez-les dans les documents de la personne avec ce type et une date d'expiration ; les RH sont prévenus avant l'échéance comme pour les autres documents.` },
+    en: { title: 'Skills', body: `
+- **Catalogue**: the skills, by family (technical, behavioural, languages, tools). Each has four levels: 1 notions, 2 practitioner, 3 confirmed, 4 expert, with a line describing each level. A starting catalogue is provided; rename, add or put aside.
+- **Skills per job**: for each job, the skills it needs and the level. The free text of the job description stays shown to help you.
+- **People's levels**: the employee rates themselves in "My skills"; their manager confirms or corrects from the "To confirm" tab or the person's page. Only the confirmed level counts. HR can set a level directly, for example after a test.
+- **Gap matrix**: each person against the skills their job needs (green reached, amber one level short, red more). "Turn the gaps into training needs" adds the year's needs in Training, with a course that builds the skill when the catalogue has one (a course's "Skills it builds").
+- **Search**: who has a skill at a level or more, to find a trainer, a successor or an internal candidate.
+- **Licences and certifications**: add them in the person's documents with this type and an expiry date; HR is reminded before they expire, like other documents.` },
+  },
+  {
+    id: 'my-skills', audience: 'everyone', routes: ['/my/skills'],
+    fr: { title: 'Mes compétences', body: `
+- « Mes compétences » liste les compétences que demande votre emploi, avec le niveau attendu.
+- Donnez votre niveau pour chacune, avec un exemple si vous voulez, puis « Envoyer mon évaluation ». Vous pouvez ajouter d'autres compétences que vous avez.
+- Votre responsable confirme ou corrige ; seul le niveau confirmé compte. Un écart avec le niveau attendu peut devenir un besoin de formation.
+- Vos permis et certifications sont listés en bas ; ajoutez-en un dans « Mes documents ».` },
+    en: { title: 'My skills', body: `
+- "My skills" lists the skills your job needs, with the level expected.
+- Give your level for each, with an example if you like, then "Send my ratings". You can add other skills you have.
+- Your manager confirms or corrects; only the confirmed level counts. A gap with the expected level can become a training need.
+- Your licences and certifications are listed at the bottom; add one in "My documents".` },
+  },
+  {
     id: 'job-offers', audience: 'everyone', routes: ['/job-offers'],
     fr: { title: 'Offres d’emploi internes', body: `
 - « Offres d'emploi » montre les postes ouverts dans l'entreprise, y compris ceux réservés au personnel.

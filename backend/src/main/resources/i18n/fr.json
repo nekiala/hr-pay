@@ -2790,5 +2790,20 @@
  "%s is asked at least %d days ahead (Code du travail art. 269).": "Le %s se demande au moins %d jours à l'avance (Code du travail art. 269).",
  "%s gives %s working days a year; %s are already taken or asked for in %d.": "Le %s donne %s jours ouvrables par an ; %s sont déjà pris ou demandés en %d.",
  "Apprentice": "Apprenti",
- "apprenticeship contract": "contrat d'apprentissage"
+ "apprenticeship contract": "contrat d'apprentissage",
+ "Skill not found.": "Compétence introuvable.",
+ "Unknown skill family.": "Famille de compétences inconnue.",
+ "A skill with this name already exists.": "Une compétence porte déjà ce nom.",
+ "A level goes from 1 to 4.": "Un niveau va de 1 à 4.",
+ "Each skill only once.": "Chaque compétence une seule fois.",
+ "You cannot see this person's skills.": "Vous ne pouvez pas voir les compétences de cette personne.",
+ "Sign in first.": "Connectez-vous d'abord.",
+ "Skills to confirm: %s": "Compétences à confirmer : %s",
+ "%s rated their skills. Confirm or correct the levels.": "%s a évalué ses compétences. Confirmez ou corrigez les niveaux.",
+ "Only the manager or HR confirms skills.": "Seuls le responsable ou les RH confirment les compétences.",
+ "You cannot confirm your own skills.": "Vous ne pouvez pas confirmer vos propres compétences.",
+ "Your skills were reviewed": "Vos compétences ont été revues",
+ "Your levels were confirmed or corrected. See them in My skills.": "Vos niveaux ont été confirmés ou corrigés. Voyez-les dans Mes compétences.",
+ "You cannot see this.": "Vous ne pouvez pas voir ceci.",
+ "Level %s, the job needs %s.": "Niveau %s, l'emploi demande %s."
 }

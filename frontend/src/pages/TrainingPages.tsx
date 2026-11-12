@@ -10,6 +10,7 @@ import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import type { MyPerson } from '../components/UnitFilter'
 import { t } from '../i18n'
+import type { Skill } from './SkillsPages'
 
 // ---- types ---------------------------------------------------------------------------------------------------------
 
@@ -772,10 +773,21 @@ function CourseModal({ course, onClose, onSaved }: { course: Course | null; onCl
     description: course?.description ?? '', active: course?.active ?? true,
   })
   const [error, setError] = useState<string | null>(null)
+  const [skills, setSkills] = useState<Skill[]>([])
+  const [built, setBuilt] = useState<number[] | null>(null)
+  useEffect(() => {
+    api<Skill[]>('/api/skills').then(setSkills).catch(() => undefined)
+    api<{ courseId: number; skillId: number }[]>('/api/skills/courses')
+      .then((r) => setBuilt(r.filter((x) => x.courseId === course?.id).map((x) => x.skillId))).catch(() => setBuilt(null))
+  }, [course?.id])
   const save = async (e: FormEvent) => {
     e.preventDefault()
     const body = { ...form, providerName: form.providerName || null, hours: Number(form.hours), costPerPerson: Number(form.costPerPerson || 0), description: form.description || null }
-    try { await api(course ? `/api/training/courses/${course.id}` : '/api/training/courses', { method: course ? 'PUT' : 'POST', body }); onSaved() } catch (err) { setError(errorText(err)) }
+    try {
+      const saved = await api<Course>(course ? `/api/training/courses/${course.id}` : '/api/training/courses', { method: course ? 'PUT' : 'POST', body })
+      if (built) await api(`/api/skills/courses/${saved.id}`, { method: 'PUT', body: built })
+      onSaved()
+    } catch (err) { setError(errorText(err)) }
   }
   return (
     <Modal title={course ? t('Course') : t('Add a course')} size="lg" onClose={onClose}>
@@ -795,6 +807,17 @@ function CourseModal({ course, onClose, onSaved }: { course: Course | null; onCl
             <option value="USD">USD</option><option value={local}>{local}</option></select></label>
         </div>
         <label>{t('Description')}<textarea rows={3} maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+        {built && skills.length > 0 && (
+          <fieldset>
+            <legend>{t('Skills it builds')}</legend>
+            <div className="row">
+              {skills.map((s) => (
+                <label key={s.id} className="check"><input type="checkbox" checked={built.includes(s.id)}
+                  onChange={(e) => setBuilt(e.target.checked ? [...built, s.id] : built.filter((x) => x !== s.id))} />{s.name}</label>
+              ))}
+            </div>
+          </fieldset>
+        )}
         <label className="check"><input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />{t('In use')}</label>
         <ErrorText error={error} />
         <div className="modal-foot"><Button className="secondary" onClick={onClose}>{t('Cancel')}</Button><Button type="submit">{t('Save')}</Button></div>
