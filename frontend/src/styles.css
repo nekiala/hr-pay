@@ -731,3 +731,7 @@ tr.current > td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 .stars .star { background: none; border: 0; padding: 2px; color: var(--border-strong); cursor: pointer; }
 .stars .star.on { color: var(--warn); }
 .stars .star.on svg { fill: currentColor; }
+
+/* Skills gap matrix: one narrow column per skill. */
+table.matrix th.small { max-width: 110px; white-space: normal; line-height: 1.2; vertical-align: bottom; }
+table.matrix td:not(:first-child):not(:nth-child(2)) { text-align: center; }

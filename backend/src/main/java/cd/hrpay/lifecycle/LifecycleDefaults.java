@@ -35,6 +35,7 @@ public class LifecycleDefaults {
             new DocType("LETTER", "Letters", "Lettres", false, false),
             new DocType("CERTIFICATE", "Certificates", "Attestations", false, false),
             new DocType("TRAINING", "Training certificates", "Attestations de formation", false, true),
+            new DocType("CERTIFICATION", "Licences and certifications", "Permis et certifications", true, true),
             new DocType("OTHER", "Other", "Autres", false, true));
 
     private record Step(String kind, String en, String fr, String action, String documentType) {}
@@ -423,6 +424,13 @@ public class LifecycleDefaults {
     private cd.hrpay.position.JobDefaults jobDefaults;
     private cd.hrpay.evaluation.ObjectiveDefaults objectiveDefaults;
 
+    private cd.hrpay.skills.SkillDefaults skillDefaults;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setSkillDefaults(cd.hrpay.skills.SkillDefaults skillDefaults) {
+        this.skillDefaults = skillDefaults;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     void setObjectiveDefaults(cd.hrpay.evaluation.ObjectiveDefaults objectiveDefaults) {
         this.objectiveDefaults = objectiveDefaults;
@@ -454,6 +462,7 @@ public class LifecycleDefaults {
                 tenants.runAs(id, this::addTrainingLetters);
                 tenants.runAs(id, jobDefaults::addSampleJobs);
                 tenants.runAs(id, objectiveDefaults::addSamples);
+                tenants.runAs(id, skillDefaults::addSamples);
             } catch (RuntimeException e) {
                 log.error("The contract models for company {} could not be added", id, e);
             }
@@ -666,6 +675,7 @@ public class LifecycleDefaults {
         addTrainingLetters();
         jobDefaults.addSampleJobs();
         objectiveDefaults.addSamples();
+        skillDefaults.addSamples();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();
     }
 }

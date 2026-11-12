@@ -4,6 +4,7 @@ import { CONTRACT_TYPES, api, days, money, personName, type EmployeeFileView, ty
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { locale, t } from '../i18n'
+import { SkillsCard } from './SkillsPages'
 import { TrainingHistoryCard } from './TrainingPages'
 
 /** A person's record, read-only: who they are, where they work, their contract, leave and family. Edit opens the form. */
@@ -122,6 +123,7 @@ export default function UserViewPage() {
         </dl>
       </div>
 
+      {(can('skills.manage') || can('evaluation.score.team')) && <SkillsCard userId={id!} />}
       {(can('training.manage') || can('evaluation.score.team')) && <TrainingHistoryCard userId={id!} />}
 
       <p className="row">
