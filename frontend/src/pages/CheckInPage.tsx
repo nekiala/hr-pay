@@ -4,6 +4,7 @@ import { api, currentPosition, time, type AttendanceStatus, type StartResponse }
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { Button, Form } from '../components/Button'
+import { useAsk } from '../components/Dialogs'
 import { t } from '../i18n'
 import { isOffline, knownStatus, queuePunch, rememberStatus, syncPunches, clearSent, useOnline, useQueue, type KnownStatus } from '../pwa'
 
@@ -11,6 +12,7 @@ const sourceLabel: Record<string, string> = { SELF: '', HR_MANUAL: t(' (entered 
 
 export default function CheckInPage() {
   const { signOut, me } = useAuth()
+  const ask = useAsk()
   const userId = me!.id
   const online = useOnline()
   const { waiting, done: answered } = useQueue(userId)
@@ -109,8 +111,17 @@ export default function CheckInPage() {
     }
   }
 
+  /** Asks in the app's own dialog, not the browser's, before ending the day. */
+  const confirmEnd = (end: () => Promise<unknown>) => ask({
+    title: t('End my day'),
+    message: t('End your day now?'),
+    confirmLabel: t('End my day'),
+    pendingText: t('Ending the day…'),
+    danger: true,
+    onConfirm: end,
+  })
+
   const checkOut = async () => {
-    if (!confirm_(t('End your day now?'))) return
     setError(null)
     setDone(null)
     try {
@@ -144,7 +155,7 @@ export default function CheckInPage() {
                 ? t('The phone keeps the time and your location. In the site\'s area it is recorded when sent; otherwise your manager approves it.')
                 : t('The phone keeps the time and your location; your manager approves it once it is sent.')}</p>
               {offline.checkedIn
-                ? <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => { if (confirm_(t('End your day now?'))) void keep('OUT', offline) }}>{t('End my day')}</Button>
+                ? <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => confirmEnd(() => keep('OUT', offline))}>{t('End my day')}</Button>
                 : <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => void keep('IN', offline)}>{t('Check in')}</Button>}
             </>
           )}
@@ -181,7 +192,7 @@ export default function CheckInPage() {
             <Button type="button" className="secondary" onClick={() => setChallenge(null)}>{t('Cancel')}</Button>
           </Form>
         ) : status.checkedIn ? (
-          <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkOut()}>{t('End my day')}</Button>
+          <Button className="big danger" pending={!!busy} pendingText={busy ?? undefined} onClick={() => confirmEnd(checkOut)}>{t('End my day')}</Button>
         ) : (
           <Button className="big" pending={!!busy} pendingText={busy ?? undefined} onClick={() => checkIn()}>{t('Check in')}</Button>
         )}
@@ -243,8 +254,4 @@ function OfflineQueue({ waiting, answered, timeZone, onClear }: {
       )}
     </div>
   )
-}
-
-function confirm_(message: string) {
-  return window.confirm(message)
 }

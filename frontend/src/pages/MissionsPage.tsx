@@ -9,6 +9,7 @@ import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { useAsk } from '../components/Dialogs'
 import { CountrySelect } from '../components/ReferencePickers'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
 import { t } from '../i18n'
@@ -368,6 +369,7 @@ function PeoplePicker({ people, onChange }: { people: User[]; onChange: (p: User
 }
 
 function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
+  const ask = useAsk()
   const [d, setD] = useState<TravelMissionDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -504,7 +506,11 @@ function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
                     <td className="row">
                       {m.canManage && open && x.status === 'SUBMITTED' && <>
                         <Button className="link" onClick={() => run(() => api(`/api/travel-missions/${id}/expenses/${x.id}/decision`, { method: 'POST', body: { approve: true } }), t('Cost accepted.'))}>{t('Accept')}</Button>
-                        <Button className="link" onClick={() => { const why = window.prompt(t('Why is this cost refused?')); if (why) void run(() => api(`/api/travel-missions/${id}/expenses/${x.id}/decision`, { method: 'POST', body: { approve: false, note: why } }), t('Cost refused.')) }}>{t('Refuse')}</Button>
+                        <Button className="link" onClick={() => ask({
+                          title: t('Refuse the cost'), confirmLabel: t('Refuse'), pendingText: t('Refusing…'), danger: true,
+                          fields: [{ label: t('Why is this cost refused?'), required: true, multiline: true }],
+                          onConfirm: ([why]) => run(() => api(`/api/travel-missions/${id}/expenses/${x.id}/decision`, { method: 'POST', body: { approve: false, note: why } }), t('Cost refused.')),
+                        })}>{t('Refuse')}</Button>
                       </>}
                       {canWork && x.status === 'SUBMITTED' && <Button className="link" onClick={() => run(() => api(`/api/travel-missions/${id}/expenses/${x.id}`, { method: 'DELETE' }), t('Cost removed.'))}>{t('Remove')}</Button>}
                     </td>
@@ -544,11 +550,12 @@ function MissionDetail({ id, onClose }: { id: number; onClose: () => void }) {
       <div className="modal-foot">
         {m.canManage && (m.status === 'PENDING' || m.status === 'APPROVED') && <Button className="secondary" onClick={() => setAmending(true)}>{t('Change the mission')}</Button>}
         {(m.status === 'PENDING' && (m.mine || m.canManage) || m.status === 'APPROVED' && m.canManage) && (
-          <Button className="secondary" onClick={() => {
-            const why = m.status === 'APPROVED' ? window.prompt(t('Why is the mission cancelled?')) : ''
-            if (why === null) return
-            void run(() => api(`/api/travel-missions/${id}/cancel`, { method: 'POST', body: { reason: why || null } }), t('Mission cancelled.'))
-          }}>{t('Cancel the mission')}</Button>
+          <Button className="secondary" onClick={() => ask({
+            title: t('Cancel the mission'), confirmLabel: t('Cancel the mission'), pendingText: t('Cancelling…'), danger: true,
+            message: m.status === 'APPROVED' ? undefined : t('Cancel this mission request?'),
+            fields: m.status === 'APPROVED' ? [{ label: t('Why is the mission cancelled?'), required: true, multiline: true }] : [],
+            onConfirm: ([why]) => run(() => api(`/api/travel-missions/${id}/cancel`, { method: 'POST', body: { reason: why || null } }), t('Mission cancelled.')),
+          })}>{t('Cancel the mission')}</Button>
         )}
         {m.canManage && open && <Button onClick={() => run(() => api(`/api/travel-missions/${id}/close`, { method: 'POST' }), t('Mission settled and closed.'))}>{t('Settle and close')}</Button>}
         <Button className="secondary" onClick={onClose}>{t('Close')}</Button>
