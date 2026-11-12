@@ -36,7 +36,8 @@ public class LifecycleController {
                             boolean active) {}
 
     public record StepInput(@NotBlank String kind, int position, @NotBlank @Size(max = 200) String label, Long documentTypeId,
-                            String action, boolean active) {}
+                            String action, boolean active, @jakarta.validation.constraints.Pattern(regexp = "HR|MANAGER|IT|NEW_HIRE|BUDDY") String owner,
+                            @jakarta.validation.constraints.Min(-90) @jakarta.validation.constraints.Max(90) Integer dueDays) {}
 
     public record TemplateInput(@NotBlank @Size(max = 40) String code, @NotBlank @Size(max = 100) String name, @NotBlank String kind,
                                 @NotBlank @Size(max = 50_000) String body, boolean requiresSignature, Long documentTypeId,
@@ -137,12 +138,12 @@ public class LifecycleController {
     @PostMapping("/checklist-steps")
     @ResponseStatus(HttpStatus.CREATED)
     public Checklists.TemplateItem addStep(@Valid @RequestBody StepInput in) {
-        return checklists.saveTemplateItem(null, in.kind(), in.position(), in.label(), in.documentTypeId(), blank(in.action()), in.active());
+        return checklists.saveTemplateItem(null, in.kind(), in.position(), in.label(), in.documentTypeId(), blank(in.action()), in.active(), in.owner(), in.dueDays());
     }
 
     @PutMapping("/checklist-steps/{id}")
     public Checklists.TemplateItem updateStep(@PathVariable long id, @Valid @RequestBody StepInput in) {
-        return checklists.saveTemplateItem(id, in.kind(), in.position(), in.label(), in.documentTypeId(), blank(in.action()), in.active());
+        return checklists.saveTemplateItem(id, in.kind(), in.position(), in.label(), in.documentTypeId(), blank(in.action()), in.active(), in.owner(), in.dueDays());
     }
 
     @DeleteMapping("/checklist-steps/{id}")

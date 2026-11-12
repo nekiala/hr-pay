@@ -38,6 +38,12 @@ public class LifecycleJobs {
     private final Clock clock;
     private cd.hrpay.career.ContractFollowup followup;
     private cd.hrpay.representation.StaffRepresentation representation;
+    private Onboarding onboarding;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setOnboarding(@org.springframework.context.annotation.Lazy Onboarding onboarding) {
+        this.onboarding = onboarding;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired
     void setFollowUps(@org.springframework.context.annotation.Lazy cd.hrpay.career.ContractFollowup followup,
@@ -68,9 +74,10 @@ public class LifecycleJobs {
         int closed = closeAccounts();
         int contracts = followup == null ? 0 : followup.run();
         int staff = representation == null ? 0 : representation.run();
-        if (reminded + letters + closed + contracts + staff > 0) {
-            log.info("Lifecycle: {} expiry reminders, {} signature reminders, {} accounts closed, {} contract follow-ups, {} staff representation reminders",
-                    reminded, letters, closed, contracts, staff);
+        int onboard = onboarding == null ? 0 : onboarding.remind();
+        if (reminded + letters + closed + contracts + staff + onboard > 0) {
+            log.info("Lifecycle: {} expiry reminders, {} signature reminders, {} accounts closed, {} contract follow-ups, {} staff representation reminders, {} onboarding reminders",
+                    reminded, letters, closed, contracts, staff, onboard);
         }
     }
 

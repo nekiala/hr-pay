@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  api, CERTIFICATE_KINDS, CHECKLIST_ACTIONS, CHECKLIST_KINDS, LETTER_KINDS, longDay,
+  api, CERTIFICATE_KINDS, CHECKLIST_ACTIONS, CHECKLIST_KINDS, dueWords, LETTER_KINDS, longDay, STEP_OWNERS, type StepOwner,
   type ChecklistAction, type ChecklistKind, type ChecklistStep, type DocumentType, type LetterKind, type LetterTemplate, type LifecycleOverview,
 } from '../api'
 import { Button, Form } from '../components/Button'
@@ -214,7 +214,7 @@ function Steps() {
         <div key={kind} className="card">
           <div className="row between">
             <h3>{t('{a} checklist', { a: CHECKLIST_KINDS[kind] })}</h3>
-            <Button onClick={() => { setFormError(null); setDraft({ kind, position: steps.filter((s) => s.kind === kind).length + 1, label: '', documentTypeId: null, action: null, active: true }) }}>{t('Add a step')}</Button>
+            <Button onClick={() => { setFormError(null); setDraft({ kind, position: steps.filter((s) => s.kind === kind).length + 1, label: '', documentTypeId: null, action: null, active: true, owner: 'HR', dueDays: null }) }}>{t('Add a step')}</Button>
           </div>
           <ErrorText error={error} />
           <ul className="checklist">
@@ -223,6 +223,7 @@ function Steps() {
                 <span className="muted small">{s.position}</span>
                 <span style={{ flex: 1 }}>{s.label}{!s.active && <span className="badge"> {t('Off')}</span>}
                   {s.action && <div className="small muted">{t('Ticks itself: {a}', { a: s.action === 'DOCUMENT' ? `${CHECKLIST_ACTIONS.DOCUMENT} (${typeName(s.documentTypeId) ?? '?'})` : CHECKLIST_ACTIONS[s.action] })}</div>}
+                  {kind === 'HIRING' && <div className="small muted">{STEP_OWNERS[s.owner]}{s.dueDays != null && ` · ${dueWords(s.dueDays)}`}</div>}
                 </span>
                 <Button className="secondary" onClick={() => { setFormError(null); setDraft({ ...s }) }}>{t('Edit')}</Button>
                 <Button className="secondary" onClick={() => ask({
@@ -251,6 +252,32 @@ function Steps() {
                   {types.filter((d) => d.active).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </label>
+            )}
+            {draft.kind === 'HIRING' && (
+              <div className="grid2">
+                <label>{t('Done by')}
+                  <select value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value as StepOwner })}>
+                    {(Object.keys(STEP_OWNERS) as StepOwner[]).map((o) => <option key={o} value={o}>{STEP_OWNERS[o]}</option>)}
+                  </select>
+                </label>
+                <label>{t('Due (days from the start date)')}
+                  <input type="number" min={-90} max={90} value={draft.dueDays ?? ''} onChange={(e) => setDraft({ ...draft, dueDays: e.target.value === '' ? null : Number(e.target.value) })} />
+                  <span className="hint">{t('-3: three days before the first day; 0: on the first day; empty: no date.')}</span>
+                </label>
+              </div>
+            )}
+            {draft.kind === 'HIRING' && (
+              <div className="grid2">
+                <label>{t('Done by')}
+                  <select value={draft.owner} onChange={(e) => setDraft({ ...draft, owner: e.target.value as StepOwner })}>
+                    {(Object.keys(STEP_OWNERS) as StepOwner[]).map((o) => <option key={o} value={o}>{STEP_OWNERS[o]}</option>)}
+                  </select>
+                </label>
+                <label>{t('Due (days from the start date)')}
+                  <input type="number" min={-90} max={90} value={draft.dueDays ?? ''} onChange={(e) => setDraft({ ...draft, dueDays: e.target.value === '' ? null : Number(e.target.value) })} />
+                  <span className="hint">{t('-3: three days before the first day; 0: on the first day; empty: no date.')}</span>
+                </label>
+              </div>
             )}
             <label>{t('Order')}<input type="number" value={draft.position} onChange={(e) => setDraft({ ...draft, position: Number(e.target.value) })} /></label>
             <label className="check"><input type="checkbox" checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />{t('Active')}</label>

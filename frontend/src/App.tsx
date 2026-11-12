@@ -30,6 +30,7 @@ import MissionSettingsPage from './pages/MissionSettingsPage'
 import MissionCheckPage from './pages/MissionCheckPage'
 import { CareersOfferPage, CareersPage, CareersWithdrawPage } from './pages/CareersPages'
 import JobOffersPage from './pages/JobOffersPage'
+import OnboardingPage, { WelcomeFormPage, WelcomePage } from './pages/OnboardingPages'
 import LeavePage from './pages/LeavePage'
 import ReportsPage from './pages/ReportsPage'
 import RankingsPage from './pages/RankingsPage'
@@ -197,10 +198,11 @@ export default function App() {
   if (location.pathname === '/reset-password') return <Routes><Route path="/reset-password" element={<ResetPasswordPage />} /></Routes>
   // Pages anyone can open, signed in or not: the status page, the terms and the trial request.
   if (location.pathname === '/status' || location.pathname === '/trial' || location.pathname === '/changes' || location.pathname.startsWith('/legal/')
-    || location.pathname.startsWith('/mission-check/') || location.pathname.startsWith('/careers/')) {
+    || location.pathname.startsWith('/mission-check/') || location.pathname.startsWith('/careers/') || location.pathname.startsWith('/welcome-form/')) {
     return (
       <Routes>
         <Route path="/careers/withdraw/:token" element={<CareersWithdrawPage />} />
+        <Route path="/welcome-form/:token" element={<WelcomeFormPage />} />
         <Route path="/careers/:slug" element={<CareersPage />} />
         <Route path="/careers/:slug/:id" element={<CareersOfferPage />} />
         <Route path="/mission-check/:token" element={<MissionCheckPage />} />
@@ -254,6 +256,8 @@ export default function App() {
           <Route path="/my/documents" element={<MyDocumentsPage />} />
           <Route path="/announcements" element={<AnnouncementsPage />} />
           <Route path="/job-offers" element={<JobOffersPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/welcome" element={<WelcomePage />} />
           <Route path="/announcements/:id" element={<AnnouncementPage />} />
           <Route path="/my/advance" element={<MyAdvancePage />} />
           <Route path="/payroll/advances" element={<AdvancesRoute />} />

@@ -38,6 +38,29 @@ public class LifecycleDefaults {
 
     private record Step(String kind, String en, String fr, String action, String documentType) {}
 
+    /** Who does a hiring step and when, in days from the start date: papers before, equipment and welcome on day one. */
+    private static String[] ownerAndDue(Step s, String action) {
+        if (!"HIRING".equals(s.kind())) {
+            return new String[] {"HR", null};
+        }
+        if ("DOCUMENT".equals(action)) {
+            return new String[] {"NEW_HIRE", "-3"};
+        }
+        if ("CONTRACT_SIGNED".equals(action)) {
+            return new String[] {"HR", "-2"};
+        }
+        if ("EQUIPMENT".equals(action) || s.en().startsWith("Welcomed")) {
+            return new String[] {"MANAGER", "0"};
+        }
+        if (s.en().startsWith("Enrolled")) {
+            return new String[] {"IT", "0"};
+        }
+        if (s.en().startsWith("Registered with the CNSS")) {
+            return new String[] {"HR", "8"};
+        }
+        return new String[] {"HR", null};
+    }
+
     private static final List<Step> STEPS = List.of(
             new Step("HIRING", "ID or passport collected", "Pièce d'identité reçue", "DOCUMENT", "ID_CARD"),
             new Step("HIRING", "Photo collected", "Photo reçue", "DOCUMENT", "PHOTO"),
@@ -555,8 +578,13 @@ public class LifecycleDefaults {
         for (Step s : STEPS) {
             Long type = s.documentType() == null ? null
                     : jdbc.sql("select id from document_type where code = ?").param(s.documentType()).query(Long.class).optional().orElse(null);
-            jdbc.sql("insert into checklist_template_item (kind, position, label, document_type_id, action) values (?, ?, ?, ?, ?)")
-                    .params(s.kind(), position += 10, fr ? s.fr() : s.en(), type, s.documentType() != null && type == null ? null : s.action())
+            String action = s.documentType() != null && type == null ? null : s.action();
+            String[] who = ownerAndDue(s, action);
+            jdbc.sql("""
+                    insert into checklist_template_item (kind, position, label, document_type_id, action, owner, due_days)
+                    values (?, ?, ?, ?, ?, ?, ?)""")
+                    .params(s.kind(), position += 10, fr ? s.fr() : s.en(), type, action, who[0],
+                            who[1] == null ? null : Integer.valueOf(who[1]))
                     .update();
         }
         for (Letter l : LETTERS) {

@@ -4,6 +4,7 @@ import {
   Banknote, Briefcase, CalendarDays, CircleCheck, Clock, Landmark, Lock, PencilLine, Star, Timer, TriangleAlert, Calculator, Circle,
 } from 'lucide-react'
 import { api, money, type HolidayOccurrence, type PayrollRun, type RunView } from '../api'
+import { WelcomeBanner } from './OnboardingPages'
 import { useAuth } from '../auth'
 import MonthView from '../components/MonthView'
 import { SetupGuideCard } from './SetupPage'
@@ -60,6 +61,12 @@ export default function HomePage() {
     if (any('overtime.approve.all', 'overtime.approve.team')) count('/api/overtime/pending', { label: t('Overtime'), detail: t('Days to approve before payroll'), to: '/overtime/approvals', icon: Timer })
     if (any('attendance.correct.propose', 'attendance.correct')) count('/api/corrections/to-decide', { label: t('Attendance corrections'), detail: t('Asked by employees'), to: '/corrections', icon: PencilLine })
     if (any('evaluation.manage', 'evaluation.score.team')) count('/api/evaluations/to-do', { label: t('Evaluations'), detail: t('To score or approve'), to: '/evaluations', icon: Star })
+    if (any('lifecycle.manage', 'evaluation.score.team')) {
+      asks.push(quiet(api<{ status: string; dueOn: string }[]>('/api/trial-reviews/mine')).then((rows) => {
+        const due = (rows ?? []).filter((r) => r.status === 'PLANNED' && r.dueOn <= today()).length
+        return due ? { label: t('Trial reviews'), detail: t('To write before the trial ends'), to: '/onboarding?tab=reviews', icon: Star, count: due } : null
+      }))
+    }
     void Promise.all(asks).then((list) => setWaiting(list.filter((w): w is Waiting => w !== null)))
   }, [])
 
@@ -91,6 +98,8 @@ export default function HomePage() {
           <Link className="button" to="/check-in"><Clock size={16} />{' '}{t('Check in or end my day')}</Link>
         </div>
       </div>
+
+      <WelcomeBanner />
 
       {can('company.manage') && !me.support && <SetupGuideCard home />}
 
