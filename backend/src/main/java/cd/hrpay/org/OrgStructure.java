@@ -523,6 +523,40 @@ public class OrgStructure {
      * manager was set to them by hand. A deputy covers the unit only while it has no head, or while the head is on
      * approved leave or an approved mission today. Never the person themself.
      */
+    /** A person found by a search, for pickers. */
+    public record Found(long userId, String name, String registrationNo, Long unitId, String unitName) {}
+
+    /**
+     * Active employees, matching every word of {@code q} in their name, employee ID or email, or with one of
+     * {@code ids}; within {@code team} when it is given. At most {@code limit}, by name.
+     */
+    public List<Found> search(String q, List<Long> ids, Set<Long> team, int limit) {
+        StringBuilder sql = new StringBuilder("""
+                select u.id, person_name(u.first_name, u.middle_name, u.last_name) as name, u.registration_no, a.unit_id, o.name as unit_name
+                from app_user u left join org_assignment a on a.user_id = u.id and a.valid_to is null
+                     left join org_unit o on o.id = a.unit_id
+                where u.status = 'ACTIVE' and not u.not_employee""");
+        List<Object> params = new ArrayList<>();
+        if (ids != null && !ids.isEmpty()) {
+            sql.append(" and u.id = any(?)");
+            params.add(ids.toArray(Long[]::new));
+        } else if (q != null) {
+            for (String word : q.trim().split("\\s+")) {
+                if (word.isEmpty()) continue;
+                sql.append(" and (person_name(u.first_name, u.middle_name, u.last_name) || ' ' || coalesce(u.registration_no, '') || ' ' || coalesce(u.email, '')) ilike ?");
+                params.add("%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+            }
+        }
+        if (team != null) {
+            sql.append(" and u.id = any(?)");
+            params.add(team.toArray(Long[]::new));
+        }
+        sql.append(" order by u.last_name, u.first_name limit ?");
+        params.add(Math.clamp(limit, 1, 50));
+        return jdbc.sql(sql.toString()).params(params).query((rs, i) -> new Found(rs.getLong("id"), rs.getString("name"),
+                rs.getString("registration_no"), rs.getObject("unit_id", Long.class), rs.getString("unit_name"))).list();
+    }
+
     public Set<Long> teamOf(long managerId) {
         return new HashSet<>(jdbc.sql("""
                 with recursive head_away(unit_id) as (

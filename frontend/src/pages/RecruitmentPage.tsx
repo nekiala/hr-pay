@@ -9,7 +9,7 @@ import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { CountrySelect } from '../components/ReferencePickers'
 import { PageTitle } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { locale, t } from '../i18n'
 
 type Request = {
@@ -291,12 +291,10 @@ function useLists() {
 function RequestModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const { units, jobs, grades } = useLists()
   const [me, setMe] = useState<Me | null>(null)
-  const [people, setPeople] = useState<MyPerson[]>([])
   const [f, setF] = useState({ unitId: '', occupationId: '', posts: '1', reason: 'NEW_POST', replacesUserId: '', contractType: 'PERMANENT', wantedOn: '', gradeId: '', note: '' })
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     api<Me>('/api/recruitment/me').then(setMe).catch(() => undefined)
-    api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined)
   }, [])
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
   const mine = me?.hr ? units : units.filter((u) => me?.units.includes(u.id))
@@ -319,7 +317,7 @@ function RequestModal({ onClose, onDone }: { onClose: () => void; onDone: () => 
           <label>{t('Job title')}<select required value={f.occupationId} onChange={set('occupationId')}><option value="">{t('Choose…')}</option>{jobs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
           <label>{t('Number of posts')}<input type="number" min={1} max={100} required value={f.posts} onChange={set('posts')} /></label>
           <label>{t('Why')}<select value={f.reason} onChange={set('reason')}>{Object.entries(REASON).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-          {f.reason === 'REPLACEMENT' && <label>{t('Person replaced')}<select required value={f.replacesUserId} onChange={set('replacesUserId')}><option value="">{t('Choose…')}</option>{people.map((p) => <option key={p.userId} value={p.userId}>{p.name}</option>)}</select></label>}
+          {f.reason === 'REPLACEMENT' && <label>{t('Person replaced')}<PersonSelect required value={f.replacesUserId} onChange={(v) => setF({ ...f, replacesUserId: v })} /></label>}
           <label>{t('Contract')}<select value={f.contractType} onChange={set('contractType')}>{Object.entries(CONTRACT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
           <label>{t('Wanted from (optional)')}<DateInput value={f.wantedOn} onChange={set('wantedOn')} /></label>
           <label>{t('Grade (optional)')}<select value={f.gradeId} onChange={set('gradeId')}><option value="">{t('HR decides')}</option>{grades.map((g) => <option key={g.id} value={g.id}>{g.code} · {g.name}</option>)}</select></label>

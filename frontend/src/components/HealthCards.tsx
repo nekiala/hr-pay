@@ -5,6 +5,7 @@ import { useAuth } from '../auth'
 import { Button, Form } from './Button'
 import { ErrorText } from './ErrorText'
 import { Modal } from './Modal'
+import { PersonSelect, type FoundPerson } from './PersonSelect'
 import { t } from '../i18n'
 
 export type VisitKind = 'HIRING' | 'PROVISIONAL' | 'YEARLY' | 'RETURN' | 'SPECIAL'
@@ -46,7 +47,6 @@ const nowLocal = () => {
 
 /** Reports an accident: for oneself, for one's team (a unit head), or for anyone (HR). HR is told at once. */
 export function ReportAccidentModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [people, setPeople] = useState<{ userId: number; name: string; registrationNo: string }[]>([])
   const [userId, setUserId] = useState('')
   const [kind, setKind] = useState<AccidentKind>('WORK')
   const [when, setWhen] = useState(nowLocal())
@@ -57,7 +57,8 @@ export function ReportAccidentModal({ onClose, onDone }: { onClose: () => void; 
   const [witnesses, setWitnesses] = useState('')
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
-    api<typeof people>('/api/health/accidents/reportable').then((p) => { setPeople(p); if (p.length === 1) setUserId(String(p[0].userId)) }).catch((e: Error) => setError(e.message))
+    // Someone who can only report for themselves finds their own name already chosen.
+    api<FoundPerson[]>('/api/health/accidents/reportable?size=2').then((p) => { if (p.length === 1) setUserId(String(p[0].userId)) }).catch((e: Error) => setError(e.message))
   }, [])
   const submit = async () => {
     setError(null)
@@ -72,10 +73,7 @@ export function ReportAccidentModal({ onClose, onDone }: { onClose: () => void; 
       footer={<><Button className="secondary" type="button" onClick={onClose}>{t('Cancel')}</Button><Button type="submit" form="accident-report">{t('Send the report')}</Button></>}>
       <Form id="accident-report" onSubmit={submit}>
         <label>{t('Who was hurt')}
-          <select required value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">{t('Choose…')}</option>
-            {people.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
-          </select>
+          <PersonSelect required value={userId} onChange={setUserId} source="/api/health/accidents/reportable" />
         </label>
         <div className="grid2">
           <label>{t('Kind')}

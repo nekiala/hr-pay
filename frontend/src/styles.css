@@ -301,6 +301,11 @@ tbody tr:hover td { background: color-mix(in srgb, var(--surface-3) 45%, transpa
 td.details { font-size: 12px; max-width: 380px; word-break: break-word; }
 td.actions { white-space: nowrap; }
 td.actions button + button { margin-left: 6px; }
+/* A cell of buttons stays a table cell (so its row keeps its line); the buttons sit side by side. */
+td.row { display: table-cell; white-space: nowrap; margin: 0; }
+td.row > * + * { margin-left: 6px; }
+/* Fields in a table line up with the text of the row. */
+td > input, td > select, td > textarea { margin-top: 0; }
 tr.absent td:nth-child(2) { color: var(--danger); }
 tr.muted td { color: inherit; opacity: .6; }
 tr.clickable { cursor: pointer; }
@@ -323,7 +328,7 @@ tr.selected td { background: var(--primary-soft); }
 .badge.off, .status-pill.absent { background: var(--danger-soft); border-color: var(--danger-border); color: var(--danger); }
 .badge.warn, .status-pill.late { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
 .status-pill.away { background: var(--primary-soft); border-color: var(--accent); color: var(--accent); }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; margin-bottom: 16px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; margin-bottom: 16px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); min-width: 0; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; }
 .tile > span:first-child { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted); }
 .tile strong { font-size: clamp(22px, 6vw, 28px); overflow-wrap: anywhere; line-height: 36px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
@@ -374,6 +379,27 @@ dialog.modal-lg { max-width: 880px; }
 /* ---------- Page details ---------- */
 .row.space { justify-content: space-between; align-items: center; flex-wrap: wrap; }
 .month-nav { align-items: center; gap: 12px; margin-bottom: 12px; }
+.month-nav .month-label { min-width: 9.5rem; text-align: center; text-transform: capitalize; font-size: 15px; }
+button.icon, .button.icon { padding: 8px; min-width: 38px; }
+
+/* Attendance decades: one card per decade */
+.decades { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; margin-bottom: 16px; }
+.decade { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.decade.warn { box-shadow: inset 3px 0 0 var(--warn-border), var(--shadow); }
+.decade.ok { box-shadow: inset 3px 0 0 var(--ok), var(--shadow); }
+.decade.on { border-color: var(--primary); background: var(--primary-soft); }
+.decade header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.decade h3 { margin: 0; font-size: 16px; }
+.decade header p { margin: 2px 0 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.decade .badge { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.decade dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.decade dl > div { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.decade dt { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.decade dd { margin: 2px 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.decade dd.none { color: var(--muted); font-weight: 400; }
+.decade p { margin: 0; }
+.decade footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
 .mission { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
 .mission p { margin: 2px 0; }
 .entries { list-style: none; padding: 0; margin: 4px 0 0; font-size: 13px; }
@@ -501,6 +527,7 @@ a.todo-item:hover .todo-text strong { color: var(--link); }
 .segmented { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2, var(--field)); }
 .segmented button { padding: 5px 11px; font: inherit; font-size: 13px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--muted); cursor: pointer; }
 .segmented button.on { border-color: var(--border-strong); background: var(--surface, #fff); color: var(--text); }
+.segmented[role=tablist] { margin-bottom: 16px; }
 input.num-input { width: 110px; margin: 0 0 0 auto; text-align: right; padding: 6px 8px; }
 
 /* ---------- Two-step sign-in and My account ---------- */
@@ -681,6 +708,18 @@ select.auto-width { width: auto; min-width: 0; }
 .person-results button.on, .person-results button:hover:not(:disabled) { background: var(--primary-soft); }
 .person-results .who { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .person-results .who .small { font-size: 13px; }
+.person-select { position: relative; }
+.row > .person-select.grow, .row > .person-chosen.grow { flex: 1 1 260px; min-width: 0; margin-top: 0; }
+.row > .person-select.grow > input { margin-top: 0; }
+.person-results.floating { position: absolute; z-index: 50; left: 0; right: 0; top: 100%; margin-top: 4px; max-height: 320px; overflow-y: auto;
+  background: var(--surface); box-shadow: var(--shadow-lg); }
+.person-results .empty { padding: 8px 10px; }
+.person-required { position: absolute; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.person-chosen { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--border-strong);
+  border-radius: 8px; background: var(--surface); min-height: 40px; box-sizing: border-box; margin-top: 6px; font-weight: 400; }
+.person-chosen .who { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.person-chosen .who .small { font-size: 12px; }
+.person-chosen button.link { color: var(--muted); }
 
 /* ---------- Date and time fields (in HR Pay's language, not the browser's) ---------- */
 .date-field { position: relative; display: block; }

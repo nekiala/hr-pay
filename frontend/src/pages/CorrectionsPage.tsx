@@ -5,6 +5,7 @@ import { ErrorText } from '../components/ErrorText'
 import { useUnitFilter } from '../components/UnitFilter'
 import { Button, Form } from '../components/Button'
 import { Modal } from '../components/Modal'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 import { DateInput, TimeInput } from '../components/DateFields'
 
@@ -137,11 +138,8 @@ export default function CorrectionsPage() {
           <Form onSubmit={async (e) => { if (await submit(e)) setRequesting(false) }}>
             <div className="grid3">
               {team.length > 0 && (
-                <label>{t('For')}<select value={form.userId} onChange={(e) => setForm({ ...form, userId: e.target.value, eventId: '' })}>
-                    {canAsk && <option value="">{t('Myself')}</option>}
-                    {!canAsk && <option value="">{t('Choose a person')}</option>}
-                    {team.map((p) => <option key={p.userId} value={p.userId}>{p.name} ({p.registrationNo})</option>)}
-                  </select>
+                <label>{t('For')}<PersonSelect required={!canAsk} value={form.userId} onChange={(v) => setForm({ ...form, userId: v, eventId: '' })} />
+                  {canAsk && !form.userId && <span className="hint">{t('Leave empty for yourself.')}</span>}
                 </label>
               )}
               <label>{t('Day')}<DateInput value={form.workDate} max={today()} required

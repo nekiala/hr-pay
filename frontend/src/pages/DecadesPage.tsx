@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Download, Lock } from 'lucide-react'
 import { ApiError, api, day, download } from '../api'
 import { ErrorText } from '../components/ErrorText'
 import { Button } from '../components/Button'
@@ -66,56 +67,69 @@ export default function DecadesPage() {
       <ErrorText error={error} />
       {message && <p className="success">{message}</p>}
 
-      <div className="toolbar">
-        <Button className="secondary" onClick={() => setMonth(shift(month, -1))}>←</Button>
-        <strong>{monthName(month)}</strong>
-        <Button className="secondary" onClick={() => setMonth(shift(month, 1))}>→</Button>
+      <div className="row month-nav">
+        <Button className="secondary icon" aria-label={t('Previous month')} title={t('Previous month')} onClick={() => setMonth(shift(month, -1))}><ChevronLeft size={18} /></Button>
+        <strong className="month-label">{monthName(month)}</strong>
+        <Button className="secondary icon" aria-label={t('Next month')} title={t('Next month')} onClick={() => setMonth(shift(month, 1))}><ChevronRight size={18} /></Button>
+        {month !== thisMonth() && <Button className="link" onClick={() => setMonth(thisMonth())}>{t('This month')}</Button>}
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>{t('Decade')}</th><th>{t('Days')}</th><th>{t('Status')}</th><th>{t('Waiting')}</th><th></th></tr></thead>
-          <tbody>
-            {decades.map((d) => (
-              <tr key={d.from} className={open === d.from ? 'selected' : undefined}>
-                <td>{t('Decade {a}', { a: d.number })}</td>
-                <td>{t('{a} to {b}', { a: day(d.from), b: day(d.to) })}</td>
-                <td>{d.status === 'CLOSED'
-                  ? <span className="badge ok" title={d.closedAt ? dayTime(d.closedAt) : undefined}>{t('Closed by {a}', { a: d.closedBy ?? '' })}</span>
+      <div className="decades">
+        {decades.map((d) => {
+          const days = t('{a} to {b}', { a: day(d.from), b: day(d.to) })
+          const waiting = d.correctionsPending + d.leavePending
+          const tone = d.status === 'CLOSED' ? 'ok' : d.ended ? 'warn' : ''
+          return (
+            <article key={d.from} className={['decade', tone, open === d.from ? 'on' : ''].filter(Boolean).join(' ')}>
+              <header>
+                <div>
+                  <h3>{t('Decade {a}', { a: d.number })}</h3>
+                  <p>{days}</p>
+                </div>
+                {d.status === 'CLOSED'
+                  ? <span className="badge ok"><Lock size={12} /> {t('Closed')}</span>
                   : d.ended ? <span className="badge warn">{t('To close')}</span> : <span className="badge">{t('In progress')}</span>}
-                  {d.reopenReason && d.status === 'OPEN' && <div className="small muted">{t('Reopened: {a}', { a: d.reopenReason })}</div>}
-                </td>
-                <td>{d.correctionsPending + d.leavePending === 0 ? '—'
-                  : t('{a} correction(s), {b} leave request(s)', { a: d.correctionsPending, b: d.leavePending })}</td>
-                <td className="nowrap">
-                  <Button className="secondary" onClick={() => setOpen(open === d.from ? null : d.from)}>{open === d.from ? t('Hide') : t('Details')}</Button>{' '}
-                  {d.status === 'OPEN' && d.ended && <Button onClick={() => ask({
-                    title: t('Close decade {a}?', { a: t('{a} to {b}', { a: day(d.from), b: day(d.to) }) }),
-                    message: t('Its clock entries, corrections, overtime decisions and leave approvals will be locked until it is reopened.'),
-                    confirmLabel: t('Close the decade'),
-                    onConfirm: () => run(() => api(`/api/attendance/decades/${d.from}/close`, { method: 'POST' }), t('Decade closed.')),
-                  })}>{t('Close decade')}</Button>}
-                  {d.status === 'CLOSED' && <Button className="secondary" onClick={() => ask({
-                    title: t('Reopen decade {a}?', { a: t('{a} to {b}', { a: day(d.from), b: day(d.to) }) }),
-                    message: t('A payroll already approved for these days stays as it is; a change will go on a later payslip.'),
-                    confirmLabel: t('Reopen'), fields: [{ label: t('Reason'), required: true, multiline: true }],
-                    onConfirm: ([reason]) => run(() => api(`/api/attendance/decades/${d.from}/reopen`, { method: 'POST', body: { reason } }), t('Decade reopened.')),
-                  })}>{t('Reopen')}</Button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </header>
+              <dl aria-label={t('Waiting')}>
+                <div><dt>{t('Corrections')} · {t('Waiting').toLowerCase()}</dt><dd className={d.correctionsPending ? undefined : 'none'}>{d.correctionsPending}</dd></div>
+                <div><dt>{t('Leave')} · {t('Waiting').toLowerCase()}</dt><dd className={d.leavePending ? undefined : 'none'}>{d.leavePending}</dd></div>
+              </dl>
+              {d.status === 'CLOSED' && <p className="small muted">{t('Closed by {a}', { a: d.closedBy ?? '' })}{d.closedAt ? ` · ${dayTime(d.closedAt)}` : ''}</p>}
+              {d.status === 'OPEN' && d.reopenReason && <p className="small muted">{t('Reopened: {a}', { a: d.reopenReason })}</p>}
+              {d.status === 'OPEN' && d.ended && waiting > 0 && <p className="small warn-text">{t('Settle what is waiting before closing.')}</p>}
+              <footer>
+                <Button className="secondary" onClick={() => setOpen(open === d.from ? null : d.from)}>{open === d.from ? t('Hide') : t('Details')}</Button>
+                {d.status === 'OPEN' && d.ended && <Button disabled={waiting > 0} onClick={() => ask({
+                  title: t('Close decade {a}?', { a: days }),
+                  message: t('Its clock entries, corrections, overtime decisions and leave approvals will be locked until it is reopened.'),
+                  confirmLabel: t('Close the decade'),
+                  onConfirm: () => run(() => api(`/api/attendance/decades/${d.from}/close`, { method: 'POST' }), t('Decade closed.')),
+                })}>{t('Close decade')}</Button>}
+                {d.status === 'CLOSED' && <Button className="secondary" onClick={() => ask({
+                  title: t('Reopen decade {a}?', { a: days }),
+                  message: t('A payroll already approved for these days stays as it is; a change will go on a later payslip.'),
+                  confirmLabel: t('Reopen'), fields: [{ label: t('Reason'), required: true, multiline: true }],
+                  onConfirm: ([reason]) => run(() => api(`/api/attendance/decades/${d.from}/reopen`, { method: 'POST', body: { reason } }), t('Decade reopened.')),
+                })}>{t('Reopen')}</Button>}
+              </footer>
+            </article>
+          )
+        })}
       </div>
 
       {open && !detail && <p className="muted">{t('Loading…')}</p>}
       {detail && (
         <div className="card">
-          <h3>{t('Decade {a}', { a: detail.decade.number })} · {t('{a} to {b}', { a: day(detail.decade.from), b: day(detail.decade.to) })}</h3>
-          <p>
-            <Button className="secondary" onClick={() => download(`/api/attendance/decades/${detail.decade.from}/sheet?format=pdf`, `fiche-decade-${detail.decade.from}.pdf`)}>{t('Decade sheet (PDF)')}</Button>{' '}
-            <Button className="secondary" onClick={() => download(`/api/attendance/decades/${detail.decade.from}/sheet?format=xlsx`, `fiche-decade-${detail.decade.from}.xlsx`)}>{t('Excel')}</Button>
-          </p>
+          <div className="card-head">
+            <div>
+              <h3>{t('Decade {a}', { a: detail.decade.number })}</h3>
+              <p>{t('{a} to {b}', { a: day(detail.decade.from), b: day(detail.decade.to) })} · {t('{a} people', { a: detail.people.length })}</p>
+            </div>
+            <div className="row">
+              <Button className="secondary" onClick={() => download(`/api/attendance/decades/${detail.decade.from}/sheet?format=pdf`, `fiche-decade-${detail.decade.from}.pdf`)}><Download size={16} /> {t('Decade sheet (PDF)')}</Button>
+              <Button className="secondary" onClick={() => download(`/api/attendance/decades/${detail.decade.from}/sheet?format=xlsx`, `fiche-decade-${detail.decade.from}.xlsx`)}><Download size={16} /> {t('Excel')}</Button>
+            </div>
+          </div>
           <h4>{t('By unit')}</h4>
           <div className="table-wrap">
             <table>
@@ -125,11 +139,11 @@ export default function DecadesPage() {
                   <tr key={u.unitId ?? 0}>
                     <td>{u.unit ?? t('No unit')}</td>
                     <td className="num">{u.people}</td>
-                    <td className="num">{u.absentDays}</td>
+                    <td className="num">{u.absentDays || '—'}</td>
                     <td className="num">{u.overtimePendingMinutes ? hours(u.overtimePendingMinutes) : '—'}</td>
                     <td className="num">{u.correctionsPending || '—'}</td>
                     <td className="num">{u.leavePending || '—'}</td>
-                    <td>{u.unitId != null && <button type="button" className="link" onClick={() => void download(`/api/attendance/decades/${detail.decade.from}/sheet?format=pdf&unitId=${u.unitId}`, `fiche-decade-${detail.decade.from}-${u.unitId}.pdf`)}>{t('Sheet')}</button>}</td>
+                    <td className="nowrap">{u.unitId != null && <button type="button" className="link" onClick={() => void download(`/api/attendance/decades/${detail.decade.from}/sheet?format=pdf&unitId=${u.unitId}`, `fiche-decade-${detail.decade.from}-${u.unitId}.pdf`)}>{t('Sheet')}</button>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -142,14 +156,14 @@ export default function DecadesPage() {
               <tbody>
                 {detail.people.map((p) => (
                   <tr key={p.userId}>
-                    <td>{p.name}{p.registrationNo ? <span className="small muted"> · {p.registrationNo}</span> : null}</td>
+                    <td>{p.name}{p.registrationNo ? <div className="small muted nowrap">{p.registrationNo}</div> : null}</td>
                     <td>{p.unit ?? '—'}</td>
                     <td className="num">{p.scheduledDays}</td>
                     <td className="num">{p.workedDays}</td>
                     <td className="num">{p.absentDays || '—'}</td>
                     <td className="num">{p.leaveDays || '—'}</td>
                     <td className="num">{p.lateDays || '—'}</td>
-                    <td className="num">{p.overtimeMinutes ? hours(p.overtimeMinutes) : '—'}{p.overtimePendingMinutes > 0 && <span className="badge warn"> {t('{a} waiting', { a: hours(p.overtimePendingMinutes) })}</span>}</td>
+                    <td className="num">{p.overtimeMinutes ? hours(p.overtimeMinutes) : '—'}{p.overtimePendingMinutes > 0 && <> <span className="badge warn">{t('{a} waiting', { a: hours(p.overtimePendingMinutes) })}</span></>}</td>
                   </tr>
                 ))}
               </tbody>

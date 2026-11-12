@@ -23,10 +23,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -178,6 +178,20 @@ public class OrgController {
         java.util.Set<Long> team = CurrentUser.has("user.read") ? null : org.teamOf(CurrentUser.id());
         return org.people().stream().filter(m -> team == null || team.contains(m.userId()))
                 .map(m -> new Person(m.userId(), m.name(), m.registrationNo(), m.unitId())).toList();
+    }
+
+    /**
+     * Search the people the current user can act on (everyone for HR, their branch for a head), for pickers: a
+     * company can have thousands, so pickers never load the whole list. {@code ids} gives back chosen people by id.
+     */
+    @GetMapping("/my-people/search")
+    @PreAuthorize("isAuthenticated()")
+    public List<OrgStructure.Found> searchPeople(@RequestParam(required = false) String q,
+                                                 @RequestParam(required = false) List<Long> ids,
+                                                 @RequestParam(defaultValue = "20") int size) {
+        java.util.Set<Long> team = CurrentUser.has("user.read") ? null : org.teamOf(CurrentUser.id());
+        String query = q == null || q.isBlank() ? null : q.trim();
+        return org.search(query, ids, team, size);
     }
 
     @GetMapping("/users/{userId}/assignments")

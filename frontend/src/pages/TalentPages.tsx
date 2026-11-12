@@ -7,7 +7,7 @@ import { useAsk } from '../components/Dialogs'
 import { ErrorText } from '../components/ErrorText'
 import { Modal } from '../components/Modal'
 import { PageTitle, SettingsLink } from '../components/SettingsLink'
-import type { MyPerson } from '../components/UnitFilter'
+import { PersonSelect } from '../components/PersonSelect'
 import { t } from '../i18n'
 import type { Course } from './TrainingPages'
 
@@ -115,12 +115,10 @@ function PostsTab() {
   const [editing, setEditing] = useState<Post | 'new' | null>(null)
   const [picking, setPicking] = useState<Post | null>(null)
   const [acting, setActing] = useState<Successor | null>(null)
-  const [people, setPeople] = useState<MyPerson[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const load = () => api<Post[]>('/api/talent/posts').then(setPosts).catch((e: Error) => setError(e.message))
   useEffect(() => {
     void load()
-    api<MyPerson[]>('/api/org/my-people').then((p) => setPeople([...p].sort((a, b) => a.name.localeCompare(b.name)))).catch(() => undefined)
     api<Course[]>('/api/training/courses').then(setCourses).catch(() => undefined)
   }, [])
   const replace = (p: Post) => setPosts((all) => (all ?? []).map((x) => (x.id === p.id ? p : x)))
@@ -189,8 +187,8 @@ function PostsTab() {
         </div>
       ))}
       {editing && <PostModal post={editing === 'new' ? null : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
-      {picking && <SuccessorModal post={picking} people={people} onClose={() => setPicking(null)} onSaved={(p) => { setPicking(null); replace(p) }} />}
-      {acting && <ActionModal successor={acting} people={people} courses={courses} onClose={() => setActing(null)} onSaved={(p) => { setActing(null); replace(p) }} />}
+      {picking && <SuccessorModal post={picking} onClose={() => setPicking(null)} onSaved={(p) => { setPicking(null); replace(p) }} />}
+      {acting && <ActionModal successor={acting} courses={courses} onClose={() => setActing(null)} onSaved={(p) => { setActing(null); replace(p) }} />}
     </>
   )
 }
@@ -229,7 +227,7 @@ function PostModal({ post, onClose, onSaved }: { post: Post | null; onClose: () 
   )
 }
 
-function SuccessorModal({ post, people, onClose, onSaved }: { post: Post; people: MyPerson[]; onClose: () => void; onSaved: (p: Post) => void }) {
+function SuccessorModal({ post, onClose, onSaved }: { post: Post; onClose: () => void; onSaved: (p: Post) => void }) {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null)
   const [userId, setUserId] = useState<number | null>(null)
   const [readiness, setReadiness] = useState<Readiness>('ONE_TWO')
@@ -261,8 +259,7 @@ function SuccessorModal({ post, people, onClose, onSaved }: { post: Post; people
           </tbody>
         </table>
       </div>
-      <label>{t('Or another person')}<select value={userId ?? ''} onChange={(e) => setUserId(e.target.value ? Number(e.target.value) : null)}>
-        <option value="">{t('Choose…')}</option>{people.filter((p) => !taken.has(p.userId)).map((p) => <option key={p.userId} value={p.userId}>{p.name} · {p.registrationNo}</option>)}</select></label>
+      <label>{t('Or another person')}<PersonSelect value={userId ?? ''} exclude={[...taken]} onChange={(v) => setUserId(v ? Number(v) : null)} /></label>
       <div className="grid2">
         <label>{t('Readiness')}<select value={readiness} onChange={(e) => setReadiness(e.target.value as Readiness)}>
           {(Object.keys(READINESS) as Readiness[]).map((k) => <option key={k} value={k}>{READINESS[k]}</option>)}</select></label>
@@ -274,7 +271,7 @@ function SuccessorModal({ post, people, onClose, onSaved }: { post: Post; people
   )
 }
 
-function ActionModal({ successor, people, courses, onClose, onSaved }: { successor: Successor; people: MyPerson[]; courses: Course[]; onClose: () => void; onSaved: (p: Post) => void }) {
+function ActionModal({ successor, courses, onClose, onSaved }: { successor: Successor; courses: Course[]; onClose: () => void; onSaved: (p: Post) => void }) {
   const [form, setForm] = useState({ kind: 'COURSE' as ActionKind, title: '', courseId: null as number | null, mentorUserId: null as number | null, dueOn: '' })
   const [error, setError] = useState<string | null>(null)
   const save = async (e: FormEvent) => {
@@ -289,8 +286,7 @@ function ActionModal({ successor, people, courses, onClose, onSaved }: { success
           {(Object.keys(ACTIONS) as ActionKind[]).map((k) => <option key={k} value={k}>{ACTIONS[k]}</option>)}</select></label>
         {form.kind === 'COURSE' && <label>{t('Course')}<select value={form.courseId ?? ''} onChange={(e) => setForm({ ...form, courseId: e.target.value ? Number(e.target.value) : null })}>
           <option value="">{t('None: describe the need')}</option>{courses.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label>}
-        {form.kind === 'MENTOR' && <label>{t('Mentor')}<select value={form.mentorUserId ?? ''} required onChange={(e) => setForm({ ...form, mentorUserId: e.target.value ? Number(e.target.value) : null })}>
-          <option value="">{t('Choose…')}</option>{people.filter((p) => p.userId !== successor.userId).map((p) => <option key={p.userId} value={p.userId}>{p.name}</option>)}</select></label>}
+        {form.kind === 'MENTOR' && <label>{t('Mentor')}<PersonSelect required value={form.mentorUserId ?? ''} exclude={[successor.userId]} onChange={(v) => setForm({ ...form, mentorUserId: v ? Number(v) : null })} /></label>}
         <label>{t('What')}<input maxLength={300} value={form.title} required={!(form.kind === 'COURSE' && form.courseId)} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
         <label>{t('By')}<DateInput value={form.dueOn} onChange={(e) => setForm({ ...form, dueOn: e.target.value })} /></label>
         {form.kind === 'COURSE' && <p className="small muted">{t('A course is added to the training needs, so HR plans it with the rest.')}</p>}
