@@ -709,3 +709,9 @@ td > .time-field, td > .date-field { margin-top: 0; }
 tr.current > td { background: var(--primary-soft); }
 tr.current > td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Recruitment: an interview inside the candidate's card, and 1-to-5 picks. */
+.sub-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.chip { min-height: 32px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.score-row { margin-bottom: 0; gap: 6px; }
