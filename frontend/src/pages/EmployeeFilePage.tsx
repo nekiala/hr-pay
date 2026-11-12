@@ -13,6 +13,7 @@ import { CareerHistory, CareerMoveModal } from '../components/CareerMove'
 import { NextStepsCard, PostWarning } from '../components/JobCards'
 import { t } from '../i18n'
 import { DateInput } from '../components/DateFields'
+import { ApprenticeCard } from './TrainingPages'
 
 export default function EmployeeFilePage() {
   // null: closed; 0: adding; an id: editing that person.
@@ -199,7 +200,7 @@ export default function EmployeeFilePage() {
                   </select>
                 </label>
                 <label>{t('Starts')}<DateInput value={contract.startDate} onChange={(e) => setContract({ ...contract, startDate: e.target.value })} required /></label>
-                <label>{t('Ends')}<DateInput value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM'} /></label>
+                <label>{t('Ends')}<DateInput value={contract.endDate} onChange={(e) => setContract({ ...contract, endDate: e.target.value })} required={contract.contractType === 'FIXED_TERM' || contract.contractType === 'APPRENTICE'} /></label>
               </div>
               <div className="grid2">
                 <label>{t('Grade')}<select value={contract.gradeId} onChange={(e) => setContract({ ...contract, gradeId: e.target.value })} required>
@@ -214,6 +215,7 @@ export default function EmployeeFilePage() {
                 </label>
               </div>
               <PostWarning userId={id!} occupationId={contract.occupationId} on={contract.startDate} />
+              {contract.contractType === 'APPRENTICE' && <p className="hint">{t('An apprenticeship lasts four years at most and needs the ONEM\'s visa. The salary entered here is the apprentice\'s allowance. Record the visa, the medical certificate and the master on this page once the contract is saved.')}</p>}
               <div className="grid2">
                 <label>{t('Agreed net salary (optional)')}<input type="number" min="0.01" step="0.01" value={contract.agreedNet} placeholder={grade ? t('Grade basic: {a}', { a: money(grade.baseSalary, grade.currency) }) : ''}
                     onChange={(e) => setContract({ ...contract, agreedNet: e.target.value })} />
@@ -240,6 +242,10 @@ export default function EmployeeFilePage() {
         <h3>{t('Career: promotions and transfers')}</h3>
         <CareerHistory userId={id!} moves={moves} />
       </div>
+
+      {file && file.contracts.some((c) => c.contractType === 'APPRENTICE') && (can('training.manage') || can('salary.write')) && (
+        <ApprenticeCard userId={id!} contractIds={file.contracts.filter((c) => c.contractType === 'APPRENTICE').map((c) => c.id)} />
+      )}
 
       <NextStepsCard userId={id!} />
 

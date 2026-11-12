@@ -37,14 +37,14 @@ public class RecruitmentController {
 
     public record RequestInput(@NotNull Long unitId, @NotNull Long occupationId, @NotNull @Min(1) @Max(100) Integer posts,
                                @NotNull @Pattern(regexp = "NEW_POST|REPLACEMENT|TEMPORARY") String reason, Long replacesUserId,
-                               @NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY") String contractType,
+                               @NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY|APPRENTICE") String contractType,
                                LocalDate wantedOn, Long gradeId, @Size(max = 1000) String note) {}
 
     public record DecisionInput(@NotNull Boolean approve, @Size(max = 1000) String comment) {}
 
     public record VacancyInput(@NotNull Long unitId, @NotNull Long occupationId, @NotNull @Min(1) @Max(100) Integer posts,
                                @NotBlank @Size(max = 200) String title, @NotBlank @Size(max = 20000) String adText,
-                               @NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY") String contractType,
+                               @NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY|APPRENTICE") String contractType,
                                Long gradeId, @Size(max = 200) String place, LocalDate closesOn,
                                @NotNull @Pattern(regexp = "INTERNAL|PUBLIC|INTERNAL_FIRST") String visibility,
                                @Min(0) @Max(90) Integer internalDays) {}

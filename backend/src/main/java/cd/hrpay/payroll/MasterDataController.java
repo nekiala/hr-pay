@@ -48,7 +48,7 @@ public class MasterDataController {
     public record RaiseInput(@NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal percent,
                              @Pattern(regexp = "ANNIVERSARY_MONTH|NEXT_MONTH") String timing) {}
 
-    public record ContractInput(@NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY") String contractType,
+    public record ContractInput(@NotNull @Pattern(regexp = "PERMANENT|FIXED_TERM|INTERN|CONSULTANT|DAILY|APPRENTICE") String contractType,
                                 @NotNull LocalDate startDate, LocalDate endDate, @NotNull Long gradeId, Long occupationId,
                                 boolean expatriate,
                                 @DecimalMin("0.01") @Digits(integer = 12, fraction = 2) BigDecimal negotiatedBasic,

@@ -767,6 +767,7 @@ public class LegalFilings {
             case "FIXED_TERM" -> Texts.t("Fixed term");
             case "INTERN" -> Texts.t("Intern");
             case "CONSULTANT" -> Texts.t("Consultant");
+            case "APPRENTICE" -> Texts.t("Apprentice");
             case "DAILY" -> Texts.t("Day worker");
             default -> type == null ? "" : type;
         };

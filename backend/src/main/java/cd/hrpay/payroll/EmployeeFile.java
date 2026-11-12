@@ -148,6 +148,11 @@ public class EmployeeFile {
         if (type.equals("DAILY")) {
             requireDayWorkerAllowed(userId, start);
         }
+        if (type.equals("APPRENTICE")) {
+            LocalDate born = jdbc.sql("select birth_date from employee_profile where user_id = ?").param(userId)
+                    .query(LocalDate.class).optional().orElse(null);
+            cd.hrpay.training.Apprentices.check(start, end, born);
+        }
         if (type.equals("FIXED_TERM") && end == null) {
             throw new BusinessRuleException("A fixed-term contract needs an end date.");
         }
@@ -179,6 +184,10 @@ public class EmployeeFile {
             BigDecimal basic = negotiatedBasic != null ? negotiatedBasic : grade.baseSalary();
             salaries.add(userId, start, basic, grade.currency(),
                     negotiatedBasic != null ? "Negotiated basic, contract start" : "Grade " + grade.code() + " basic");
+        }
+        if (type.equals("APPRENTICE")) {
+            jdbc.sql("insert into apprenticeship (contract_id, user_id, updated_by) values (?, ?, ?) on conflict do nothing")
+                    .params(id, userId, CurrentUser.email()).update();
         }
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("type", type);

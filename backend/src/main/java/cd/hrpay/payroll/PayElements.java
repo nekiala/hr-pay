@@ -74,6 +74,24 @@ public class PayElements {
         return jdbc.sql(ELEMENT_SELECT + " order by display_order, code").query(Element.class).list();
     }
 
+    /**
+     * The pay elements for a contract: an apprentice's allowance owes no CNSS and no tax when the company chose so
+     * (APPRENTICE_CONTRIBUTIONS = NONE, the default until the rule is confirmed).
+     */
+    public List<Element> forContract(List<Element> all, String contractType) {
+        if (!"APPRENTICE".equals(contractType)) {
+            return all;
+        }
+        String rule = jdbc.sql("select value from payroll_setting where key = 'APPRENTICE_CONTRIBUTIONS'").query(String.class)
+                .optional().map(String::trim).orElse("NONE");
+        if (!rule.equals("NONE")) {
+            return all;
+        }
+        return all.stream().map(e -> new Element(e.id(), e.code(), e.name(), e.kind(), e.method(), e.defaultAmount(),
+                e.defaultCurrency(), e.percent(), false, false, e.iprExemptCapPercent(), e.prorated(), e.defaultForAll(),
+                e.system(), e.displayOrder(), e.active())).toList();
+    }
+
     public Element element(long id) {
         return jdbc.sql(ELEMENT_SELECT + " where id = ?").param(id).query(Element.class).optional()
                 .orElseThrow(() -> new NotFoundException("Pay element not found."));

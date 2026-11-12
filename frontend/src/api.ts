@@ -808,7 +808,7 @@ export type CareerMove = {
   letterId: number | null; letterStatus: LetterStatus | null; createdBy: string; createdAt: string
 }
 export type Contract = {
-  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT' | 'DAILY'; startDate: string; endDate: string | null
+  id: number; userId: number; contractType: 'PERMANENT' | 'FIXED_TERM' | 'INTERN' | 'CONSULTANT' | 'DAILY' | 'APPRENTICE'; startDate: string; endDate: string | null
   gradeId: number; gradeCode: string; gradeName: string; categoryId: number; occupationId: number | null; occupationName: string | null
   expatriate: boolean; note: string | null; createdBy: string; createdAt: string
 }
@@ -869,7 +869,7 @@ export type EmployeeFileView = {
   /** The places picked, the top one first. */
   birthPlacePath?: Place[]; addressPlacePath?: Place[]
 }
-export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant'), DAILY: t('Day worker') }
+export const CONTRACT_TYPES = { PERMANENT: t('Permanent'), FIXED_TERM: t('Fixed term'), INTERN: t('Intern'), CONSULTANT: t('Consultant'), DAILY: t('Day worker'), APPRENTICE: t('Apprentice') }
 
 export type PayElementKind = 'EARNING' | 'DEDUCTION' | 'EMPLOYER_CHARGE'
 export type PayMethod = 'COMPUTED' | 'FIXED' | 'PERCENT_OF_BASIC' | 'PER_DAY_WORKED' | 'PER_CHILD' | 'MANUAL'

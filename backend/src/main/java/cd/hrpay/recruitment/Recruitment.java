@@ -45,7 +45,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class Recruitment {
 
     public static final Set<String> REASONS = Set.of("NEW_POST", "REPLACEMENT", "TEMPORARY");
-    public static final Set<String> CONTRACT_TYPES = Set.of("PERMANENT", "FIXED_TERM", "INTERN", "CONSULTANT", "DAILY");
+    public static final Set<String> CONTRACT_TYPES = Set.of("PERMANENT", "FIXED_TERM", "INTERN", "CONSULTANT", "DAILY", "APPRENTICE");
     public static final Set<String> VISIBILITY = Set.of("INTERNAL", "PUBLIC", "INTERNAL_FIRST");
     public static final Set<String> SOURCES = Set.of("CAREERS", "INTERNAL", "REFERRAL", "AGENCY", "OTHER");
     /** Stages HR moves a candidate to by hand; OFFER comes with the offer, HIRED with the hire. */
@@ -404,6 +404,7 @@ public class Recruitment {
             case "FIXED_TERM" -> fr ? "CDD" : "fixed-term contract";
             case "INTERN" -> fr ? "stage" : "internship";
             case "CONSULTANT" -> fr ? "consultance" : "consultancy";
+            case "APPRENTICE" -> fr ? "apprentissage" : "apprenticeship";
             case "DAILY" -> fr ? "journalier" : "day work";
             default -> type;
         };

@@ -14,7 +14,7 @@ type Ad = { offer: Offer; company: string; language: Language; hasLogo: boolean;
 type Withdrawal = { company: string; title: string; stage: string }
 
 const contractLabel = (c: string) => ({
-  PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker'),
+  PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker'), APPRENTICE: t('Apprenticeship'),
 } as Record<string, string>)[c] ?? c
 
 /**

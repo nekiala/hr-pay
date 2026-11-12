@@ -7,6 +7,7 @@ import {
   ChartNoAxesCombined, CircleHelp, ListChecks, CalendarRange, Headset, Inbox, Scale, Siren, Sparkles, MessageSquareWarning, MessageCircle, Megaphone,
   BriefcaseBusiness, Handshake, Smartphone, ListTree,
   FlaskConical, Trophy, Gavel, Vote, HeartPulse, Goal, UserPlus, Search,
+  GraduationCap,
 } from 'lucide-react'
 import { useAuth } from '../auth'
 import { api, longDay, type Module , personName } from '../api'
@@ -47,6 +48,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/my/payslips', label: t('My payslips'), icon: ReceiptText, show: pay && can('payslip.read.own') },
         { to: '/my/advance', label: t('My salary advance'), icon: PiggyBank, show: pay && advances },
         { to: '/my/documents', label: t('My documents'), icon: FolderOpen, show: true },
+        { to: '/my/training', label: t('My training'), icon: GraduationCap, show: !me?.firm },
         { to: '/announcements', label: t('Announcements'), icon: Megaphone, show: true },
         { to: '/job-offers', label: t('Job offers'), icon: Search, show: !me?.firm },
         { to: '/jobs', label: t('My jobs'), icon: ListChecks, show: true },
@@ -72,6 +74,7 @@ function useNav(): { title: string; items: Item[] }[] {
         { to: '/positions', label: t('Jobs and positions'), icon: BriefcaseBusiness, show: can('jobs.manage') },
         { to: '/recruitment', label: t('Recruitment'), icon: UserPlus, show: any('recruitment.manage', 'evaluation.score.team') },
         { to: '/onboarding', label: t('Onboarding'), icon: Handshake, show: any('lifecycle.manage', 'evaluation.score.team') },
+        { to: '/training', label: t('Training'), icon: GraduationCap, show: any('training.manage', 'evaluation.score.team') },
         { to: '/schedules', label: t('Schedules'), icon: CalendarClock, show: any('schedule.manage', 'user.read') },
         { to: '/holidays', label: t('Holidays'), icon: Flag, show: true },
         { to: '/discipline', label: t('Discipline'), icon: Gavel, show: any('discipline.manage', 'discipline.propose') },
