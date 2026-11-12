@@ -760,9 +760,7 @@ public class Imports {
 
     private void contract(Row row, Outcome out) {
         row.required("registration_no");
-        String type = choice(row, "contract_type", Map.of("PERMANENT", "PERMANENT", "CDI", "PERMANENT", "FIXED_TERM", "FIXED_TERM",
-                "FIXEDTERM", "FIXED_TERM", "CDD", "FIXED_TERM", "INTERN", "INTERN", "STAGE", "INTERN", "STAGIAIRE", "INTERN",
-                "CONSULTANT", "CONSULTANT", "DAILY", "DAILY"));
+        String type = choice(row, "contract_type", Map.ofEntries(Map.entry("PERMANENT", "PERMANENT"), Map.entry("CDI", "PERMANENT"), Map.entry("FIXED_TERM", "FIXED_TERM"), Map.entry("FIXEDTERM", "FIXED_TERM"), Map.entry("CDD", "FIXED_TERM"), Map.entry("INTERN", "INTERN"), Map.entry("STAGE", "INTERN"), Map.entry("STAGIAIRE", "INTERN"), Map.entry("CONSULTANT", "CONSULTANT"), Map.entry("DAILY", "DAILY"), Map.entry("APPRENTICE", "APPRENTICE"), Map.entry("APPRENTI", "APPRENTICE")));
         LocalDate start = row.requiredDate("start_date");
         LocalDate end = row.date("end_date");
         String gradeCode = row.required("grade");

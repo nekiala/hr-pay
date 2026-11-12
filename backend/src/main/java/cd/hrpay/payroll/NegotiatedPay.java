@@ -305,7 +305,8 @@ public class NegotiatedPay {
         EmployeeFile.Counted counted = files.counted(userId, ym);
         int children = counted.children();
         int inCharge = counted.dependants();
-        return new Month(rates, usd, pay.elements(), standing, complement, minutes, days, worked, children, inCharge, b,
+        String type = files.contractOn(userId, from).map(EmployeeFile.Contract::contractType).orElse(null);
+        return new Month(rates, usd, pay.forContract(pay.elements(), type), standing, complement, minutes, days, worked, children, inCharge, b,
                 seniorityPercent(userId, last));
     }
 
@@ -338,9 +339,11 @@ public class NegotiatedPay {
         EmployeeFile.Counted counted = files.counted(userId, ym);
         int children = counted.children();
         int inCharge = counted.dependants();
-        boolean expatriate = files.contractOn(userId, on).map(EmployeeFile.Contract::expatriate).orElse(false);
+        var contract = files.contractOn(userId, on);
+        boolean expatriate = contract.map(EmployeeFile.Contract::expatriate).orElse(false);
+        List<PayElements.Element> elements = pay.forContract(pay.elements(), contract.map(EmployeeFile.Contract::contractType).orElse(null));
         return PayslipCalculator.calculate(new PayslipCalculator.Input(salary.currency(), basic != null ? basic : salary.grossMonthly(), minutes,
-                minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, pay.elements(),
+                minutes, days, worked, BigDecimal.ZERO, 0, null, null, children, inCharge, expatriate, elements,
                 pay.standingFor(userId, ym), List.of(), List.of(), rates, 0, null, null, seniorityPercent(userId, last)));
     }
 

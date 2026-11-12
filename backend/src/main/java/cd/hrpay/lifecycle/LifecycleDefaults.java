@@ -34,6 +34,7 @@ public class LifecycleDefaults {
             new DocType("CONTRACT", "Contracts", "Contrats", false, false),
             new DocType("LETTER", "Letters", "Lettres", false, false),
             new DocType("CERTIFICATE", "Certificates", "Attestations", false, false),
+            new DocType("TRAINING", "Training certificates", "Attestations de formation", false, true),
             new DocType("OTHER", "Other", "Autres", false, true));
 
     private record Step(String kind, String en, String fr, String action, String documentType) {}
@@ -450,6 +451,7 @@ public class LifecycleDefaults {
                 tenants.runAs(id, this::addDisciplineLetters);
                 tenants.runAs(id, this::addCareerLetters);
                 tenants.runAs(id, this::addHealthLetters);
+                tenants.runAs(id, this::addTrainingLetters);
                 tenants.runAs(id, jobDefaults::addSampleJobs);
                 tenants.runAs(id, objectiveDefaults::addSamples);
             } catch (RuntimeException e) {
@@ -504,6 +506,69 @@ public class LifecycleDefaults {
     }
 
     private static final String HEALTH_LETTERS_ADDED = "HEALTH_LETTERS_ADDED";
+    private static final String TRAINING_LETTERS_ADDED = "TRAINING_LETTERS_ADDED";
+
+    /**
+     * The apprentice's end certificate (DRC Code du travail art. 24) and the commitment to stay after a training the
+     * company paid for: a signed letter only, never a deduction from pay.
+     */
+    private static final List<Letter> TRAINING_LETTERS = List.of(
+            new Letter("APPRENTICESHIP_END", "LETTER", "Apprenticeship end certificate", "Certificat de fin d'apprentissage", """
+                    {{company.name}}, {{company.address}}, certifies that {{employee.name}}, born on {{employee.birth_date}}, served an apprenticeship as {{job.title}} with the company from {{contract.start}} to {{contract.end}}.
+
+                    [State the trade learned, the skills acquired and the result of any final test.]
+
+                    This certificate is given to serve where it may be needed.
+
+                    Done at {{contract.signed_place}}, on {{today}}.
+                    {{company.representative}}, {{company.representative_title}}""", """
+                    {{company.name}}, {{company.address}}, certifie que {{employee.name}}, né(e) le {{employee.birth_date}}, a effectué un apprentissage de {{job.title}} au sein de l'entreprise du {{contract.start}} au {{contract.end}}.
+
+                    [Préciser le métier appris, les compétences acquises et le résultat de l'épreuve finale éventuelle.]
+
+                    Le présent certificat lui est délivré pour servir et valoir ce que de droit.
+
+                    Fait à {{contract.signed_place}}, le {{today}}.
+                    {{company.representative}}, {{company.representative_title}}""", "CERTIFICATE"),
+            new Letter("TRAINING_COMMITMENT", "LETTER", "Commitment after a paid training", "Engagement à la suite d'une formation", """
+                    I, the undersigned {{employee.name}}, {{job.title}}, take note that {{company.name}} pays for my training: [title of the training, dates, provider, cost].
+
+                    I commit to stay with the company for [number] months after the training ends. Should I leave of my own will before then, I agree to repay [the share of the cost agreed], in the terms we agree at that time.
+
+                    This commitment does not allow any deduction from my pay without my written agreement at the time.
+
+                    Done at {{contract.signed_place}}, on {{today}}, in two copies.""", """
+                    Je soussigné(e) {{employee.name}}, {{job.title}}, prends acte de la prise en charge par {{company.name}} de ma formation : [intitulé, dates, organisme, coût].
+
+                    Je m'engage à rester au service de l'entreprise pendant [nombre] mois à compter de la fin de la formation. En cas de départ de mon fait avant ce terme, j'accepte de rembourser [la part du coût convenue], selon les modalités dont nous conviendrons alors.
+
+                    Cet engagement n'autorise aucune retenue sur mon salaire sans mon accord écrit donné à ce moment.
+
+                    Fait à {{contract.signed_place}}, le {{today}}, en deux exemplaires.""", "LETTER"));
+
+    @Transactional
+    public void addTrainingLetters() {
+        if (jdbc.sql("select count(*) from payroll_setting where key = ?").param(TRAINING_LETTERS_ADDED)
+                .query(Integer.class).single() > 0) {
+            return;
+        }
+        boolean fr = "fr".equals(jdbc.sql("select language from company where id = current_company_id()").query(String.class)
+                .optional().orElse("fr"));
+        jdbc.sql("""
+                insert into document_type (code, name, has_expiry, employee_can_upload, position) values ('TRAINING', ?, false, true, 105)
+                on conflict do nothing""").param(fr ? "Attestations de formation" : "Training certificates").update();
+        for (Letter l : TRAINING_LETTERS) {
+            Long type = jdbc.sql("select id from document_type where code = ?").param(l.documentType()).query(Long.class)
+                    .optional().orElse(null);
+            jdbc.sql("""
+                    insert into letter_template (code, name, kind, body, requires_signature, document_type_id, updated_by)
+                    values (?, ?, ?, ?, ?, ?, 'system') on conflict do nothing""")
+                    .params(l.code(), fr ? l.fr() : l.en(), l.kind(), (fr ? l.bodyFr() : l.bodyEn()).strip(),
+                            l.code().equals("TRAINING_COMMITMENT"), type).update();
+        }
+        jdbc.sql("insert into payroll_setting (key, value) values (?, 'true') on conflict do nothing")
+                .param(TRAINING_LETTERS_ADDED).update();
+    }
 
     /** The work accident declaration, once per company. */
     @Transactional
@@ -598,6 +663,7 @@ public class LifecycleDefaults {
         addDisciplineLetters();
         addCareerLetters();
         addHealthLetters();
+        addTrainingLetters();
         jobDefaults.addSampleJobs();
         objectiveDefaults.addSamples();
         jdbc.sql("update company set lifecycle_seeded = true where id = current_company_id()").update();

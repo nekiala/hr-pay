@@ -564,6 +564,7 @@ public class Letters {
             case "FIXED_TERM" -> Texts.t("fixed-term contract (CDD)");
             case "INTERN" -> Texts.t("internship agreement");
             case "CONSULTANT" -> Texts.t("consultancy agreement");
+            case "APPRENTICE" -> Texts.t("apprenticeship contract");
             case "DAILY" -> Texts.t("day labour contract");
             default -> code;
         };

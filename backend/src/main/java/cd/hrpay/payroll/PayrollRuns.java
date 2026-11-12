@@ -428,7 +428,8 @@ public class PayrollRuns {
                 basicMonthly, summary.scheduledMinutesMonth(), paid, scheduledDays, daysWorked, overtime,
                 overtimeMinutes, thirteenth == null ? null
                         : ExchangeRates.convert(thirteenth.amount(), thirteenth.currency(), salary.currency(), usdLocal),
-                thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(), ctx.elements(),
+                thirteenth == null ? null : thirteenth.note(), children, inCharge, contract.expatriate(),
+                pay.forContract(ctx.elements(), contract.contractType()),
                 standing,
                 java.util.stream.Stream.concat(pay.entriesFor(userId, month).stream(), extra.stream()).toList(), loansDue, ctx.rates(),
                 allocatedMinutes, smigCoefficient(contract.gradeId()), files.profile(userId).maritalStatus(),

@@ -628,6 +628,36 @@ HR has the "Simulate and project pay" permission; the Roles page can give it to 
 - **Trial reviews**: with a trial period on the contract, a one-month review and an end-of-trial review two weeks before the end are planned for the manager and reminded on the day. The end review needs a recommendation (confirm or end), which goes to HR: ending the trial needs a written notice before its last day (Labour Code art. 43).` },
   },
   {
+    id: 'training', audience: 'hr', routes: ['/training', '/training/settings'],
+    fr: { title: 'Formation et apprentis', body: `
+- Tout employeur assure la formation de ses travailleurs (Code du travail art. 8). L'ordonnance 71-055 demande un **plan de formation** qui n'exclut aucune catégorie du personnel (art. 17), forme d'abord les cadres nationaux (art. 18), est établi avec les représentants des travailleurs (art. 19) et a un responsable désigné (art. 22).
+- **Formations** : le catalogue des formations internes, INPP ou d'un cabinet externe, avec la durée et le coût par personne.
+- **Besoins et demandes** : un employé demande une formation depuis « Mes formations » ; son responsable donne son avis, puis les RH acceptent ou refusent (avec un motif). Un responsable peut demander pour son équipe. « Reprendre des objectifs et évaluations » ajoute les besoins de développement notés sur les objectifs de l'année et les critères notés sous 50 % dans les évaluations approuvées.
+- **Plan annuel** : un budget, des lignes (formation, catégorie, unité, trimestre, nombre de personnes, budget). Le tableau « Toutes les catégories couvertes » signale une catégorie sans ligne. L'avis des représentants est noté avec sa date ; il ne bloque pas l'approbation. La cotisation INPP payée sur les mois clôturés de l'année est affichée en face des dépenses.
+- **Sessions** : inscrivez les personnes à partir de leurs besoins, puis après le dernier jour cochez les présents et notez le coût réel. Chaque présent peut noter la session ; son attestation se classe dans son dossier (Attestations de formation). Trois mois après (réglable), son responsable dit si la formation a changé son travail (onglet « Suivi des effets »).
+- **Apprentis** (Code du travail art. 18-35) : créez un contrat de type Apprenti dans le dossier de la personne : quatre ans au plus, jamais avant 15 ans. Notez ensuite le visa de l'ONEM (sans lui, le contrat vaut contrat de travail ordinaire), le certificat médical, la dérogation du Tribunal de paix avant 18 ans, le maître, la revue annuelle de l'allocation, le certificat de fin et la déclaration de fin à l'inspecteur et à l'ONEM. Par défaut l'allocation ne supporte ni CNSS ni IPR (paramètre à confirmer avec votre comptable). Les modèles « Certificat de fin d'apprentissage » et « Engagement à la suite d'une formation » sont dans les lettres ; l'engagement ne permet aucune retenue sur salaire.
+- **Congé d'éducation ouvrière** (art. 268-271) : un type de congé de 12 jours ouvrables par an, payé, demandé 30 jours à l'avance, pour les syndiqués et délégués.` },
+    en: { title: 'Training and apprentices', body: `
+- Every employer trains its workers (Labour Code art. 8). Ordonnance 71-055 asks for a **training plan** that leaves no category of staff out (art. 17), trains national managers first (art. 18), is drawn up with the workers' representatives (art. 19) and has a named person in charge (art. 22).
+- **Courses**: the catalogue of in-house, INPP or outside courses, with their hours and cost per person.
+- **Needs and requests**: an employee asks for training from "My training"; their manager gives an opinion, then HR accepts or refuses (with a reason). A manager can ask for their team. "Collect from objectives and evaluations" adds the development needs written on the year's objectives and the criteria scored below 50% in approved evaluations.
+- **Annual plan**: a budget and lines (course, category, unit, quarter, number of people, budget). "Every category covered" flags a category with no line. The representatives' opinion is recorded with its date; it does not block the approval. The INPP levy paid on the year's closed months is shown beside the spending.
+- **Sessions**: enrol people from their needs, then after the last day tick who came and enter the real cost. Each attendee can rate the session; their certificate is filed in their employee file (Training certificates). Three months later (a setting), their manager says whether it changed their work ("Effect check" tab).
+- **Apprentices** (Labour Code art. 18-35): start a contract of type Apprentice on the person's file: four years at most, never under 15. Then record the ONEM visa (without it the contract is an ordinary employment contract), the medical certificate, the Tribunal de paix waiver under 18, the master, the yearly review of the allowance, the end certificate and the end reported to the inspector and ONEM. By default the allowance owes no CNSS or IPR (a setting to confirm with your accountant). The letters include an "Apprenticeship end certificate" and a "Commitment after a paid training"; the commitment allows no deduction from pay.
+- **Workers' education leave** (art. 268-271): a leave type of 12 working days a year, paid, asked 30 days ahead, for union members and delegates.` },
+  },
+  {
+    id: 'my-training', audience: 'everyone', routes: ['/my/training'],
+    fr: { title: 'Mes formations', body: `
+- « Mes formations » montre les sessions à venir, vos demandes et votre historique, avec les heures suivies cette année.
+- « Demander une formation » : choisissez une formation du catalogue ou décrivez le besoin et dites pourquoi. Votre responsable donne son avis, puis les RH décident ; vous êtes prévenu(e).
+- Après une session, notez-la : cela aide les RH à choisir les prochaines. Votre attestation, quand il y en a une, est dans « Mes documents ».` },
+    en: { title: 'My training', body: `
+- "My training" shows your coming sessions, your requests and your history, with the hours followed this year.
+- "Ask for training": choose a course from the catalogue or describe the need and say why. Your manager gives an opinion, then HR decides; you are told.
+- After a session, rate it: it helps HR choose the next ones. Your certificate, when there is one, is in "My documents".` },
+  },
+  {
     id: 'job-offers', audience: 'everyone', routes: ['/job-offers'],
     fr: { title: 'Offres d’emploi internes', body: `
 - « Offres d'emploi » montre les postes ouverts dans l'entreprise, y compris ceux réservés au personnel.

@@ -70,7 +70,7 @@ const errorText = (e: unknown) => (e instanceof ApiError ? [e.message, ...Object
 const num = (n: number | null | undefined, digits = 0) => n == null ? '—' : Number(n).toLocaleString(locale(), { maximumFractionDigits: digits })
 const dateTime = (d: string) => new Date(d).toLocaleString(locale(), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-const CONTRACT: Record<string, string> = { PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker') }
+const CONTRACT: Record<string, string> = { PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker'), APPRENTICE: t('Apprenticeship') }
 const REASON: Record<Request['reason'], string> = { NEW_POST: t('New post'), REPLACEMENT: t('Replacement'), TEMPORARY: t('Temporary need') }
 const REQUEST_STATUS: Record<Request['status'], string> = { PENDING: t('Waiting for HR'), APPROVED: t('Approved'), REFUSED: t('Refused'), CANCELLED: t('Cancelled') }
 const VACANCY_STATUS: Record<VacancyStatus, string> = { DRAFT: t('Draft'), OPEN: t('Open for applications'), ON_HOLD: t('On hold'), FILLED: t('Filled'), CLOSED: t('Closed'), CANCELLED: t('Cancelled') }

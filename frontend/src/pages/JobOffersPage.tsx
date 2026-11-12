@@ -17,7 +17,7 @@ type JobOffer = {
 }
 type JobOfferAd = { offer: JobOffer; adText: string }
 
-const CONTRACT: Record<string, string> = { PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker') }
+const CONTRACT: Record<string, string> = { PERMANENT: t('Permanent (CDI)'), FIXED_TERM: t('Fixed term (CDD)'), INTERN: t('Internship'), CONSULTANT: t('Consultant'), DAILY: t('Day worker'), APPRENTICE: t('Apprenticeship') }
 // What the employee sees of their application: plain words, never HR's notes.
 const MY_STAGE: Record<Stage, string> = {
   APPLIED: t('Application received'), SCREENED: t('Shortlisted'), INTERVIEW: t('Interview'), OFFER: t('Offer'), HIRED: t('Selected'),

@@ -621,6 +621,9 @@ public class LeaveService {
         if (type.circumstance()) {
             checkCircumstance(user, type, start, days);
         }
+        if (type.code().equals(WORKER_EDUCATION)) {
+            checkWorkerEducation(user, type, start, days);
+        }
         int overlapping = jdbc.sql("""
                 select count(*) from leave_request where user_id = ? and status in ('PENDING', 'AWAITING_HR', 'APPROVED')
                 and start_date <= ? and end_date >= ?""").params(user.getId(), end, start).query(Integer.class).single();
@@ -642,6 +645,31 @@ public class LeaveService {
         audit.record("leave.requested", "leave_request", id, Map.of("userId", user.getId(), "type", type.code(),
                 "start", start.toString(), "end", end.toString(), "days", days));
         return find(id);
+    }
+
+    public static final String WORKER_EDUCATION = "WORKER_EDUCATION";
+
+    /**
+     * Congé d'éducation ouvrière (DRC Code du travail art. 268-271): asked at least 30 days ahead, 12 working days a year
+     * at most. It is for union members and delegates, which the manager and HR check when they approve.
+     */
+    private void checkWorkerEducation(AppUser user, LeaveType type, LocalDate start, BigDecimal days) {
+        int notice = Integer.parseInt(setting("WORKER_EDUCATION_NOTICE_DAYS", "30").trim());
+        if (start.isBefore(today().plusDays(notice))) {
+            throw new BusinessRuleException(cd.hrpay.i18n.Texts.t("%s is asked at least %d days ahead (Code du travail art. 269).",
+                    type.name(), notice));
+        }
+        BigDecimal limit = new BigDecimal(setting("WORKER_EDUCATION_DAYS", "12").trim());
+        BigDecimal taken = jdbc.sql("""
+                select coalesce(sum(working_days), 0) from leave_request
+                where user_id = ? and leave_type_id = ? and status in ('PENDING', 'AWAITING_HR', 'APPROVED')
+                and extract(year from start_date) = ?""").params(user.getId(), type.id(), start.getYear())
+                .query(BigDecimal.class).single();
+        if (taken.add(days).compareTo(limit) > 0) {
+            throw new BusinessRuleException(cd.hrpay.i18n.Texts.t("%s gives %s working days a year; %s are already taken or asked for in %d.",
+                    type.name(), limit.stripTrailingZeros().toPlainString(), taken.stripTrailingZeros().toPlainString(),
+                    start.getYear()));
+        }
     }
 
     public static final String CIRCUMSTANCE_YEAR_MAX = "LEAVE_CIRCUMSTANCE_YEAR_MAX";

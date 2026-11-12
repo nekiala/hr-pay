@@ -4,6 +4,7 @@ import { CONTRACT_TYPES, api, days, money, personName, type EmployeeFileView, ty
 import { useAuth } from '../auth'
 import { ErrorText } from '../components/ErrorText'
 import { locale, t } from '../i18n'
+import { TrainingHistoryCard } from './TrainingPages'
 
 /** A person's record, read-only: who they are, where they work, their contract, leave and family. Edit opens the form. */
 export default function UserViewPage() {
@@ -120,6 +121,8 @@ export default function UserViewPage() {
           {fact(t('Last sign-in'), user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString(locale()) : <span className="muted">{t('Never signed in')}</span>)}
         </dl>
       </div>
+
+      {(can('training.manage') || can('evaluation.score.team')) && <TrainingHistoryCard userId={id!} />}
 
       <p className="row">
         {can('attendance.read.all') && <Link className="button secondary" to={`/users/${id}/attendance`}>{t('View attendance and earnings')}</Link>}
