@@ -4926,6 +4926,11 @@ const fr: Record<string, string> = {
   "Sheet": "Fiche",
   "To close": "À clôturer",
   "{a} correction(s), {b} leave request(s)": "{a} correction(s), {b} demande(s) de congé",
+  "Ending the day…": "Fin de la journée…",
+  "Refuse the cost": "Refuser le frais",
+  "Refusing…": "Refus en cours…",
+  "Cancelling…": "Annulation…",
+  "Cancel this mission request?": "Annuler cette demande de mission ?",
 }
 
 export default fr

@@ -159,6 +159,7 @@ function CareersModal({ onClose }: { onClose: () => void }) {
 
 /** The links HR posts on WhatsApp, LinkedIn or a job board: each records where the candidate came from. */
 function ShareOffer({ v }: { v: VacancyRow }) {
+  const ask = useAsk()
   const [settings, setSettings] = useState<CareersSettings | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   useEffect(() => { api<CareersSettings>('/api/recruitment/careers').then(setSettings).catch(() => undefined) }, [])
@@ -168,7 +169,13 @@ function ShareOffer({ v }: { v: VacancyRow }) {
   if (!settings.enabled || !settings.link) return <p className="small muted">{t('Turn the careers page on to share this offer outside the company.')}</p>
   const url = (src: string) => `${settings.link}/${v.id}?src=${src}`
   const copy = async (src: string) => {
-    try { await navigator.clipboard.writeText(url(src)); setCopied(src) } catch { window.prompt(t('Copy the link'), url(src)) }
+    try { await navigator.clipboard.writeText(url(src)); setCopied(src) } catch {
+      ask({
+        title: t('Copy the link'), confirmLabel: t('Close'),
+        message: <input readOnly value={url(src)} onFocus={(e) => e.currentTarget.select()} autoFocus />,
+        onConfirm: () => undefined,
+      })
+    }
   }
   const later = v.visibility === 'INTERNAL_FIRST' && v.openedOn
     ? new Date(new Date(v.openedOn + 'T00:00:00').getTime() + v.internalDays * 86400000) : null
